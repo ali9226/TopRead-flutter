@@ -146,7 +146,7 @@ class MessageStore extends GetxController {
     favorite_unread.value = result.favorite_unread;
     favorite_total.value = result.favorite_total;
     chat_unread.value = result.chat_unread;
-    _recompute_unread_total();
+    _recompute_unread_total(force_badge_sync: true);
   }
 
   /// 获取消息列表（加载到当前激活的桶）。
@@ -257,11 +257,8 @@ class MessageStore extends GetxController {
     }
   }
 
-  /// 标记所有消息为已读（更新所有桶）。
-  Future<void> mark_all_as_read() async {
-    final bool success = await message_api.read_all_messages();
-    if (!success) return;
-
+  /// 立即在本地标记所有消息为已读，并在后台静默同步服务端。
+  void mark_all_as_read() {
     for (final bucket in _buckets.values) {
       bucket.list.value = bucket.list
           .where((m) => m.type != MessageType.chat_reply)
@@ -292,6 +289,19 @@ class MessageStore extends GetxController {
     like_unread.value = 0;
     favorite_unread.value = 0;
     _recompute_unread_total();
+    unawaited(_sync_all_messages_read());
+  }
+
+  /// 将全部已读状态静默同步到服务端。
+  Future<void> _sync_all_messages_read() async {
+    try {
+      final bool success = await message_api.read_all_messages();
+      if (!success) {
+        debugPrint('TODO MessageStore mark_all_as_read sync failed');
+      }
+    } catch (e) {
+      debugPrint('TODO MessageStore mark_all_as_read sync error: $e');
+    }
   }
 
   /// 删除单条消息（从所有桶中移除）。
@@ -344,7 +354,7 @@ class MessageStore extends GetxController {
     final String? visitor_id = await StorageUtil.getData('visitor_uuid');
     if (visitor_id == null || visitor_id.isEmpty) {
       chat_unread.value = 0;
-      _recompute_unread_total();
+      _recompute_unread_total(force_badge_sync: true);
       return;
     }
 
@@ -352,7 +362,7 @@ class MessageStore extends GetxController {
       visitor_id: visitor_id,
     );
     chat_unread.value = unread;
-    _recompute_unread_total();
+    _recompute_unread_total(force_badge_sync: true);
   }
 
   /// 清空所有数据（登出时调用）。
@@ -373,18 +383,19 @@ class MessageStore extends GetxController {
     like_total.value = 0;
     favorite_unread.value = 0;
     favorite_total.value = 0;
+    _recompute_unread_total(force_badge_sync: true);
   }
 
   // ==================== 内部方法 ====================
 
   /// 重新计算未读总数并更新角标。
-  void _recompute_unread_total() {
+  void _recompute_unread_total({bool force_badge_sync = false}) {
     final int new_total =
         comment_unread.value +
         like_unread.value +
         favorite_unread.value +
         chat_unread.value;
-    if (new_total == unread_total.value) return;
+    if (!force_badge_sync && new_total == unread_total.value) return;
     unread_total.value = new_total;
     _badge_update_timer?.cancel();
     _badge_update_timer = Timer(const Duration(milliseconds: 500), () {

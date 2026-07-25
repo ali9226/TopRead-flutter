@@ -101,7 +101,7 @@ class Style {
   static const double grid_cross_spacing = 14;
 
   /// 网格纵向间距。
-  static const double grid_main_spacing = 0;
+  static const double grid_main_spacing = 12;
 
   /// 单个书籍卡片圆角。
   static const double book_card_radius = 18;
@@ -198,17 +198,20 @@ class Style {
   /// 骨架进度条高度。
   static const double book_meta_skeleton_height = 12;
 
-  /// 加载更多顶部间距。
-  static const double load_more_top_spacing = 22;
+  /// 骨架标题行高度。
+  static const double book_title_skeleton_height = 13;
 
-  /// 加载更多字号。
-  static const double load_more_font_size = 14;
+  /// 骨架标题行之间的间距。
+  static const double book_title_skeleton_spacing = 8;
 
-  /// 加载更多图标尺寸。
-  static const double load_more_icon_size = 14;
+  /// 骨架第二行标题宽度。
+  static const double book_title_skeleton_short_width = 72;
 
-  /// 加载更多图标间距。
-  static const double load_more_icon_spacing = 4;
+  /// 骨架进度条宽度。
+  static const double book_meta_skeleton_width = 88;
+
+  /// 骨架文本块圆角。
+  static const double book_text_skeleton_radius = 10;
 
   /// 距离底部多少像素时触发自动加载更多。
   static const double load_more_auto_trigger_distance = 180;

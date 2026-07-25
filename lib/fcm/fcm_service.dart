@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:app/fcm/register_token.dart';
@@ -28,6 +29,11 @@ class FcmService {
   /// 本地通知插件。
   final FlutterLocalNotificationsPlugin _local_notifications =
       FlutterLocalNotificationsPlugin();
+
+  /// iOS 原生 App 图标角标通道。
+  static const MethodChannel _badge_channel = MethodChannel(
+    'com.topread.app/badge',
+  );
 
   /// Android 通知渠道。
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
@@ -292,30 +298,22 @@ class FcmService {
   /// 更新 App 图标角标数量。
   ///
   /// [count] 未读消息数。0 表示清除角标。
-  /// iOS 通过本地通知的 badge 字段更新；Android 部分启动器支持。
+  /// iOS 通过 UNUserNotificationCenter 直接同步角标。
   Future<void> update_badge(int count) async {
+    if (kIsWeb) return;
+
+    final int normalized_count = count < 0 ? 0 : count;
     try {
-      if (count <= 0) {
-        await _local_notifications.cancelAll();
+      if (Platform.isIOS) {
+        await _badge_channel.invokeMethod<void>('setBadgeCount', <String, int>{
+          'count': normalized_count,
+        });
+        logUtil(msg: 'FCM: iOS 角标已更新为 $normalized_count');
         return;
       }
-      // iOS: 通过一个静默通知更新角标（不显示内容）
-      if (!kIsWeb && Platform.isIOS) {
-        await _local_notifications.show(
-          id: 0,
-          title: '',
-          body: '',
-          notificationDetails: NotificationDetails(
-            iOS: DarwinNotificationDetails(
-              presentAlert: false,
-              presentBadge: true,
-              presentSound: false,
-              badgeNumber: count,
-            ),
-          ),
-        );
+      if (Platform.isAndroid && normalized_count == 0) {
+        await _local_notifications.cancelAll();
       }
-      // Android: 角标由系统通知渠道自动管理，无需手动更新
     } catch (e) {
       logUtil(msg: 'FCM: 更新角标失败: $e', type: 'w');
     }

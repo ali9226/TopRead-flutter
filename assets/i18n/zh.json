@@ -365,7 +365,7 @@
     },
     "load_more": {
       "button": "加载更多",
-      "loading": "加载中",
+      "loading": "加载中...",
       "no_more": "没有更多了"
     },
     "recommend_today": "今日推荐"

@@ -37,9 +37,7 @@ import 'package:app/config/constant.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await EasyLocalization.ensureInitialized();
 
   // TODO 初始化 GetStorage（必须在 runApp 之前）
@@ -119,4 +117,5 @@ void main() async {
   // TODO 初始化推送通知服务
   final FcmService fcm_service = FcmService();
   await fcm_service.init();
+  await fcm_service.update_badge(Get.find<MessageStore>().unread_total.value);
 }

@@ -364,7 +364,7 @@
     },
     "load_more": {
       "button": "More",
-      "loading": "Loading",
+      "loading": "Loading...",
       "no_more": "No more"
     },
     "recommend_today": "Today's Picks"

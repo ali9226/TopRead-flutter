@@ -13,6 +13,7 @@ import 'package:app/components/fixed_bottom_navigation/style.dart'
 import 'package:app/components/floating_back_to_top/index.dart';
 import 'package:app/components/floating_back_to_top/style.dart'
     as floating_back_to_top_style;
+import 'package:app/components/load_more_footer/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/models/message_data.dart';
 import 'package:app/util/router/router_util.dart';
@@ -444,56 +445,12 @@ class _MessagePageState extends State<MessagePage> {
                           unread_count: unread_count,
                         );
                       }),
-                    if (messages.isNotEmpty && message_store.has_more)
-                      Obx(() {
-                        if (!message_store.is_loading) {
-                          return const SizedBox.shrink();
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          child: Center(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 1.5,
-                                    color: secondary_text_color,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  easy.tr('message.loading_more'),
-                                  style: TextStyle(
-                                    color: secondary_text_color,
-                                    fontSize: 12,
-                                    fontWeight: FontConfig.adjustedWeight(
-                                      FontWeight.w400,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }),
-                    if (!has_more && messages.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 18),
-                        child: Center(
-                          child: Text(
-                            easy.tr('message.no_more'),
-                            style: TextStyle(
-                              color: secondary_text_color,
-                              fontSize: 12,
-                              fontWeight: FontConfig.adjustedWeight(
-                                FontWeight.w400,
-                              ),
-                            ),
-                          ),
-                        ),
+                    if (messages.isNotEmpty)
+                      LoadMoreFooter(
+                        is_dark: is_dark,
+                        is_loading: message_store.is_loading,
+                        has_more: has_more,
+                        on_load_more: message_store.load_more,
                       ),
                   ],
                 ),

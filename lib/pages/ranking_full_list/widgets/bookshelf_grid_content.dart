@@ -1,5 +1,3 @@
-import 'package:easy_localization/easy_localization.dart' as easy;
-import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/api/post_request.dart';
 import 'package:app/components/category_filter/index.dart';
@@ -8,11 +6,9 @@ import 'package:app/components/fixed_bottom_navigation/style.dart'
 import 'package:app/components/floating_back_to_top/index.dart';
 import 'package:app/components/floating_back_to_top/style.dart'
     as floating_back_to_top_style;
-import 'package:app/config/color_config.dart';
 import 'package:app/components/load_more_footer/index.dart';
 import 'package:app/config/layout_config.dart';
 import 'package:app/models/recommend_ranking_item.dart';
-import 'package:app/models/short_story_item.dart';
 import 'package:app/pages/ranking_full_list/logic.dart';
 import 'package:app/pages/ranking_full_list/style.dart';
 import 'package:app/pages/ranking_full_list/widgets/bookshelf_book_card.dart';
@@ -148,12 +144,13 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
                             ) {
                               return _BookCardSkeleton(is_dark: widget.is_dark);
                             }, childCount: Style.page_size),
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: grid_count,
-                              crossAxisSpacing: Style.grid_cross_spacing,
-                              mainAxisSpacing: Style.grid_main_spacing,
-                              mainAxisExtent: item_height,
-                            ),
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: grid_count,
+                                  crossAxisSpacing: Style.grid_cross_spacing,
+                                  mainAxisSpacing: Style.grid_main_spacing,
+                                  mainAxisExtent: item_height,
+                                ),
                           )
                         else ...<Widget>[
                           SliverGrid(
@@ -177,19 +174,20 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
                                 },
                               );
                             }, childCount: _visible_book_list.length),
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: grid_count,
-                              crossAxisSpacing: Style.grid_cross_spacing,
-                              mainAxisSpacing: Style.grid_main_spacing,
-                              mainAxisExtent: item_height,
-                            ),
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: grid_count,
+                                  crossAxisSpacing: Style.grid_cross_spacing,
+                                  mainAxisSpacing: Style.grid_main_spacing,
+                                  mainAxisExtent: item_height,
+                                ),
                           ),
                           SliverToBoxAdapter(
                             child: LoadMoreFooter(
                               is_dark: widget.is_dark,
-                              isLoading: _is_loading_more,
-                              hasMore: _has_more,
-                              onLoadMore: _load_more_data,
+                              is_loading: _is_loading_more,
+                              has_more: _has_more,
+                              on_load_more: _load_more_data,
                             ),
                           ),
                         ],
@@ -200,7 +198,9 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
                       isDark: widget.is_dark,
                       onTap: _scroll_to_top,
                       right:
-                          floating_back_to_top_style.FloatingBackToTopStyle.right -
+                          floating_back_to_top_style
+                              .FloatingBackToTopStyle
+                              .right -
                           Style.page_horizontal_padding,
                       visibleBottom:
                           fixed_nav_style.Style.bar_height +
@@ -279,9 +279,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
   ///
   /// 根据 [widget.ranking_tab_id] 选择对应的 API 路径，
   /// 传入 [category_id] 进行分类筛选，传入 [no_ids] 排除已加载数据。
-  Future<List<RecommendRankingItem>> _fetch_data({
-    List<int>? no_ids,
-  }) async {
+  Future<List<RecommendRankingItem>> _fetch_data({List<int>? no_ids}) async {
     final String api_path = RankingFullListLogic.resolve_api_path(
       widget.ranking_tab_id,
     );
@@ -292,7 +290,8 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
         showTips: false,
         parameter: <String, dynamic>{
           'limit': _page_size,
-          if (_selected_category_id != null) 'category_id': _selected_category_id,
+          if (_selected_category_id != null)
+            'category_id': _selected_category_id,
           if (no_ids != null && no_ids.isNotEmpty) 'no_ids': no_ids,
         },
         fromJsonList: (List<dynamic> json) =>

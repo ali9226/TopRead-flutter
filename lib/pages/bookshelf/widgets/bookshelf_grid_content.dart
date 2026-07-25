@@ -1,8 +1,11 @@
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
-import 'package:app/components/fixed_bottom_navigation/style.dart' as fixed_nav_style;
+import 'package:app/components/fixed_bottom_navigation/style.dart'
+    as fixed_nav_style;
 import 'package:app/components/floating_back_to_top/index.dart';
-import 'package:app/components/floating_back_to_top/style.dart' as floating_back_to_top_style;
+import 'package:app/components/floating_back_to_top/style.dart'
+    as floating_back_to_top_style;
+import 'package:app/components/load_more_footer/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/bookshelf/logic.dart';
@@ -155,7 +158,9 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
                         final rect = positions[item.id];
                         if (rect == null) return const SizedBox.shrink();
 
-                        final bool is_removing = _removing_ids.contains(item.id);
+                        final bool is_removing = _removing_ids.contains(
+                          item.id,
+                        );
 
                         return AnimatedPositioned(
                           key: ValueKey(item.id),
@@ -166,7 +171,6 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
                           left: rect.left,
                           top: rect.top,
                           width: rect.width,
-                          height: rect.height,
                           child: AnimatedOpacity(
                             duration: Duration(
                               milliseconds: _fade_out_animation_duration_ms,
@@ -180,8 +184,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
                                 book_item: item,
                                 is_dark: widget.is_dark,
                                 on_tap: () => _navigate_to_read(item),
-                                on_long_press: () =>
-                                    _show_action_dialog(item),
+                                on_long_press: () => _show_action_dialog(item),
                               ),
                             ),
                           ),
@@ -224,46 +227,81 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
     if (mounted) setState(() {});
   }
 
-  /// 计算网格中每个项目的位置。
+  /// 按列表顺序计算网格中每个项目的位置。
+  ///
+  /// 每一行严格按照原始列表顺序从左到右排列，下一行的顶部位置
+  /// 由上一行最高卡片决定，避免因卡片高度不同打乱视觉顺序。
   Map<String, Rect> _calculate_grid_positions(
     List<BookshelfBookItem> items,
     int grid_count,
     double column_width,
   ) {
     final double default_height = _calculate_item_height(column_width);
-    final List<double> column_heights = List<double>.filled(grid_count, 0);
+    final Map<String, Rect> original_positions =
+        _calculate_ordered_grid_positions(
+          items,
+          grid_count,
+          column_width,
+          default_height,
+        );
+
+    if (_removing_ids.isEmpty) {
+      return original_positions;
+    }
+
+    final List<BookshelfBookItem> remaining_items = items
+        .where((BookshelfBookItem item) => !_removing_ids.contains(item.id))
+        .toList(growable: false);
+    final Map<String, Rect> remaining_positions =
+        _calculate_ordered_grid_positions(
+          remaining_items,
+          grid_count,
+          column_width,
+          default_height,
+        );
+
+    /// 被删除项保留原位置执行淡出，其余卡片严格按原始顺序依次补位。
+    original_positions.addAll(remaining_positions);
+    return original_positions;
+  }
+
+  /// 计算一组卡片的固定行优先位置。
+  Map<String, Rect> _calculate_ordered_grid_positions(
+    List<BookshelfBookItem> items,
+    int grid_count,
+    double column_width,
+    double default_height,
+  ) {
     final Map<String, Rect> positions = <String, Rect>{};
+    double row_top = 0;
 
-    for (int i = 0; i < items.length; i++) {
-      final BookshelfBookItem item = items[i];
-      final bool is_removing = _removing_ids.contains(item.id);
+    for (int row_start = 0; row_start < items.length; row_start += grid_count) {
+      final int next_row_start = row_start + grid_count;
+      final int row_end = next_row_start > items.length
+          ? items.length
+          : next_row_start;
+      double row_height = 0;
 
-      int shortest_column = 0;
-      double min_height = column_heights[0];
-      for (int c = 1; c < grid_count; c++) {
-        if (column_heights[c] < min_height) {
-          min_height = column_heights[c];
-          shortest_column = c;
+      for (int item_index = row_start; item_index < row_end; item_index++) {
+        final BookshelfBookItem item = items[item_index];
+        final int column_index = item_index - row_start;
+        final double item_height = _item_heights[item.id] ?? default_height;
+        final double left =
+            column_index * (column_width + Style.grid_cross_spacing);
+
+        positions[item.id] = Rect.fromLTWH(
+          left,
+          row_top,
+          column_width,
+          item_height,
+        );
+
+        if (item_height > row_height) {
+          row_height = item_height;
         }
       }
 
-      final double x = shortest_column *
-          (column_width + Style.grid_cross_spacing);
-      final double item_height =
-          _item_heights[item.id] ?? default_height;
-      final double effective_height = is_removing ? 0 : item_height;
-
-      positions[item.id] = Rect.fromLTWH(
-        x,
-        column_heights[shortest_column],
-        column_width,
-        effective_height,
-      );
-
-      if (!is_removing) {
-        column_heights[shortest_column] +=
-            item_height + Style.grid_main_spacing;
-      }
+      row_top += row_height + Style.grid_main_spacing;
     }
 
     return positions;
@@ -289,6 +327,17 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
         Style.book_max_meta_height;
   }
 
+  /// 按骨架卡片的真实内容计算高度，避免行间出现预估高度产生的空白。
+  double _calculate_skeleton_item_height(double item_width) {
+    final double cover_height = item_width / Style.cover_aspect_ratio;
+    return cover_height +
+        Style.book_title_top_spacing +
+        Style.book_title_skeleton_height * 2 +
+        Style.book_title_skeleton_spacing +
+        Style.book_meta_top_spacing +
+        Style.book_meta_skeleton_height;
+  }
+
   /// 构建加载中的骨架屏网格。
   Widget _build_loading_grid() {
     return LayoutBuilder(
@@ -300,7 +349,9 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
             (constraints.maxWidth -
                 (grid_count - 1) * Style.grid_cross_spacing) /
             grid_count;
-        final double item_height = _calculate_item_height(column_width);
+        final double item_height = _calculate_skeleton_item_height(
+          column_width,
+        );
 
         final List<Widget> skeletons = [];
         for (int i = 0; i < Style.page_size; i++) {
@@ -331,7 +382,8 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
 
   /// 处理滚动事件：控制返回顶部按钮显隐、触发加载更多。
   void _handle_scroll() {
-    final bool should_show_back_to_top = _scroll_controller.hasClients &&
+    final bool should_show_back_to_top =
+        _scroll_controller.hasClients &&
         _scroll_controller.offset > Style.back_to_top_visible_offset;
 
     if (_is_back_to_top_visible != should_show_back_to_top) {
@@ -436,6 +488,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
           if (mounted) {
             setState(() {
               _removing_ids.remove(book_item.id);
+              _item_heights.remove(book_item.id);
               widget.on_item_removed?.call(book_item.id);
             });
           }
@@ -481,28 +534,11 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
 
   /// 构建加载更多区域。
   Widget _build_load_more_section() {
-    final Color text_color = widget.is_dark
-        ? Colors.white.withValues(alpha: 0.8)
-        : const Color(0xFF616775);
-
-    final String text_key = _is_loading_more
-        ? 'bookshelf.load_more.loading'
-        : (widget.has_more
-            ? 'bookshelf.load_more.button'
-            : 'bookshelf.load_more.no_more');
-
-    return Padding(
-      padding: const EdgeInsets.only(top: Style.load_more_top_spacing),
-      child: Center(
-        child: Text(
-          easy.tr(text_key),
-          style: TextStyle(
-            color: text_color,
-            fontSize: Style.load_more_font_size,
-            fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-          ),
-        ),
-      ),
+    return LoadMoreFooter(
+      is_dark: widget.is_dark,
+      is_loading: _is_loading_more,
+      has_more: widget.has_more,
+      on_load_more: _load_more_data,
     );
   }
 }
@@ -575,29 +611,35 @@ class _BookCardSkeleton extends StatelessWidget {
         ),
         const SizedBox(height: Style.book_title_top_spacing),
         Container(
-          height: 13,
+          height: Style.book_title_skeleton_height,
           width: double.infinity,
           decoration: BoxDecoration(
             color: block_color,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(
+              Style.book_text_skeleton_radius,
+            ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: Style.book_title_skeleton_spacing),
         Container(
-          height: 13,
-          width: 72,
+          height: Style.book_title_skeleton_height,
+          width: Style.book_title_skeleton_short_width,
           decoration: BoxDecoration(
             color: block_color,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(
+              Style.book_text_skeleton_radius,
+            ),
           ),
         ),
         const SizedBox(height: Style.book_meta_top_spacing),
         Container(
           height: Style.book_meta_skeleton_height,
-          width: 88,
+          width: Style.book_meta_skeleton_width,
           decoration: BoxDecoration(
             color: block_color,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(
+              Style.book_text_skeleton_radius,
+            ),
           ),
         ),
       ],

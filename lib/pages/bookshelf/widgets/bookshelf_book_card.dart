@@ -71,8 +71,9 @@ class _BookshelfBookCardState extends State<BookshelfBookCard> {
 
   @override
   Widget build(BuildContext context) {
-    final Color title_color =
-        widget.is_dark ? Colors.white : const Color(0xFF2B2F36);
+    final Color title_color = widget.is_dark
+        ? Colors.white
+        : const Color(0xFF2B2F36);
 
     final Color meta_text_color = widget.is_dark
         ? Colors.white.withValues(alpha: 0.52)
@@ -82,12 +83,6 @@ class _BookshelfBookCardState extends State<BookshelfBookCard> {
       color: meta_text_color,
       fontSize: Style.book_meta_font_size,
       fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-    );
-
-    final String category_text = _get_category_text();
-    final String progress_text = easy.tr(
-      widget.book_item.progress_key,
-      namedArgs: widget.book_item.progress_args,
     );
 
     return GestureDetector(
@@ -128,8 +123,9 @@ class _BookshelfBookCardState extends State<BookshelfBookCard> {
                                 ? Colors.white
                                 : const Color(0xFF23262D),
                             fontSize: Style.tag_font_size,
-                            fontWeight:
-                                FontConfig.adjustedWeight(FontWeight.w500),
+                            fontWeight: FontConfig.adjustedWeight(
+                              FontWeight.w500,
+                            ),
                           ),
                         ),
                       ),

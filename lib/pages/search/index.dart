@@ -101,10 +101,7 @@ class _SearchPageState extends State<SearchPage> {
     search_controller = TextEditingController();
     search_focus_node = FocusNode();
     _scroll_controller.addListener(_handle_scroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      search_focus_node.requestFocus();
-    });
+
   }
 
   @override
@@ -499,6 +496,11 @@ class _SearchPageState extends State<SearchPage> {
                                   },
                                   decoration: InputDecoration(
                                     border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                    errorBorder: InputBorder.none,
+                                    focusedErrorBorder: InputBorder.none,
                                     hintText: '',
                                     suffixIcon: AnimatedOpacity(
                                       duration: const Duration(milliseconds: Style.search_clear_fade_duration_ms),

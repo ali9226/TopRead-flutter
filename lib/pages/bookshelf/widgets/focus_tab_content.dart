@@ -3,9 +3,12 @@ import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/api/bookshelf.dart';
-import 'package:app/components/fixed_bottom_navigation/style.dart' as fixed_nav_style;
+import 'package:app/components/fixed_bottom_navigation/style.dart'
+    as fixed_nav_style;
 import 'package:app/components/floating_back_to_top/index.dart';
-import 'package:app/components/floating_back_to_top/style.dart' as floating_back_to_top_style;
+import 'package:app/components/floating_back_to_top/style.dart'
+    as floating_back_to_top_style;
+import 'package:app/components/load_more_footer/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/bookshelf/style.dart';
@@ -87,33 +90,31 @@ class _FocusTabContentState extends State<FocusTabContent>
                   SliverPadding(
                     padding: const EdgeInsets.only(top: 4),
                     sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (BuildContext context, int index) {
-                          return _AuthorCardSkeleton(is_dark: widget.is_dark);
-                        },
-                        childCount: 6,
-                      ),
+                      delegate: SliverChildBuilderDelegate((
+                        BuildContext context,
+                        int index,
+                      ) {
+                        return _AuthorCardSkeleton(is_dark: widget.is_dark);
+                      }, childCount: 6),
                     ),
                   )
                 else if (visible_list.isEmpty)
-                  SliverToBoxAdapter(
-                    child: _build_empty_state(),
-                  )
+                  SliverToBoxAdapter(child: _build_empty_state())
                 else ...<Widget>[
                   SliverPadding(
                     padding: const EdgeInsets.only(top: 4),
                     sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (BuildContext context, int index) {
-                          final FocusAuthorItem author_item = visible_list[index];
-                          return _FocusAuthorCard(
-                            author_item: author_item,
-                            is_dark: widget.is_dark,
-                            on_unfollow: () => _show_unfollow_dialog(author_item),
-                          );
-                        },
-                        childCount: visible_list.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((
+                        BuildContext context,
+                        int index,
+                      ) {
+                        final FocusAuthorItem author_item = visible_list[index];
+                        return _FocusAuthorCard(
+                          author_item: author_item,
+                          is_dark: widget.is_dark,
+                          on_unfollow: () => _show_unfollow_dialog(author_item),
+                        );
+                      }, childCount: visible_list.length),
                     ),
                   ),
                   SliverToBoxAdapter(
@@ -160,7 +161,8 @@ class _FocusTabContentState extends State<FocusTabContent>
   /// 处理滚动事件：控制返回顶部按钮显隐、触发加载更多。
   void _handle_scroll() {
     // 返回顶部按钮显隐。
-    final bool should_show_back_to_top = _scroll_controller.hasClients &&
+    final bool should_show_back_to_top =
+        _scroll_controller.hasClients &&
         _scroll_controller.offset > Style.back_to_top_visible_offset;
 
     if (_is_back_to_top_visible != should_show_back_to_top) {
@@ -253,28 +255,11 @@ class _FocusTabContentState extends State<FocusTabContent>
 
   /// 构建加载更多区域。
   Widget _build_load_more_section({required bool has_more}) {
-    final Color text_color = widget.is_dark
-        ? Colors.white.withValues(alpha: 0.8)
-        : const Color(0xFF616775);
-
-    final String text_key = _is_loading_more
-        ? 'bookshelf.load_more.loading'
-        : (has_more
-            ? 'bookshelf.load_more.button'
-            : 'bookshelf.load_more.no_more');
-
-    return Padding(
-      padding: const EdgeInsets.only(top: Style.load_more_top_spacing),
-      child: Center(
-        child: Text(
-          easy.tr(text_key),
-          style: TextStyle(
-            color: text_color,
-            fontSize: Style.load_more_font_size,
-            fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-          ),
-        ),
-      ),
+    return LoadMoreFooter(
+      is_dark: widget.is_dark,
+      is_loading: _is_loading_more,
+      has_more: has_more,
+      on_load_more: _load_more_data,
     );
   }
 
@@ -390,8 +375,9 @@ class _FocusAuthorCard extends StatelessWidget {
                           style: TextStyle(
                             color: subtitle_color,
                             fontSize: 13,
-                            fontWeight:
-                                FontConfig.adjustedWeight(FontWeight.w400),
+                            fontWeight: FontConfig.adjustedWeight(
+                              FontWeight.w400,
+                            ),
                             height: 1.2,
                           ),
                         ),

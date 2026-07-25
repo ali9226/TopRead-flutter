@@ -80,13 +80,15 @@ class _CatalogSheetState extends State<CatalogSheet> {
   bool _is_loading_more = false;
 
   /// 短篇小说目录列表 Store。
-  final ShortStoryCatalogStore _catalog_store = Get.find<ShortStoryCatalogStore>();
+  final ShortStoryCatalogStore _catalog_store =
+      Get.find<ShortStoryCatalogStore>();
 
   /// 加载更多触发距离（距离底部多少像素时触发）。
   static const double _load_more_trigger_distance = 200;
 
   /// 页面水平内边距（与其他页面保持一致）。
-  static const double _horizontal_padding = LayoutConfig.page_horizontal_padding;
+  static const double _horizontal_padding =
+      LayoutConfig.page_horizontal_padding;
 
   /// 测量到的实际卡片高度（首次布局后自动测量）。
   double? _measured_card_height;
@@ -142,20 +144,23 @@ class _CatalogSheetState extends State<CatalogSheet> {
     const double list_padding_top = 8.0;
 
     // 计算目标偏移：ListView顶部padding + 索引 * 卡片高度。
-    final double target_offset = (list_padding_top + current_index * card_height).clamp(
-      0.0,
-      _scroll_controller.position.maxScrollExtent,
-    );
+    final double target_offset =
+        (list_padding_top + current_index * card_height).clamp(
+          0.0,
+          _scroll_controller.position.maxScrollExtent,
+        );
 
     // 动画滚动到目标位置。
-    _scroll_controller.animateTo(
-      target_offset,
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeOutCubic,
-    ).then((_) {
-      // 动画完成后更新可视状态。
-      _check_current_visibility();
-    });
+    _scroll_controller
+        .animateTo(
+          target_offset,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+        )
+        .then((_) {
+          // 动画完成后更新可视状态。
+          _check_current_visibility();
+        });
   }
 
   /// 测量实际卡片高度。
@@ -187,20 +192,17 @@ class _CatalogSheetState extends State<CatalogSheet> {
 
     try {
       // 收集已加载数据的 ID（包括当前小说 ID）。
-      final List<int> no_ids = widget.catalog_list
-          .map((ShortStoryItem item) => item.id)
-          .toList()
-        ..add(widget.current_story_id);
+      final List<int> no_ids =
+          widget.catalog_list.map((ShortStoryItem item) => item.id).toList()
+            ..add(widget.current_story_id);
 
       final ResultsType<List<ShortStoryItem>> results =
           await postRequest<List<ShortStoryItem>>(
-        path: 'novel/short_story',
-        parameter: <String, dynamic>{
-          'no_ids': no_ids,
-        },
-        fromJsonList: (List<dynamic> json) =>
-            ShortStoryItem.from_json_list(json),
-      );
+            path: 'novel/short_story',
+            parameter: <String, dynamic>{'no_ids': no_ids},
+            fromJsonList: (List<dynamic> json) =>
+                ShortStoryItem.from_json_list(json),
+          );
 
       if (!mounted) return;
 
@@ -265,7 +267,8 @@ class _CatalogSheetState extends State<CatalogSheet> {
     final double screen_top = MediaQuery.viewPaddingOf(context).top;
     final double screen_bottom = MediaQuery.of(context).size.height;
 
-    final bool is_visible = item_bottom > screen_top && item_top < screen_bottom;
+    final bool is_visible =
+        item_bottom > screen_top && item_top < screen_bottom;
 
     if (_is_current_visible != is_visible) {
       setState(() {
@@ -329,10 +332,7 @@ class _CatalogSheetState extends State<CatalogSheet> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               /// 顶部标题栏。
-              CatalogHeader(
-                is_dark: is_dark,
-                on_close: widget.on_close,
-              ),
+              CatalogHeader(is_dark: is_dark, on_close: widget.on_close),
 
               /// 列表内容区域（响应式切换骨架屏 / 数据列表 / 错误状态 / 空状态）。
               Flexible(
@@ -354,7 +354,8 @@ class _CatalogSheetState extends State<CatalogSheet> {
 
           /// 定位按钮（当前阅读小说不在可视区域内时显示）。
           Obx(() {
-            final bool show_button = !widget.is_catalog_loading.value &&
+            final bool show_button =
+                !widget.is_catalog_loading.value &&
                 !widget.is_catalog_error.value &&
                 widget.catalog_list.isNotEmpty &&
                 !_is_current_visible;
@@ -398,9 +399,9 @@ class _CatalogSheetState extends State<CatalogSheet> {
         if (index == widget.catalog_list.length) {
           return LoadMoreFooter(
             is_dark: is_dark,
-            isLoading: _is_loading_more,
-            hasMore: _catalog_store.has_more,
-            onLoadMore: _load_more_data,
+            is_loading: _is_loading_more,
+            has_more: _catalog_store.has_more,
+            on_load_more: _load_more_data,
           );
         }
 
@@ -542,10 +543,7 @@ class _CatalogSheetState extends State<CatalogSheet> {
         padding: const EdgeInsets.symmetric(vertical: 40),
         child: Text(
           tr('short_story_read.catalog_empty'),
-          style: TextStyle(
-            fontSize: 14,
-            color: text_color,
-          ),
+          style: TextStyle(fontSize: 14, color: text_color),
         ),
       ),
     );

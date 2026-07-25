@@ -410,7 +410,7 @@
     },
     "load_more": {
       "button": "Charger plus",
-      "loading": "Chargement",
+      "loading": "Chargement...",
       "no_more": "Plus rien"
     },
     "recommend_today": "Recommandations du jour"

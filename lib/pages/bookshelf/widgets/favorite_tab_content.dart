@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/api/bookshelf.dart';
-import 'package:app/pages/bookshelf/logic.dart';
 import 'package:app/pages/bookshelf/widgets/bookshelf_grid_content.dart';
 import 'package:app/stores/bookshelf_store.dart';
 

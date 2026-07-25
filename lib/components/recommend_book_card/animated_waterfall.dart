@@ -7,7 +7,6 @@ import 'package:app/components/recommend_book_card/style.dart';
 import 'package:app/components/recommend_book_card/index.dart';
 import 'package:app/components/recommend_book_card/style.dart' as card_style;
 import 'package:app/components/load_more_footer/index.dart';
-import 'package:app/config/color_config.dart';
 import 'package:app/models/recommend_ranking_item.dart';
 import 'package:app/stores/home_store.dart';
 import 'package:app/util/novel_navigation/index.dart';
@@ -24,13 +23,11 @@ class AnimatedRecommendWaterfall extends StatefulWidget {
   /// 当前是否为夜间模式。
   final bool is_dark;
 
-  const AnimatedRecommendWaterfall({
-    super.key,
-    required this.is_dark,
-  });
+  const AnimatedRecommendWaterfall({super.key, required this.is_dark});
 
   @override
-  State<AnimatedRecommendWaterfall> createState() => AnimatedRecommendWaterfallState();
+  State<AnimatedRecommendWaterfall> createState() =>
+      AnimatedRecommendWaterfallState();
 }
 
 class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
@@ -143,9 +140,7 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
   /// 请求推荐榜小说列表并映射为 BookListItem。
   ///
   /// [no_ids] - 已加载的小说 ID，用于排除已展示的数据。
-  Future<List<BookListItem>> _fetch_recommend_list({
-    List<int>? no_ids,
-  }) async {
+  Future<List<BookListItem>> _fetch_recommend_list({List<int>? no_ids}) async {
     try {
       final results = await postRequest<List<RecommendRankingItem>>(
         path: 'novel/recommend_ranking',
@@ -179,10 +174,12 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
           .asMap()
           .entries
           .map((MapEntry<int, String> entry) {
-        final Color color = _tag_color_pool[
-            (item.id * 7 + entry.key * 3) % _tag_color_pool.length];
-        return BookListTagItem(label: entry.value, color: color);
-      }).toList();
+            final Color color =
+                _tag_color_pool[(item.id * 7 + entry.key * 3) %
+                    _tag_color_pool.length];
+            return BookListTagItem(label: entry.value, color: color);
+          })
+          .toList();
 
       // 封面左下角附加信息：评分或热度。
       String meta_text = '';
@@ -244,7 +241,10 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
 
     // 动画完成后移除数据
     Future<void>.delayed(
-      Duration(milliseconds: card_style.RecommendBookCardStyle.delete_animation_duration_ms),
+      Duration(
+        milliseconds:
+            card_style.RecommendBookCardStyle.delete_animation_duration_ms,
+      ),
     ).then((_) {
       if (mounted) {
         setState(() {
@@ -261,8 +261,9 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
     if (_total_width == 0) return <String, Rect>{};
 
     final double column_width =
-        (_total_width - RecommendBookCardStyle.column_spacing * (_column_count - 1)) /
-            _column_count;
+        (_total_width -
+            RecommendBookCardStyle.column_spacing * (_column_count - 1)) /
+        _column_count;
 
     final List<double> column_heights = List<double>.filled(_column_count, 0);
     final Map<String, Rect> positions = <String, Rect>{};
@@ -280,8 +281,12 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
         }
       }
 
-      final double x = shortest_column * (column_width + RecommendBookCardStyle.column_spacing);
-      final double item_height = _item_heights[item.id] ?? card_style.RecommendBookCardStyle.default_card_height;
+      final double x =
+          shortest_column *
+          (column_width + RecommendBookCardStyle.column_spacing);
+      final double item_height =
+          _item_heights[item.id] ??
+          card_style.RecommendBookCardStyle.default_card_height;
       final double effective_height = is_removing ? 0 : item_height;
 
       positions[item.id] = Rect.fromLTWH(
@@ -292,7 +297,8 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
       );
 
       if (!is_removing) {
-        column_heights[shortest_column] += item_height + RecommendBookCardStyle.item_spacing;
+        column_heights[shortest_column] +=
+            item_height + RecommendBookCardStyle.item_spacing;
       }
     }
 
@@ -342,7 +348,9 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
                   return AnimatedPositioned(
                     key: ValueKey<String>(item.id),
                     duration: const Duration(
-                      milliseconds: card_style.RecommendBookCardStyle.reorder_animation_duration_ms,
+                      milliseconds: card_style
+                          .RecommendBookCardStyle
+                          .reorder_animation_duration_ms,
                     ),
                     curve: Curves.easeOutCubic,
                     left: rect.left,
@@ -350,7 +358,9 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
                     width: rect.width,
                     child: AnimatedOpacity(
                       duration: const Duration(
-                        milliseconds: card_style.RecommendBookCardStyle.fade_out_animation_duration_ms,
+                        milliseconds: card_style
+                            .RecommendBookCardStyle
+                            .fade_out_animation_duration_ms,
                       ),
                       opacity: is_removing ? 0.0 : 1.0,
                       curve: Curves.easeOut,
@@ -362,37 +372,37 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
                             });
                           }
                         },
-                          child: RecommendBookCard(
-                            item: item,
-                            is_dark: widget.is_dark,
-                            show_overlay: is_active,
-                            on_long_press: () {
-                              _show_overlay(item.id);
-                            },
-                            on_overlay_close: close_overlay,
-                            on_tap: () {
-                              // 如果点击的卡片有弹窗，只关闭弹窗，不跳转
-                              if (_active_overlay_id == item.id) {
-                                close_overlay();
-                                return;
-                              }
-                              // 如果其他卡片有弹窗，关闭弹窗并跳转
-                              if (_active_overlay_id != null) {
-                                close_overlay();
-                              }
-                              navigate_to_novel(
-                                id: item.story_id,
-                                title: item.title,
-                                publish_status: item.publish_status,
-                              );
-                            },
-                            on_dislike: () {
-                              final int index = _items.indexOf(item);
-                              if (index >= 0) {
-                                remove_at(index);
-                              }
-                            },
-                          ),
+                        child: RecommendBookCard(
+                          item: item,
+                          is_dark: widget.is_dark,
+                          show_overlay: is_active,
+                          on_long_press: () {
+                            _show_overlay(item.id);
+                          },
+                          on_overlay_close: close_overlay,
+                          on_tap: () {
+                            // 如果点击的卡片有弹窗，只关闭弹窗，不跳转
+                            if (_active_overlay_id == item.id) {
+                              close_overlay();
+                              return;
+                            }
+                            // 如果其他卡片有弹窗，关闭弹窗并跳转
+                            if (_active_overlay_id != null) {
+                              close_overlay();
+                            }
+                            navigate_to_novel(
+                              id: item.story_id,
+                              title: item.title,
+                              publish_status: item.publish_status,
+                            );
+                          },
+                          on_dislike: () {
+                            final int index = _items.indexOf(item);
+                            if (index >= 0) {
+                              remove_at(index);
+                            }
+                          },
+                        ),
                       ),
                     ),
                   );
@@ -402,9 +412,9 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
             // 加载更多 / 没有了 底部组件
             LoadMoreFooter(
               is_dark: widget.is_dark,
-              isLoading: _is_loading_more,
-              hasMore: _has_more,
-              onLoadMore: load_more,
+              is_loading: _is_loading_more,
+              has_more: _has_more,
+              on_load_more: load_more,
             ),
           ],
         );
@@ -427,12 +437,20 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
     final List<_SkeletonCardData> left_cards = <_SkeletonCardData>[
       _SkeletonCardData(cover_height: 170, has_description: true, tag_count: 2),
       _SkeletonCardData(cover_height: 150, has_description: true, tag_count: 1),
-      _SkeletonCardData(cover_height: 190, has_description: false, tag_count: 0),
+      _SkeletonCardData(
+        cover_height: 190,
+        has_description: false,
+        tag_count: 0,
+      ),
     ];
     final List<_SkeletonCardData> right_cards = <_SkeletonCardData>[
       _SkeletonCardData(cover_height: 145, has_description: true, tag_count: 1),
       _SkeletonCardData(cover_height: 180, has_description: true, tag_count: 2),
-      _SkeletonCardData(cover_height: 160, has_description: false, tag_count: 1),
+      _SkeletonCardData(
+        cover_height: 160,
+        has_description: false,
+        tag_count: 1,
+      ),
     ];
 
     return AnimatedBuilder(
@@ -443,9 +461,7 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
           children: List<Widget>.generate(3, (int row_index) {
             return Padding(
               padding: EdgeInsets.only(
-                bottom: row_index < 2
-                    ? RecommendBookCardStyle.item_spacing
-                    : 0,
+                bottom: row_index < 2 ? RecommendBookCardStyle.item_spacing : 0,
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -528,7 +544,8 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
                 // 标题骨架（2行）
                 _build_skeleton_bar(
                   width: double.infinity,
-                  height: RecommendBookCardStyle.title_font_size *
+                  height:
+                      RecommendBookCardStyle.title_font_size *
                       RecommendBookCardStyle.title_height,
                   radius: 4,
                   base_color: base_color,
@@ -539,7 +556,8 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
                 const SizedBox(height: 4),
                 _build_skeleton_bar(
                   width: 80,
-                  height: RecommendBookCardStyle.title_font_size *
+                  height:
+                      RecommendBookCardStyle.title_font_size *
                       RecommendBookCardStyle.title_height,
                   radius: 4,
                   base_color: base_color,
@@ -554,7 +572,8 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
                   ),
                   _build_skeleton_bar(
                     width: double.infinity,
-                    height: RecommendBookCardStyle.description_font_size *
+                    height:
+                        RecommendBookCardStyle.description_font_size *
                         RecommendBookCardStyle.description_height,
                     radius: 3,
                     base_color: base_color,
@@ -565,7 +584,8 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
                   const SizedBox(height: 3),
                   _build_skeleton_bar(
                     width: 100,
-                    height: RecommendBookCardStyle.description_font_size *
+                    height:
+                        RecommendBookCardStyle.description_font_size *
                         RecommendBookCardStyle.description_height,
                     radius: 3,
                     base_color: base_color,
@@ -589,7 +609,8 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
                         ),
                         child: _build_skeleton_bar(
                           width: 44,
-                          height: RecommendBookCardStyle.tag_font_size * 2 +
+                          height:
+                              RecommendBookCardStyle.tag_font_size * 2 +
                               8, // padding top+bottom
                           radius: RecommendBookCardStyle.tag_radius,
                           base_color: base_color,
@@ -684,9 +705,7 @@ class _MeasurableWidgetState extends State<_MeasurableWidget> {
         _measure();
         return false;
       },
-      child: SizeChangedLayoutNotifier(
-        child: widget.child,
-      ),
+      child: SizeChangedLayoutNotifier(child: widget.child),
     );
   }
 
