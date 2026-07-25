@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+
 import 'package:get/get.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:app/api/post_request.dart';
 import 'package:app/util/log_util.dart';
-import 'package:app/util/storage_util/index.dart';
+import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/models/redis_get_data.dart';
 import 'package:app/models/rotation.dart';
 import 'package:app/stores/language_store.dart';
@@ -15,14 +15,22 @@ import 'package:app/stores/share_store.dart';
 
 /// TODO: Redis 数据请求中心控制器
 class RedisRequestStore extends GetxController {
-
   /// TODO: 防止重复请求
   final RxBool _is_fetching = false.obs;
+
+  /// 请求期间是否收到了一次新的刷新请求。
+  bool _has_pending_fetch = false;
+
+  /// 合并后的后续请求是否需要展示错误提示。
+  bool _pending_show_tips = false;
+
+  /// 等待合并请求完成的调用方。
+  Completer<bool>? _pending_completer;
 
   /// redis/get 接口是否正在请求中。
   bool get is_fetching => _is_fetching.value;
 
-  /// 是否已经执行过至少一次 redis/get 请求（用于区分首次加载和语种切换刷新）。
+  /// 是否已经执行过至少一次 redis/get 请求。
   bool _has_fetched_once = false;
 
   /// 静默重试最大次数。
@@ -35,15 +43,20 @@ class RedisRequestStore extends GetxController {
   int _retry_count = 0;
 
   /// TODO: 全量拉取 Redis 配置并同步到各子 Store
-  Future<void> fetch_redis_data({bool showTips = false}) async {
-    if (_is_fetching.value) return;
-    _is_fetching.value = true;
+  Future<bool> fetch_redis_data({bool showTips = false}) async {
+    /// 请求进行中时不丢弃新请求，而是合并为下一轮请求。
+    if (_is_fetching.value) {
+      _has_pending_fetch = true;
+      _pending_show_tips = _pending_show_tips || showTips;
+      _pending_completer ??= Completer<bool>();
+      return _pending_completer!.future;
+    }
 
+    _is_fetching.value = true;
     logUtil(msg: '开始执行中心化 redis/get 接口请求');
     _set_loading(true);
 
-
-    /// 通知偏好数据开始刷新（仅非首次加载时展示骨架屏）。
+    /// 非语种切换场景仍沿用原有刷新态。
     if (Get.isRegistered<PreferenceStore>()) {
       final PreferenceStore preference_store = Get.find<PreferenceStore>();
       if (preference_store.loaded.value) {
@@ -56,100 +69,120 @@ class RedisRequestStore extends GetxController {
       final HomeBannerStore home_store = Get.find<HomeBannerStore>();
       if (home_store.has_cached_data && _has_fetched_once) {
         home_store.is_loading.value = true;
-        /// 语种切换时清空短篇列表，避免展示旧语种内容。
-        home_store.short_story_list.clear();
       }
       _has_fetched_once = true;
     }
 
+    bool latest_result = false;
+    bool current_show_tips = showTips;
+
     try {
-      final results = await postRequest<RedisGetData>(
-        path: 'redis/get',
-        showTips: showTips,
-        fromJson: (Map<String, dynamic> json) => RedisGetData.from_json(json),
-      );
+      do {
+        _has_pending_fetch = false;
+        current_show_tips = current_show_tips || _pending_show_tips;
+        _pending_show_tips = false;
 
-      if (results.status && results.content != null) {
-        final RedisGetData data = results.content!;
-
-        // 重试计数器归零（请求成功）。
-        _retry_count = 0;
-
-        // 1. 语种列表同步
-        if (data.language_list.isNotEmpty) {
-          if (Get.isRegistered<LanguageStore>()) {
-            Get.find<LanguageStore>().save_language_list(data.language_list);
-          }
-        }
-
-        // 2. 旋转列表数据分发 (Type 20, 21, 23)
-        if (data.rotation_list.isNotEmpty) {
-          _distribute_rotation_data(data.rotation_list);
-        }
-
-        // 3. 偏好列表同步
-        if (data.preference_list.isNotEmpty) {
-          if (Get.isRegistered<PreferenceStore>()) {
-            Get.find<PreferenceStore>().save_preference_list(data.preference_list);
-          }
-        }
-
-        // 4. 首页分类列表同步
-        if (data.home_classification_list.isNotEmpty) {
-          if (Get.isRegistered<HomeBannerStore>()) {
-            Get.find<HomeBannerStore>().save_home_classification_list(
-              data.home_classification_list,
-            );
-          }
-        }
-
-        // 5. 榜单分类列表同步
-        if (data.rankings.isNotEmpty) {
-          if (Get.isRegistered<HomeBannerStore>()) {
-            Get.find<HomeBannerStore>().save_rankings_list(
-              data.rankings,
-            );
-          }
-        }
-
-        // 6. 搜索栏关键词列表同步
-        if (data.search_list.isNotEmpty) {
-          if (Get.isRegistered<HomeBannerStore>()) {
-            Get.find<HomeBannerStore>().save_search_list(
-              data.search_list,
-            );
-          }
-        }
-
-        // 7. 不喜欢理由列表同步
-        if (data.dislike_list.isNotEmpty) {
-          if (Get.isRegistered<HomeBannerStore>()) {
-            Get.find<HomeBannerStore>().save_dislike_list(
-              data.dislike_list,
-            );
-          }
-        }
-
-        // 8. 热门搜索标签列表同步
-        if (data.popular_searches.isNotEmpty) {
-          if (Get.isRegistered<HomeBannerStore>()) {
-            Get.find<HomeBannerStore>().save_popular_searches(
-              data.popular_searches,
-            );
-          }
-        }
-
-        logUtil(msg: 'redis/get 数据全量分发完成');
-      } else if (!results.status) {
-        logUtil(msg: 'redis/get 接口业务失败: ${results.message}', type: 'w');
-        _schedule_retry();
-      }
-    } catch (error) {
-      logUtil(msg: 'redis/get 接口系统异常: $error', type: 'e');
-      _schedule_retry();
+        latest_result = await _fetch_once(show_tips: current_show_tips);
+        current_show_tips = false;
+      } while (_has_pending_fetch);
     } finally {
       _is_fetching.value = false;
       _set_loading(false);
+      final Completer<bool>? completer = _pending_completer;
+      _pending_completer = null;
+      if (completer != null && !completer.isCompleted) {
+        completer.complete(latest_result);
+      }
+    }
+
+    return latest_result;
+  }
+
+  /// 执行单轮 Redis 配置请求。
+  Future<bool> _fetch_once({required bool show_tips}) async {
+    final int request_revision = LanguageChangeHandler.current_revision;
+    final String request_language_code =
+        LanguageChangeHandler.current_language_code;
+
+    try {
+      final results = await postRequest<RedisGetData>(
+        path: 'redis/get',
+        showTips: show_tips,
+        fromJson: (Map<String, dynamic> json) => RedisGetData.from_json(json),
+      );
+
+      /// 切换期间到达的旧响应不能覆盖新语种数据。
+      if (!LanguageChangeHandler.is_current_revision(
+        request_revision,
+        request_language_code,
+      )) {
+        logUtil(
+          msg:
+              '丢弃过期 redis/get 响应: '
+              '$request_language_code#$request_revision',
+          type: 'w',
+        );
+        return false;
+      }
+
+      if (!results.status || results.content == null) {
+        logUtil(msg: 'redis/get 接口业务失败: ${results.message}', type: 'w');
+        _finish_language_loading();
+        _schedule_retry();
+        return false;
+      }
+
+      final RedisGetData data = results.content!;
+      _retry_count = 0;
+
+      if (Get.isRegistered<LanguageStore>()) {
+        Get.find<LanguageStore>().save_language_list(data.language_list);
+      }
+
+      _distribute_rotation_data(data.rotation_list);
+
+      if (Get.isRegistered<PreferenceStore>()) {
+        Get.find<PreferenceStore>()
+          ..save_preference_list(data.preference_list)
+          ..finish_language_refresh();
+      }
+
+      if (Get.isRegistered<HomeBannerStore>()) {
+        Get.find<HomeBannerStore>()
+          ..save_home_classification_list(data.home_classification_list)
+          ..save_rankings_list(data.rankings)
+          ..save_search_list(data.search_list)
+          ..save_dislike_list(data.dislike_list)
+          ..save_popular_searches(data.popular_searches)
+          ..finish_language_refresh();
+      }
+
+      logUtil(
+        msg:
+            'redis/get 数据全量分发完成: '
+            '$request_language_code#$request_revision',
+      );
+      return true;
+    } catch (error) {
+      if (LanguageChangeHandler.is_current_revision(
+        request_revision,
+        request_language_code,
+      )) {
+        logUtil(msg: 'redis/get 接口系统异常: $error', type: 'e');
+        _finish_language_loading();
+        _schedule_retry();
+      }
+      return false;
+    }
+  }
+
+  /// 结束基础配置刷新态。
+  void _finish_language_loading() {
+    if (Get.isRegistered<PreferenceStore>()) {
+      Get.find<PreferenceStore>().finish_language_refresh();
+    }
+    if (Get.isRegistered<HomeBannerStore>()) {
+      Get.find<HomeBannerStore>().finish_language_refresh();
     }
   }
 
@@ -177,41 +210,38 @@ class RedisRequestStore extends GetxController {
     }
 
     _retry_count++;
-    logUtil(msg: 'redis/get 将在 $_retry_delay_seconds 秒后进行第 $_retry_count 次静默重试');
+    logUtil(
+      msg: 'redis/get 将在 $_retry_delay_seconds 秒后进行第 $_retry_count 次静默重试',
+    );
 
     Future<void>.delayed(const Duration(seconds: _retry_delay_seconds), () {
       fetch_redis_data(showTips: false);
     });
   }
 
-  /// TODO: 执行语种切换并刷新数据
-  Future<void> update_language_and_fetch(BuildContext context, String languageCode) async {
-    logUtil(msg: '触发语种切换流程: $languageCode');
-    await StorageUtil.saveData(LanguageStore.language_key, languageCode);
-    if (context.mounted) {
-      await context.setLocale(Locale(languageCode));
-    }
-    await fetch_redis_data(showTips: false);
-  }
-
   /// TODO: 旋转数据分类分发
   void _distribute_rotation_data(List<Rotation> allRotations) {
-
     // 分发客服 (Type 21)
-    final List<Rotation> serviceList = allRotations.where((e) => e.type == 21).toList();
+    final List<Rotation> serviceList = allRotations
+        .where((e) => e.type == 21)
+        .toList();
     if (Get.isRegistered<CustomerServiceStore>()) {
       Get.find<CustomerServiceStore>().save_customer_service_list(serviceList);
     }
 
     // 分发第三方授权 (Type 23)
-    final List<Rotation> authList = allRotations.where((e) => e.type == 23).toList();
+    final List<Rotation> authList = allRotations
+        .where((e) => e.type == 23)
+        .toList();
     if (Get.isRegistered<AuthorizedLoginStore>()) {
       Get.find<AuthorizedLoginStore>().save_authorized_login_list(authList);
     }
     _handle_authorized_login_data(authList);
 
     // 分发分享渠道 (Type 24)
-    final List<Rotation> shareList = allRotations.where((e) => e.type == ShareStore.share_type).toList();
+    final List<Rotation> shareList = allRotations
+        .where((e) => e.type == ShareStore.share_type)
+        .toList();
     if (Get.isRegistered<ShareStore>()) {
       Get.find<ShareStore>().save_share_list(shareList);
     }

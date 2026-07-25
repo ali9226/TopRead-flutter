@@ -27,6 +27,19 @@ class PreferenceStore extends GetxController {
     is_loading.value = false;
   }
 
+  /// 进入语种切换刷新态并移除旧语种选项。
+  void begin_language_refresh() {
+    is_loading.value = true;
+    loaded.value = false;
+    preference_list.clear();
+  }
+
+  /// 完成语种配置刷新。
+  void finish_language_refresh() {
+    loaded.value = true;
+    is_loading.value = false;
+  }
+
   /// TODO 根据类别 id 查找对应的偏好类别。
   ///
   /// 参数 [id]：

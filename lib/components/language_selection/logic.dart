@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:get/get.dart';
 import 'package:app/stores/language_store.dart';
+import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/language_util/index.dart';
-import 'package:app/util/storage_util/index.dart';
 import 'package:app/util/router/router_back.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/util/log_util.dart';
@@ -65,10 +65,10 @@ class Logic {
       return;
     }
 
-    final String fallback_language_code = LanguageUtil.get_fallback_language_code();
-    await context.setLocale(Locale(fallback_language_code));
-    await StorageUtil.saveData(
-      LanguageStore.language_key,
+    final String fallback_language_code =
+        LanguageUtil.get_fallback_language_code();
+    await LanguageChangeHandler.change_language(
+      context,
       fallback_language_code,
     );
     language_store.loaded.value = true;

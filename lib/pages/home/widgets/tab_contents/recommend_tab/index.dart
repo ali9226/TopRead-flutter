@@ -2,15 +2,18 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/api/post_request.dart';
-import 'package:app/components/fixed_bottom_navigation/style.dart' as fixed_nav_style;
+import 'package:app/components/fixed_bottom_navigation/style.dart'
+    as fixed_nav_style;
 import 'package:app/components/floating_back_to_top/index.dart';
-import 'package:app/components/floating_back_to_top/style.dart' as floating_back_to_top_style;
+import 'package:app/components/floating_back_to_top/style.dart'
+    as floating_back_to_top_style;
 import 'package:app/components/recommend_book_card/animated_waterfall.dart';
 import 'package:app/models/recommend_ranking_item.dart';
 import 'package:app/models/short_story_item.dart';
 import 'package:app/models/story_item.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/home_store.dart';
+import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/widgets/ranking_section/style.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/style.dart';
@@ -83,7 +86,8 @@ class _RecommendTabContentState extends State<RecommendTabContent>
   bool _is_back_to_top_visible = false;
 
   /// 今日推荐瀑布流组件的 GlobalKey。
-  final GlobalKey<AnimatedRecommendWaterfallState> _recommend_waterfall_key = GlobalKey();
+  final GlobalKey<AnimatedRecommendWaterfallState> _recommend_waterfall_key =
+      GlobalKey();
 
   /// 首页数据仓库。
   final HomeBannerStore _home_store = Get.find<HomeBannerStore>();
@@ -99,13 +103,22 @@ class _RecommendTabContentState extends State<RecommendTabContent>
   /// 各 Tab 独立的加载状态（用于骨架屏）。
   final RxMap<int, bool> _loading_tab_ids = <int, bool>{}.obs;
 
-  /// 上次渲染时的语种代码，用于检测语种切换。
-  String? _prev_language_code;
+  /// 语种刷新任务订阅。
+  late final LanguageRefreshSubscription _language_refresh_subscription;
+
+  /// 切换语种前选中的榜单 id。
+  int _retained_ranking_tab_id = 0;
 
   @override
   void initState() {
     super.initState();
     _scroll_controller.addListener(_handle_scroll);
+    _language_refresh_subscription =
+        LanguageChangeHandler.register_refresh_task(
+          phase: LanguageRefreshPhase.content,
+          on_prepare: _prepare_language_refresh,
+          on_refresh: _refresh_for_language,
+        );
 
     // 首次加载时，标记已在启动阶段获取过的 Tab 为已加载。
     if (_home_store.recommend_ranking_list.isNotEmpty) {
@@ -122,36 +135,37 @@ class _RecommendTabContentState extends State<RecommendTabContent>
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    final String language_code = context.locale.languageCode;
-
-    // 首次赋值。
-    if (_prev_language_code == null) {
-      _prev_language_code = language_code;
-      return;
-    }
-
-    // 语种未变化，跳过。
-    if (_prev_language_code == language_code) return;
-
-    // 语种已切换：清空已加载标记和缓存数据，重新拉取当前 Tab。
-    _prev_language_code = language_code;
-    _loaded_tab_ids.clear();
-    _home_store.clear_all_ranking_data();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _ensure_tab_loaded(_current_tab_id);
-    });
-  }
-
-  @override
   void dispose() {
+    _language_refresh_subscription.dispose();
     _scroll_controller.removeListener(_handle_scroll);
     _scroll_controller.dispose();
     super.dispose();
+  }
+
+  /// Locale 切换前保存当前榜单选择并让旧请求失效。
+  void _prepare_language_refresh(LanguageRefreshContext refresh_context) {
+    _retained_ranking_tab_id = _current_tab_id;
+    _loaded_tab_ids.clear();
+    _loading_tab_ids.clear();
+  }
+
+  /// 基础分类刷新完成后，恢复同一榜单并请求新语种内容。
+  Future<void> _refresh_for_language(
+    LanguageRefreshContext refresh_context,
+  ) async {
+    if (!mounted || !refresh_context.is_current) return;
+
+    final List<int> tab_ids = rankings_id_list;
+    if (tab_ids.isEmpty) return;
+
+    final int retained_index = tab_ids.indexOf(_retained_ranking_tab_id);
+    _selected_ranking_tab_index.value = retained_index >= 0
+        ? retained_index
+        : 0;
+    await _fetch_ranking_for_tab(
+      _current_tab_id,
+      request_revision: refresh_context.revision,
+    );
   }
 
   // ==================== 滚动处理 ====================
@@ -161,8 +175,10 @@ class _RecommendTabContentState extends State<RecommendTabContent>
 
   /// 处理滚动事件：控制返回顶部按钮显隐、关闭推荐弹窗、触发加载更多。
   void _handle_scroll() {
-    final bool should_show_back_to_top = _scroll_controller.hasClients &&
-        _scroll_controller.offset > RecommendTabStyle.back_to_top_visible_offset;
+    final bool should_show_back_to_top =
+        _scroll_controller.hasClients &&
+        _scroll_controller.offset >
+            RecommendTabStyle.back_to_top_visible_offset;
 
     if (_is_back_to_top_visible != should_show_back_to_top) {
       setState(() {
@@ -175,7 +191,8 @@ class _RecommendTabContentState extends State<RecommendTabContent>
     }
 
     if (_scroll_controller.position.pixels >=
-        _scroll_controller.position.maxScrollExtent - _load_more_trigger_distance) {
+        _scroll_controller.position.maxScrollExtent -
+            _load_more_trigger_distance) {
       _recommend_waterfall_key.currentState?.load_more();
     }
   }
@@ -238,14 +255,9 @@ class _RecommendTabContentState extends State<RecommendTabContent>
   /// 获取当前选中 Tab 的 id。
   int get _current_tab_id {
     final List<int> ids = rankings_id_list;
-    if (ids.isEmpty || _selected_ranking_tab_index.value >= ids.length) return 0;
+    if (ids.isEmpty || _selected_ranking_tab_index.value >= ids.length)
+      return 0;
     return ids[_selected_ranking_tab_index.value];
-  }
-
-  /// 当前选中 Tab 的数据是否已加载完成。
-  bool get _is_current_tab_data_ready {
-    final int tab_id = _current_tab_id;
-    return _is_tab_data_ready(tab_id);
   }
 
   /// 指定 Tab 的数据是否已就绪。
@@ -290,97 +302,128 @@ class _RecommendTabContentState extends State<RecommendTabContent>
   ///
   /// 请求完成后将数据保存到 HomeBannerStore，
   /// 并标记该 Tab 为已加载。
-  Future<void> _fetch_ranking_for_tab(int tab_id) async {
+  Future<void> _fetch_ranking_for_tab(
+    int tab_id, {
+    int? request_revision,
+  }) async {
+    if (tab_id == 0 || _loading_tab_ids[tab_id] == true) return;
+    final int revision =
+        request_revision ?? LanguageChangeHandler.current_revision;
+
     // 设置该 Tab 的加载状态（响应式，驱动 Obx 局部刷新）。
     _loading_tab_ids[tab_id] = true;
 
+    bool success = false;
     try {
       switch (tab_id) {
         case _recommend_ranking_id:
-          await _fetch_recommend_ranking();
+          success = await _fetch_recommend_ranking(revision);
           break;
         case _completed_ranking_id:
-          await _fetch_completed_ranking();
+          success = await _fetch_completed_ranking(revision);
           break;
         case _peak_ranking_id:
-          await _fetch_peak_ranking();
+          success = await _fetch_peak_ranking(revision);
           break;
         case _new_book_ranking_id:
-          await _fetch_new_book_ranking();
+          success = await _fetch_new_book_ranking(revision);
           break;
         case _short_story_ranking_id:
-          await _fetch_short_story_ranking();
+          success = await _fetch_short_story_ranking(revision);
           break;
       }
     } finally {
-      _loading_tab_ids[tab_id] = false;
-      _loaded_tab_ids.add(tab_id);
+      if (mounted && LanguageChangeHandler.is_current_revision(revision)) {
+        _loading_tab_ids[tab_id] = false;
+        if (success) {
+          _loaded_tab_ids.add(tab_id);
+        }
+      }
     }
   }
 
   /// 请求推荐榜数据。
-  Future<void> _fetch_recommend_ranking() async {
+  Future<bool> _fetch_recommend_ranking(int revision) async {
     final results = await postRequest<List<RecommendRankingItem>>(
       path: 'novel/recommend_ranking',
       showTips: false,
       fromJsonList: (List<dynamic> json) =>
           RecommendRankingItem.from_json_list(json),
     );
-    if (results.status && results.content != null) {
+    if (results.status &&
+        results.content != null &&
+        LanguageChangeHandler.is_current_revision(revision)) {
       _home_store.save_recommend_ranking_list(results.content!);
+      return true;
     }
+    return false;
   }
 
   /// 请求完结榜数据。
-  Future<void> _fetch_completed_ranking() async {
+  Future<bool> _fetch_completed_ranking(int revision) async {
     final results = await postRequest<List<RecommendRankingItem>>(
       path: 'novel/completed_ranking',
       showTips: false,
       fromJsonList: (List<dynamic> json) =>
           RecommendRankingItem.from_json_list(json),
     );
-    if (results.status && results.content != null) {
+    if (results.status &&
+        results.content != null &&
+        LanguageChangeHandler.is_current_revision(revision)) {
       _home_store.save_completed_ranking_list(results.content!);
+      return true;
     }
+    return false;
   }
 
   /// 请求巅峰榜数据。
-  Future<void> _fetch_peak_ranking() async {
+  Future<bool> _fetch_peak_ranking(int revision) async {
     final results = await postRequest<List<RecommendRankingItem>>(
       path: 'novel/peak_ranking',
       showTips: false,
       fromJsonList: (List<dynamic> json) =>
           RecommendRankingItem.from_json_list(json),
     );
-    if (results.status && results.content != null) {
+    if (results.status &&
+        results.content != null &&
+        LanguageChangeHandler.is_current_revision(revision)) {
       _home_store.save_peak_ranking_list(results.content!);
+      return true;
     }
+    return false;
   }
 
   /// 请求新书榜数据。
-  Future<void> _fetch_new_book_ranking() async {
+  Future<bool> _fetch_new_book_ranking(int revision) async {
     final results = await postRequest<List<RecommendRankingItem>>(
       path: 'novel/new_book_ranking',
       showTips: false,
       fromJsonList: (List<dynamic> json) =>
           RecommendRankingItem.from_json_list(json),
     );
-    if (results.status && results.content != null) {
+    if (results.status &&
+        results.content != null &&
+        LanguageChangeHandler.is_current_revision(revision)) {
       _home_store.save_new_book_ranking_list(results.content!);
+      return true;
     }
+    return false;
   }
 
   /// 请求短篇榜数据。
-  Future<void> _fetch_short_story_ranking() async {
+  Future<bool> _fetch_short_story_ranking(int revision) async {
     final results = await postRequest<List<ShortStoryItem>>(
       path: 'novel/short_story',
       showTips: false,
-      fromJsonList: (List<dynamic> json) =>
-          ShortStoryItem.from_json_list(json),
+      fromJsonList: (List<dynamic> json) => ShortStoryItem.from_json_list(json),
     );
-    if (results.status && results.content != null) {
+    if (results.status &&
+        results.content != null &&
+        LanguageChangeHandler.is_current_revision(revision)) {
       _home_store.short_story_list.assignAll(results.content!);
+      return true;
     }
+    return false;
   }
 
   // ==================== 数据映射 ====================
@@ -409,9 +452,7 @@ class _RecommendTabContentState extends State<RecommendTabContent>
             _home_store.new_book_ranking_list,
           );
         case _short_story_ranking_id:
-          return _map_short_story_to_story_item(
-            _home_store.short_story_list,
-          );
+          return _map_short_story_to_story_item(_home_store.short_story_list);
         case _recommend_ranking_id:
         default:
           return _map_recommend_ranking_to_story_item(
@@ -427,43 +468,48 @@ class _RecommendTabContentState extends State<RecommendTabContent>
   ) {
     if (source.isEmpty) return <StoryItem>[];
     final String language_code = Localizations.localeOf(context).languageCode;
-    return source.map(
-      (RecommendRankingItem item) => StoryItem(
-        id: item.id,
-        title: item.title,
-        introduction: item.introduction,
-        cover_url: item.cover_url,
-        popularity_count: '',
-        category_text: item.formatted_categories,
-        heat_text: item.formatted_read_count_for(language_code),
-        publish_status: item.publish_status,
-      ),
-    ).toList();
+    return source
+        .map(
+          (RecommendRankingItem item) => StoryItem(
+            id: item.id,
+            title: item.title,
+            introduction: item.introduction,
+            cover_url: item.cover_url,
+            popularity_count: '',
+            category_text: item.formatted_categories,
+            heat_text: item.formatted_read_count_for(language_code),
+            publish_status: item.publish_status,
+          ),
+        )
+        .toList();
   }
 
   /// 将短篇小说数据映射为 StoryItem 列表。
-  List<StoryItem> _map_short_story_to_story_item(
-    List<ShortStoryItem> source,
-  ) {
+  List<StoryItem> _map_short_story_to_story_item(List<ShortStoryItem> source) {
     if (source.isEmpty) return <StoryItem>[];
-    return source.map(
-      (ShortStoryItem item) => StoryItem(
-        id: item.id,
-        title: item.title,
-        introduction: item.description,
-        cover_url: '',
-        popularity_count: '',
-        category_text: item.tags.isNotEmpty ? item.tags.join('·') : '',
-        heat_text: _format_short_story_heat(item),
-        publish_status: 4,
-      ),
-    ).toList();
+    return source
+        .map(
+          (ShortStoryItem item) => StoryItem(
+            id: item.id,
+            title: item.title,
+            introduction: item.description,
+            cover_url: '',
+            popularity_count: '',
+            category_text: item.tags.isNotEmpty ? item.tags.join('·') : '',
+            heat_text: _format_short_story_heat(item),
+            publish_status: 4,
+          ),
+        )
+        .toList();
   }
 
   /// 格式化短篇小说的阅读数展示文本（多语种）。
   String _format_short_story_heat(ShortStoryItem item) {
     final String language_code = Localizations.localeOf(context).languageCode;
-    return RecommendRankingItem.format_count_text(item.read_count, language_code);
+    return RecommendRankingItem.format_count_text(
+      item.read_count,
+      language_code,
+    );
   }
 
   // ==================== UI ====================
@@ -478,14 +524,17 @@ class _RecommendTabContentState extends State<RecommendTabContent>
       final bool is_dark = device_info.theme.value == ThemeMode.dark;
       final Color panel_bg = is_dark ? const Color(0xFF171C28) : Colors.white;
       final List<String> ranking_titles = rankings_title_list;
-      final List<List<StoryItem>> all_ranking_data = _build_ranking_data_from_store();
+      final List<List<StoryItem>> all_ranking_data =
+          _build_ranking_data_from_store();
 
       // 当前 Tab 是否需要展示骨架屏。
       // 仅在数据完全不存在且正在请求时才展示，
       // 如果 store 中已有数据（即使是上次缓存的），直接展示数据，不闪骨架屏。
       final int current_id = _current_tab_id;
-      final bool is_current_loading = _is_rankings_loading ||
-          (_loading_tab_ids[current_id] == true && !_is_tab_data_ready(current_id));
+      final bool is_current_loading =
+          _is_rankings_loading ||
+          (_loading_tab_ids[current_id] == true &&
+              !_is_tab_data_ready(current_id));
 
       return Stack(
         children: <Widget>[
@@ -500,7 +549,9 @@ class _RecommendTabContentState extends State<RecommendTabContent>
                   margin: RecommendTabStyle.ranking_margin,
                   decoration: BoxDecoration(
                     color: panel_bg,
-                    borderRadius: BorderRadius.circular(RecommendTabStyle.ranking_border_radius),
+                    borderRadius: BorderRadius.circular(
+                      RecommendTabStyle.ranking_border_radius,
+                    ),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: SizedBox(
@@ -534,7 +585,9 @@ class _RecommendTabContentState extends State<RecommendTabContent>
                     is_dark: is_dark,
                   ),
                 ),
-                const SizedBox(height: RecommendTabStyle.recommend_bottom_spacing),
+                const SizedBox(
+                  height: RecommendTabStyle.recommend_bottom_spacing,
+                ),
               ],
             ),
           ),

@@ -4,6 +4,7 @@ import 'package:app/models/home_classification.dart';
 import 'package:app/models/popular_search_item.dart';
 import 'package:app/models/recommend_ranking_item.dart';
 import 'package:app/models/short_story_item.dart';
+import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/storage_util/index.dart';
 
 /// 首页全局数据仓库。
@@ -18,7 +19,8 @@ class HomeBannerStore extends GetxController {
   static const String _rankings_cache_key = 'home_rankings_cache';
 
   /// 推荐榜小说数据本地缓存键。
-  static const String _recommend_ranking_cache_key = 'home_recommend_ranking_cache';
+  static const String _recommend_ranking_cache_key =
+      'home_recommend_ranking_cache';
 
   /// 搜索栏关键词数据本地缓存键。
   static const String _search_list_cache_key = 'home_search_list_cache';
@@ -31,8 +33,7 @@ class HomeBannerStore extends GetxController {
       <HomeClassification>[].obs;
 
   /// 榜单分类列表。
-  final RxList<HomeClassification> rankings_list =
-      <HomeClassification>[].obs;
+  final RxList<HomeClassification> rankings_list = <HomeClassification>[].obs;
 
   /// 推荐榜小说列表。
   ///
@@ -63,8 +64,7 @@ class HomeBannerStore extends GetxController {
       <RecommendRankingItem>[].obs;
 
   /// 搜索栏轮播关键词列表。
-  final RxList<HomeClassification> search_list =
-      <HomeClassification>[].obs;
+  final RxList<HomeClassification> search_list = <HomeClassification>[].obs;
 
   /// 当前搜索栏轮播关键词索引。
   final RxInt _search_hint_index = 0.obs;
@@ -92,6 +92,11 @@ class HomeBannerStore extends GetxController {
 
   /// 是否已有本地缓存数据。
   bool get has_cached_data => _has_cached_data;
+
+  /// 当前语种对应的缓存键。
+  String _language_cache_key(String base_key) {
+    return '${base_key}_${LanguageChangeHandler.current_language_code}';
+  }
 
   /// 短篇小说列表数据。
   final RxList<ShortStoryItem> short_story_list = <ShortStoryItem>[].obs;
@@ -135,6 +140,7 @@ class HomeBannerStore extends GetxController {
   /// 接口返回的首页分类列表。
   void save_home_classification_list(List<HomeClassification> data) {
     home_classification_list.assignAll(data);
+    _has_cached_data = data.isNotEmpty;
     is_loading.value = false;
     _save_classification_list_to_cache(data);
   }
@@ -219,6 +225,27 @@ class HomeBannerStore extends GetxController {
     short_story_list.clear();
   }
 
+  /// 进入语种切换刷新态。
+  ///
+  /// 旧语种数据必须在 Locale 切换前统一失效，避免新旧语种同屏。
+  void begin_language_refresh() {
+    is_loading.value = true;
+    _has_cached_data = false;
+    home_classification_list.clear();
+    rankings_list.clear();
+    clear_all_ranking_data();
+    search_list.clear();
+    dislike_list.clear();
+    popular_searches.clear();
+    _search_hint_index.value = 0;
+    _search_cycle_timer?.cancel();
+  }
+
+  /// 完成语种配置刷新。
+  void finish_language_refresh() {
+    is_loading.value = false;
+  }
+
   /// 启动搜索栏关键词轮播定时器。
   void _restart_search_cycle_timer() {
     _search_cycle_timer?.cancel();
@@ -238,8 +265,9 @@ class HomeBannerStore extends GetxController {
   /// 后续接口数据到达后会覆盖缓存。
   Future<void> _load_cached_classification_list() async {
     try {
-      final List<dynamic>? cached_list =
-          StorageUtil.getList(_classification_cache_key);
+      final List<dynamic>? cached_list = StorageUtil.getList(
+        _language_cache_key(_classification_cache_key),
+      );
       if (cached_list != null && cached_list.isNotEmpty) {
         final List<HomeClassification> classification_list =
             HomeClassification.from_cache_list(cached_list);
@@ -256,9 +284,13 @@ class HomeBannerStore extends GetxController {
   /// 将首页分类列表保存到本地缓存。
   void _save_classification_list_to_cache(List<HomeClassification> data) {
     try {
-      final List<Map<String, dynamic>> json_list =
-          data.map((item) => item.to_json()).toList();
-      StorageUtil.saveList(_classification_cache_key, json_list);
+      final List<Map<String, dynamic>> json_list = data
+          .map((item) => item.to_json())
+          .toList();
+      StorageUtil.saveList(
+        _language_cache_key(_classification_cache_key),
+        json_list,
+      );
     } catch (_) {
       // 缓存写入失败时静默忽略。
     }
@@ -270,8 +302,9 @@ class HomeBannerStore extends GetxController {
   /// 后续接口数据到达后会覆盖缓存。
   Future<void> _load_cached_rankings_list() async {
     try {
-      final List<dynamic>? cached_list =
-          StorageUtil.getList(_rankings_cache_key);
+      final List<dynamic>? cached_list = StorageUtil.getList(
+        _language_cache_key(_rankings_cache_key),
+      );
       if (cached_list != null && cached_list.isNotEmpty) {
         final List<HomeClassification> rankings =
             HomeClassification.from_cache_list(cached_list);
@@ -287,9 +320,10 @@ class HomeBannerStore extends GetxController {
   /// 将榜单分类列表保存到本地缓存。
   void _save_rankings_list_to_cache(List<HomeClassification> data) {
     try {
-      final List<Map<String, dynamic>> json_list =
-          data.map((item) => item.to_json()).toList();
-      StorageUtil.saveList(_rankings_cache_key, json_list);
+      final List<Map<String, dynamic>> json_list = data
+          .map((item) => item.to_json())
+          .toList();
+      StorageUtil.saveList(_language_cache_key(_rankings_cache_key), json_list);
     } catch (_) {
       // 缓存写入失败时静默忽略。
     }
@@ -301,8 +335,9 @@ class HomeBannerStore extends GetxController {
   /// 后续接口数据到达后会覆盖缓存。
   Future<void> _load_cached_recommend_ranking_list() async {
     try {
-      final List<dynamic>? cached_list =
-          StorageUtil.getList(_recommend_ranking_cache_key);
+      final List<dynamic>? cached_list = StorageUtil.getList(
+        _language_cache_key(_recommend_ranking_cache_key),
+      );
       if (cached_list != null && cached_list.isNotEmpty) {
         final List<RecommendRankingItem> list =
             RecommendRankingItem.from_cache_list(cached_list);
@@ -318,9 +353,13 @@ class HomeBannerStore extends GetxController {
   /// 将推荐榜小说列表保存到本地缓存。
   void _save_recommend_ranking_list_to_cache(List<RecommendRankingItem> data) {
     try {
-      final List<Map<String, dynamic>> json_list =
-          data.map((item) => item.to_json()).toList();
-      StorageUtil.saveList(_recommend_ranking_cache_key, json_list);
+      final List<Map<String, dynamic>> json_list = data
+          .map((item) => item.to_json())
+          .toList();
+      StorageUtil.saveList(
+        _language_cache_key(_recommend_ranking_cache_key),
+        json_list,
+      );
     } catch (_) {
       // 缓存写入失败时静默忽略。
     }
@@ -332,8 +371,9 @@ class HomeBannerStore extends GetxController {
   /// 后续接口数据到达后会覆盖缓存。
   Future<void> _load_cached_search_list() async {
     try {
-      final List<dynamic>? cached_list =
-          StorageUtil.getList(_search_list_cache_key);
+      final List<dynamic>? cached_list = StorageUtil.getList(
+        _language_cache_key(_search_list_cache_key),
+      );
       if (cached_list != null && cached_list.isNotEmpty) {
         final List<HomeClassification> list =
             HomeClassification.from_cache_list(cached_list);
@@ -350,9 +390,13 @@ class HomeBannerStore extends GetxController {
   /// 将搜索栏关键词列表保存到本地缓存。
   void _save_search_list_to_cache(List<HomeClassification> data) {
     try {
-      final List<Map<String, dynamic>> json_list =
-          data.map((item) => item.to_json()).toList();
-      StorageUtil.saveList(_search_list_cache_key, json_list);
+      final List<Map<String, dynamic>> json_list = data
+          .map((item) => item.to_json())
+          .toList();
+      StorageUtil.saveList(
+        _language_cache_key(_search_list_cache_key),
+        json_list,
+      );
     } catch (_) {
       // 缓存写入失败时静默忽略。
     }

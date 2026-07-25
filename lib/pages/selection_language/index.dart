@@ -9,11 +9,9 @@ import 'package:app/config/color_config.dart';
 import 'package:app/models/language_info.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/language_store.dart';
-import 'package:app/stores/redis_request.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/router/router_back.dart';
-import 'package:app/util/storage_util/index.dart';
 
 import 'logic.dart';
 import 'style.dart';
@@ -75,23 +73,13 @@ class _SelectionLanguageState extends State<SelectionLanguage> {
     /// 记录一次语言切换日志，方便排查语种切换链路。
     logUtil(msg: '切换语种: $selectionCode');
 
-    /// 把选择结果持久化到本地并切换 locale。
-    final RedisRequestStore redisRequestStore = Get.find<RedisRequestStore>();
-    await StorageUtil.saveData(LanguageStore.language_key, selectionCode);
-    if (context.mounted) {
-      await context.setLocale(Locale(selectionCode));
-    }
-
-    // 触发语种变化处理（更新 FCM Token 语言代码等）。
-    await LanguageChangeHandler.onLanguageChanged(selectionCode);
+    /// 由全局协调器统一切换 Locale、刷新配置和页面内容。
+    await LanguageChangeHandler.change_language(context, selectionCode);
 
     if (!mounted) return;
 
-    /// 立即返回，不等待网络请求。
+    /// Locale 切换完成后立即返回，网络刷新继续在后台执行。
     routerBack(context);
-
-    /// 后台刷新 redis 数据，不阻塞导航。
-    redisRequestStore.fetch_redis_data(showTips: false);
   }
 
   @override
@@ -160,8 +148,9 @@ class _SelectionLanguageState extends State<SelectionLanguage> {
   /// 构建语言列表主体。
   Widget _build_language_list(double headerOverlayHeight) {
     return Obx(() {
-      final List<LanguageInfo> language_list =
-          languageStore.visible_language_list.toList();
+      final List<LanguageInfo> language_list = languageStore
+          .visible_language_list
+          .toList();
 
       return ListView.builder(
         padding: EdgeInsets.fromLTRB(

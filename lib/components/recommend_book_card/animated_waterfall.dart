@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:easy_localization/easy_localization.dart' as easy;
 
 import 'package:app/api/post_request.dart';
 import 'package:app/components/recommend_book_card/book_list_item.dart';
@@ -9,6 +10,7 @@ import 'package:app/components/recommend_book_card/style.dart' as card_style;
 import 'package:app/components/load_more_footer/index.dart';
 import 'package:app/models/recommend_ranking_item.dart';
 import 'package:app/stores/home_store.dart';
+import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/novel_navigation/index.dart';
 
 /// 推荐书籍瀑布流组件（带动画重排支持）。
@@ -65,6 +67,12 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
   /// 是否还有更多数据可加载。
   bool _has_more = true;
 
+  /// 语种刷新任务订阅。
+  late final LanguageRefreshSubscription _language_refresh_subscription;
+
+  /// 本组件请求版本，用于丢弃刷新前发出的旧响应。
+  int _request_generation = 0;
+
   /// 标签颜色池。
   static const List<Color> _tag_color_pool = <Color>[
     Color(0xFF2FBF9B),
@@ -82,24 +90,65 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
+    _language_refresh_subscription =
+        LanguageChangeHandler.register_refresh_task(
+          phase: LanguageRefreshPhase.content,
+          on_prepare: _prepare_language_refresh,
+          on_refresh: _refresh_for_language,
+        );
     _load_initial_data();
   }
 
   @override
   void dispose() {
+    _language_refresh_subscription.dispose();
     _shimmer_controller.dispose();
     super.dispose();
   }
 
+  /// Locale 切换前立即隐藏旧语种瀑布流并让旧请求失效。
+  void _prepare_language_refresh(LanguageRefreshContext refresh_context) {
+    _request_generation++;
+    _home_store.is_recommend_overlay_open.value = false;
+    if (!mounted) return;
+    setState(() {
+      _items.clear();
+      _removing_ids.clear();
+      _item_heights.clear();
+      _active_overlay_id = null;
+      _is_initial_loading = true;
+      _is_loading_more = false;
+      _has_more = true;
+    });
+  }
+
+  /// 基础配置刷新后重新请求当前语种瀑布流。
+  Future<void> _refresh_for_language(
+    LanguageRefreshContext refresh_context,
+  ) async {
+    if (!mounted || !refresh_context.is_current) return;
+    await _load_initial_data(language_revision: refresh_context.revision);
+  }
+
   /// 加载首屏数据。
-  Future<void> _load_initial_data() async {
+  Future<void> _load_initial_data({int? language_revision}) async {
+    final int generation = ++_request_generation;
+    final int revision =
+        language_revision ?? LanguageChangeHandler.current_revision;
     setState(() {
       _is_initial_loading = true;
+      _items.clear();
+      _item_heights.clear();
+      _has_more = true;
     });
 
     final List<BookListItem> items = await _fetch_recommend_list();
 
-    if (!mounted) return;
+    if (!mounted ||
+        generation != _request_generation ||
+        !LanguageChangeHandler.is_current_revision(revision)) {
+      return;
+    }
 
     setState(() {
       _items.addAll(items);
@@ -113,6 +162,8 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
   /// 当滚动到底部时由父组件调用，加载下一页数据并追加到列表。
   Future<void> load_more() async {
     if (_is_loading_more || !_has_more) return;
+    final int generation = _request_generation;
+    final int revision = LanguageChangeHandler.current_revision;
 
     setState(() {
       _is_loading_more = true;
@@ -128,7 +179,11 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
       no_ids: no_ids,
     );
 
-    if (!mounted) return;
+    if (!mounted ||
+        generation != _request_generation ||
+        !LanguageChangeHandler.is_current_revision(revision)) {
+      return;
+    }
 
     setState(() {
       _items.addAll(new_items);
@@ -184,7 +239,10 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
       // 封面左下角附加信息：评分或热度。
       String meta_text = '';
       if (item.score > 0) {
-        meta_text = '${item.score.toStringAsFixed(1)}分';
+        meta_text = easy.tr(
+          'home.book_rating',
+          namedArgs: <String, String>{'rating': item.score.toStringAsFixed(1)},
+        );
       }
 
       return BookListItem(
@@ -194,7 +252,9 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
         title: item.title,
         description: item.introduction,
         cover_url: item.cover_url,
-        cover_badge: item.publish_status == 2 ? '完结' : '',
+        cover_badge: item.publish_status == 2
+            ? easy.tr('bookshelf.tags.completed')
+            : '',
         cover_meta_text: meta_text,
         tag_list: tags,
         ad_image_url_list: const <String>[],

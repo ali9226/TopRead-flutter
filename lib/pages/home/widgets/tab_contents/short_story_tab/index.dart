@@ -18,6 +18,7 @@ import 'package:app/pages/home/widgets/tab_contents/short_story_tab/style.dart';
 import 'package:app/pages/home/widgets/tab_contents/short_story_tab/widgets/dislike_reason_sheet.dart';
 import 'package:app/pages/home/widgets/tab_contents/short_story_tab/widgets/short_story_card.dart';
 import 'package:app/pages/interest_preference/index.dart';
+import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/router/router_util.dart';
 
 /// 短篇 Tab 内容组件。
@@ -47,8 +48,11 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
   /// 正在请求点赞的小说 id 集合，用于显示 loading 并阻止重复点击。
   final Set<int> _like_loading_ids = <int>{};
 
-  /// 语种切换监听器，语种切换时清空本地短篇列表。
-  late Worker _language_worker;
+  /// 语种刷新任务订阅。
+  late final LanguageRefreshSubscription _language_refresh_subscription;
+
+  /// 本组件请求版本，用于丢弃语种切换前的旧响应。
+  int _request_generation = 0;
 
   static const double _load_more_trigger_distance = 300;
   static const int _skeleton_count = 5;
@@ -58,6 +62,12 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
     super.initState();
     _logic = ShortStoryTabLogic(context);
     _scroll_controller.addListener(_handle_scroll);
+    _language_refresh_subscription =
+        LanguageChangeHandler.register_refresh_task(
+          phase: LanguageRefreshPhase.content,
+          on_prepare: _prepare_language_refresh,
+          on_refresh: _refresh_for_language,
+        );
 
     /// 如果全局仓库已有数据，直接恢复，不重新请求。
     final HomeBannerStore home_store = Get.find<HomeBannerStore>();
@@ -66,32 +76,49 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
     } else {
       _load_initial_data();
     }
-
-    /// 监听全局加载状态，语种切换时 is_loading 变为 true，
-    /// 此时清空本地列表，避免展示旧语种内容。
-    _language_worker = ever(home_store.is_loading, (bool loading) {
-      if (loading) {
-        setState(() {
-          _display_list.clear();
-          _is_loading = true;
-          _has_more = true;
-        });
-      }
-    });
   }
 
   @override
   void dispose() {
-    _language_worker.dispose();
+    _language_refresh_subscription.dispose();
     _scroll_controller.removeListener(_handle_scroll);
     _scroll_controller.dispose();
     _category_scroll_controller.dispose();
     super.dispose();
   }
 
+  /// Locale 切换前清空旧语种内容并让旧请求失效。
+  void _prepare_language_refresh(LanguageRefreshContext refresh_context) {
+    _request_generation++;
+    if (!mounted) return;
+    setState(() {
+      _display_list.clear();
+      _is_loading = true;
+      _is_loading_more = false;
+      _has_more = true;
+    });
+  }
+
+  /// 基础配置刷新后请求新语种短篇内容。
+  Future<void> _refresh_for_language(
+    LanguageRefreshContext refresh_context,
+  ) async {
+    if (!mounted || !refresh_context.is_current) return;
+    await _load_initial_data(
+      force: true,
+      language_revision: refresh_context.revision,
+    );
+  }
+
   /// 加载首屏数据。
-  Future<void> _load_initial_data() async {
-    if (_is_loading) return;
+  Future<void> _load_initial_data({
+    bool force = false,
+    int? language_revision,
+  }) async {
+    if (_is_loading && !force) return;
+    final int generation = ++_request_generation;
+    final int revision =
+        language_revision ?? LanguageChangeHandler.current_revision;
 
     setState(() {
       _is_loading = true;
@@ -103,7 +130,11 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
       category_id: _logic.selected_category_id.value,
     );
 
-    if (!mounted) return;
+    if (!mounted ||
+        generation != _request_generation ||
+        !LanguageChangeHandler.is_current_revision(revision)) {
+      return;
+    }
 
     setState(() {
       _display_list.addAll(items);
@@ -138,6 +169,8 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
   /// 加载更多。
   Future<void> _try_load_more() async {
     if (_is_loading_more || _is_loading || !_has_more) return;
+    final int generation = _request_generation;
+    final int revision = LanguageChangeHandler.current_revision;
 
     setState(() {
       _is_loading_more = true;
@@ -152,7 +185,11 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
       category_id: _logic.selected_category_id.value,
     );
 
-    if (!mounted) return;
+    if (!mounted ||
+        generation != _request_generation ||
+        !LanguageChangeHandler.is_current_revision(revision)) {
+      return;
+    }
 
     setState(() {
       _display_list.addAll(new_items);
@@ -166,24 +203,7 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
   /// 清空当前列表展示骨架屏，重新请求首屏数据。
   Future<void> _on_refresh() async {
     if (_is_loading) return;
-
-    setState(() {
-      _is_loading = true;
-      _display_list.clear();
-      _has_more = true;
-    });
-
-    final List<ShortStoryItem> items = await _logic.fetch_short_story_list(
-      category_id: _logic.selected_category_id.value,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      _display_list.addAll(items);
-      _has_more = items.isNotEmpty;
-      _is_loading = false;
-    });
+    await _load_initial_data();
   }
 
   /// 分类切换回调。

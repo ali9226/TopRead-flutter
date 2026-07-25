@@ -53,6 +53,11 @@ void main() async {
   // TODO 初始化语种变化处理器
   await LanguageChangeHandler.init();
 
+  /// 获取并保存启动时最终使用的语种。
+  final String lang = await LanguageUtil.get_language();
+  await StorageUtil.saveData(LanguageStore.language_key, lang);
+  LanguageChangeHandler.sync_initial_language(lang);
+
   setWebUrlStrategy(); // TODO Web 优化：移除 hash 路由
 
   // TODO 注入全局状态
@@ -77,16 +82,26 @@ void main() async {
   Get.put(ShareStore());
   Get.put(MessageStore());
   Get.put(BookshelfStore());
+
+  /// TODO 注册全局语种基础配置刷新任务。
+  ///
+  /// 所有页面内容刷新都会等待 redis/get 完成，保证分类与内容使用同一语种。
+  LanguageChangeHandler.register_refresh_task(
+    phase: LanguageRefreshPhase.configuration,
+    on_prepare: (LanguageRefreshContext context) {
+      Get.find<HomeBannerStore>().begin_language_refresh();
+      Get.find<PreferenceStore>().begin_language_refresh();
+    },
+    on_refresh: (LanguageRefreshContext context) async {
+      await redisRequestStore.fetch_redis_data(showTips: false);
+    },
+  );
+
   // TODO 初始化主题
   await getThemeMode();
 
-  /// 获取本地保存的语种
-  final String lang = await LanguageUtil.get_language();
   final String fallback_language_code =
       LanguageUtil.get_fallback_language_code();
-
-  /// TODO 语种保存到本地
-  await StorageUtil.saveData(LanguageStore.language_key, lang);
 
   // 【临时修复】Flutter 3.44.2 框架内部 semantics 断言 bug（node.built is not true），
   // 用 ExcludeSemantics 跳过无障碍树构建来规避。不影响 release 模式。
