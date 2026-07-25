@@ -1,9 +1,12 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 
 import 'package:app/api/post_request.dart';
 import 'package:app/components/recommend_book_card/book_list_item.dart';
+import 'package:app/components/recommend_book_card/logic.dart';
 import 'package:app/components/recommend_book_card/style.dart';
 import 'package:app/components/recommend_book_card/index.dart';
 import 'package:app/components/recommend_book_card/style.dart' as card_style;
@@ -101,6 +104,7 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
 
   @override
   void dispose() {
+    _request_generation++;
     _language_refresh_subscription.dispose();
     _shimmer_controller.dispose();
     super.dispose();
@@ -161,7 +165,7 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
   ///
   /// 当滚动到底部时由父组件调用，加载下一页数据并追加到列表。
   Future<void> load_more() async {
-    if (_is_loading_more || !_has_more) return;
+    if (_is_initial_loading || _is_loading_more || !_has_more) return;
     final int generation = _request_generation;
     final int revision = LanguageChangeHandler.current_revision;
 
@@ -185,9 +189,15 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
       return;
     }
 
+    final List<BookListItem> unique_new_items =
+        RecommendBookCardLogic.exclude_duplicate_items(
+          candidates: new_items,
+          existing_items: _items,
+        );
+
     setState(() {
-      _items.addAll(new_items);
-      _has_more = new_items.isNotEmpty;
+      _items.addAll(unique_new_items);
+      _has_more = unique_new_items.isNotEmpty;
       _is_loading_more = false;
     });
   }
@@ -211,7 +221,9 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
         return <BookListItem>[];
       }
 
-      return _map_to_book_list_items(results.content!);
+      return RecommendBookCardLogic.exclude_duplicate_items(
+        candidates: _map_to_book_list_items(results.content!),
+      );
     } catch (_) {
       return <BookListItem>[];
     }
