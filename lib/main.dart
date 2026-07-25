@@ -23,6 +23,7 @@ import 'package:app/stores/short_story_catalog_store.dart';
 import 'package:app/stores/preference_store.dart';
 import 'package:app/stores/share_store.dart';
 import 'package:app/stores/message_store.dart';
+import 'package:app/stores/bookshelf_store.dart';
 import 'package:app/util/router/web_url_strategy.dart';
 import 'package:app/util/device/get_theme_mode.dart';
 import 'package:get_storage/get_storage.dart';
@@ -77,6 +78,7 @@ void main() async {
   Get.put(PreferenceStore());
   Get.put(ShareStore());
   Get.put(MessageStore());
+  Get.put(BookshelfStore());
   // TODO 初始化主题
   await getThemeMode();
 

@@ -1,5 +1,8 @@
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
+import 'package:app/components/fixed_bottom_navigation/style.dart' as fixed_nav_style;
+import 'package:app/components/floating_back_to_top/index.dart';
+import 'package:app/components/floating_back_to_top/style.dart' as floating_back_to_top_style;
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/bookshelf/logic.dart';
@@ -72,6 +75,9 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
   /// 当前是否处于加载更多。
   bool _is_loading_more = false;
 
+  /// 返回顶部按钮是否可见。
+  bool _is_back_to_top_visible = false;
+
   @override
   void initState() {
     super.initState();
@@ -105,66 +111,100 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
             Style.book_meta_top_spacing +
             18;
 
-        return RefreshIndicator(
-          onRefresh: _handle_refresh,
-          child: CustomScrollView(
-            controller: _scroll_controller,
-            physics: const AlwaysScrollableScrollPhysics(
-              parent: BouncingScrollPhysics(),
-            ),
-            slivers: <Widget>[
-              if (widget.is_initial_loading)
-                SliverGrid(
-                  delegate: SliverChildBuilderDelegate(
-                    (BuildContext context, int index) {
-                      return _BookCardSkeleton(is_dark: widget.is_dark);
-                    },
-                    childCount: Style.page_size,
-                  ),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: grid_count,
-                    crossAxisSpacing: Style.grid_cross_spacing,
-                    mainAxisSpacing: Style.grid_main_spacing,
-                    mainAxisExtent: item_height,
-                  ),
-                )
-              else if (widget.items.isEmpty)
-                SliverToBoxAdapter(
-                  child: _build_empty_state(),
-                )
-              else ...<Widget>[
-                SliverGrid(
-                  delegate: SliverChildBuilderDelegate(
-                    (BuildContext context, int index) {
-                      final BookshelfBookItem book_item = widget.items[index];
-
-                      return BookshelfBookCard(
-                        book_item: book_item,
-                        is_dark: widget.is_dark,
-                        on_tap: () => _navigate_to_read(book_item),
-                        on_long_press: () => _show_action_dialog(book_item),
-                      );
-                    },
-                    childCount: widget.items.length,
-                  ),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: grid_count,
-                    crossAxisSpacing: Style.grid_cross_spacing,
-                    mainAxisSpacing: Style.grid_main_spacing,
-                    mainAxisExtent: item_height,
-                  ),
+        return Stack(
+          children: <Widget>[
+            RefreshIndicator(
+              onRefresh: _handle_refresh,
+              child: CustomScrollView(
+                controller: _scroll_controller,
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
                 ),
-                SliverToBoxAdapter(child: _build_load_more_section()),
-              ],
-            ],
-          ),
+                slivers: <Widget>[
+                  if (widget.is_initial_loading)
+                    SliverGrid(
+                      delegate: SliverChildBuilderDelegate(
+                        (BuildContext context, int index) {
+                          return _BookCardSkeleton(is_dark: widget.is_dark);
+                        },
+                        childCount: Style.page_size,
+                      ),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: grid_count,
+                        crossAxisSpacing: Style.grid_cross_spacing,
+                        mainAxisSpacing: Style.grid_main_spacing,
+                        mainAxisExtent: item_height,
+                      ),
+                    )
+                  else if (widget.items.isEmpty)
+                    SliverToBoxAdapter(
+                      child: _build_empty_state(),
+                    )
+                  else ...<Widget>[
+                    SliverGrid(
+                      delegate: SliverChildBuilderDelegate(
+                        (BuildContext context, int index) {
+                          final BookshelfBookItem book_item = widget.items[index];
+
+                          return BookshelfBookCard(
+                            book_item: book_item,
+                            is_dark: widget.is_dark,
+                            on_tap: () => _navigate_to_read(book_item),
+                            on_long_press: () => _show_action_dialog(book_item),
+                          );
+                        },
+                        childCount: widget.items.length,
+                      ),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: grid_count,
+                        crossAxisSpacing: Style.grid_cross_spacing,
+                        mainAxisSpacing: Style.grid_main_spacing,
+                        mainAxisExtent: item_height,
+                      ),
+                    ),
+                    SliverToBoxAdapter(child: _build_load_more_section()),
+                  ],
+                ],
+              ),
+            ),
+            // 返回顶部按钮
+            FloatingBackToTop(
+              show: _is_back_to_top_visible,
+              isDark: widget.is_dark,
+              onTap: _scroll_to_top,
+              right: floating_back_to_top_style.FloatingBackToTopStyle.right,
+              visibleBottom:
+                  fixed_nav_style.Style.bar_height +
+                  floating_back_to_top_style
+                      .FloatingBackToTopStyle
+                      .offset_from_bottom_nav +
+                  MediaQuery.paddingOf(context).bottom,
+              hiddenBottom:
+                  fixed_nav_style.Style.bar_height +
+                  floating_back_to_top_style
+                      .FloatingBackToTopStyle
+                      .hidden_offset +
+                  MediaQuery.paddingOf(context).bottom,
+            ),
+          ],
         );
       },
     );
   }
 
-  /// 处理滚动事件，触发加载更多。
+  /// 处理滚动事件：控制返回顶部按钮显隐、触发加载更多。
   void _handle_scroll() {
+    // 返回顶部按钮显隐。
+    final bool should_show_back_to_top = _scroll_controller.hasClients &&
+        _scroll_controller.offset > Style.back_to_top_visible_offset;
+
+    if (_is_back_to_top_visible != should_show_back_to_top) {
+      setState(() {
+        _is_back_to_top_visible = should_show_back_to_top;
+      });
+    }
+
+    // 加载更多。
     if (_is_loading_more || !widget.has_more) return;
 
     if (_scroll_controller.position.pixels >=
@@ -172,6 +212,17 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
             Style.load_more_auto_trigger_distance) {
       _load_more_data();
     }
+  }
+
+  /// 平滑滚动到顶部。
+  void _scroll_to_top() {
+    if (!_scroll_controller.hasClients) return;
+
+    _scroll_controller.animateTo(
+      0,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   /// 加载更多数据。

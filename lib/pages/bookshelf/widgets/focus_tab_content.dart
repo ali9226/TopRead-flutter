@@ -1,15 +1,21 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:app/api/bookshelf.dart';
+import 'package:app/components/fixed_bottom_navigation/style.dart' as fixed_nav_style;
+import 'package:app/components/floating_back_to_top/index.dart';
+import 'package:app/components/floating_back_to_top/style.dart' as floating_back_to_top_style;
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/bookshelf/style.dart';
+import 'package:app/stores/bookshelf_store.dart';
 import 'package:app/util/dialog/show_message.dart';
 
 /// 关注 Tab 内容。
 ///
 /// 展示用户关注的作者列表，采用卡片网格布局展示作者信息。
+/// 数据由 [BookshelfStore] 统一管理，切换 Tab 时不会丢失。
 class FocusTabContent extends StatefulWidget {
   /// 当前 Tab 的强调色。
   final Color accent_color;
@@ -27,33 +33,28 @@ class FocusTabContent extends StatefulWidget {
   State<FocusTabContent> createState() => _FocusTabContentState();
 }
 
-class _FocusTabContentState extends State<FocusTabContent> {
+class _FocusTabContentState extends State<FocusTabContent>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   /// 内容滚动控制器。
   final ScrollController _scroll_controller = ScrollController();
 
-  /// 当前可见数据列表。
-  List<FocusAuthorItem> _visible_list = <FocusAuthorItem>[];
-
-  /// 当前是否处于首屏加载。
-  bool _is_initial_loading = true;
+  /// 书架数据仓库。
+  final BookshelfStore _store = Get.find<BookshelfStore>();
 
   /// 当前是否处于加载更多。
   bool _is_loading_more = false;
 
-  /// 当前页码。
-  int _current_page = 1;
-
-  /// 是否还有更多数据。
-  bool _has_more = true;
-
-  /// 每页数量。
-  static const int _page_size = 20;
+  /// 返回顶部按钮是否可见。
+  bool _is_back_to_top_visible = false;
 
   @override
   void initState() {
     super.initState();
     _scroll_controller.addListener(_handle_scroll);
-    _load_initial_data();
+    _store.load_focus_if_needed();
   }
 
   @override
@@ -65,103 +66,115 @@ class _FocusTabContentState extends State<FocusTabContent> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: _handle_refresh,
-      child: CustomScrollView(
-        controller: _scroll_controller,
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        slivers: <Widget>[
-          if (_is_initial_loading)
-            SliverPadding(
-              padding: const EdgeInsets.only(top: 4),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (BuildContext context, int index) {
-                    return _AuthorCardSkeleton(is_dark: widget.is_dark);
-                  },
-                  childCount: 6,
-                ),
+    super.build(context);
+
+    return Obx(() {
+      final bool is_initial_loading = _store.focus_is_loading.value;
+      final List<FocusAuthorItem> visible_list = _store.focus_list.toList();
+      final bool has_more = _store.focus_has_more.value;
+
+      return Stack(
+        children: <Widget>[
+          RefreshIndicator(
+            onRefresh: _handle_refresh,
+            child: CustomScrollView(
+              controller: _scroll_controller,
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
               ),
-            )
-          else if (_visible_list.isEmpty)
-            SliverToBoxAdapter(
-              child: _build_empty_state(),
-            )
-          else ...<Widget>[
-            SliverPadding(
-              padding: const EdgeInsets.only(top: 4),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (BuildContext context, int index) {
-                    final FocusAuthorItem author_item = _visible_list[index];
-                    return _FocusAuthorCard(
-                      author_item: author_item,
-                      is_dark: widget.is_dark,
-                      on_unfollow: () => _show_unfollow_dialog(author_item),
-                    );
-                  },
-                  childCount: _visible_list.length,
-                ),
-              ),
+              slivers: <Widget>[
+                if (is_initial_loading)
+                  SliverPadding(
+                    padding: const EdgeInsets.only(top: 4),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (BuildContext context, int index) {
+                          return _AuthorCardSkeleton(is_dark: widget.is_dark);
+                        },
+                        childCount: 6,
+                      ),
+                    ),
+                  )
+                else if (visible_list.isEmpty)
+                  SliverToBoxAdapter(
+                    child: _build_empty_state(),
+                  )
+                else ...<Widget>[
+                  SliverPadding(
+                    padding: const EdgeInsets.only(top: 4),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (BuildContext context, int index) {
+                          final FocusAuthorItem author_item = visible_list[index];
+                          return _FocusAuthorCard(
+                            author_item: author_item,
+                            is_dark: widget.is_dark,
+                            on_unfollow: () => _show_unfollow_dialog(author_item),
+                          );
+                        },
+                        childCount: visible_list.length,
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _build_load_more_section(has_more: has_more),
+                  ),
+                ],
+              ],
             ),
-            SliverToBoxAdapter(child: _build_load_more_section()),
-          ],
+          ),
+          // 返回顶部按钮
+          FloatingBackToTop(
+            show: _is_back_to_top_visible,
+            isDark: widget.is_dark,
+            onTap: _scroll_to_top,
+            right: floating_back_to_top_style.FloatingBackToTopStyle.right,
+            visibleBottom:
+                fixed_nav_style.Style.bar_height +
+                floating_back_to_top_style
+                    .FloatingBackToTopStyle
+                    .offset_from_bottom_nav +
+                MediaQuery.paddingOf(context).bottom,
+            hiddenBottom:
+                fixed_nav_style.Style.bar_height +
+                floating_back_to_top_style
+                    .FloatingBackToTopStyle
+                    .hidden_offset +
+                MediaQuery.paddingOf(context).bottom,
+          ),
         ],
-      ),
-    );
-  }
-
-  /// 首屏加载数据。
-  Future<void> _load_initial_data() async {
-    setState(() {
-      _is_initial_loading = true;
-      _current_page = 1;
-    });
-
-    final result = await inquire_focus_author_list(
-      page: 1,
-      page_size: _page_size,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      if (result != null) {
-        _visible_list = result.list;
-        _has_more = result.list.length >= _page_size;
-      } else {
-        _visible_list = [];
-        _has_more = false;
-      }
-      _is_initial_loading = false;
+      );
     });
   }
 
   /// 下拉刷新数据。
   Future<void> _handle_refresh() async {
-    _current_page = 1;
-
-    final result = await inquire_focus_author_list(
-      page: 1,
-      page_size: _page_size,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      if (result != null) {
-        _visible_list = result.list;
-        _has_more = result.list.length >= _page_size;
-      }
-      _is_loading_more = false;
-    });
+    await _store.refresh_focus();
+    if (mounted) {
+      setState(() {
+        _is_loading_more = false;
+      });
+    }
   }
 
-  /// 处理滚动事件。
+  /// 处理滚动事件：控制返回顶部按钮显隐、触发加载更多。
   void _handle_scroll() {
-    if (_is_initial_loading || _is_loading_more || !_has_more) return;
+    // 返回顶部按钮显隐。
+    final bool should_show_back_to_top = _scroll_controller.hasClients &&
+        _scroll_controller.offset > Style.back_to_top_visible_offset;
+
+    if (_is_back_to_top_visible != should_show_back_to_top) {
+      setState(() {
+        _is_back_to_top_visible = should_show_back_to_top;
+      });
+    }
+
+    // 加载更多。
+    if (_store.focus_is_loading.value ||
+        _is_loading_more ||
+        !_store.focus_has_more.value) {
+      return;
+    }
 
     if (_scroll_controller.position.pixels >=
         _scroll_controller.position.maxScrollExtent -
@@ -170,31 +183,32 @@ class _FocusTabContentState extends State<FocusTabContent> {
     }
   }
 
+  /// 平滑滚动到顶部。
+  void _scroll_to_top() {
+    if (!_scroll_controller.hasClients) return;
+
+    _scroll_controller.animateTo(
+      0,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   /// 加载更多数据。
   Future<void> _load_more_data() async {
-    if (_is_loading_more || !_has_more) return;
+    if (_is_loading_more || !_store.focus_has_more.value) return;
 
     setState(() {
       _is_loading_more = true;
     });
 
-    _current_page++;
-    final result = await inquire_focus_author_list(
-      page: _current_page,
-      page_size: _page_size,
-    );
+    await _store.load_more_focus();
 
-    if (!mounted) return;
-
-    setState(() {
-      if (result != null && result.list.isNotEmpty) {
-        _visible_list.addAll(result.list);
-        _has_more = result.list.length >= _page_size;
-      } else {
-        _has_more = false;
-      }
-      _is_loading_more = false;
-    });
+    if (mounted) {
+      setState(() {
+        _is_loading_more = false;
+      });
+    }
   }
 
   /// 构建空状态。
@@ -238,14 +252,14 @@ class _FocusTabContentState extends State<FocusTabContent> {
   }
 
   /// 构建加载更多区域。
-  Widget _build_load_more_section() {
+  Widget _build_load_more_section({required bool has_more}) {
     final Color text_color = widget.is_dark
         ? Colors.white.withValues(alpha: 0.8)
         : const Color(0xFF616775);
 
     final String text_key = _is_loading_more
         ? 'bookshelf.load_more.loading'
-        : (_has_more
+        : (has_more
             ? 'bookshelf.load_more.button'
             : 'bookshelf.load_more.no_more');
 
@@ -279,11 +293,7 @@ class _FocusTabContentState extends State<FocusTabContent> {
       rightButtonColor: ColorConstants.dangerColor,
       onRightPressed: () async {
         if (!mounted) return;
-        setState(() {
-          _visible_list = _visible_list
-              .where((FocusAuthorItem item) => item.id != author_item.id)
-              .toList();
-        });
+        _store.remove_focus_item(author_item.id);
       },
     );
   }
@@ -502,7 +512,7 @@ class _FocusAuthorCard extends StatelessWidget {
       [const Color(0xFF6B8CFF), const Color(0xFF9B6BFF)],
       [const Color(0xFFFF6B8C), const Color(0xFFFF9B6B)],
       [const Color(0xFF6BCCAA), const Color(0xFF6BAAEE)],
-      [const Color(0xFFCC8B6B), const Color(0xFFCC6B8B)],
+      [const Color(0xCC8B6B), const Color(0xCC6B8B)],
       [const Color(0xFF8B6BCC), const Color(0xFF6BCCCB)],
       [const Color(0xFFEE8B6B), const Color(0xFFEECB6B)],
     ];
