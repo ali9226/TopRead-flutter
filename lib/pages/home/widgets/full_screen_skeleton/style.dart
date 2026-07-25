@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:app/config/layout_config.dart';
 
 /// 首页全屏骨架屏样式常量。
 ///
@@ -28,6 +27,9 @@ class FullScreenSkeletonStyle {
   /// Tab栏骨架项圆角。
   static const double tab_item_radius = 6.0;
 
+  /// 相邻 Tab 骨架错开的动画进度。
+  static const double tab_item_animation_delay = 0.1;
+
   /// Tab栏骨架项宽度列表（模拟不同标题长度）。
   static const List<double> tab_item_width_list = <double>[
     36.0,
@@ -37,63 +39,6 @@ class FullScreenSkeletonStyle {
     40.0,
     56.0,
   ];
-
-  /// 内容区域左右内边距（与推荐页面的 ranking_margin 一致）。
-  static const double content_horizontal_padding = 12.0;
-
-  /// 榜单区域高度（与推荐页面的榜单区域一致）。
-  /// tab_bar(56) + list_padding_top(5) + item_height(71) * 4 = 345
-  static const double ranking_section_height = 345.0;
-
-  /// 榜单区域圆角（与 LayoutConfig.card_radius 一致）。
-  static const double ranking_section_radius = LayoutConfig.card_radius;
-
-  /// 榜单 Tab 栏骨架高度（与 RankingSectionStyle.tab_bar_height 一致）。
-  /// 20顶部间距 + 20骨架条高度 = 40
-  static const double ranking_tab_bar_height = 40.0;
-
-  /// 榜单列表项高度（与 RankingSectionStyle.item_height 一致）。
-  static const double ranking_item_height = 71.0;
-
-  /// 榜单列表项间距（与 RankingSectionStyle.row_gap 一致）。
-  static const double ranking_item_spacing = 0.0;
-
-  /// 榜单列表行数（与 RankingSectionStyle.rows_per_column 一致）。
-  static const int ranking_row_count = 4;
-
-  /// 榜单与推荐区域间距（与 RecommendTabStyle.recommend_top_spacing 一致）。
-  static const double section_spacing = 10.0;
-
-  /// 推荐卡片高度（模拟不同高度的瀑布流卡片）。
-  static const List<double> card_height_list = <double>[
-    200.0,
-    240.0,
-    180.0,
-    220.0,
-    190.0,
-    230.0,
-  ];
-
-  /// 推荐卡片圆角（与 LayoutConfig.card_radius 一致）。
-  static const double card_radius = LayoutConfig.card_radius;
-
-  /// 推荐卡片间距（与 RecommendTabStyle.card_spacing 一致）。
-  static const double card_spacing = 12.0;
-
-  /// 推荐卡片标题骨架高度。
-  static const double card_title_height = 14.0;
-
-  /// 推荐卡片标题骨架圆角。
-  static const double card_title_radius = 4.0;
-
-  /// 推荐卡片副标题骨架高度。
-  static const double card_subtitle_height = 10.0;
-
-  /// 推荐卡片副标题骨架圆角。
-  static const double card_subtitle_radius = 3.0;
-
-  /// 推荐卡片底部内边距。
-  static const double card_bottom_padding = 8.0;
 
   /// 骨架屏浅色模式底色。
   static const Color light_base_color = Color(0xFFEEEEEE);
@@ -118,13 +63,4 @@ class FullScreenSkeletonStyle {
 
   /// 骨架屏深色模式面板背景色。
   static const Color dark_panel_color = Color(0xFF171C28);
-
-  /// 骨架屏渐变 stops。
-  static const List<double> gradient_stops = <double>[
-    0.0,
-    0.35,
-    0.5,
-    0.65,
-    1.0,
-  ];
 }

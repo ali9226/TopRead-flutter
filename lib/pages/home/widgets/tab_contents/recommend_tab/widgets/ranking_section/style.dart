@@ -90,6 +90,9 @@ class RankingSectionStyle {
   /// 单个书籍项的高度（封面 + 底部间距）。
   static const double item_height = cover_height + 11;
 
+  /// 榜单内容区域为了对齐真实列表保留的额外高度。
+  static const double content_height_adjustment = 5;
+
   /// 内容区域左右内边距。
   static const double content_padding_horizontal = 10;
 
@@ -101,6 +104,19 @@ class RankingSectionStyle {
 
   /// 榜单底部间距。
   static const double ranking_bottom_spacing = 0;
+
+  /// 榜单面板固定高度。
+  ///
+  /// 骨架屏和真实内容共同使用该高度，避免加载状态切换时发生跳动。
+  static const double section_fixed_height =
+      tab_bar_height +
+      rows_per_column * item_height +
+      (rows_per_column - 1) * row_gap +
+      content_height_adjustment +
+      view_more_top_spacing +
+      view_more_content_height +
+      view_more_bottom_spacing +
+      ranking_bottom_spacing;
 
   // ---- 书籍项样式 ----
 
@@ -185,4 +201,71 @@ class RankingSectionStyle {
 
   /// "查看更多"下划线与文字间距。
   static const double view_more_underline_gap = 2;
+
+  // ---- 骨架屏样式 ----
+
+  /// 骨架流光动画时长。
+  static const Duration skeleton_animation_duration = Duration(
+    milliseconds: 1200,
+  );
+
+  /// 榜单 Tab 骨架数量。
+  static const int skeleton_tab_item_count = 5;
+
+  /// 榜单 Tab 骨架基础宽度。
+  static const double skeleton_tab_item_base_width = 40;
+
+  /// 榜单 Tab 骨架宽度变化数量。
+  static const int skeleton_tab_item_width_variants = 3;
+
+  /// 榜单 Tab 骨架相邻宽度差。
+  static const double skeleton_tab_item_width_step = 8;
+
+  /// 榜单 Tab 骨架高度。
+  static const double skeleton_tab_item_height = 12;
+
+  /// 标题骨架基础宽度。
+  static const double skeleton_title_base_width = 100;
+
+  /// 标题骨架宽度变化数量。
+  static const int skeleton_title_width_variants = 3;
+
+  /// 标题骨架相邻宽度差。
+  static const double skeleton_title_width_step = 20;
+
+  /// 标题骨架高度。
+  static const double skeleton_title_height = 12;
+
+  /// 分类与热度骨架基础宽度。
+  static const double skeleton_metadata_base_width = 60;
+
+  /// 分类与热度骨架宽度变化数量。
+  static const int skeleton_metadata_width_variants = 2;
+
+  /// 分类与热度骨架相邻宽度差。
+  static const double skeleton_metadata_width_step = 15;
+
+  /// 分类与热度骨架高度。
+  static const double skeleton_metadata_height = 10;
+
+  /// 标题与分类骨架之间的间距。
+  static const double skeleton_text_line_spacing = 6;
+
+  /// 日间主题骨架底色。
+  static const Color skeleton_light_color = Color(0x269E9E9E);
+
+  /// 夜间主题骨架底色。
+  static const Color skeleton_dark_color = Color(0x14FFFFFF);
+
+  /// 日间主题流光底色。
+  static const Color skeleton_light_shimmer_base_color = Color(0x1A9E9E9E);
+
+  /// 日间主题流光高亮色。
+  static const Color skeleton_light_shimmer_highlight_color = Color(0x409E9E9E);
+
+  /// 夜间主题流光底色。
+  static const Color skeleton_dark_shimmer_base_color = Color(0x0DFFFFFF);
+
+  /// 夜间主题流光高亮色。
+  static const Color skeleton_dark_shimmer_highlight_color = Color(0x1FFFFFFF);
 }

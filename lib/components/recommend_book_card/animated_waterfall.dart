@@ -10,6 +10,7 @@ import 'package:app/components/recommend_book_card/logic.dart';
 import 'package:app/components/recommend_book_card/style.dart';
 import 'package:app/components/recommend_book_card/index.dart';
 import 'package:app/components/recommend_book_card/style.dart' as card_style;
+import 'package:app/components/recommend_book_card/widgets/recommend_waterfall_skeleton.dart';
 import 'package:app/components/load_more_footer/index.dart';
 import 'package:app/models/recommend_ranking_item.dart';
 import 'package:app/stores/home_store.dart';
@@ -35,11 +36,8 @@ class AnimatedRecommendWaterfall extends StatefulWidget {
       AnimatedRecommendWaterfallState();
 }
 
-class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
-    with SingleTickerProviderStateMixin {
-  /// 骨架屏动画控制器。
-  late AnimationController _shimmer_controller;
-
+class AnimatedRecommendWaterfallState
+    extends State<AnimatedRecommendWaterfall> {
   /// 所有书籍数据。
   final List<BookListItem> _items = <BookListItem>[];
 
@@ -89,10 +87,6 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
   @override
   void initState() {
     super.initState();
-    _shimmer_controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
     _language_refresh_subscription =
         LanguageChangeHandler.register_refresh_task(
           phase: LanguageRefreshPhase.content,
@@ -106,7 +100,6 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
   void dispose() {
     _request_generation++;
     _language_refresh_subscription.dispose();
-    _shimmer_controller.dispose();
     super.dispose();
   }
 
@@ -393,7 +386,7 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
   Widget build(BuildContext context) {
     // 首屏加载中时展示骨架屏。
     if (_is_initial_loading) {
-      return _build_skeleton();
+      return RecommendWaterfallSkeleton(is_dark: widget.is_dark);
     }
 
     return LayoutBuilder(
@@ -494,258 +487,6 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
     );
   }
 
-  /// 构建首屏骨架屏。
-  ///
-  /// 布局与实际 RecommendBookCard 一致：封面 + 标题 + 简介 + 标签。
-  Widget _build_skeleton() {
-    final Color base_color = widget.is_dark
-        ? const Color(0xFF252836)
-        : const Color(0xFFF0F1F5);
-    final Color highlight_color = widget.is_dark
-        ? const Color(0xFF2F3346)
-        : const Color(0xFFF8F8F8);
-
-    /// 骨架卡片数据：左列/右列交替，模拟不同封面高度。
-    final List<_SkeletonCardData> left_cards = <_SkeletonCardData>[
-      _SkeletonCardData(
-        cover_height: RecommendBookCardStyle.skeleton_cover_standard_height,
-        has_description: true,
-        tag_count: 2,
-      ),
-      _SkeletonCardData(
-        cover_height: RecommendBookCardStyle.skeleton_cover_short_height,
-        has_description: true,
-        tag_count: 1,
-      ),
-      _SkeletonCardData(
-        cover_height: RecommendBookCardStyle.skeleton_cover_tall_height,
-        has_description: false,
-        tag_count: 0,
-      ),
-    ];
-    final List<_SkeletonCardData> right_cards = <_SkeletonCardData>[
-      _SkeletonCardData(
-        cover_height: RecommendBookCardStyle.skeleton_cover_short_height,
-        has_description: true,
-        tag_count: 1,
-      ),
-      _SkeletonCardData(
-        cover_height: RecommendBookCardStyle.skeleton_cover_tall_height,
-        has_description: true,
-        tag_count: 2,
-      ),
-      _SkeletonCardData(
-        cover_height: RecommendBookCardStyle.skeleton_cover_standard_height,
-        has_description: false,
-        tag_count: 1,
-      ),
-    ];
-
-    return AnimatedBuilder(
-      animation: _shimmer_controller,
-      builder: (BuildContext context, Widget? child) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: List<Widget>.generate(3, (int row_index) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: row_index < 2 ? RecommendBookCardStyle.item_spacing : 0,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  // 左列骨架卡片
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        right: RecommendBookCardStyle.column_spacing / 2,
-                      ),
-                      child: _build_skeleton_card(
-                        data: left_cards[row_index],
-                        base_color: base_color,
-                        highlight_color: highlight_color,
-                        delay: row_index * 0.15,
-                      ),
-                    ),
-                  ),
-                  // 右列骨架卡片
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        left: RecommendBookCardStyle.column_spacing / 2,
-                      ),
-                      child: _build_skeleton_card(
-                        data: right_cards[row_index],
-                        base_color: base_color,
-                        highlight_color: highlight_color,
-                        delay: 0.08 + row_index * 0.15,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        );
-      },
-    );
-  }
-
-  /// 构建单张骨架卡片。
-  ///
-  /// 模拟 RecommendBookCard 的布局：封面 + 标题 + 简介 + 标签。
-  Widget _build_skeleton_card({
-    required _SkeletonCardData data,
-    required Color base_color,
-    required Color highlight_color,
-    double delay = 0,
-  }) {
-    final double animation_value = _shimmer_controller.value;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: widget.is_dark
-            ? RecommendBookCardStyle.card_dark_bg
-            : RecommendBookCardStyle.card_light_bg,
-        borderRadius: BorderRadius.circular(RecommendBookCardStyle.card_radius),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          // 封面骨架
-          _build_skeleton_bar(
-            width: double.infinity,
-            height: data.cover_height,
-            radius: 0,
-            base_color: base_color,
-            highlight_color: highlight_color,
-            animation_value: animation_value,
-            delay: delay,
-          ),
-          // 文字区域骨架（与实际卡片 content_padding 一致）
-          Padding(
-            padding: RecommendBookCardStyle.content_padding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // 标题骨架（2行）
-                _build_skeleton_bar(
-                  width: double.infinity,
-                  height:
-                      RecommendBookCardStyle.title_font_size *
-                      RecommendBookCardStyle.title_height,
-                  radius: 4,
-                  base_color: base_color,
-                  highlight_color: highlight_color,
-                  animation_value: animation_value,
-                  delay: delay + 0.05,
-                ),
-                const SizedBox(height: 4),
-                _build_skeleton_bar(
-                  width: 80,
-                  height:
-                      RecommendBookCardStyle.title_font_size *
-                      RecommendBookCardStyle.title_height,
-                  radius: 4,
-                  base_color: base_color,
-                  highlight_color: highlight_color,
-                  animation_value: animation_value,
-                  delay: delay + 0.08,
-                ),
-                // 简介骨架
-                if (data.has_description) ...<Widget>[
-                  const SizedBox(
-                    height: RecommendBookCardStyle.description_top_spacing,
-                  ),
-                  _build_skeleton_bar(
-                    width: double.infinity,
-                    height:
-                        RecommendBookCardStyle.description_font_size *
-                        RecommendBookCardStyle.description_height,
-                    radius: 3,
-                    base_color: base_color,
-                    highlight_color: highlight_color,
-                    animation_value: animation_value,
-                    delay: delay + 0.11,
-                  ),
-                  const SizedBox(height: 3),
-                  _build_skeleton_bar(
-                    width: 100,
-                    height:
-                        RecommendBookCardStyle.description_font_size *
-                        RecommendBookCardStyle.description_height,
-                    radius: 3,
-                    base_color: base_color,
-                    highlight_color: highlight_color,
-                    animation_value: animation_value,
-                    delay: delay + 0.14,
-                  ),
-                ],
-                // 标签骨架
-                if (data.tag_count > 0) ...<Widget>[
-                  const SizedBox(
-                    height: RecommendBookCardStyle.tag_top_spacing,
-                  ),
-                  Row(
-                    children: List<Widget>.generate(data.tag_count, (int i) {
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          right: i < data.tag_count - 1
-                              ? RecommendBookCardStyle.tag_spacing
-                              : 0,
-                        ),
-                        child: _build_skeleton_bar(
-                          width: 44,
-                          height:
-                              RecommendBookCardStyle.tag_font_size * 2 +
-                              8, // padding top+bottom
-                          radius: RecommendBookCardStyle.tag_radius,
-                          base_color: base_color,
-                          highlight_color: highlight_color,
-                          animation_value: animation_value,
-                          delay: delay + 0.17 + i * 0.05,
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 构建骨架条。
-  ///
-  /// 通用方法，用于创建带有流动闪光效果的骨架条。
-  Widget _build_skeleton_bar({
-    required double width,
-    required double height,
-    required double radius,
-    required Color base_color,
-    required Color highlight_color,
-    required double animation_value,
-    double delay = 0,
-  }) {
-    final double adjusted_value = (animation_value + delay) % 1.0;
-    final double t = adjusted_value < 0.5
-        ? adjusted_value * 2
-        : (1.0 - adjusted_value) * 2;
-    final Color color = Color.lerp(base_color, highlight_color, t)!;
-
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(radius),
-      ),
-    );
-  }
-
   /// 根据可用宽度推导出当前列数。
   int _resolve_column_count(double total_width) {
     final int estimated =
@@ -819,24 +560,4 @@ class _MeasurableWidgetState extends State<_MeasurableWidget> {
       }
     });
   }
-}
-
-/// 骨架卡片数据配置。
-///
-/// 定义单张骨架卡片的结构参数，用于在首屏加载时模拟不同卡片的视觉差异。
-class _SkeletonCardData {
-  /// 封面区域高度。
-  final double cover_height;
-
-  /// 是否显示简介骨架。
-  final bool has_description;
-
-  /// 标签骨架数量。
-  final int tag_count;
-
-  const _SkeletonCardData({
-    required this.cover_height,
-    required this.has_description,
-    required this.tag_count,
-  });
 }

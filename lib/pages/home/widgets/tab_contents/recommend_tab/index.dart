@@ -63,20 +63,6 @@ class _RecommendTabContentState extends State<RecommendTabContent>
   /// 短篇榜 Tab 的固定 id。
   static const int _short_story_ranking_id = 157;
 
-  /// 榜单区域固定高度（Tab 栏 + 内容区 + 查看更多按钮 + 底部间距）。
-  ///
-  /// 切换 Tab 时骨架屏和真实内容高度必须一致，
-  /// 否则高度变化会导致下方内容被顶上去产生闪烁。
-  static const double _ranking_section_fixed_height =
-      RankingSectionStyle.tab_bar_height +
-      RankingSectionStyle.rows_per_column * RankingSectionStyle.item_height +
-      (RankingSectionStyle.rows_per_column - 1) * RankingSectionStyle.row_gap +
-      5 + // RankingContent 内部额外间距
-      RankingSectionStyle.view_more_top_spacing +
-      RankingSectionStyle.view_more_content_height +
-      RankingSectionStyle.view_more_bottom_spacing +
-      RankingSectionStyle.ranking_bottom_spacing;
-
   // ==================== 状态 ====================
 
   /// 滚动控制器，用于监听滚动事件和返回顶部。
@@ -128,8 +114,15 @@ class _RecommendTabContentState extends State<RecommendTabContent>
       _loaded_tab_ids.add(_short_story_ranking_id);
     }
 
-    // 首次进入时触发当前 Tab 的数据加载。
+    /// 挂载时立即进入当前榜单的加载态。
+    ///
+    /// 不能只在首帧结束后启动请求，否则分类骨架消失后的第一帧会先展示
+    /// 空榜单，下一帧又切回榜单骨架，形成一次明显闪烁。
+    _ensure_tab_loaded(_current_tab_id);
+
+    /// 当前时刻榜单分类尚未就绪时，在首帧结束后再兜底检查一次。
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _ensure_tab_loaded(_current_tab_id);
     });
   }
@@ -555,7 +548,7 @@ class _RecommendTabContentState extends State<RecommendTabContent>
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: SizedBox(
-                    height: _ranking_section_fixed_height,
+                    height: RankingSectionStyle.section_fixed_height,
                     child: RankingSection(
                       sub_tab_list: ranking_titles,
                       sub_tab_id_list: rankings_id_list,

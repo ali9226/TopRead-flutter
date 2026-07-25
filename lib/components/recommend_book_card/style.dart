@@ -238,6 +238,74 @@ class RecommendBookCardStyle {
   /// 骨架屏较高封面高度。
   static const double skeleton_cover_tall_height = 230.0;
 
+  /// 骨架屏动画时长。
+  static const Duration skeleton_animation_duration = Duration(
+    milliseconds: 1500,
+  );
+
+  /// 骨架屏展示行数。
+  static const int skeleton_row_count = 3;
+
+  /// 骨架屏每行错开的动画进度。
+  static const double skeleton_row_delay = 0.15;
+
+  /// 骨架屏右列相对于左列错开的动画进度。
+  static const double skeleton_right_column_delay = 0.08;
+
+  /// 标题骨架圆角。
+  static const double skeleton_title_radius = 4;
+
+  /// 标题骨架两行之间的间距。
+  static const double skeleton_title_line_spacing = 4;
+
+  /// 标题骨架第二行宽度。
+  static const double skeleton_title_second_line_width = 80;
+
+  /// 标题骨架第一行动画延迟。
+  static const double skeleton_title_first_line_delay = 0.05;
+
+  /// 标题骨架第二行动画延迟。
+  static const double skeleton_title_second_line_delay = 0.08;
+
+  /// 简介骨架圆角。
+  static const double skeleton_description_radius = 3;
+
+  /// 简介骨架两行之间的间距。
+  static const double skeleton_description_line_spacing = 3;
+
+  /// 简介骨架第二行宽度。
+  static const double skeleton_description_second_line_width = 100;
+
+  /// 简介骨架第一行动画延迟。
+  static const double skeleton_description_first_line_delay = 0.11;
+
+  /// 简介骨架第二行动画延迟。
+  static const double skeleton_description_second_line_delay = 0.14;
+
+  /// 标签骨架宽度。
+  static const double skeleton_tag_width = 44;
+
+  /// 标签骨架上下内边距总和。
+  static const double skeleton_tag_vertical_padding = 8;
+
+  /// 第一个标签骨架的动画延迟。
+  static const double skeleton_tag_initial_delay = 0.17;
+
+  /// 相邻标签骨架之间错开的动画进度。
+  static const double skeleton_tag_interval_delay = 0.05;
+
+  /// 日间主题骨架底色。
+  static const Color skeleton_light_base_color = Color(0xFFF0F1F5);
+
+  /// 日间主题骨架高亮色。
+  static const Color skeleton_light_highlight_color = Color(0xFFF8F8F8);
+
+  /// 夜间主题骨架底色。
+  static const Color skeleton_dark_base_color = Color(0xFF252836);
+
+  /// 夜间主题骨架高亮色。
+  static const Color skeleton_dark_highlight_color = Color(0xFF2F3346);
+
   /// 加载更多指示器顶部间距。
   static const double loading_indicator_top_spacing = 20.0;
 

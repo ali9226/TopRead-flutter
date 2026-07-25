@@ -93,14 +93,17 @@ class _RankingContentState extends State<RankingContent> {
     // 固定“一列内容宽度 + 列间距”，不要再按屏幕宽度计算一屏两列。
     // 这样横屏/平板/折叠屏会自然展示更多列，列与列之间仍保持固定间距。
     final double new_page_extent =
-        RankingSectionStyle.column_content_width + RankingSectionStyle.column_gap;
+        RankingSectionStyle.column_content_width +
+        RankingSectionStyle.column_gap;
     final double new_fraction = new_page_extent / safe_viewport_width;
     final int max_column_index = total_columns <= 0 ? 0 : total_columns - 1;
 
-    final int target_column_index =
-        _current_column_index.clamp(0, max_column_index).toInt();
+    final int target_column_index = _current_column_index
+        .clamp(0, max_column_index)
+        .toInt();
 
-    final bool need_recreate_controller = _page_controller == null ||
+    final bool need_recreate_controller =
+        _page_controller == null ||
         _viewport_fraction == null ||
         _page_extent == null ||
         (_viewport_fraction! - new_fraction).abs() > 0.0001 ||
@@ -136,14 +139,18 @@ class _RankingContentState extends State<RankingContent> {
       if (_page_controller?.hasClients == true) {
         final double? current_page = _page_controller!.page;
         if (current_page != null && current_page.isFinite) {
-          final int new_column_index = current_page.round().clamp(
+          final int new_column_index = current_page
+              .round()
+              .clamp(
                 0,
                 widget.books.isEmpty
                     ? 0
-                    : (widget.books.length / RankingSectionStyle.rows_per_column)
-                            .ceil() -
-                        1,
-              ).toInt();
+                    : (widget.books.length /
+                                  RankingSectionStyle.rows_per_column)
+                              .ceil() -
+                          1,
+              )
+              .toInt();
           _set_current_column_index(new_column_index);
         }
       }
@@ -160,15 +167,13 @@ class _RankingContentState extends State<RankingContent> {
 
     if (total_columns == 0) {
       return SizedBox(
-        height: RankingSectionStyle.rows_per_column *
+        height:
+            RankingSectionStyle.rows_per_column *
                 RankingSectionStyle.item_height +
             (RankingSectionStyle.rows_per_column - 1) *
                 RankingSectionStyle.row_gap +
-            5,
-        child: EmptyState(
-          is_dark: widget.is_dark,
-          on_reload: widget.on_reload,
-        ),
+            RankingSectionStyle.content_height_adjustment,
+        child: EmptyState(is_dark: widget.is_dark, on_reload: widget.on_reload),
       );
     }
 
@@ -184,11 +189,12 @@ class _RankingContentState extends State<RankingContent> {
         );
 
         return SizedBox(
-          height: RankingSectionStyle.rows_per_column *
+          height:
+              RankingSectionStyle.rows_per_column *
                   RankingSectionStyle.item_height +
               (RankingSectionStyle.rows_per_column - 1) *
                   RankingSectionStyle.row_gap +
-              5,
+              RankingSectionStyle.content_height_adjustment,
           child: Stack(
             clipBehavior: Clip.hardEdge,
             children: <Widget>[
@@ -257,11 +263,10 @@ class _RankingContentState extends State<RankingContent> {
     );
   }
 
-  int _calculate_placeholder_columns({
-    required double viewport_width,
-  }) {
+  int _calculate_placeholder_columns({required double viewport_width}) {
     final double safe_viewport_width = viewport_width <= 0 ? 1 : viewport_width;
-    final double page_extent = _page_extent ??
+    final double page_extent =
+        _page_extent ??
         RankingSectionStyle.column_content_width +
             RankingSectionStyle.column_gap;
 
@@ -277,8 +282,7 @@ class _RankingContentState extends State<RankingContent> {
   }
 
   Widget _build_column(int column_index) {
-    final int start_index =
-        column_index * RankingSectionStyle.rows_per_column;
+    final int start_index = column_index * RankingSectionStyle.rows_per_column;
 
     final List<StoryItem> column_books = widget.books
         .skip(start_index)
@@ -286,30 +290,25 @@ class _RankingContentState extends State<RankingContent> {
         .toList();
 
     return Padding(
-      padding: const EdgeInsets.only(
-        right: RankingSectionStyle.column_gap,
-      ),
+      padding: const EdgeInsets.only(right: RankingSectionStyle.column_gap),
       child: SizedBox(
         width: RankingSectionStyle.column_content_width,
         child: Column(
-          children: List.generate(
-            column_books.length,
-            (int row_index) {
-              final int book_index = start_index + row_index;
-              return Padding(
-                padding: EdgeInsets.only(
-                  bottom: row_index < column_books.length - 1
-                      ? RankingSectionStyle.row_gap
-                      : 0,
-                ),
-                child: RankingBookItem(
-                  book: column_books[row_index],
-                  ranking_index: book_index + 1,
-                  is_dark: widget.is_dark,
-                ),
-              );
-            },
-          ),
+          children: List.generate(column_books.length, (int row_index) {
+            final int book_index = start_index + row_index;
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: row_index < column_books.length - 1
+                    ? RankingSectionStyle.row_gap
+                    : 0,
+              ),
+              child: RankingBookItem(
+                book: column_books[row_index],
+                ranking_index: book_index + 1,
+                is_dark: widget.is_dark,
+              ),
+            );
+          }),
         ),
       ),
     );
@@ -333,7 +332,6 @@ class _RankingContentState extends State<RankingContent> {
     );
   }
 }
-
 
 /// 限制榜单横向分页的最大滚动位置。
 ///
@@ -376,10 +374,9 @@ class _LastColumnClampPagePhysics extends PageScrollPhysics {
 
     // 宽屏/横屏下，实际 maxScrollExtent 可能会因为 viewport 很宽而变化。
     // 最大值取二者较小值，避免越过真实可滚动边界。
-    return max_by_last_column.clamp(
-      position.minScrollExtent,
-      position.maxScrollExtent,
-    ).toDouble();
+    return max_by_last_column
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
   }
 
   double _get_page(ScrollMetrics position) {
@@ -412,21 +409,22 @@ class _LastColumnClampPagePhysics extends PageScrollPhysics {
       page.roundToDouble(),
     );
 
-    return target_pixels.clamp(
-      position.minScrollExtent,
-      _max_allowed_pixels(position),
-    ).toDouble();
+    return target_pixels
+        .clamp(position.minScrollExtent, _max_allowed_pixels(position))
+        .toDouble();
   }
 
   @override
   double applyBoundaryConditions(ScrollMetrics position, double value) {
     final double max_allowed_pixels = _max_allowed_pixels(position);
 
-    if (value < position.minScrollExtent && position.pixels <= position.minScrollExtent) {
+    if (value < position.minScrollExtent &&
+        position.pixels <= position.minScrollExtent) {
       return value - position.pixels;
     }
 
-    if (value < position.minScrollExtent && position.pixels > position.minScrollExtent) {
+    if (value < position.minScrollExtent &&
+        position.pixels > position.minScrollExtent) {
       return value - position.minScrollExtent;
     }
 
@@ -447,7 +445,11 @@ class _LastColumnClampPagePhysics extends PageScrollPhysics {
     double velocity,
   ) {
     final Tolerance tolerance = toleranceFor(position);
-    final double target_pixels = _get_target_pixels(position, tolerance, velocity);
+    final double target_pixels = _get_target_pixels(
+      position,
+      tolerance,
+      velocity,
+    );
 
     if ((target_pixels - position.pixels).abs() < tolerance.distance &&
         velocity.abs() < tolerance.velocity) {
