@@ -306,16 +306,16 @@ class _FullScreenSkeletonState extends State<FullScreenSkeleton>
                 ),
               ),
 
-              // 列表项骨架（模拟榜单书籍列表，双列布局）
+              // 列表项骨架（模拟榜单书籍列表，双列布局，4行）
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(10, 5, 10, 0),
                   child: Column(
-                    children: List<Widget>.generate(2, (int row_index) {
+                    children: List<Widget>.generate(FullScreenSkeletonStyle.ranking_row_count, (int row_index) {
                       return Expanded(
                         child: Padding(
                           padding: EdgeInsets.only(
-                            bottom: row_index < 1
+                            bottom: row_index < FullScreenSkeletonStyle.ranking_row_count - 1
                                 ? FullScreenSkeletonStyle.ranking_item_spacing
                                 : 0,
                           ),

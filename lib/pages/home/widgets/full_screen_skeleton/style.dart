@@ -58,6 +58,9 @@ class FullScreenSkeletonStyle {
   /// 榜单列表项间距（与 RankingSectionStyle.row_gap 一致）。
   static const double ranking_item_spacing = 0.0;
 
+  /// 榜单列表行数（与 RankingSectionStyle.rows_per_column 一致）。
+  static const int ranking_row_count = 4;
+
   /// 榜单与推荐区域间距（与 RecommendTabStyle.recommend_top_spacing 一致）。
   static const double section_spacing = 10.0;
 
