@@ -663,6 +663,11 @@
     "qr_semantics": "书籍分享二维码",
     "share_text": "我正在用{app}看《{title}》，快来一起看吧！"
   },
+  "notification_permission": {
+    "message": "开启通知，不错过精彩内容更新",
+    "open_settings": "去开启",
+    "not_now": "暂不开启"
+  },
   "app_update": {
     "upgrade_title": "发现新版本",
     "force_update_message": "有新版本可用，请更新后再使用",

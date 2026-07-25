@@ -640,6 +640,11 @@
     "qr_semantics": "Msimbo wa QR wa kushiriki kitabu",
     "share_text": "Ninasoma \"{title}\" kwenye {app}, kuja uone!"
   },
+  "notification_permission": {
+    "message": "Washa arifa ili kubaki na habari",
+    "open_settings": "Washa",
+    "not_now": "Sio sasa"
+  },
   "app_update": {
     "upgrade_title": "Toleo Jipya",
     "force_update_message": "Toleo jipya linapatikana. Tafadhali sasisha ili kuendelea.",

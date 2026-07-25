@@ -662,6 +662,11 @@
     "qr_semantics": "Book sharing QR code",
     "share_text": "I'm reading \"{title}\" on {app}, come check it out!"
   },
+  "notification_permission": {
+    "message": "Enable notifications to stay updated",
+    "open_settings": "Enable",
+    "not_now": "Not now"
+  },
   "app_update": {
     "upgrade_title": "New Version Available",
     "force_update_message": "A new version is available. Please update to continue.",

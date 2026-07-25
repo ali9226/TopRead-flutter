@@ -698,6 +698,11 @@
     "qr_semantics": "Code QR de partage du livre",
     "share_text": "Je lis « {title} » sur {app}, venez voir !"
   },
+  "notification_permission": {
+    "message": "Activez les notifications pour rester informé",
+    "open_settings": "Activer",
+    "not_now": "Pas maintenant"
+  },
   "app_update": {
     "upgrade_title": "Nouvelle version",
     "force_update_message": "Une nouvelle version est disponible. Veuillez mettre à jour pour continuer.",

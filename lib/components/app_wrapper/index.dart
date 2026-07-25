@@ -14,6 +14,7 @@ import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/components/app_wrapper/utils/get_app_title.dart';
 import 'package:app/components/app_wrapper/utils/route_page_warm_up.dart';
 import 'package:app/components/app_wrapper/utils/route_asset_warm_up.dart';
+import 'package:app/components/app_wrapper/utils/notification_permission.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/stores/bottom_navigation_info.dart';
@@ -94,6 +95,7 @@ class _AppWrapperState extends State<AppWrapper> {
         }),
       );
       autoLogin();
+      NotificationPermission.checkAndRequest();
     });
   }
 
