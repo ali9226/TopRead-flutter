@@ -1,12 +1,37 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:app/api/bookshelf.dart';
 import 'package:app/pages/bookshelf/logic.dart';
+import 'package:app/stores/user_information.dart';
+import 'package:app/util/language_util/language_change_handler.dart';
 
 /// 书架页面全局数据仓库。
 ///
 /// 缓存历史、收藏、关注三个 Tab 的列表数据，
 /// 避免切换 Tab 时数据丢失导致重复请求。
 class BookshelfStore extends GetxController {
+  /// 语种刷新任务订阅。
+  late final LanguageRefreshSubscription _language_refresh_subscription;
+
+  /// 语种刷新状态监听。
+  ///
+  /// 用于承接恰好在统一刷新流程中首次打开书架的场景。
+  late final Worker _language_refresh_worker;
+
+  /// 当前书架多语言数据版本。
+  ///
+  /// 语种切换时递增，确保切换前发出的旧请求不能覆盖新语种数据。
+  int _language_data_revision = 0;
+
+  /// 切换语种前历史列表是否已加载。
+  bool _should_refresh_history = false;
+
+  /// 切换语种前收藏列表是否已加载。
+  bool _should_refresh_favorite = false;
+
   // ==================== 历史 Tab ====================
 
   /// 历史列表数据。
@@ -24,6 +49,12 @@ class BookshelfStore extends GetxController {
   /// 历史列表是否已加载过（懒加载标记）。
   bool _history_loaded = false;
 
+  /// 历史列表是否已经发起过加载。
+  ///
+  /// 与 [_history_loaded] 分开记录，保证语种切换发生在首个请求途中时，
+  /// 新语种仍会重新发起请求。
+  bool _history_requested = false;
+
   // ==================== 收藏 Tab ====================
 
   /// 收藏列表数据。
@@ -40,6 +71,11 @@ class BookshelfStore extends GetxController {
 
   /// 收藏列表是否已加载过（懒加载标记）。
   bool _favorite_loaded = false;
+
+  /// 收藏列表是否已经发起过加载。
+  ///
+  /// 与 [_favorite_loaded] 分开记录，避免语种切换中断首个请求后列表不再加载。
+  bool _favorite_requested = false;
 
   // ==================== 关注 Tab ====================
 
@@ -63,22 +99,127 @@ class BookshelfStore extends GetxController {
   /// 每页数量。
   static const int _page_size = 20;
 
+  @override
+  void onInit() {
+    super.onInit();
+    _language_refresh_subscription =
+        LanguageChangeHandler.register_refresh_task(
+          phase: LanguageRefreshPhase.content,
+          on_prepare: _prepare_language_refresh,
+          on_refresh: _refresh_for_language,
+        );
+    _language_refresh_worker = ever<bool>(
+      LanguageChangeHandler.is_refreshing,
+      _handle_language_refresh_state,
+    );
+  }
+
+  @override
+  void onClose() {
+    _language_refresh_worker.dispose();
+    _language_refresh_subscription.dispose();
+    super.onClose();
+  }
+
+  /// Locale 切换前清除旧语种书架数据，并使在途请求失效。
+  void _prepare_language_refresh(LanguageRefreshContext refresh_context) {
+    _language_data_revision++;
+    _should_refresh_history = _history_requested;
+    _should_refresh_favorite = _favorite_requested;
+
+    _history_page = 1;
+    _history_loaded = false;
+    history_list.clear();
+    history_has_more.value = true;
+    history_is_loading.value = _should_refresh_history;
+
+    _favorite_page = 1;
+    _favorite_loaded = false;
+    favorite_list.clear();
+    favorite_has_more.value = true;
+    favorite_is_loading.value = _should_refresh_favorite;
+  }
+
+  /// 基础语种配置刷新完成后，重新加载切换前已访问的书架内容。
+  Future<void> _refresh_for_language(
+    LanguageRefreshContext refresh_context,
+  ) async {
+    if (!refresh_context.is_current ||
+        !Get.find<UserInformation>().isLoggedIn.value) {
+      return;
+    }
+
+    await Future.wait<void>(<Future<void>>[
+      if (_should_refresh_history)
+        _fetch_history(
+          reset: true,
+          language_revision: refresh_context.revision,
+        ),
+      if (_should_refresh_favorite)
+        _fetch_favorite(
+          reset: true,
+          language_revision: refresh_context.revision,
+        ),
+    ]);
+  }
+
+  /// 统一语种刷新结束后补载刷新期间首次请求的书架内容。
+  void _handle_language_refresh_state(bool is_refreshing) {
+    final bool should_load_history = _history_requested && !_history_loaded;
+    final bool should_load_favorite = _favorite_requested && !_favorite_loaded;
+
+    if (is_refreshing ||
+        !Get.find<UserInformation>().isLoggedIn.value ||
+        (!should_load_history && !should_load_favorite)) {
+      return;
+    }
+
+    unawaited(
+      Future.wait<void>(<Future<void>>[
+        if (should_load_history)
+          _fetch_history(
+            reset: true,
+            language_revision: LanguageChangeHandler.current_revision,
+          ),
+        if (should_load_favorite)
+          _fetch_favorite(
+            reset: true,
+            language_revision: LanguageChangeHandler.current_revision,
+          ),
+      ]),
+    );
+  }
+
   // ==================== 历史 Tab 操作 ====================
 
   /// 加载历史列表首屏数据（懒加载，仅首次调用时请求）。
   Future<void> load_history_if_needed() async {
     if (_history_loaded) return;
+    _history_requested = true;
+    if (LanguageChangeHandler.is_refreshing.value) {
+      _should_refresh_history = true;
+      history_is_loading.value = true;
+      return;
+    }
     await _fetch_history(reset: true);
   }
 
   /// 刷新历史列表数据。
   Future<void> refresh_history() async {
+    _history_requested = true;
+    if (LanguageChangeHandler.is_refreshing.value) {
+      _should_refresh_history = true;
+      history_is_loading.value = true;
+      return;
+    }
     await _fetch_history(reset: true);
   }
 
   /// 加载历史列表更多数据。
   Future<void> load_more_history() async {
-    if (!history_has_more.value) return;
+    if (!history_has_more.value || LanguageChangeHandler.is_refreshing.value) {
+      return;
+    }
     _history_page++;
     await _fetch_history(reset: false);
   }
@@ -89,7 +230,12 @@ class BookshelfStore extends GetxController {
   }
 
   /// 请求历史列表数据。
-  Future<void> _fetch_history({required bool reset}) async {
+  Future<void> _fetch_history({
+    required bool reset,
+    int? language_revision,
+  }) async {
+    _history_requested = true;
+    final int data_revision = _language_data_revision;
     if (reset) {
       _history_page = 1;
       history_is_loading.value = true;
@@ -100,13 +246,24 @@ class BookshelfStore extends GetxController {
       page_size: _page_size,
     );
 
+    if (data_revision != _language_data_revision ||
+        (language_revision != null &&
+            !LanguageChangeHandler.is_current_revision(language_revision))) {
+      return;
+    }
+
     if (result != null) {
       final List<BookshelfBookItem> new_items = result.list
           .asMap()
-          .map((int index, ReadRecordItem item) => MapEntry(
+          .map(
+            (int index, ReadRecordItem item) => MapEntry(
               index,
               _convert_history_item(
-                  item, reset ? index : history_list.length + index)))
+                item,
+                reset ? index : history_list.length + index,
+              ),
+            ),
+          )
           .values
           .toList();
 
@@ -137,7 +294,7 @@ class BookshelfStore extends GetxController {
     if (has_progress) {
       progress_key = 'bookshelf.progress.read_progress';
       progress_args = <String, String>{
-        'progress': item.read_progress.toStringAsFixed(0)
+        'progress': item.read_progress.toStringAsFixed(0),
       };
     } else {
       progress_key = 'bookshelf.progress.unread';
@@ -164,17 +321,31 @@ class BookshelfStore extends GetxController {
   /// 加载收藏列表首屏数据（懒加载，仅首次调用时请求）。
   Future<void> load_favorite_if_needed() async {
     if (_favorite_loaded) return;
+    _favorite_requested = true;
+    if (LanguageChangeHandler.is_refreshing.value) {
+      _should_refresh_favorite = true;
+      favorite_is_loading.value = true;
+      return;
+    }
     await _fetch_favorite(reset: true);
   }
 
   /// 刷新收藏列表数据。
   Future<void> refresh_favorite() async {
+    _favorite_requested = true;
+    if (LanguageChangeHandler.is_refreshing.value) {
+      _should_refresh_favorite = true;
+      favorite_is_loading.value = true;
+      return;
+    }
     await _fetch_favorite(reset: true);
   }
 
   /// 加载收藏列表更多数据。
   Future<void> load_more_favorite() async {
-    if (!favorite_has_more.value) return;
+    if (!favorite_has_more.value || LanguageChangeHandler.is_refreshing.value) {
+      return;
+    }
     _favorite_page++;
     await _fetch_favorite(reset: false);
   }
@@ -185,7 +356,12 @@ class BookshelfStore extends GetxController {
   }
 
   /// 请求收藏列表数据。
-  Future<void> _fetch_favorite({required bool reset}) async {
+  Future<void> _fetch_favorite({
+    required bool reset,
+    int? language_revision,
+  }) async {
+    _favorite_requested = true;
+    final int data_revision = _language_data_revision;
     if (reset) {
       _favorite_page = 1;
       favorite_is_loading.value = true;
@@ -196,13 +372,24 @@ class BookshelfStore extends GetxController {
       page_size: _page_size,
     );
 
+    if (data_revision != _language_data_revision ||
+        (language_revision != null &&
+            !LanguageChangeHandler.is_current_revision(language_revision))) {
+      return;
+    }
+
     if (result != null) {
       final List<BookshelfBookItem> new_items = result.list
           .asMap()
-          .map((int index, FavoriteItem item) => MapEntry(
+          .map(
+            (int index, FavoriteItem item) => MapEntry(
               index,
               _convert_favorite_item(
-                  item, reset ? index : favorite_list.length + index)))
+                item,
+                reset ? index : favorite_list.length + index,
+              ),
+            ),
+          )
           .values
           .toList();
 
@@ -240,13 +427,11 @@ class BookshelfStore extends GetxController {
     if (has_progress) {
       progress_key = 'bookshelf.progress.read_progress';
       progress_args = <String, String>{
-        'progress': item.read_progress.toStringAsFixed(0)
+        'progress': item.read_progress.toStringAsFixed(0),
       };
     } else if (item.chapter_count > 0) {
       progress_key = 'bookshelf.progress.chapters';
-      progress_args = <String, String>{
-        'count': item.chapter_count.toString()
-      };
+      progress_args = <String, String>{'count': item.chapter_count.toString()};
     } else {
       progress_key = 'bookshelf.progress.unread';
       progress_args = <String, String>{};
