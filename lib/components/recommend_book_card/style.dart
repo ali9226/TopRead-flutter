@@ -229,6 +229,15 @@ class RecommendBookCardStyle {
   /// 封面最大高度限制，避免图片过高。
   static const double cover_max_height = 320.0;
 
+  /// 骨架屏较短封面高度。
+  static const double skeleton_cover_short_height = 190.0;
+
+  /// 骨架屏标准封面高度。
+  static const double skeleton_cover_standard_height = 210.0;
+
+  /// 骨架屏较高封面高度。
+  static const double skeleton_cover_tall_height = 230.0;
+
   /// 加载更多指示器顶部间距。
   static const double loading_indicator_top_spacing = 20.0;
 

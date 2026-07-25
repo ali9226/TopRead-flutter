@@ -435,19 +435,35 @@ class AnimatedRecommendWaterfallState extends State<AnimatedRecommendWaterfall>
 
     /// 骨架卡片数据：左列/右列交替，模拟不同封面高度。
     final List<_SkeletonCardData> left_cards = <_SkeletonCardData>[
-      _SkeletonCardData(cover_height: 170, has_description: true, tag_count: 2),
-      _SkeletonCardData(cover_height: 150, has_description: true, tag_count: 1),
       _SkeletonCardData(
-        cover_height: 190,
+        cover_height: RecommendBookCardStyle.skeleton_cover_standard_height,
+        has_description: true,
+        tag_count: 2,
+      ),
+      _SkeletonCardData(
+        cover_height: RecommendBookCardStyle.skeleton_cover_short_height,
+        has_description: true,
+        tag_count: 1,
+      ),
+      _SkeletonCardData(
+        cover_height: RecommendBookCardStyle.skeleton_cover_tall_height,
         has_description: false,
         tag_count: 0,
       ),
     ];
     final List<_SkeletonCardData> right_cards = <_SkeletonCardData>[
-      _SkeletonCardData(cover_height: 145, has_description: true, tag_count: 1),
-      _SkeletonCardData(cover_height: 180, has_description: true, tag_count: 2),
       _SkeletonCardData(
-        cover_height: 160,
+        cover_height: RecommendBookCardStyle.skeleton_cover_short_height,
+        has_description: true,
+        tag_count: 1,
+      ),
+      _SkeletonCardData(
+        cover_height: RecommendBookCardStyle.skeleton_cover_tall_height,
+        has_description: true,
+        tag_count: 2,
+      ),
+      _SkeletonCardData(
+        cover_height: RecommendBookCardStyle.skeleton_cover_standard_height,
         has_description: false,
         tag_count: 1,
       ),
