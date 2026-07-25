@@ -1,0 +1,191 @@
+name: app
+description: "TopRead"
+
+
+version: 1.0.4+4
+
+environment:
+    sdk: ^3.11.5
+
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.9.0
+
+  # TODO 多语种
+  easy_localization: ^3.0.7+1
+
+  # TODO google登录
+  firebase_core: ^4.12.1
+  # firebase_auth: 6.1.2
+  # google_sign_in: ^7.2.0
+
+  # TODO 推送
+  firebase_messaging: 16.4.3
+  flutter_local_notifications: ^21.0.0
+
+  # TODO  飞机授权登录
+  telegram_login_flutter: ^1.0.1
+
+  # TODO AES加密解密需要用到
+  pointycastle: ^4.0.0
+
+  # TODO 类似vuex的状态管理
+  get: ^4.7.2
+
+  # TODO 路由插件
+  go_router: ^17.1.0
+
+  # TODO 日志输出插件
+  logger: ^2.6.1
+
+  # TODO 吐司弹窗
+  oktoast: ^3.4.0
+
+  # TODO 可以使用svg图标
+  flutter_svg: ^2.2.0
+
+  # TODO 生成二维码
+  qr_flutter: ^4.1.0
+
+  # TODO 轮播图库
+  carousel_slider: ^5.1.1
+
+  # TODO 弹窗等UI组件库
+  flutter_smart_dialog: ^5.1.0
+
+  # TODO 拦截后退
+  back_button_interceptor: ^8.0.4
+
+  # TODO 底部导航切换
+  convex_bottom_bar: ^3.2.0
+
+  # TODO 加载网络图片
+  cached_network_image: ^3.4.1
+
+  # TODO 判断网络环境
+  connectivity_plus: ^7.0.0
+
+  # TODO 开关插件
+  flutter_switch: ^0.3.2
+
+  # TODO 一个用于启动 URL 的 Flutter 插件
+  url_launcher: ^6.3.2
+
+  # TODO 获取 App 版本号
+  package_info_plus: ^8.3.0
+
+  # TODO 获取设备信息（型号、系统版本等）
+  device_info_plus: ^11.2.0
+
+  # TODO 网络请求插件
+  dio: ^5.9.0
+  intl: ^0.20.2
+
+  # TODO 字母语种自动断词排版
+  auto_hyphenating_text: ^0.3.1
+
+  # TODO 嵌套网址
+  webview_flutter: ^4.13.1
+  webview_flutter_android: ^4.11.0
+  webview_flutter_wkwebview: ^3.24.3
+
+  # TODO websocket请求
+  web_socket_channel: ^3.0.3
+  flutter_web_plugins:
+    sdk: flutter
+
+  # TODO 选择图片
+  image_picker: ^1.2.0
+
+  # TODO 哈希/md5等加密，不用于解密
+  crypto: ^3.0.6
+
+  # TODO 保存数据到本地，类似web的 localStorage
+  get_storage: ^2.1.1
+
+  # TODO 数据请求加密需要用到
+  dart_jsonwebtoken: ^3.2.0
+
+  # TODO 解密后端返回数据需要用到
+  jwt_decode: ^0.3.1
+
+  # TODO 判断权限的插件
+  permission_handler: ^12.0.1
+
+  # TODO 将分享卡片图片保存到系统相册
+  gal: ^2.3.2
+
+  # TODO html 富文本渲染
+  flutter_html: ^3.0.0
+  flutter_staggered_grid_view: ^0.7.0
+
+  # TODO 相册图片多选（聊天发送图片，微信风格网格选择器）
+  wechat_assets_picker: ^9.4.0
+
+  # TODO 生成 UUID（访客匿名聊天标识）
+  uuid: ^4.5.1
+
+  # TODO 播放音频（聊天消息铃声）
+  audioplayers: ^6.1.0
+
+
+  # TODO 相册图片多选（聊天发送图片）
+dependency_overrides:
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+  # TODO 更改项目名称的插件
+  launcher_name: ^1.0.2
+
+  # TODO 更改项目的图标
+  flutter_launcher_icons: ^0.14.4
+
+  # TODO 请求结果后转换数据需要
+  # TODO 执行: flutter pub run build_runner build --delete-conflicting-outputs
+  build_runner: ^2.7.1
+  freezed: ^3.2.0
+  json_serializable: ^6.11.1
+
+# TODO 更改项目名称，更改之后终端执行命令:
+# TODO flutter pub run launcher_name:main
+launcher_name:
+  default: "TopRead"
+
+
+# TODO 更改项目的图标，更改之后终端执行命令:
+# TODO flutter pub run flutter_launcher_icons:main
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/img/logo.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/img/min_logo.png"
+#    background_color: "#FFFFFF"
+#    theme_color: "#000000"
+
+
+flutter:
+
+
+  uses-material-design: true
+
+  assets:
+    - assets/i18n/
+    - assets/i18n/zh.json
+    - assets/i18n/en.json
+    - assets/svg/
+    - assets/img/
+    - assets/img/poster/
+    - assets/img/poster/woniu.png
+    - assets/img/poster/fo.png

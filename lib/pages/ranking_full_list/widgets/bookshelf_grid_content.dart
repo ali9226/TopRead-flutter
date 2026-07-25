@@ -1,0 +1,425 @@
+import 'package:easy_localization/easy_localization.dart' as easy;
+import 'package:app/config/font_config.dart';
+import 'package:flutter/material.dart';
+import 'package:app/api/post_request.dart';
+import 'package:app/components/category_filter/index.dart';
+import 'package:app/components/fixed_bottom_navigation/style.dart'
+    as fixed_nav_style;
+import 'package:app/components/floating_back_to_top/index.dart';
+import 'package:app/components/floating_back_to_top/style.dart'
+    as floating_back_to_top_style;
+import 'package:app/config/color_config.dart';
+import 'package:app/components/load_more_footer/index.dart';
+import 'package:app/config/layout_config.dart';
+import 'package:app/models/recommend_ranking_item.dart';
+import 'package:app/models/short_story_item.dart';
+import 'package:app/pages/ranking_full_list/logic.dart';
+import 'package:app/pages/ranking_full_list/style.dart';
+import 'package:app/pages/ranking_full_list/widgets/bookshelf_book_card.dart';
+import 'package:app/util/novel_navigation/index.dart';
+
+/// 完整榜单网格内容组件。
+///
+/// 根据 [ranking_tab_id] 请求不同的后端接口获取真实数据，
+/// 支持分类筛选和分页加载。
+class BookshelfGridContent extends StatefulWidget {
+  /// 榜单 Tab id，决定请求哪个接口。
+  final int ranking_tab_id;
+
+  /// 当前顶部 Tab 的强调色。
+  final Color accent_color;
+
+  /// 当前是否为夜间模式。
+  final bool is_dark;
+
+  /// 初始选中的分类 id（可选，用于从外部传入默认选中项）。
+  final int? initial_category_id;
+
+  const BookshelfGridContent({
+    super.key,
+    required this.ranking_tab_id,
+    required this.accent_color,
+    required this.is_dark,
+    this.initial_category_id,
+  });
+
+  @override
+  State<BookshelfGridContent> createState() => _BookshelfGridContentState();
+}
+
+class _BookshelfGridContentState extends State<BookshelfGridContent> {
+  /// 内容滚动控制器。
+  final ScrollController _scroll_controller = ScrollController();
+
+  /// 当前可见数据列表。
+  List<RecommendRankingItem> _visible_book_list = <RecommendRankingItem>[];
+
+  /// 当前是否处于首屏加载。
+  bool _is_initial_loading = true;
+
+  /// 当前是否处于加载更多。
+  bool _is_loading_more = false;
+
+  /// 返回顶部按钮是否可见。
+  bool _is_back_to_top_visible = false;
+
+  /// 是否还有更多数据可加载。
+  bool _has_more = true;
+
+  /// 当前选中的分类 id（null 表示未筛选）。
+  int? _selected_category_id;
+
+  /// 距离底部多少像素时触发自动加载更多。
+  static const double _load_more_trigger_distance = 180;
+
+  /// 每次加载的数据量。
+  static const int _page_size = 20;
+
+  /// 标签颜色池。
+  static const List<Color> _tag_color_pool = <Color>[
+    Color(0xFF2FBF9B),
+    Color(0xFF5F8BFF),
+    Color(0xFFF56C6C),
+    Color(0xFFFF9F5A),
+    Color(0xFF8B7CFF),
+    Color(0xFFE6A23C),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll_controller.addListener(_handle_scroll);
+    // 如果有初始分类 id，设置为默认选中
+    if (widget.initial_category_id != null && widget.initial_category_id! > 0) {
+      _selected_category_id = widget.initial_category_id;
+    }
+    _load_initial_data();
+  }
+
+  @override
+  void dispose() {
+    _scroll_controller.removeListener(_handle_scroll);
+    _scroll_controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final int grid_count = RankingFullListLogic.resolve_grid_count(
+          constraints.maxWidth,
+        );
+
+        final double item_width =
+            (constraints.maxWidth -
+                (grid_count - 1) * Style.grid_cross_spacing) /
+            grid_count;
+
+        final double item_height =
+            item_width / Style.cover_aspect_ratio +
+            Style.book_title_top_spacing +
+            Style.book_title_min_height +
+            Style.book_meta_top_spacing +
+            18;
+
+        return Column(
+          children: <Widget>[
+            CategoryFilter(
+              initial_category_id: widget.initial_category_id,
+              on_category_changed: _handle_category_changed,
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _handle_refresh,
+                child: Stack(
+                  children: <Widget>[
+                    CustomScrollView(
+                      controller: _scroll_controller,
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      slivers: <Widget>[
+                        if (_is_initial_loading)
+                          SliverGrid(
+                            delegate: SliverChildBuilderDelegate((
+                              BuildContext context,
+                              int index,
+                            ) {
+                              return _BookCardSkeleton(is_dark: widget.is_dark);
+                            }, childCount: Style.page_size),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: grid_count,
+                              crossAxisSpacing: Style.grid_cross_spacing,
+                              mainAxisSpacing: Style.grid_main_spacing,
+                              mainAxisExtent: item_height,
+                            ),
+                          )
+                        else ...<Widget>[
+                          SliverGrid(
+                            delegate: SliverChildBuilderDelegate((
+                              BuildContext context,
+                              int index,
+                            ) {
+                              final RecommendRankingItem book_item =
+                                  _visible_book_list[index];
+
+                              return BookshelfBookCard(
+                                book_item: book_item,
+                                is_dark: widget.is_dark,
+                                tag_color_pool: _tag_color_pool,
+                                on_tap: () {
+                                  navigate_to_novel(
+                                    id: book_item.id,
+                                    title: book_item.title,
+                                    publish_status: book_item.publish_status,
+                                  );
+                                },
+                              );
+                            }, childCount: _visible_book_list.length),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: grid_count,
+                              crossAxisSpacing: Style.grid_cross_spacing,
+                              mainAxisSpacing: Style.grid_main_spacing,
+                              mainAxisExtent: item_height,
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: LoadMoreFooter(
+                              is_dark: widget.is_dark,
+                              isLoading: _is_loading_more,
+                              hasMore: _has_more,
+                              onLoadMore: _load_more_data,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    FloatingBackToTop(
+                      show: _is_back_to_top_visible,
+                      isDark: widget.is_dark,
+                      onTap: _scroll_to_top,
+                      right:
+                          floating_back_to_top_style.FloatingBackToTopStyle.right -
+                          Style.page_horizontal_padding,
+                      visibleBottom:
+                          fixed_nav_style.Style.bar_height +
+                          floating_back_to_top_style
+                              .FloatingBackToTopStyle
+                              .offset_from_bottom_nav +
+                          MediaQuery.paddingOf(context).bottom,
+                      hiddenBottom:
+                          fixed_nav_style.Style.bar_height +
+                          floating_back_to_top_style
+                              .FloatingBackToTopStyle
+                              .hidden_offset +
+                          MediaQuery.paddingOf(context).bottom,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 加载首屏数据。
+  Future<void> _load_initial_data() async {
+    setState(() {
+      _is_initial_loading = true;
+    });
+
+    final List<RecommendRankingItem> items = await _fetch_data();
+
+    if (!mounted) return;
+
+    setState(() {
+      _visible_book_list = items;
+      _has_more = items.length >= _page_size;
+      _is_initial_loading = false;
+    });
+  }
+
+  /// 下拉刷新。
+  Future<void> _handle_refresh() async {
+    final List<RecommendRankingItem> items = await _fetch_data();
+
+    if (!mounted) return;
+
+    setState(() {
+      _visible_book_list = items;
+      _has_more = items.length >= _page_size;
+      _is_loading_more = false;
+    });
+  }
+
+  /// 分类筛选变更。
+  Future<void> _handle_category_changed(int? category_id) async {
+    if (_selected_category_id == category_id) return;
+    _selected_category_id = category_id;
+
+    setState(() {
+      _is_initial_loading = true;
+    });
+
+    final List<RecommendRankingItem> items = await _fetch_data();
+
+    if (!mounted) return;
+
+    setState(() {
+      _visible_book_list = items;
+      _has_more = items.length >= _page_size;
+      _is_initial_loading = false;
+    });
+  }
+
+  /// 请求榜单数据。
+  ///
+  /// 根据 [widget.ranking_tab_id] 选择对应的 API 路径，
+  /// 传入 [category_id] 进行分类筛选，传入 [no_ids] 排除已加载数据。
+  Future<List<RecommendRankingItem>> _fetch_data({
+    List<int>? no_ids,
+  }) async {
+    final String api_path = RankingFullListLogic.resolve_api_path(
+      widget.ranking_tab_id,
+    );
+
+    try {
+      final results = await postRequest<List<RecommendRankingItem>>(
+        path: api_path,
+        showTips: false,
+        parameter: <String, dynamic>{
+          'limit': _page_size,
+          if (_selected_category_id != null) 'category_id': _selected_category_id,
+          if (no_ids != null && no_ids.isNotEmpty) 'no_ids': no_ids,
+        },
+        fromJsonList: (List<dynamic> json) =>
+            RecommendRankingItem.from_json_list(json),
+      );
+
+      if (!results.status || results.content == null) {
+        return <RecommendRankingItem>[];
+      }
+
+      return results.content!;
+    } catch (_) {
+      return <RecommendRankingItem>[];
+    }
+  }
+
+  /// 处理滚动事件。
+  void _handle_scroll() {
+    final bool should_show_back_to_top =
+        _scroll_controller.hasClients &&
+        _scroll_controller.offset > Style.back_to_top_visible_offset;
+
+    if (_is_back_to_top_visible != should_show_back_to_top) {
+      setState(() {
+        _is_back_to_top_visible = should_show_back_to_top;
+      });
+    }
+
+    if (_is_initial_loading || _is_loading_more) return;
+
+    if (_scroll_controller.position.pixels >=
+        _scroll_controller.position.maxScrollExtent -
+            _load_more_trigger_distance) {
+      if (_has_more) {
+        _load_more_data();
+      }
+    }
+  }
+
+  /// 平滑滚动到顶部。
+  void _scroll_to_top() {
+    if (!_scroll_controller.hasClients) return;
+
+    _scroll_controller.animateTo(
+      0,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  /// 加载更多数据。
+  Future<void> _load_more_data() async {
+    if (_is_loading_more || !_has_more) return;
+
+    setState(() {
+      _is_loading_more = true;
+    });
+
+    final List<int> no_ids = _visible_book_list
+        .map((RecommendRankingItem item) => item.id)
+        .toList();
+
+    final List<RecommendRankingItem> new_items = await _fetch_data(
+      no_ids: no_ids,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _visible_book_list.addAll(new_items);
+      _has_more = new_items.length >= _page_size;
+      _is_loading_more = false;
+    });
+  }
+}
+
+/// 书籍卡片骨架屏。
+class _BookCardSkeleton extends StatelessWidget {
+  final bool is_dark;
+
+  const _BookCardSkeleton({required this.is_dark});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color block_color = is_dark
+        ? const Color(0xFF1A2130)
+        : const Color(0xFFEDEFF4);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: block_color,
+              borderRadius: BorderRadius.circular(Style.cover_radius),
+            ),
+          ),
+        ),
+        const SizedBox(height: Style.book_title_top_spacing),
+        Container(
+          height: 13,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: block_color,
+            borderRadius: BorderRadius.circular(LayoutConfig.tag_radius),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 13,
+          width: 72,
+          decoration: BoxDecoration(
+            color: block_color,
+            borderRadius: BorderRadius.circular(LayoutConfig.tag_radius),
+          ),
+        ),
+        const SizedBox(height: Style.book_meta_top_spacing),
+        Container(
+          height: Style.book_meta_skeleton_height,
+          width: 88,
+          decoration: BoxDecoration(
+            color: block_color,
+            borderRadius: BorderRadius.circular(LayoutConfig.tag_radius),
+          ),
+        ),
+      ],
+    );
+  }
+}

@@ -1,0 +1,3 @@
+-keep class io.flutter.embedding.engine.** { *; }
+-keep class io.flutter.plugin.** { *; }
+-keep class io.flutter.plugins.pathprovider.** { *; }

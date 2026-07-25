@@ -1,0 +1,654 @@
+{
+  "common": {
+    "loading": "Inapakia...",
+    "empty_data": "Hakuna chochote~",
+    "cancel": "Ghairi",
+    "confirm": "Thibitisha"
+  },
+  "dislike_sheet": {
+    "title": "Kwa nini huipendi?",
+    "hint": "Weka Mapendeleo",
+    "login_required": "Ingia kwa mapendekezo bora"
+  },
+  "recommend_card": {
+    "dislike": "Ruka"
+  },
+  "interest_preference": {
+    "title": "Chagua Maslahi Yako",
+    "subtitle": "Kamilisha wasifu wako kwa mapendekezo bora",
+    "save": "Hifadhi",
+    "loading": "Inapakia...",
+    "login_required": "Ingia ili kuhifadhi maslahi yako kwa mapendekezo bora zaidi",
+    "content_preference": "Mapendeleo ya Maudhui",
+    "multi_select_hint": "(Chaguzi nyingi)",
+    "completion_preference": "Ukamilifu wa Riwaya",
+    "word_count_preference": "Idadi ya Maneno",
+    "gender_preference": "Upendeleo wa Jinsia",
+    "single_select_hint": "(Chaguzi moja)",
+    "content_novel": "Riwaya",
+    "content_short_drama": "Tamthilia Fupi",
+    "content_audiobook": "Vitabu vya Sauti",
+    "content_comics": "Comic",
+    "content_comic_drama": "Comic Drama",
+    "content_classics": "Classic",
+    "content_knowledge": "Elimu",
+    "content_short_story": "Hadithi Fupi",
+    "content_video": "Video Mapitio",
+    "content_community": "Jumuiya",
+    "completion_completed": "Imekamilika",
+    "completion_serial": "Inaendelea",
+    "word_count_1m_plus": "1M+",
+    "word_count_50_100w": "500K-1M",
+    "word_count_10_50w": "100K-500K",
+    "word_count_under_10w": "Chini ya 100K",
+    "gender_male": "Riwaya za Kiume",
+    "gender_female": "Riwaya za Kike",
+    "gender_any": "Hakuna Upendeleo",
+    "exit_dialog_title": "Hifadhi mabadiliko?",
+    "exit_dialog_discard": "Usihifadhi",
+    "exit_dialog_save": "Hifadhi"
+  },
+  "home": {
+    "full_ranking": "Zaidi",
+    "full_ranking_link": "Zote",
+    "category_tabs": {
+      "recommend": "Pendekezo",
+      "novel": "Riwaya",
+      "audiobook": "Kitabu cha sauti",
+      "drama": "Tamthilia",
+      "classic": "Classic",
+      "short_story": "Hadithi fupi",
+      "comic_drama": "Comic",
+      "video": "Video",
+      "knowledge": "Ujuzi"
+    },
+    "category_button": "Aina",
+    "full_ranking_page_title": "Orodha kamili",
+    "view_more": "Zaidi",
+    "ranking_popularity": "Umaarufu {count}0K",
+    "ranking_heat": "Moto {count}0K",
+    "ranking_heat_text": "{count} Masomo",
+    "ranking_count_thousand_text": "{count} Masomo",
+    "ranking_count_yi_text": "{count} Masomo",
+    "ranking_item_meta": "{category} · Moto {count}0K",
+    "book_rating": "{rating}",
+    "content_tabs": {
+      "novel": "Riwaya",
+      "published": "Iliyochapishwa",
+      "short_drama": "Tamthilia Fupi"
+    },
+    "ranking_tabs": {
+      "recommend": "Mapendekezo",
+      "finished": "Zilizokamilika",
+      "peak": "Alama za Juu",
+      "new_book": "Vitabu Vipya",
+      "short_story": "Hadithi Fupi",
+      "hot_read": "Vinavyosomewa Sana",
+      "rising": "Vinavyopanda",
+      "reputation": "Sifa Bora",
+      "collection": "Vilivyohifadhiwa Sana",
+      "potential": "Vipaji Vipya"
+    },
+    "default_banner": {
+      "first": {
+        "title": "Kurasa za Kugundua",
+        "subtitle": "Kutana na hadithi yako inayofuata.",
+        "badge": "Teule",
+        "highlight": "Soma kwa uhuru"
+      },
+      "second": {
+        "title": "Safari ya Hadithi",
+        "subtitle": "Fungua sura zaidi zinazovutia kubaki nazo.",
+        "badge": "Mapendekezo",
+        "highlight": "Furahia wakati"
+      }
+    },
+    "book_list_footer": {
+      "loading_more": "Inapakia zaidi",
+      "no_more": "Hakuna zaidi"
+    }
+  },
+  "recharge": {
+    "title": "Weka Fedha",
+    "content": "Weka Fedha"
+  },
+  "postRequest": {
+    "default_error": "Mtandao una hitilafu. Tafadhali kagua mtandao na ujaribu tena",
+    "error_02": "Hitilafu ya ombi la mtandao, tafadhali wasiliana na msimamizi",
+    "invalid_json": "Imeshindikana kusoma data. Tafadhali jaribu tena baadaye"
+  },
+  "CustomerService": {
+    "title": "Huduma kwa Wateja"
+  },
+  "register": {
+    "invitation_code": "Msimbo",
+    "invitation_code_input_tips": "Tafadhali weka nambari ya mwaliko",
+    "invitation_code_tips": "Kwa nini ujaze nambari ya mwaliko?",
+    "account_tips": "Tayari una akaunti?",
+    "login_now": "Ingia sasa",
+    "success_01": "Usajili umefanikiwa"
+  },
+  "login": {
+    "slogan": "Kila unachotaka kiko hapa",
+    "account": "Akaunti",
+    "account_tips": "Tafadhali weka akaunti",
+    "password": "Nenosiri",
+    "password_tips": "Tafadhali weka nenosiri",
+    "remember_password": "Kumbuka Nenosiri",
+    "forgot_password": "Umesahau Nenosiri?",
+    "no_account_tips": "Huna akaunti?",
+    "register_now": "Jisajili sasa",
+    "success_01": "Umeingia kwa mafanikio",
+    "account_not_registered": "Akaunti hii bado haijasajiliwa, tafadhali jisajili kwanza",
+    "account_already_registered": "Akaunti hii imesajiliwa tayari, tafadhali ingia"
+  },
+  "SelectionLanguage": {
+    "title": "Chagua Lugha",
+    "subtitle": "Chagua lugha unayoipendelea",
+    "done": "Imekamilika"
+  },
+  "UserInfo": {
+    "copy_invitation_code": "Nambari ya mwaliko imenakiliwa",
+    "billing_records": "Rekodi za bili",
+    "choose_gallery": "Chagua kutoka Gallery",
+    "take_photo": "Piga Picha",
+    "choose_gallery_error_01": "Hakuna picha iliyochaguliwa",
+    "take_photo_error_01": "Hakuna picha iliyopigwa",
+    "take_photo_tips_01": "Ruhusa ya kamera haijapatikana, tafadhali ruhusu programu kutumia kamera",
+    "take_photo_tips_02": "Ruhusu",
+    "take_photo_error_02": "Imeshindikana kufungua mipangilio ya programu, tafadhali fanya kwa mkono au wasiliana na msimamizi",
+    "take_photo_error_03": "Upakiaji umeshindikana, tafadhali wasiliana na msimamizi",
+    "error_01": "Uthibitisho umeisha muda, tafadhali ingia tena",
+    "error_02": "Nenosiri jipya haliwezi kuwa tupu",
+    "error_03": "Jina haliwezi kuwa tupu",
+    "error_04": "Tafadhali pakia faili ya picha yenye kiendelezi kama: jpg/jpeg/png/webp n.k.",
+    "error_05": "Ukubwa wa picha ya sasa ni: {size}, tafadhali pakia picha isiyozidi {max_size}",
+    "error_06": "Imeshindikana kubadilisha avatar, tafadhali wasiliana na msimamizi",
+    "error_07": "Tafadhali weka nenosiri tena",
+    "error_08": "Nenosiri mbili hazifanani",
+    "success_01": "Usasishaji umefanikiwa",
+    "tips_01": "Una uhakika unataka kutoka?",
+    "tips_02": "Tafadhali weka nenosiri jipya",
+    "tips_03": "Tafadhali weka jina jipya la mtumiaji",
+    "tips_04": "Badilisha Jina",
+    "tips_05": "Inapakia avatar",
+    "tips_06": "Tafadhali thibitisha nenosiri jipya",
+    "update_password_btn": "Sasisha",
+    "update_user_info_title": "Sasisha Taarifa za Mtumiaji",
+    "update_login_password_title": "Sasisha Nenosiri la Kuingia",
+    "update_nickname_screen_title": "Sasisha Jina la Mtumiaji",
+    "update_nickname_screen_subtitle": "Chagua jina rahisi kutambulika na wasomaji wengine watakuona.",
+    "update_password_screen_title": "Sasisha Nenosiri",
+    "update_password_screen_subtitle": "Weka nenosiri jipya la kuingia. Litafanya kazi mara tu unapothibitisha.",
+    "current_nickname": "Jina la sasa: {name}",
+    "current_nickname_label": "Jina la sasa la Mtumiaji",
+    "new_nickname_label": "Jina jipya la Mtumiaji",
+    "new_password_label": "Nenosiri Jipya",
+    "confirm_password_label": "Thibitisha Nenosiri",
+    "success_02": "Akaunti imetoka",
+    "success_03": "Nenosiri limebadilishwa kwa mafanikio",
+    "success_04": "Jina limesasishwa",
+    "yes": "Ndio",
+    "no": "Hapana",
+    "balance": "Sarafu",
+    "login": "Ingia",
+    "register": "Jiunge",
+    "night_mode": "Mandhari ya Giza",
+    "language_selection": "Chaguo la Lugha",
+    "language": "Lugha",
+    "bill": "Bili",
+    "withdraw": "Toa Fedha",
+    "recharge": "Weka Fedha",
+    "change_password": "badilisha Nenosiri",
+    "sign_out": "Toka",
+    "invitation_code": "Nambari ya Mwaliko",
+    "statistics_follow": "Wanaofuata",
+    "statistics_fans": "Wafuasi",
+    "statistics_likes": "Mapendeleo",
+    "change_password_subtitle": "Weka nenosiri jipya la kuingia ili kuhifadhi akaunti yako salama.",
+    "password_strength": "Uhimilivu wa nenosiri:",
+    "strength_weak": "Dhaifu",
+    "strength_fair": "Wastani",
+    "strength_good": "Nzuri",
+    "strength_strong": "Imara",
+    "password_tips_title": "Vidokezo vya Nenosiri",
+    "password_tip_1": "Herufi 8-16",
+    "password_tip_2": "Jumuisha herufi, nambari na alama",
+    "password_tip_3": "Epuka maudhui yanayohusiana na akaunti",
+    "confirm_change": "Thibitisha Mabadiliko",
+    "confirm_update": "Sasisha",
+    "interest_preference": "Maslahi",
+    "online_customer_service": "Huduma Mtandaoni",
+    "about_top_read": "Kuhusu TopRead"
+  },
+
+  "customer_service_sheet": {
+    "title": "Msaada Mtandaoni",
+    "description": "Ukihitaji msaada wowote wakati wa kutumia programu, tafadhali wasiliana na msaada wetu mtandaoni. Tunafuraha kukusaidia.",
+    "contact_button": "Wasiliana na Msaada",
+    "empty_hint": "Tuma ujumbe kuanza mazungumzo",
+    "photo_permission_hint": "Ruhusa ya picha inahitajika kutuma picha. Tafadhali iwashe kwenye Mipangilio."
+  },
+
+  "message": {
+    "title": "Ujumbe",
+    "subtitle": "Kituo cha ujumbe",
+    "all_messages": "Ujumbe wote",
+    "no_more": "Hakuna ujumbe zaidi",
+    "loading_more": "Inapakia...",
+    "empty": "Hakuna ujumbe",
+    "mark_all_read": "Soma yote",
+    "delete_confirm_title": "Futa ujumbe",
+    "delete_confirm_content": "Una uhakika unataka kufuta ujumbe huu?",
+    "stats": {
+      "comment": "Maoni",
+      "like": "Likes",
+      "favorite": "Vipendwa",
+      "reply": "Majibu",
+      "unread_suffix": " hazijasomwa"
+    },
+    "type": {
+      "system": "Mfumo",
+      "comment_reply": "Maoni",
+      "comment_like": "Like",
+      "novel_like": "Like",
+      "novel_favorite": "Kipendwa",
+      "chat_reply": "Jibu"
+    },
+    "card_title": {
+      "system": "Taarifa za Mfumo",
+      "comment_reply": "Jibu la Maoni",
+      "comment_like": "Like Maoni",
+      "novel_like": "Like Riwaya",
+      "novel_favorite": "Riwaya Kipendwa",
+      "chat_reply": "Msaada Mtandaoni"
+    },
+    "card_subtitle": {
+      "system_self": "{0}",
+      "system_other": "{0}",
+      "comment_reply_self": "Ulijibu maoni katika \"{0}\"",
+      "comment_reply_other": "Mtu alijibu maoni yako katika \"{0}\"",
+      "comment_like_self": "Ulikuja like maoni katika \"{0}\"",
+      "comment_like_other": "Mtu alikuja like maoni yako katika \"{0}\"",
+      "novel_like_self": "Ulikuja like \"{0}\"",
+      "novel_like_other": "Mtu alikuja like riwaya yako \"{0}\"",
+      "novel_favorite_self": "Uliweka \"{0}\" kipendwa",
+      "novel_favorite_other": "Mtu aliweka riwaya yako \"{0}\" kipendwa"
+    },
+    "time": {
+      "just_now": "Sasa hivi",
+      "minutes_ago": "Dakika {0} zilizopita",
+      "hours_ago": "Saa {0} zilizopita",
+      "days_ago": "Siku {0} zilizopita"
+    },
+    "no_login": {
+      "title": "Hujaingia",
+      "desc": "Ingia ili kuona taarifa za mfumo, mwingiliano na majibu",
+      "go_login": "Ingia"
+    }
+  },
+  "bookshelf": {
+    "title": "Rafu ya Vitabu",
+    "subtitle": "Dhibiti maudhui yako ya kusoma",
+    "tabs": {
+      "history": "Historia",
+      "favorite": "Vipendwa",
+      "focus": "Unafuatilia"
+    },
+    "no_login": {
+      "title": "Hujaingia",
+      "desc": "Ingia ili kuona vitabu ulivyohifadhi, historia ya usomaji na zaidi"
+    },
+    "tags": {
+      "completed": "Imekamilika",
+      "updated": "Imesasishwa",
+      "new_release": "Mpya",
+      "listening": "Inasikilizwa",
+      "favorite": "Kipendwa",
+      "serializing": "Inaendelea"
+    },
+    "progress": {
+      "reading_chapters": "Sura {current}/{total}",
+      "unread_chapters": "Sura {count} hazijasomwa",
+      "read_progress": "Umesoma {progress}%",
+      "chapters": "Sura {count}",
+      "unread": "Haijasomwa",
+      "categories": "{names}"
+    },
+    "empty": {
+      "history": "Hakuna historia ya usomaji bado",
+      "favorite": "Hakuna vitabu vilivyohifadhiwa bado",
+      "focus": "Hakuna waandishi unaofuatilia bado"
+    },
+    "focus": {
+      "novel_count": "Kazi {count}"
+    },
+    "time": {
+      "just_now": "Sasa hivi",
+      "minute_ago": "dak zilizopita",
+      "hour_ago": "saa zilizopita",
+      "day_ago": "siku zilizopita",
+      "month_ago": "miezi iliyopita",
+      "year_ago": "miaka iliyopita"
+    },
+    "delete_dialog": {
+      "title": "Futa Rekodi",
+      "message": "Futa rekodi ya kusoma ya \"{title}\"?",
+      "cancel": "Ghairi",
+      "confirm": "Futa"
+    },
+    "unfavorite_dialog": {
+      "title": "Ondoa Kipendwa",
+      "message": "Ondoa \"{title}\" kutoka vipendwa?",
+      "cancel": "Ghairi",
+      "confirm": "Ondoa"
+    },
+    "unfollow_dialog": {
+      "title": "Acha Kufuatilia",
+      "message": "Acha kufuatilia {name}?",
+      "cancel": "Ghairi",
+      "confirm": "Acha Kufuatilia"
+    },
+    "load_more": {
+      "button": "Pakia Zaidi",
+      "loading": "Inapakia",
+      "no_more": "Hakuna zaidi"
+    },
+    "recommend_today": "Mapendekezo ya Leo"
+  },
+  "search": {
+    "entry_hint": "Tafuta vitabu, waandishi, aina",
+    "page_title": "Tafuta",
+    "header_title": "Vitabu, waandishi, lebo",
+    "input_hint": "Andika maneno ya kutafuta",
+    "submit": "Tafuta",
+    "hot_title": "Utafutaji maarufu",
+    "recommend_title": "Maarufu",
+    "keyword_result_title": "Matokeo ya \"{keyword}\"",
+    "search_result_title": "Matokeo ya \"{keyword}\""
+  },
+  "ranking_full_list": {
+    "footer": {
+      "loading_more": "Inapakia zaidi",
+      "no_more": "Hakuna data zaidi"
+    }
+  },
+  "bill": {
+    "title": "Orodha ya Bili",
+    "empty": "Hakuna Data",
+    "reload": "Pakia tena",
+    "load_more": "Pakia Zaidi",
+    "no_more": "Hakuna Data Zaidi",
+    "copy_success": "Imenakiliwa",
+    "id": "Kitambulisho cha Bili",
+    "serial_number": "Nambari ya Bili",
+    "time": "Muda",
+    "amount": "Kiasi",
+    "increase": "Ongezeko",
+    "decrease": "Punguzo",
+    "type": "Aina",
+    "type_3": "Mabadiliko ya Bili",
+    "type_105": "Utoaji wa Mtumiaji",
+    "type_106": "Uwekaji wa Mtumiaji",
+    "type_108": "Mgawo wa Wakala",
+    "type_109": "Mgawo wa Wakala",
+    "type_110": "Mgawo wa Wakala",
+    "type_default": "Mabadiliko ya Bili"
+  },
+  "back": {
+    "exit_prompt": "Bonyeza nyuma tena kutoka app"
+  },
+  "withdraw_page": {
+    "title": "Toa Fedha",
+    "balance_title": "Salio Linalopatikana",
+    "records": "Rekodi za Utoaji",
+    "type_title": "Mtandao wa Utoaji",
+    "type_hint": "Chagua mtandao wa utoaji huu",
+    "address_title": "Anwani ya Wallet",
+    "wallet_title": "Anwani ya Wallet",
+    "address_placeholder": "Weka anwani ya wallet",
+    "paste": "Bandika",
+    "address_paste_success": "Imebandikwa kwenye sehemu ya anwani",
+    "address_paste_empty": "Hakuna maandishi yanayoweza kutumika kwenye clipboard",
+    "amount_title": "Kiasi cha Kutoa",
+    "amount_hint": "Tumia slider au weka kiasi moja kwa moja",
+    "amount_placeholder": "Weka kiasi cha kutoa",
+    "min_amount": "Chini",
+    "min_short": "Chini",
+    "max_amount": "Juu",
+    "max_short": "Juu",
+    "withdraw_all": "Toa Zote",
+    "submit": "Wasilisha",
+    "submit_success": "Utoaji wako unachakatwa. Tafadhali subiri.",
+    "back_home": "Rudi Nyumbani",
+    "back_home_countdown": "Rudi Nyumbani ({seconds}s)",
+    "go_records": "Rekodi za Utoaji",
+    "type_required": "Tafadhali chagua mtandao wa utoaji",
+    "address_required": "Tafadhali weka anwani ya wallet ya utoaji",
+    "amount_required": "Tafadhali weka kiasi halali cha utoaji",
+    "confirm_title": "Thibitisha Maelezo ya Utoaji",
+    "insufficient_message": "Salio lako la sasa ni {balance}. Kiasi cha chini cha kutoa ni {min}, hivyo utoaji haupatikani bado.",
+    "insufficient_dialog_records": "Rekodi za utoaji",
+    "insufficient_acknowledged": "Nimeelewa",
+    "notice_title": "Kumbusho",
+    "notice_1": "Hakikisha mtandao wa utoaji uliouchagua unalingana kabisa na mtandao wa wallet lengwa. Mfano, utoaji wa TRC20 lazima uende kwa anwani ya TRC20.",
+    "notice_2": "Ukichagua mtandao usio sahihi, kama kuchagua ERC20 kwa wallet ya TRC20, uhamisho wowote ulioshindikana, kuchelewa, au upotevu wa mali utabebwa na mtumiaji.",
+    "notice_3": "Huu ni uthibitisho wa mwisho kabla ya utoaji. Tafadhali kagua kwa makini mtandao, anwani ya wallet, na kiasi kabla ya kuendelea."
+  },
+  "withdraw_record_page": {
+    "title": "Rekodi za Utoaji",
+    "subtitle": "Vuta chini kusasisha. Endelea kushuka ili kupakia historia zaidi ya utoaji.",
+    "empty_title": "Bado hakuna rekodi za utoaji",
+    "empty_subtitle": "Baada ya kuwasilisha ombi la utoaji, rekodi zitaonekana hapa kwa mpangilio wa muda.",
+    "loading_more": "Inapakia data zaidi...",
+    "no_more": "Hakuna data zaidi",
+    "amount_payable": "Kiasi cha Utoaji",
+    "serial_number": "Nambari ya Msururu",
+    "create_time": "Muda wa Kuundwa",
+    "pay_time": "Muda wa Kuchakatwa",
+    "pay_qr_code": "Anwani ya Wallet",
+    "copy_success": "Imenakiliwa kwenye clipboard",
+    "status_processing": "Inachakatwa",
+    "status_success": "Imefanikiwa",
+    "status_void": "Imebatilishwa",
+    "status_returned": "Imerejeshwa",
+    "status_unknown": "Hali"
+  },
+  "top_up_page": {
+    "title": "Weka Fedha",
+    "subtitle": "Chagua mtandao wa uwekaji na kiasi kabla ya kuwasilisha ombi lako.",
+    "unavailable": "Uwekaji fedha haupatikani kwa sasa",
+    "type_title": "Mtandao wa Uwekaji",
+    "type_hint": "Chagua mtandao wa uwekaji huu",
+    "amount_title": "Kiasi cha Uwekaji",
+    "amount_hint": "Chagua kiasi unachotaka kuweka",
+    "summary_type": "Aina",
+    "summary_amount": "Kiasi",
+    "submit": "Wasilisha Uwekaji",
+    "submit_pending": "API ya kuwasilisha uwekaji bado haijaunganishwa",
+    "result_title": "Maelezo ya Uwekaji",
+    "result_hint": "Tumia kiasi na anwani halisi hapa chini kukamilisha uwekaji.",
+    "result_amount": "Kiasi cha Asili",
+    "result_payable": "Kiasi cha Kulipa",
+    "result_address": "Anwani ya Uwekaji",
+    "result_serial": "Nambari ya Msururu"
+  },
+  "filter_popup": {
+    "title": "Chuja",
+    "clear": "Futa",
+    "confirm": "Thibitisha",
+    "confirm_with_count": "Thibitisha({})"
+  },
+  "image_text": {
+    "loading": "Inapakia maudhui..."
+  },
+  "top_up_qr_code_page": {
+    "title": "Anwani ya Uwekaji",
+    "unavailable": "Maelezo ya uwekaji hayapatikani kwa sasa",
+    "amount_label": "Kiasi cha Kulipa",
+    "amount_hint": "Tafadhali hamisha kulingana kabisa na kiasi hiki",
+    "copy_success": "Imenakiliwa",
+    "done": "Uwekaji Umekamilika",
+    "records": "Rekodi za Uwekaji",
+    "notice_title": "Kumbusho",
+    "notice_01": "Tafadhali hakikisha unahamisha kiasi halisi cha [{amount}] kupitia mtandao wa [{type}] kwenda anwani hii.",
+    "notice_02": "Ikiwa mtandao au kiasi havilingani, uwekaji unaweza kuchelewa au kutotambuliwa.",
+    "notice_03": "Uhamisho wa blockchain mara nyingi hauwezi kubadilishwa baada ya kuwasilishwa, hivyo hakikisha tena kabla ya kuendelea.",
+    "serial_number": "Nambari ya Msururu"
+  },
+  "top_up_record_page": {
+    "title": "Rekodi za Uwekaji",
+    "subtitle": "Vuta chini kusasisha. Endelea kushuka ili kupakia historia zaidi ya uwekaji.",
+    "empty_title": "Bado hakuna rekodi za uwekaji",
+    "empty_subtitle": "Baada ya uwekaji wako wa kwanza kukamilika, rekodi zitaonekana hapa kwa mpangilio wa muda.",
+    "loading_more": "Inapakia data zaidi...",
+    "no_more": "Hakuna data zaidi",
+    "amount_payable": "Kiasi Kilichopokelewa",
+    "pay_payable": "Kiasi cha Kulipa",
+    "serial_number": "Nambari ya Msururu",
+    "create_time": "Muda wa Kuundwa",
+    "pay_time": "Muda wa Malipo",
+    "carrier_order_number": "Nambari ya Oda ya Carrier",
+    "pay_qr_code": "Anwani ya Uwekaji",
+    "countdown_label": "Muda Uliobaki",
+    "copy_success": "Imenakiliwa kwenye clipboard",
+    "status_unpaid": "Haijalipwa",
+    "status_expired": "Muda umeisha",
+    "status_success": "Uwekaji Umefanikiwa",
+    "status_failed": "Uwekaji Umeshindikana",
+    "status_unknown": "Hali"
+  },
+  "read": {
+    "follow": "+ Fuatilia",
+    "followed": "Imefuatiliwa",
+    "restoring_progress": "Inapakia maendeleo ya kusoma",
+    "intro_title": "Muhtasari",
+    "more": "Zaidi",
+    "hot_review_title": "Maoni maarufu",
+    "more_review": "Maoni zaidi",
+    "reading_title": "Usomaji wa majaribio",
+    "reading_hint": "Telezesha juu kuingia kwenye usomaji. Maudhui ya sasa ni ya majaribio.",
+    "swipe_to_read": "Telezesha juu kuanza kusoma",
+    "add_to_bookshelf": "Hifadhi",
+    "prev_chapter": "Iliyotangulia",
+    "next_chapter": "Ifuatayo",
+    "catalog": "Sura",
+    "detail": "Maelezo",
+    "notes": "Vidokezo",
+    "no_notes": "Hakuna vidokezo bado",
+    "chapter_word_count_suffix": "maneno",
+    "chapter_read_percent": "Imesomwa {}%",
+    "day_mode": "Mchana",
+    "night_mode": "Usiku"
+  },
+  "constant": {
+    "refresh_success": "Usasishaji umefanikiwa",
+    "ok": "Sawa",
+    "continue_after_confirm": "Tafadhali thibitisha kabla ya kuendelea",
+    "cancel": "Ghairi",
+    "balance": "Salio",
+    "hintText": "Tafadhali weka maudhui",
+    "album": "Albamu",
+    "camera": "Kamera"
+  },
+  "web_view": {
+    "loading_text": "Inapakia...",
+    "error_title": "Imeshindwa kupakia",
+    "error_description": "Tafadhali angalia mtandao wako na ujaribu tena",
+    "retry_button": "Jaribu tena"
+  },
+  "number_unit": {
+    "ten_thousand": "{count}w",
+    "thousand": "{count}k"
+  },
+  "short_story_read": {
+    "comment_input_hint": "Sema kitu...",
+    "catalog": "Orodha",
+    "catalog_empty": "Hakuna hadithi zaidi",
+    "setting": "Mipangilio",
+    "reading": "Inasoma",
+    "collapse": "Ficha",
+    "expand": "Onyesha",
+    "load_failed": "Imeshindwa kupakia",
+    "load_failed_hint": "Tafadhali angalia muunganisho wa mtandao na ujaribu tena",
+    "retry": "Jaribu tena",
+    "login_required": "Hujalogin. Tafadhali login ili kuendelea.",
+    "previous": "Iliyotangulia",
+    "next": "Inayofuata",
+    "reading_settings": "Usomaji",
+    "font_size": "Ukubwa",
+    "theme": "Mandhari",
+    "theme_day": "Mchana",
+    "theme_night": "Usiku",
+    "other": "Nyingine",
+    "auto_read": "Soma Kiotomatiki",
+    "auto_read_settings": "Soma Otomatiki",
+    "speed_slow": "Pole",
+    "speed_fast": "Haraka",
+    "exit_auto_read": "Toka",
+    "next_story": "Inayofuata",
+    "release_to_view": "Acha kuona",
+    "scroll_to_view_next": "Sogeza kwa ifuatayo"
+  },
+  "comment": {
+    "title": "Maoni",
+    "count_label": "Maoni {count}",
+    "empty": "Hakuna maoni bado. Kuwa wa kwanza kutoa maoni!",
+    "reply": "Jibu",
+    "like": "Penda",
+    "send": "Tuma",
+    "input_hint": "Sema kitu…",
+    "emoji": "Emoji",
+    "image": "Picha",
+    "reply_to": "Jibu",
+    "load_error_title": "Imeshindwa kupakia maoni",
+    "load_error_desc": "Tatizo la mtandao. Gusa ili kujaribu tena.",
+    "send_success": "Maoni yametumwa",
+    "time": {
+      "just_now": "Sasa hivi",
+      "minutes_ago": "dakika zilizopita",
+      "hours_ago": "masaa yaliyopita",
+      "days_ago": "siku zilizopita",
+      "weeks_ago": "wiki zilizopita"
+    }
+  },
+  "favorite": {
+    "add_success": "Imeongezwa kwenye vipendwa",
+    "remove_success": "Imeondolewa kwenye vipendwa"
+  },
+  "like_tip": {
+    "add_success": "Imependwa",
+    "remove_success": "Imeondolewa upendo"
+  },
+  "no_internet": {
+    "title": "Inaonekana umefika kwenye jangwa lisilo na hadithi.",
+    "description": "Usijali, mara nyingi hili husababishwa na tatizo la muda la mtandao. Gusa « Pakia Upya » ili uendelee na safari yako ya kusoma."
+  },
+  "share_sheet": {
+    "title": "Shiriki kwa",
+    "generate_image": "Unda Picha",
+    "copy_link": "Nakili Kiungo",
+    "copy_success": "Kiungo kimenakiliwa",
+    "card_preview_title": "Hakiki Kadi",
+    "save_to_album": "Hifadhi",
+    "save_success": "Imehifadhiwa kwenye galeri",
+    "save_failed": "Imeshindwa kuhifadhi",
+    "photo_permission_denied": "Ruhusu ufikiaji wa picha kabla ya kuhifadhi",
+    "default_reader": "Msomaji",
+    "excerpt_by": "{name} · Dondoo",
+    "read_together": "Fungua {app} · Soma nami",
+    "qr_semantics": "Msimbo wa QR wa kushiriki kitabu",
+    "share_text": "Ninasoma \"{title}\" kwenye {app}, kuja uone!"
+  },
+  "app_update": {
+    "upgrade_title": "Toleo Jipya",
+    "force_update_message": "Toleo jipya linapatikana. Tafadhali sasisha ili kuendelea.",
+    "optional_update_message": "Toleo jipya linapatikana. Tunapendekeza usasishe.",
+    "upgrade_now": "Sasisha Sasa",
+    "upgrade_later": "Baadaye",
+    "already_latest": "Tayari ni toleo la hivi karibuni"
+  },
+  "chat": {
+    "no_more_messages": "Hakuna ujumbe zaidi"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@openim/wasm-client-sdk": "^3.8.3-patch.14"
+  }
+}

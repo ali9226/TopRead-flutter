@@ -1,0 +1,676 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "empty_data": "Nothing here~",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "dislike_sheet": {
+    "title": "Why don't you like it?",
+    "hint": "Set Interests",
+    "login_required": "Sign in for better recommendations"
+  },
+  "recommend_card": {
+    "dislike": "Skip"
+  },
+  "interest_preference": {
+    "title": "Pick Interests",
+    "subtitle": "Get better story picks",
+    "save": "Save",
+    "loading": "Loading...",
+    "login_required": "Log in to save your interests for better recommendations",
+    "content_preference": "Content",
+    "multi_select_hint": "(Multi)",
+    "completion_preference": "Status",
+    "word_count_preference": "Length",
+    "gender_preference": "Audience",
+    "single_select_hint": "(Single)",
+    "content_novel": "Novels",
+    "content_short_drama": "Dramas",
+    "content_audiobook": "Audio",
+    "content_comics": "Comics",
+    "content_comic_drama": "Comic Dramas",
+    "content_classics": "Classics",
+    "content_knowledge": "Knowledge",
+    "content_short_story": "Shorts",
+    "content_video": "Video Recaps",
+    "content_community": "Community",
+    "completion_completed": "Completed",
+    "completion_serial": "Ongoing",
+    "word_count_1m_plus": "1M+ words",
+    "word_count_50_100w": "500K-1M",
+    "word_count_10_50w": "100K-500K",
+    "word_count_under_10w": "Under 100K",
+    "gender_male": "For Men",
+    "gender_female": "For Women",
+    "gender_any": "Any",
+    "exit_dialog_title": "Save changes?",
+    "exit_dialog_discard": "Don't Save",
+    "exit_dialog_save": "Save"
+  },
+  "home": {
+    "full_ranking": "More",
+    "full_ranking_link": "All",
+    "category_tabs": {
+      "recommend": "For You",
+      "novel": "Novels",
+      "audiobook": "Audio",
+      "drama": "Dramas",
+      "classic": "Classics",
+      "short_story": "Shorts",
+      "comic_drama": "Comic",
+      "video": "Videos",
+      "knowledge": "Knowledge"
+    },
+    "category_button": "Categories",
+    "full_ranking_page_title": "Rankings",
+    "view_more": "More",
+    "book_list_footer": {
+      "loading_more": "Loading",
+      "no_more": "No more"
+    },
+    "ranking_popularity": "{count}0K Fans",
+    "ranking_heat": "{count}0K Heat",
+    "ranking_heat_text": "{count} Reads",
+    "ranking_count_thousand_text": "{count} Reads",
+    "ranking_count_yi_text": "{count} Reads",
+    "ranking_item_meta": "{category} · {count}0K Heat",
+    "book_rating": "{rating}",
+    "content_tabs": {
+      "novel": "Novel",
+      "published": "Published",
+      "short_drama": "Drama"
+    },
+    "ranking_tabs": {
+      "recommend": "Picks",
+      "finished": "Completed",
+      "peak": "Peak",
+      "new_book": "New",
+      "short_story": "Shorts",
+      "hot_read": "Hot",
+      "rising": "Rising",
+      "reputation": "Rated",
+      "collection": "Saved",
+      "potential": "Gems"
+    },
+    "default_banner": {
+      "first": {
+        "title": "Story Haven",
+        "subtitle": "Find your next favorite story.",
+        "badge": "Featured",
+        "highlight": "Read Freely"
+      },
+      "second": {
+        "title": "Story Walk",
+        "subtitle": "Open pages worth staying for.",
+        "badge": "Recommended",
+        "highlight": "Dive In"
+      }
+    }
+  },
+  "recharge": {
+    "title": "Top Up",
+    "content": "Top Up"
+  },
+  "postRequest": {
+    "default_error": "Network error. Try again.",
+    "error_02": "Request failed. Contact support.",
+    "invalid_json": "Data error. Try later."
+  },
+  "CustomerService": {
+    "title": "Support"
+  },
+  "AuthorizedLogin": {
+    "title": "Quick Login",
+    "telegram_title": "Telegram Login",
+    "telegram_phone_hint": "Phone with code, e.g. +255",
+    "telegram_phone_required": "Enter phone number",
+    "telegram_phone_code_required": "Add country code, e.g. +255",
+    "telegram_auth_timeout": "Telegram login timed out",
+    "telegram_auth_failed": "Telegram login failed",
+    "telegram_auth_url_invalid": "Invalid Telegram auth URL",
+    "telegram_auth_ongoing": "Telegram login in progress",
+    "authorize_login": "Authorize"
+  },
+  "register": {
+    "invitation_code": "Invite Code",
+    "invitation_code_input_tips": "Enter invite code",
+    "invitation_code_tips": "Why invite code?",
+    "account_tips": "Already have an account?",
+    "login_now": "Log In",
+    "success_01": "Signed up"
+  },
+  "login": {
+    "slogan": "All your stories are here",
+    "account": "Account",
+    "account_tips": "Enter account",
+    "password": "Password",
+    "password_tips": "Enter password",
+    "remember_password": "Remember Me",
+    "forgot_password": "Forgot Password?",
+    "google_configuration_error": "Google login setup error. Check OAuth Client ID, package name, and SHA-1.",
+    "no_account_tips": "New here?",
+    "register_now": "Sign Up",
+    "success_01": "Logged in",
+    "account_not_registered": "Account not registered. Please sign up first.",
+    "account_already_registered": "Account already registered. Please log in."
+  },
+  "SelectionLanguage": {
+    "title": "Language",
+    "subtitle": "Choose app language",
+    "done": "Done"
+  },
+  "UserInfo": {
+    "copy_invitation_code": "Invite code copied",
+    "billing_records": "Bills",
+    "choose_gallery": "Gallery",
+    "take_photo": "Camera",
+    "choose_gallery_error_01": "No photo selected",
+    "take_photo_error_01": "No photo taken",
+    "take_photo_tips_01": "Camera access is off. Please allow access.",
+    "take_photo_tips_02": "Allow",
+    "take_photo_error_02": "Can't open settings. Set it manually or contact support.",
+    "take_photo_error_03": "Upload failed. Contact support.",
+    "error_01": "Session expired. Log in again.",
+    "error_02": "New password required",
+    "error_03": "Name required",
+    "error_04": "Upload an image file, such as jpg, jpeg, png, or webp.",
+    "error_05": "Image size: {size}. Max: {max_size}.",
+    "error_06": "Avatar update failed. Contact support.",
+    "error_07": "Confirm password",
+    "error_08": "Passwords do not match",
+    "tips_01": "Log out now?",
+    "tips_02": "Enter new password",
+    "tips_03": "Enter new name",
+    "tips_04": "Change Name",
+    "tips_05": "Uploading avatar",
+    "tips_06": "Confirm new password",
+    "update_password_btn": "Change",
+    "update_user_info_title": "Edit Profile",
+    "update_login_password_title": "Change Password",
+    "update_nickname_screen_title": "Change Name",
+    "update_nickname_screen_subtitle": "Choose a clear name other readers will see.",
+    "update_password_screen_title": "Change Password",
+    "update_password_screen_subtitle": "Set a new login password.",
+    "current_nickname": "Current name: {name}",
+    "current_nickname_label": "Current Name",
+    "new_nickname_label": "New Name",
+    "new_password_label": "New Password",
+    "confirm_password_label": "Confirm Password",
+    "success_02": "Logged out",
+    "success_03": "Password changed",
+    "success_04": "Name updated",
+    "yes": "OK",
+    "no": "Cancel",
+    "success_01": "Refreshed",
+    "balance": "Coins",
+    "login": "Log In",
+    "register": "Sign Up",
+    "night_mode": "Dark Mode",
+    "language_selection": "Language",
+    "language": "Language",
+    "bill": "Bills",
+    "withdraw": "Withdraw",
+    "recharge": "Top Up",
+    "change_password": "Change Password",
+    "sign_out": "Log Out",
+    "invitation_code": "Invite Code",
+    "statistics_follow": "Following",
+    "statistics_fans": "Fans",
+    "statistics_likes": "Likes",
+    "change_password_subtitle": "Set a new password to keep your account safe.",
+    "password_strength": "Strength:",
+    "strength_weak": "Weak",
+    "strength_fair": "Fair",
+    "strength_good": "Good",
+    "strength_strong": "Strong",
+    "password_tips_title": "Password Tips",
+    "password_tip_1": "8-16 characters",
+    "password_tip_2": "Use letters, numbers, and symbols",
+    "password_tip_3": "Avoid account-related words",
+    "confirm_change": "Change",
+    "confirm_update": "Update",
+    "interest_preference": "Interests",
+    "online_customer_service": "Online Service",
+    "about_top_read": "About TopRead"
+  },
+
+  "customer_service_sheet": {
+    "title": "Online Support",
+    "description": "If you encounter any issues while using the app, please contact our online support. We are happy to help.",
+    "contact_button": "Contact Support",
+    "empty_hint": "Send a message to start chatting",
+    "photo_permission_hint": "Photo permission is required to send images. Please enable it in Settings."
+  },
+
+  "message": {
+    "title": "Message Center",
+    "subtitle": "Inbox",
+    "all_messages": "All",
+    "no_more": "No more",
+    "loading_more": "Loading...",
+    "empty": "No messages",
+    "mark_all_read": "Read all",
+    "delete_confirm_title": "Delete Message",
+    "delete_confirm_content": "Are you sure you want to delete this message?",
+    "stats": {
+      "comment": "Comments",
+      "like": "Likes",
+      "favorite": "Favorites",
+      "reply": "Replies",
+      "unread_suffix": " unread"
+    },
+    "type": {
+      "system": "System",
+      "comment_reply": "Comment",
+      "comment_like": "Like",
+      "novel_like": "Like",
+      "novel_favorite": "Favorite",
+      "chat_reply": "View Now"
+    },
+    "card_title": {
+      "system": "System Notice",
+      "comment_reply": "Comment Reply",
+      "comment_like": "Liked Comment",
+      "novel_like": "Liked Novel",
+      "novel_favorite": "Favorited Novel",
+      "chat_reply": "Online Support"
+    },
+    "card_subtitle": {
+      "system_self": "{0}",
+      "system_other": "{0}",
+      "comment_reply_self": "You replied to a comment in \"{0}\"",
+      "comment_reply_other": "Someone replied to your comment in \"{0}\"",
+      "comment_like_self": "You liked a comment in \"{0}\"",
+      "comment_like_other": "Someone liked your comment in \"{0}\"",
+      "novel_like_self": "You liked \"{0}\"",
+      "novel_like_other": "Someone liked your novel \"{0}\"",
+      "novel_favorite_self": "You favorited \"{0}\"",
+      "novel_favorite_other": "Someone favorited your novel \"{0}\""
+    },
+    "time": {
+      "just_now": "Just now",
+      "minutes_ago": "{0}m ago",
+      "hours_ago": "{0}h ago",
+      "days_ago": "{0}d ago"
+    },
+    "no_login": {
+      "title": "Not logged in",
+      "desc": "Log in to view notices, activity, and replies",
+      "go_login": "Log In"
+    }
+  },
+  "bookshelf": {
+    "title": "Bookshelf",
+    "subtitle": "Your reading list",
+    "tabs": {
+      "history": "History",
+      "favorite": "Saved",
+      "focus": "Following"
+    },
+    "no_login": {
+      "title": "Not logged in",
+      "desc": "Log in to view saved books and history"
+    },
+    "tags": {
+      "completed": "Done",
+      "updated": "Updated",
+      "new_release": "New",
+      "listening": "Listening",
+      "favorite": "Saved",
+      "serializing": "Ongoing"
+    },
+    "progress": {
+      "reading_chapters": "{current}/{total} ch",
+      "unread_chapters": "{count} unread",
+      "read_progress": "Read {progress}%",
+      "chapters": "{count} ch",
+      "unread": "Unread",
+      "categories": "{names}"
+    },
+    "empty": {
+      "history": "No reading history yet",
+      "favorite": "No saved books yet",
+      "focus": "No followed authors yet"
+    },
+    "focus": {
+      "novel_count": "{count} works"
+    },
+    "time": {
+      "just_now": "Just now",
+      "minute_ago": "min ago",
+      "hour_ago": "h ago",
+      "day_ago": "d ago",
+      "month_ago": "mo ago",
+      "year_ago": "yr ago"
+    },
+    "delete_dialog": {
+      "title": "Delete Record",
+      "message": "Delete reading record for \"{title}\"?",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "unfavorite_dialog": {
+      "title": "Unfavorite",
+      "message": "Remove \"{title}\" from favorites?",
+      "cancel": "Cancel",
+      "confirm": "Unfavorite"
+    },
+    "unfollow_dialog": {
+      "title": "Unfollow",
+      "message": "Unfollow {name}?",
+      "cancel": "Cancel",
+      "confirm": "Unfollow"
+    },
+    "load_more": {
+      "button": "More",
+      "loading": "Loading",
+      "no_more": "No more"
+    },
+    "recommend_today": "Today's Picks"
+  },
+  "search": {
+    "entry_hint": "Search books, authors, genres",
+    "page_title": "Search",
+    "header_title": "Books, authors, tags",
+    "input_hint": "Enter keywords",
+    "submit": "Search",
+    "hot_title": "Hot Searches",
+    "recommend_title": "Hot Picks",
+    "keyword_result_title": "Results for \"{keyword}\"",
+    "search_result_title": "Results for \"{keyword}\""
+  },
+  "ranking_full_list": {
+    "footer": {
+      "loading_more": "Loading",
+      "no_more": "No more"
+    }
+  },
+  "bill": {
+    "title": "Bills",
+    "empty": "No Data",
+    "reload": "Reload",
+    "load_more": "More",
+    "no_more": "No more",
+    "copy_success": "Copied",
+    "id": "Bill ID",
+    "serial_number": "Bill No.",
+    "time": "Time",
+    "amount": "Amount",
+    "increase": "Increase",
+    "decrease": "Decrease",
+    "type": "Type",
+    "type_3": "Balance Change",
+    "type_105": "Withdrawal",
+    "type_106": "Deposit",
+    "type_108": "Agent Share",
+    "type_109": "Agent Share",
+    "type_110": "Agent Share",
+    "type_default": "Balance Change"
+  },
+  "back": {
+    "exit_prompt": "Press back again to exit"
+  },
+  "withdraw_page": {
+    "title": "Withdraw",
+    "balance_title": "Balance",
+    "records": "Withdrawals",
+    "type_title": "Network",
+    "type_hint": "Choose wallet network",
+    "address_title": "Wallet",
+    "wallet_title": "Wallet",
+    "address_placeholder": "Enter wallet address",
+    "paste": "Paste",
+    "address_paste_success": "Pasted",
+    "address_paste_empty": "Clipboard is empty",
+    "amount_title": "Amount",
+    "amount_hint": "Drag slider or enter amount",
+    "amount_placeholder": "Enter amount",
+    "min_amount": "Minimum",
+    "min_short": "Min",
+    "max_amount": "Maximum",
+    "max_short": "Max",
+    "withdraw_all": "All",
+    "submit": "Withdraw",
+    "submit_success": "Withdrawal is processing.",
+    "back_home": "Home",
+    "back_home_countdown": "Home ({seconds}s)",
+    "go_records": "Withdrawals",
+    "type_required": "Select network",
+    "address_required": "Enter wallet address",
+    "amount_required": "Enter a valid amount",
+    "confirm_title": "Confirm Withdrawal",
+    "insufficient_message": "Your balance is {balance}. Minimum withdrawal is {min}.",
+    "insufficient_dialog_records": "Withdrawals",
+    "insufficient_acknowledged": "Got it",
+    "notice_title": "Notice",
+    "notice_1": "Make sure the withdrawal network matches the wallet network. TRC20 must go to a TRC20 address.",
+    "notice_2": "If you choose the wrong network, such as ERC20 for a TRC20 wallet, any loss is your responsibility.",
+    "notice_3": "Final check: confirm the network, wallet address, and amount before submitting."
+  },
+  "withdraw_record_page": {
+    "title": "Withdrawals",
+    "subtitle": "Pull to refresh. Scroll for more.",
+    "empty_title": "No withdrawals",
+    "empty_subtitle": "Your withdrawal records will appear here.",
+    "loading_more": "Loading...",
+    "no_more": "No more",
+    "amount_payable": "Amount",
+    "serial_number": "Serial No.",
+    "create_time": "Created",
+    "pay_time": "Processed",
+    "pay_qr_code": "Wallet",
+    "copy_success": "Copied",
+    "status_processing": "Processing",
+    "status_success": "Success",
+    "status_void": "Voided",
+    "status_returned": "Returned",
+    "status_unknown": "Status"
+  },
+  "top_up_page": {
+    "title": "Top Up",
+    "subtitle": "Choose network and amount.",
+    "unavailable": "Top-up unavailable",
+    "type_title": "Network",
+    "type_hint": "Choose top-up network",
+    "amount_title": "Amount",
+    "amount_hint": "Choose top-up amount",
+    "summary_type": "Type",
+    "summary_amount": "Amount",
+    "submit": "Top Up",
+    "submit_pending": "Top-up API not connected",
+    "result_title": "Top-up Info",
+    "result_hint": "Send the exact amount to the address below.",
+    "result_amount": "Amount",
+    "result_payable": "Payable",
+    "result_address": "Address",
+    "result_serial": "Serial No."
+  },
+  "filter_popup": {
+    "title": "Filter",
+    "clear": "Clear",
+    "confirm": "Confirm",
+    "confirm_with_count": "Confirm({})"
+  },
+  "image_text": {
+    "loading": "Loading..."
+  },
+  "top_up_qr_code_page": {
+    "title": "Top-up Address",
+    "unavailable": "Top-up info unavailable",
+    "amount_label": "Amount",
+    "amount_hint": "Transfer this exact amount",
+    "copy_success": "Copied",
+    "done": "Done",
+    "records": "Top-ups",
+    "notice_title": "Notice",
+    "notice_01": "Transfer exactly [{amount}] via the [{type}] network to this address.",
+    "notice_02": "Wrong network or amount may delay or fail the top-up.",
+    "notice_03": "Crypto transfers are usually final. Please double-check before sending.",
+    "serial_number": "Serial No."
+  },
+  "top_up_record_page": {
+    "title": "Top-ups",
+    "subtitle": "Pull to refresh. Scroll for more.",
+    "empty_title": "No top-ups",
+    "empty_subtitle": "Your top-up records will appear here.",
+    "loading_more": "Loading...",
+    "no_more": "No more",
+    "amount_payable": "Received",
+    "pay_payable": "Payable",
+    "serial_number": "Serial No.",
+    "create_time": "Created",
+    "pay_time": "Paid",
+    "carrier_order_number": "Order No.",
+    "pay_qr_code": "Address",
+    "countdown_label": "Time Left",
+    "copy_success": "Copied",
+    "status_unpaid": "Unpaid",
+    "status_expired": "Expired",
+    "status_success": "Success",
+    "status_failed": "Failed",
+    "status_unknown": "Status"
+  },
+  "read": {
+    "follow": "+ Follow",
+    "followed": "Following",
+    "restoring_progress": "Loading reading progress",
+    "score_unit": "Score",
+    "review_count": "{} Reviews",
+    "reading_unit": "Readers",
+    "reading_status": "Reading",
+    "word_count_unit": "0K words",
+    "status_serializing": "Updating",
+    "status_completed": "Completed",
+    "status_removed": "Removed",
+    "intro_title": "About",
+    "more": "More",
+    "collapse": "Less",
+    "hot_review_title": "Reviews",
+    "more_review": "More",
+    "reading_title": "Preview",
+    "reading_hint": "Swipe up to start reading. Demo content shown.",
+    "swipe_to_read": "Swipe up to read",
+    "add_to_bookshelf": "Save",
+    "prev_chapter": "Prev",
+    "next_chapter": "Next",
+    "catalog": "Chapters",
+    "detail": "Details",
+    "notes": "Notes",
+    "no_notes": "No notes yet",
+    "chapter_word_count_suffix": "words",
+    "chapter_read_percent": "Read {}%",
+    "day_mode": "Day",
+    "night_mode": "Night"
+  },
+  "constant": {
+    "refresh_success": "Refreshed",
+    "continue_after_confirm": "Confirm to continue",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "balance": "Balance",
+    "hintText": "Enter text",
+    "album": "Gallery",
+    "camera": "Camera"
+  },
+  "web_view": {
+    "loading_text": "Loading...",
+    "error_title": "Load Failed",
+    "error_description": "Check your connection and try again.",
+    "retry_button": "Retry"
+  },
+  "number_unit": {
+    "ten_thousand": "{count}w",
+    "thousand": "{count}k"
+  },
+  "short_story_read": {
+    "comment_input_hint": "Say something...",
+    "catalog": "Catalog",
+    "catalog_empty": "No more stories",
+    "setting": "Settings",
+    "reading": "Reading",
+    "collapse": "Hide",
+    "expand": "Show",
+    "load_failed": "Load Failed",
+    "load_failed_hint": "Please check your network connection and try again",
+    "retry": "Retry",
+    "login_required": "Not logged in. Please log in to continue.",
+    "previous": "Previous",
+    "next": "Next",
+    "reading_settings": "Reading",
+    "font_size": "Size",
+    "theme": "Theme",
+    "theme_day": "Day",
+    "theme_night": "Night",
+    "other": "Other",
+    "auto_read": "Auto-Read",
+    "auto_read_settings": "Auto-Read",
+    "speed_slow": "Slow",
+    "speed_fast": "Fast",
+    "exit_auto_read": "Exit Auto-Read",
+    "next_story": "Next",
+    "release_to_view": "Release to view",
+    "scroll_to_view_next": "Scroll for next"
+  },
+  "comment": {
+    "title": "Comments",
+    "count_label": "{count} comments",
+    "empty": "No comments yet. Be the first to comment!",
+    "reply": "Reply",
+    "like": "Like",
+    "send": "Send",
+    "input_hint": "Say something…",
+    "emoji": "Emoji",
+    "image": "Image",
+    "reply_to": "Reply to",
+    "load_error_title": "Failed to load comments",
+    "load_error_desc": "Network issue. Tap to try again.",
+    "send_success": "Comment posted",
+    "time": {
+      "just_now": "Just now",
+      "minutes_ago": "m ago",
+      "hours_ago": "h ago",
+      "days_ago": "d ago",
+      "weeks_ago": "w ago"
+    }
+  },
+  "favorite": {
+    "add_success": "Added to favorites",
+    "remove_success": "Removed from favorites"
+  },
+  "like_tip": {
+    "add_success": "Liked",
+    "remove_success": "Unliked"
+  },
+  "no_internet": {
+    "title": "It looks like you've wandered into a desert without stories.",
+    "description": "Don't worry—it's usually just a temporary network issue. Tap reload to continue your reading journey."
+  },
+  "share_sheet": {
+    "title": "Share to",
+    "generate_image": "Create Image",
+    "copy_link": "Copy Link",
+    "copy_success": "Link copied",
+    "card_preview_title": "Card Preview",
+    "save_to_album": "Save to Gallery",
+    "save_success": "Saved to gallery",
+    "save_failed": "Save failed",
+    "photo_permission_denied": "Allow photo access before saving",
+    "default_reader": "A reader",
+    "excerpt_by": "{name} · Excerpt",
+    "read_together": "Open {app} · Read with me",
+    "qr_semantics": "Book sharing QR code",
+    "share_text": "I'm reading \"{title}\" on {app}, come check it out!"
+  },
+  "app_update": {
+    "upgrade_title": "New Version Available",
+    "force_update_message": "A new version is available. Please update to continue.",
+    "optional_update_message": "A new version is available. We recommend updating.",
+    "upgrade_now": "Update Now",
+    "upgrade_later": "Later",
+    "already_latest": "Already the latest version"
+  },
+  "chat": {
+    "no_more_messages": "No more messages"
+  }
+}
