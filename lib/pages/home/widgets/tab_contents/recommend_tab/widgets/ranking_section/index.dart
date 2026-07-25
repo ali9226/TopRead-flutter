@@ -111,17 +111,23 @@ class _RankingSectionState extends State<RankingSection> {
         widget.is_loading
             ? _build_content_skeleton()
             : Transform.translate(
-                offset: const Offset(0, RankingSectionStyle.content_padding_top),
+                offset: const Offset(
+                  0,
+                  RankingSectionStyle.content_padding_top,
+                ),
                 child: RankingContent(
                   key: ValueKey<int>(selected_sub_tab_index),
-                  books: widget.all_ranking_data.isNotEmpty &&
-                          selected_sub_tab_index < widget.all_ranking_data.length
+                  books:
+                      widget.all_ranking_data.isNotEmpty &&
+                          selected_sub_tab_index <
+                              widget.all_ranking_data.length
                       ? widget.all_ranking_data[selected_sub_tab_index]
                       : [],
                   is_dark: widget.is_dark,
                   panel_bg: widget.panel_bg,
                   initial_column_index:
-                      _column_index_by_sub_tab_index[selected_sub_tab_index] ?? 0,
+                      _column_index_by_sub_tab_index[selected_sub_tab_index] ??
+                      0,
                   on_column_index_changed: (int column_index) {
                     _column_index_by_sub_tab_index[selected_sub_tab_index] =
                         column_index;
@@ -129,8 +135,10 @@ class _RankingSectionState extends State<RankingSection> {
                   on_reload: widget.on_reload,
                 ),
               ),
-        // "查看更多"按钮（数据为空时不显示）
-        if (!widget.is_loading && _has_current_tab_data)
+        // "查看更多"按钮及其加载骨架。
+        if (widget.is_loading)
+          _build_view_more_skeleton()
+        else if (_has_current_tab_data)
           ViewMoreButton(
             is_dark: widget.is_dark,
             language_code: widget.language_code,
@@ -161,7 +169,9 @@ class _RankingSectionState extends State<RankingSection> {
         ),
         itemCount: 5,
         separatorBuilder: (BuildContext context, int index) {
-          return const SizedBox(width: RankingSectionStyle.tab_separator_width_cjk);
+          return const SizedBox(
+            width: RankingSectionStyle.tab_separator_width_cjk,
+          );
         },
         itemBuilder: (BuildContext context, int index) {
           return Center(
@@ -182,7 +192,7 @@ class _RankingSectionState extends State<RankingSection> {
 
   /// 构建内容区域骨架屏。
   ///
-  /// 双列布局，每列包含封面、排名序号和书籍信息骨架。
+  /// 双列四行布局，每列包含封面、排名序号和书籍信息骨架。
   Widget _build_content_skeleton() {
     final Color skeleton_color = widget.is_dark
         ? Colors.white.withValues(alpha: 0.08)
@@ -193,9 +203,15 @@ class _RankingSectionState extends State<RankingSection> {
         horizontal: RankingSectionStyle.content_padding_horizontal,
       ),
       child: Column(
-        children: List<Widget>.generate(2, (int row_index) {
+        children: List<Widget>.generate(RankingSectionStyle.rows_per_column, (
+          int row_index,
+        ) {
           return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(
+              bottom:
+                  RankingSectionStyle.item_height -
+                  RankingSectionStyle.cover_height,
+            ),
             child: Row(
               children: <Widget>[
                 Expanded(
@@ -215,6 +231,34 @@ class _RankingSectionState extends State<RankingSection> {
             ),
           );
         }),
+      ),
+    );
+  }
+
+  /// 构建与“查看更多”文字位置一致的居中骨架。
+  Widget _build_view_more_skeleton() {
+    final Color skeleton_color = widget.is_dark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.grey.withValues(alpha: 0.15);
+
+    return Padding(
+      padding: const EdgeInsets.only(
+        top: RankingSectionStyle.view_more_top_spacing,
+        bottom: RankingSectionStyle.view_more_bottom_spacing,
+      ),
+      child: SizedBox(
+        height: RankingSectionStyle.view_more_content_height,
+        child: Center(
+          child: Container(
+            width: RankingSectionStyle.view_more_skeleton_width,
+            height: RankingSectionStyle.view_more_skeleton_height,
+            decoration: BoxDecoration(
+              color: skeleton_color,
+              borderRadius: BorderRadius.circular(LayoutConfig.tag_radius),
+            ),
+            child: _ShimmerWidget(is_dark: widget.is_dark),
+          ),
+        ),
       ),
     );
   }
@@ -283,7 +327,8 @@ class _RankingSectionState extends State<RankingSection> {
   /// 获取当前选中 Tab 的 id，传递给回调。
   void _handle_full_ranking_tap() {
     /// 当前选中 Tab 的 id。
-    final int current_tab_id = widget.sub_tab_id_list.isNotEmpty &&
+    final int current_tab_id =
+        widget.sub_tab_id_list.isNotEmpty &&
             _selected_sub_tab_index < widget.sub_tab_id_list.length
         ? widget.sub_tab_id_list[_selected_sub_tab_index]
         : 0;

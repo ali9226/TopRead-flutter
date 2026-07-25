@@ -1,5 +1,4 @@
 import 'package:easy_localization/easy_localization.dart' as easy;
-import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -23,10 +22,6 @@ import 'package:app/util/dialog/show_upgrade_dialog.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/router/router_util.dart';
-import 'package:app/util/storage_util/index.dart';
-import 'package:app/websocket/websocket_auth.dart';
-import 'package:app/message/message_service.dart';
-import 'package:app/fcm/fcm_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'operation_li.dart';
 import 'logic.dart';
@@ -66,7 +61,8 @@ class _OperationListState extends State<OperationList> {
   /// 构建圆形语种旗帜图片。
   Widget _buildLanguageFlag(String localeCode) {
     /// 获取当前语种信息。
-    final LanguageInfo? currentLanguage = languageStore.find_supported_language_by_code(localeCode);
+    final LanguageInfo? currentLanguage = languageStore
+        .find_supported_language_by_code(localeCode);
 
     /// 获取语种图标地址（优先使用后端返回的网络图标）。
     final String iconUrl = currentLanguage?.icon.trim() ?? '';
@@ -90,12 +86,7 @@ class _OperationListState extends State<OperationList> {
                 );
               },
             )
-          : Image.asset(
-              localAsset,
-              width: 28,
-              height: 28,
-              fit: BoxFit.cover,
-            ),
+          : Image.asset(localAsset, width: 28, height: 28, fit: BoxFit.cover),
     );
   }
 
@@ -123,9 +114,7 @@ class _OperationListState extends State<OperationList> {
       );
     }
 
-    return Obx(
-      key: ValueKey(localeCode),
-      () {
+    return Obx(key: ValueKey(localeCode), () {
       /// 当前是否已登录。
       final isLoggedIn = userInformation.isLoggedIn.value;
 
@@ -144,8 +133,7 @@ class _OperationListState extends State<OperationList> {
             type: 3,
             showDivider: true,
             onTap: () async {
-              final code =
-                  userInformation.userInfo.value?.invitationCode ?? '';
+              final code = userInformation.userInfo.value?.invitationCode ?? '';
               final ok = await copyToClipboard(code);
               if (ok) {
                 showBottomTip(easy.tr("UserInfo.copy_invitation_code"));
@@ -246,13 +234,7 @@ class _OperationListState extends State<OperationList> {
                 rightButtonColor: ColorConstants.dangerColor,
                 iconColor: ColorConstants.dangerColor,
                 onRightPressed: () async {
-                  userInformation.clearUserInfo();
-                  Get.find<MessageStore>().clear();
-                  await StorageUtil.removeData(Constant.tokenKey);
-                  await WebSocketAuth.onLogout();
-                  await MessageService.fetchVisitorUnread();
-                  await FcmAuth.onLogout();
-                  showBottomTip(easy.tr('UserInfo.success_02'));
+                  await logic.logout();
                 },
               );
             },
@@ -321,7 +303,8 @@ class _OperationListState extends State<OperationList> {
       final results = await postRequest<AppConfigInquire>(
         path: 'app_config/inquire',
         showTips: false,
-        fromJson: (Map<String, dynamic> json) => AppConfigInquire.fromJson(json),
+        fromJson: (Map<String, dynamic> json) =>
+            AppConfigInquire.fromJson(json),
       );
 
       if (!mounted) return;
@@ -335,10 +318,12 @@ class _OperationListState extends State<OperationList> {
 
       // 根据平台选择对应的版本号和升级地址。
       final bool is_ios = defaultTargetPlatform == TargetPlatform.iOS;
-      final String max_version =
-          is_ios ? config.max_ios_version : config.max_android_version;
-      final String upgrade_url =
-          is_ios ? config.ios_update_address : config.update_address;
+      final String max_version = is_ios
+          ? config.max_ios_version
+          : config.max_android_version;
+      final String upgrade_url = is_ios
+          ? config.ios_update_address
+          : config.update_address;
 
       // 版本号为空则提示已是最新。
       if (max_version.isEmpty) {
@@ -388,8 +373,9 @@ class _OperationListState extends State<OperationList> {
     final List<int> parts1 = _parse_version_parts(v1);
     final List<int> parts2 = _parse_version_parts(v2);
 
-    final int max_len =
-        parts1.length > parts2.length ? parts1.length : parts2.length;
+    final int max_len = parts1.length > parts2.length
+        ? parts1.length
+        : parts2.length;
 
     for (int i = 0; i < max_len; i++) {
       final int p1 = i < parts1.length ? parts1[i] : 0;
@@ -448,7 +434,12 @@ class _OperationGroup extends StatelessWidget {
     return AnimatedPadding(
       duration: Duration(milliseconds: ThemeConstants.animationTime),
       curve: Curves.easeInOut,
-      padding: EdgeInsets.fromLTRB(horizontalInset, 0, horizontalInset, bottomPadding),
+      padding: EdgeInsets.fromLTRB(
+        horizontalInset,
+        0,
+        horizontalInset,
+        bottomPadding,
+      ),
       child: Container(
         decoration: BoxDecoration(
           color: isDark

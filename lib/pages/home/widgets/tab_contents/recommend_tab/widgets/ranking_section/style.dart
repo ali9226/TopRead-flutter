@@ -159,6 +159,15 @@ class RankingSectionStyle {
   /// "查看更多"按钮底部间距。
   static const double view_more_bottom_spacing = 8;
 
+  /// "查看更多"内容区域固定高度。
+  static const double view_more_content_height = 22;
+
+  /// "查看更多"骨架条宽度。
+  static const double view_more_skeleton_width = 72;
+
+  /// "查看更多"骨架条高度。
+  static const double view_more_skeleton_height = 12;
+
   /// "查看更多"文字字号（CJK 语系）。
   static const double view_more_font_size_cjk = 13;
 

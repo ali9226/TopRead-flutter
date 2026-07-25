@@ -134,10 +134,15 @@ class MessageStore extends GetxController {
 
   /// 获取统计数据（总数和未读数）。
   Future<void> fetch_statistics() async {
-    if (!Get.find<UserInformation>().isLoggedIn.value) return;
+    final UserInformation user_information = Get.find<UserInformation>();
+    if (!user_information.isLoggedIn.value) return;
+    final int request_revision = user_information.auth_revision;
 
     final MessageUnreadCount? result = await message_api.get_unread_count();
     if (result == null) return;
+    if (!user_information.can_apply_authenticated_response(request_revision)) {
+      return;
+    }
 
     comment_unread.value = result.comment_unread;
     comment_total.value = result.comment_total;
@@ -155,7 +160,9 @@ class MessageStore extends GetxController {
     bool is_refresh = false,
     bool silent = false,
   }) async {
-    if (!Get.find<UserInformation>().isLoggedIn.value) return;
+    final UserInformation user_information = Get.find<UserInformation>();
+    if (!user_information.isLoggedIn.value) return;
+    final int request_revision = user_information.auth_revision;
 
     final int? requested_type = _active_type.value;
     final bucket = _active_bucket;
@@ -170,6 +177,11 @@ class MessageStore extends GetxController {
       );
 
       if (result == null) {
+        return;
+      }
+      if (!user_information.can_apply_authenticated_response(
+        request_revision,
+      )) {
         return;
       }
 
@@ -341,6 +353,12 @@ class MessageStore extends GetxController {
 
   /// 获取访客的客服聊天未读数（未登录时调用）。
   Future<void> fetch_visitor_chat_unread() async {
+    final UserInformation user_information = Get.find<UserInformation>();
+    final int request_revision = user_information.auth_revision;
+    if (!user_information.can_apply_visitor_response(request_revision)) {
+      return;
+    }
+
     comment_unread.value = 0;
     comment_total.value = 0;
     like_unread.value = 0;
@@ -352,6 +370,9 @@ class MessageStore extends GetxController {
     }
 
     final String? visitor_id = await StorageUtil.getData('visitor_uuid');
+    if (!user_information.can_apply_visitor_response(request_revision)) {
+      return;
+    }
     if (visitor_id == null || visitor_id.isEmpty) {
       chat_unread.value = 0;
       _recompute_unread_total(force_badge_sync: true);
@@ -361,6 +382,9 @@ class MessageStore extends GetxController {
     final int unread = await message_api.get_visitor_chat_unread(
       visitor_id: visitor_id,
     );
+    if (!user_information.can_apply_visitor_response(request_revision)) {
+      return;
+    }
     chat_unread.value = unread;
     _recompute_unread_total(force_badge_sync: true);
   }

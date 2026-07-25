@@ -73,7 +73,7 @@ class _RecommendTabContentState extends State<RecommendTabContent>
       (RankingSectionStyle.rows_per_column - 1) * RankingSectionStyle.row_gap +
       5 + // RankingContent 内部额外间距
       RankingSectionStyle.view_more_top_spacing +
-      22 + // "查看更多"按钮高度（文字 + 图标 + 下划线）
+      RankingSectionStyle.view_more_content_height +
       RankingSectionStyle.view_more_bottom_spacing +
       RankingSectionStyle.ranking_bottom_spacing;
 

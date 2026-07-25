@@ -51,7 +51,12 @@ class Logic {
   }
 
   Future<void> updateUserInformation() async {
+    final UserInformation user_controller = Get.find<UserInformation>();
+    final int request_revision = user_controller.auth_revision;
     final String? oldToken = await StorageUtil.getData(Constant.tokenKey);
+    if (!user_controller.is_auth_revision_current(request_revision)) {
+      return;
+    }
     if (oldToken == null || oldToken.isEmpty) {
       logUtil(msg: 'TODO oldToken 不存在');
       showBottomTip(easy.tr('UserInfo.error_01'));
@@ -63,6 +68,12 @@ class Logic {
       showTips: false,
       fromJson: (json) => Login.fromJson(json),
     );
+
+    /// 用户已退出时丢弃旧请求结果，不能再保存 Token 或用户信息。
+    if (!user_controller.can_apply_authenticated_response(request_revision)) {
+      return;
+    }
+
     if (!results.status || results.content == null) {
       // TODO 自动登录失败，删除本地的token
       showBottomTip(easy.tr('UserInfo.error_01'));
@@ -81,12 +92,12 @@ class Logic {
       return;
     }
 
-    await StorageUtil.saveData(Constant.tokenKey, token);
-
     // TODO 保存 userInfo
-    final userController = Get.put(UserInformation());
     if (results.content?.userInfo != null) {
-      userController.saveUserInfo(results.content!.userInfo);
+      user_controller.save_user_info_if_current(
+        results.content!.userInfo,
+        request_revision: request_revision,
+      );
     }
 
     showBottomTip(easy.tr('UserInfo.success_01'));
