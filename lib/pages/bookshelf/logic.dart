@@ -75,6 +75,9 @@ class BookshelfBookItem {
   /// 小说简介（用于封面兜底展示）。
   final String introduction;
 
+  /// 分类名称（逗号分隔）。
+  final String category_names;
+
   /// 进度文案国际化 key。
   final String progress_key;
 
@@ -99,6 +102,7 @@ class BookshelfBookItem {
     required this.title,
     this.publish_status = 1,
     this.introduction = '',
+    this.category_names = '',
     required this.progress_key,
     required this.progress_args,
     this.tag_key,

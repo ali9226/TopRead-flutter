@@ -101,7 +101,7 @@ class Style {
   static const double grid_cross_spacing = 14;
 
   /// 网格纵向间距。
-  static const double grid_main_spacing = 18;
+  static const double grid_main_spacing = 0;
 
   /// 单个书籍卡片圆角。
   static const double book_card_radius = 18;
@@ -138,6 +138,14 @@ class Style {
 
   /// 标题区域最小高度。
   static const double book_title_min_height = 38;
+
+  /// 标题单行时最大内容高度（3 行内容 + 间距 + 余量）。
+  static const double book_max_meta_height =
+      (book_meta_font_size * book_title_height) * 3 + 20;
+
+  /// 标题单行高度。
+  static const double book_title_line_height =
+      book_title_font_size * book_title_height;
 
   /// 进度区域顶部间距。
   static const double book_meta_top_spacing = 8;

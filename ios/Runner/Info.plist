@@ -27,7 +27,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>用于拍摄照片并发送给在线客服。</string>
+	<string>用于拍摄头像照片或向在线客服发送照片。</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>用于将您生成的小说分享卡片保存到系统相册。</string>
 	<key>NSPhotoLibraryUsageDescription</key>

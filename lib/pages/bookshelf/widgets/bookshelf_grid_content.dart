@@ -19,6 +19,10 @@ enum BookshelfContentType { history, favorite }
 /// 历史和收藏 Tab 共用此组件，通过 [type] 区分行为差异：
 /// - 长按弹窗：历史→删除历史记录，收藏→取消收藏
 /// - 数据由外部通过 [items] 传入，组件不负责请求
+/// - 删除操作为乐观模式：先移除再后台请求，带位置动画
+///
+/// 使用 Stack + AnimatedPositioned 实现删除动画，
+/// 删除卡片后所有剩余卡片会平滑移动到新位置。
 class BookshelfGridContent extends StatefulWidget {
   /// 内容类型。
   final BookshelfContentType type;
@@ -78,6 +82,21 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
   /// 返回顶部按钮是否可见。
   bool _is_back_to_top_visible = false;
 
+  /// 正在播放删除动画的项目 ID 集合。
+  final Set<String> _removing_ids = <String>{};
+
+  /// 每个卡片的实际测量高度。
+  final Map<String, double> _item_heights = <String, double>{};
+
+  /// 删除动画时长。
+  static const int _delete_animation_duration_ms = 320;
+
+  /// 位置重排动画时长。
+  static const int _reorder_animation_duration_ms = 300;
+
+  /// 淡出动画时长。
+  static const int _fade_out_animation_duration_ms = 250;
+
   @override
   void initState() {
     super.initState();
@@ -93,81 +112,87 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.is_initial_loading) {
+      return _build_loading_grid();
+    }
+
+    if (widget.items.isEmpty) {
+      return _build_empty_state();
+    }
+
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final int grid_count = BookshelfLogic.resolve_grid_count(
-          constraints.maxWidth,
-        );
-
-        final double item_width =
-            (constraints.maxWidth -
-                (grid_count - 1) * Style.grid_cross_spacing) /
+        final double total_width = constraints.maxWidth;
+        final int grid_count = BookshelfLogic.resolve_grid_count(total_width);
+        final double column_width =
+            (total_width - Style.grid_cross_spacing * (grid_count - 1)) /
             grid_count;
 
-        final double item_height =
-            item_width / Style.cover_aspect_ratio +
-            Style.book_title_top_spacing +
-            Style.book_title_min_height +
-            Style.book_meta_top_spacing +
-            18;
+        final positions = _calculate_grid_positions(
+          widget.items,
+          grid_count,
+          column_width,
+        );
+
+        final double total_height = _calculate_total_height(positions);
 
         return Stack(
+          clipBehavior: Clip.hardEdge,
           children: <Widget>[
             RefreshIndicator(
               onRefresh: _handle_refresh,
-              child: CustomScrollView(
+              child: ListView(
                 controller: _scroll_controller,
                 physics: const AlwaysScrollableScrollPhysics(
                   parent: BouncingScrollPhysics(),
                 ),
-                slivers: <Widget>[
-                  if (widget.is_initial_loading)
-                    SliverGrid(
-                      delegate: SliverChildBuilderDelegate(
-                        (BuildContext context, int index) {
-                          return _BookCardSkeleton(is_dark: widget.is_dark);
-                        },
-                        childCount: Style.page_size,
-                      ),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: grid_count,
-                        crossAxisSpacing: Style.grid_cross_spacing,
-                        mainAxisSpacing: Style.grid_main_spacing,
-                        mainAxisExtent: item_height,
-                      ),
-                    )
-                  else if (widget.items.isEmpty)
-                    SliverToBoxAdapter(
-                      child: _build_empty_state(),
-                    )
-                  else ...<Widget>[
-                    SliverGrid(
-                      delegate: SliverChildBuilderDelegate(
-                        (BuildContext context, int index) {
-                          final BookshelfBookItem book_item = widget.items[index];
+                children: <Widget>[
+                  SizedBox(
+                    height: total_height,
+                    child: Stack(
+                      clipBehavior: Clip.hardEdge,
+                      children: widget.items.map((item) {
+                        final rect = positions[item.id];
+                        if (rect == null) return const SizedBox.shrink();
 
-                          return BookshelfBookCard(
-                            book_item: book_item,
-                            is_dark: widget.is_dark,
-                            on_tap: () => _navigate_to_read(book_item),
-                            on_long_press: () => _show_action_dialog(book_item),
-                          );
-                        },
-                        childCount: widget.items.length,
-                      ),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: grid_count,
-                        crossAxisSpacing: Style.grid_cross_spacing,
-                        mainAxisSpacing: Style.grid_main_spacing,
-                        mainAxisExtent: item_height,
-                      ),
+                        final bool is_removing = _removing_ids.contains(item.id);
+
+                        return AnimatedPositioned(
+                          key: ValueKey(item.id),
+                          duration: Duration(
+                            milliseconds: _reorder_animation_duration_ms,
+                          ),
+                          curve: Curves.easeOutCubic,
+                          left: rect.left,
+                          top: rect.top,
+                          width: rect.width,
+                          height: rect.height,
+                          child: AnimatedOpacity(
+                            duration: Duration(
+                              milliseconds: _fade_out_animation_duration_ms,
+                            ),
+                            curve: Curves.easeOut,
+                            opacity: is_removing ? 0.0 : 1.0,
+                            child: _MeasurableCard(
+                              item_id: item.id,
+                              on_size_changed: _on_item_size_changed,
+                              child: BookshelfBookCard(
+                                book_item: item,
+                                is_dark: widget.is_dark,
+                                on_tap: () => _navigate_to_read(item),
+                                on_long_press: () =>
+                                    _show_action_dialog(item),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
-                    SliverToBoxAdapter(child: _build_load_more_section()),
-                  ],
+                  ),
+                  _build_load_more_section(),
                 ],
               ),
             ),
-            // 返回顶部按钮
             FloatingBackToTop(
               show: _is_back_to_top_visible,
               isDark: widget.is_dark,
@@ -192,9 +217,120 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
     );
   }
 
+  /// 卡片高度回调：首次测量后存储高度并触发布局更新。
+  void _on_item_size_changed(String item_id, Size size) {
+    if (_item_heights[item_id] == size.height) return;
+    _item_heights[item_id] = size.height;
+    if (mounted) setState(() {});
+  }
+
+  /// 计算网格中每个项目的位置。
+  Map<String, Rect> _calculate_grid_positions(
+    List<BookshelfBookItem> items,
+    int grid_count,
+    double column_width,
+  ) {
+    final double default_height = _calculate_item_height(column_width);
+    final List<double> column_heights = List<double>.filled(grid_count, 0);
+    final Map<String, Rect> positions = <String, Rect>{};
+
+    for (int i = 0; i < items.length; i++) {
+      final BookshelfBookItem item = items[i];
+      final bool is_removing = _removing_ids.contains(item.id);
+
+      int shortest_column = 0;
+      double min_height = column_heights[0];
+      for (int c = 1; c < grid_count; c++) {
+        if (column_heights[c] < min_height) {
+          min_height = column_heights[c];
+          shortest_column = c;
+        }
+      }
+
+      final double x = shortest_column *
+          (column_width + Style.grid_cross_spacing);
+      final double item_height =
+          _item_heights[item.id] ?? default_height;
+      final double effective_height = is_removing ? 0 : item_height;
+
+      positions[item.id] = Rect.fromLTWH(
+        x,
+        column_heights[shortest_column],
+        column_width,
+        effective_height,
+      );
+
+      if (!is_removing) {
+        column_heights[shortest_column] +=
+            item_height + Style.grid_main_spacing;
+      }
+    }
+
+    return positions;
+  }
+
+  /// 计算网格总高度。
+  double _calculate_total_height(Map<String, Rect> positions) {
+    double max_bottom = 0;
+    for (final rect in positions.values) {
+      final double bottom = rect.top + rect.height;
+      if (bottom > max_bottom) max_bottom = bottom;
+    }
+    return max_bottom;
+  }
+
+  /// 计算单个卡片高度（未测量时的兜底值，取最大情况避免首帧溢出）。
+  double _calculate_item_height(double item_width) {
+    final double cover_height = item_width / Style.cover_aspect_ratio;
+    return cover_height +
+        Style.book_title_top_spacing +
+        Style.book_title_line_height * 2 +
+        Style.book_meta_top_spacing +
+        Style.book_max_meta_height;
+  }
+
+  /// 构建加载中的骨架屏网格。
+  Widget _build_loading_grid() {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final int grid_count = BookshelfLogic.resolve_grid_count(
+          constraints.maxWidth,
+        );
+        final double column_width =
+            (constraints.maxWidth -
+                (grid_count - 1) * Style.grid_cross_spacing) /
+            grid_count;
+        final double item_height = _calculate_item_height(column_width);
+
+        final List<Widget> skeletons = [];
+        for (int i = 0; i < Style.page_size; i++) {
+          final int row = i ~/ grid_count;
+          final int col = i % grid_count;
+          skeletons.add(
+            Positioned(
+              left: col * (column_width + Style.grid_cross_spacing),
+              top: row * (item_height + Style.grid_main_spacing),
+              width: column_width,
+              height: item_height,
+              child: _BookCardSkeleton(is_dark: widget.is_dark),
+            ),
+          );
+        }
+
+        final int rows = (Style.page_size / grid_count).ceil();
+        final double total_height =
+            rows * item_height + (rows - 1) * Style.grid_main_spacing;
+
+        return SizedBox(
+          height: total_height,
+          child: Stack(clipBehavior: Clip.hardEdge, children: skeletons),
+        );
+      },
+    );
+  }
+
   /// 处理滚动事件：控制返回顶部按钮显隐、触发加载更多。
   void _handle_scroll() {
-    // 返回顶部按钮显隐。
     final bool should_show_back_to_top = _scroll_controller.hasClients &&
         _scroll_controller.offset > Style.back_to_top_visible_offset;
 
@@ -204,7 +340,6 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
       });
     }
 
-    // 加载更多。
     if (_is_loading_more || !widget.has_more) return;
 
     if (_scroll_controller.position.pixels >=
@@ -257,6 +392,8 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
   }
 
   /// 展示操作弹窗（历史→删除，收藏→取消收藏）。
+  ///
+  /// 乐观模式：确认后立即标记删除并播放动画，后台静默调用 API。
   void _show_action_dialog(BookshelfBookItem book_item) {
     final String message = widget.type == BookshelfContentType.history
         ? easy.tr(
@@ -282,11 +419,27 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
       rightButtonText: rightButtonText,
       rightButtonColor: ColorConstants.dangerColor,
       onRightPressed: () async {
-        final bool success =
-            await widget.on_delete?.call(book_item.novel_id) ?? false;
-        if (success && mounted) {
-          widget.on_item_removed?.call(book_item.id);
-        }
+        if (!mounted) return;
+
+        // 标记为正在移除，触发位置重排动画 + 淡出动画。
+        setState(() {
+          _removing_ids.add(book_item.id);
+        });
+
+        // 后台静默调用 API，不等待结果。
+        widget.on_delete?.call(book_item.novel_id);
+
+        // 动画完成后从列表中真正移除。
+        Future<void>.delayed(
+          const Duration(milliseconds: _delete_animation_duration_ms),
+        ).then((_) {
+          if (mounted) {
+            setState(() {
+              _removing_ids.remove(book_item.id);
+              widget.on_item_removed?.call(book_item.id);
+            });
+          }
+        });
       },
     );
   }
@@ -301,30 +454,27 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
         ? 'bookshelf.empty.history'
         : 'bookshelf.empty.favorite';
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 120),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              widget.type == BookshelfContentType.history
-                  ? Icons.history_rounded
-                  : Icons.bookmark_outline_rounded,
-              size: 64,
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            widget.type == BookshelfContentType.history
+                ? Icons.history_rounded
+                : Icons.bookmark_outline_rounded,
+            size: 64,
+            color: text_color,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            easy.tr(empty_key),
+            style: TextStyle(
               color: text_color,
+              fontSize: 16,
+              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
             ),
-            const SizedBox(height: 16),
-            Text(
-              easy.tr(empty_key),
-              style: TextStyle(
-                color: text_color,
-                fontSize: 16,
-                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -357,6 +507,47 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
   }
 }
 
+/// 测量子组件实际尺寸的包装器。
+///
+/// 首次布局后将子组件的尺寸通过 [on_size_changed] 回调通知父级，
+/// 用于动态计算网格位置，避免固定高度导致的溢出或间距过大。
+class _MeasurableCard extends StatefulWidget {
+  final String item_id;
+  final void Function(String item_id, Size size) on_size_changed;
+  final Widget child;
+
+  const _MeasurableCard({
+    required this.item_id,
+    required this.on_size_changed,
+    required this.child,
+  });
+
+  @override
+  State<_MeasurableCard> createState() => _MeasurableCardState();
+}
+
+class _MeasurableCardState extends State<_MeasurableCard> {
+  Size? _old_size;
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final RenderObject? render_object = context.findRenderObject();
+      if (render_object is! RenderBox || !render_object.hasSize) return;
+
+      final Size new_size = render_object.size;
+      if (_old_size == new_size) return;
+
+      _old_size = new_size;
+      widget.on_size_changed(widget.item_id, new_size);
+    });
+
+    return widget.child;
+  }
+}
+
 /// 书籍卡片骨架屏。
 class _BookCardSkeleton extends StatelessWidget {
   final bool is_dark;
@@ -370,9 +561,11 @@ class _BookCardSkeleton extends StatelessWidget {
         : const Color(0xFFEDEFF4);
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Expanded(
+        AspectRatio(
+          aspectRatio: Style.cover_aspect_ratio,
           child: Container(
             decoration: BoxDecoration(
               color: block_color,

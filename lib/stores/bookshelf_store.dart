@@ -130,9 +130,7 @@ class BookshelfStore extends GetxController {
   /// 将阅读记录转换为书架书籍项。
   BookshelfBookItem _convert_history_item(ReadRecordItem item, int index) {
     final colors = cover_gradient_colors[index % cover_gradient_colors.length];
-    final bool is_short_story = item.publish_status == 4;
     final bool has_progress = item.read_progress > 0;
-    final bool has_categories = item.category_names.isNotEmpty;
 
     String progress_key;
     Map<String, String> progress_args;
@@ -140,11 +138,6 @@ class BookshelfStore extends GetxController {
       progress_key = 'bookshelf.progress.read_progress';
       progress_args = <String, String>{
         'progress': item.read_progress.toStringAsFixed(0)
-      };
-    } else if (is_short_story && has_categories) {
-      progress_key = 'bookshelf.progress.categories';
-      progress_args = <String, String>{
-        'names': item.category_names.split(',').take(2).join(' · ')
       };
     } else {
       progress_key = 'bookshelf.progress.unread';
@@ -157,6 +150,7 @@ class BookshelfStore extends GetxController {
       title: item.novel_title,
       publish_status: item.publish_status,
       introduction: item.introduction,
+      category_names: item.category_names,
       progress_key: progress_key,
       progress_args: progress_args,
       cover_image_url: item.cover_url.isNotEmpty ? item.cover_url : null,
@@ -232,9 +226,7 @@ class BookshelfStore extends GetxController {
   /// 将收藏项转换为书架书籍项。
   BookshelfBookItem _convert_favorite_item(FavoriteItem item, int index) {
     final colors = cover_gradient_colors[index % cover_gradient_colors.length];
-    final bool is_short_story = item.publish_status == 4;
     final bool has_progress = item.read_progress > 0;
-    final bool has_categories = item.category_names.isNotEmpty;
 
     String? tag_key;
     if (item.publish_status == 2) {
@@ -250,12 +242,7 @@ class BookshelfStore extends GetxController {
       progress_args = <String, String>{
         'progress': item.read_progress.toStringAsFixed(0)
       };
-    } else if (is_short_story && has_categories) {
-      progress_key = 'bookshelf.progress.categories';
-      progress_args = <String, String>{
-        'names': item.category_names.split(',').take(2).join(' · ')
-      };
-    } else if (!is_short_story && item.chapter_count > 0) {
+    } else if (item.chapter_count > 0) {
       progress_key = 'bookshelf.progress.chapters';
       progress_args = <String, String>{
         'count': item.chapter_count.toString()
@@ -271,6 +258,7 @@ class BookshelfStore extends GetxController {
       title: item.novel_title,
       publish_status: item.publish_status,
       introduction: item.introduction,
+      category_names: item.category_names,
       progress_key: progress_key,
       progress_args: progress_args,
       tag_key: tag_key,

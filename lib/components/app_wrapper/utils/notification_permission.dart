@@ -1,4 +1,5 @@
 import 'package:easy_localization/easy_localization.dart' as easy;
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:app/util/dialog/show_message.dart';
 import 'package:app/util/storage_util/index.dart';
@@ -12,8 +13,11 @@ class NotificationPermission {
     final dismissed = await StorageUtil.getData(_dismissedKey);
     if (dismissed == 'true') return;
 
-    final status = await Permission.notification.status;
-    if (status.isGranted || status.isLimited) return;
+    final settings = await FirebaseMessaging.instance.getNotificationSettings();
+    if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional) {
+      return;
+    }
 
     await showMessage(
       message: easy.tr('notification_permission.message'),

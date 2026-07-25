@@ -60,9 +60,9 @@ class _FavoriteTabContentState extends State<FavoriteTabContent>
     });
   }
 
-  /// 调用取消收藏API。
+  /// 后台静默调用取消收藏 API。
   Future<bool> _handle_delete(String novel_id) async {
-    final result = await toggle_favorite(novel_id: int.tryParse(novel_id) ?? 0);
-    return result != null && !result.favorite;
+    toggle_favorite(novel_id: int.tryParse(novel_id) ?? 0);
+    return true;
   }
 }
