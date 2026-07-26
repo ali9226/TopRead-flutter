@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:app/api/post_request.dart';
 import 'package:app/components/category_filter/index.dart';
 import 'package:app/components/fixed_bottom_navigation/style.dart'
@@ -12,12 +13,18 @@ import 'package:app/models/recommend_ranking_item.dart';
 import 'package:app/pages/ranking_full_list/logic.dart';
 import 'package:app/pages/ranking_full_list/style.dart';
 import 'package:app/pages/ranking_full_list/widgets/bookshelf_book_card.dart';
+import 'package:app/stores/ranking_full_list_store.dart';
 import 'package:app/util/novel_navigation/index.dart';
 
 /// 完整榜单网格内容组件。
 ///
 /// 根据 [ranking_tab_id] 请求不同的后端接口获取真实数据，
 /// 支持分类筛选和分页加载。
+///
+/// 缓存策略：
+/// - Tab切换时保留每个Tab的选中分类和已加载数据
+/// - 同Tab内切换分类时缓存每个分类的数据
+/// - 使用请求版本号解决异步竞态问题
 class BookshelfGridContent extends StatefulWidget {
   /// 榜单 Tab id，决定请求哪个接口。
   final int ranking_tab_id;
@@ -65,6 +72,12 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
   /// 当前选中的分类 id（null 表示未筛选）。
   int? _selected_category_id;
 
+  /// 请求版本号，用于解决异步竞态问题。
+  ///
+  /// 每次发起新请求时递增，请求返回时检查版本号是否匹配，
+  /// 不匹配则丢弃结果，避免旧请求覆盖新数据。
+  int _request_version = 0;
+
   /// 距离底部多少像素时触发自动加载更多。
   static const double _load_more_trigger_distance = 180;
 
@@ -81,15 +94,31 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
     Color(0xFFE6A23C),
   ];
 
+  /// 缓存仓库。
+  final RankingFullListStore _store = Get.find<RankingFullListStore>();
+
   @override
   void initState() {
     super.initState();
     _scroll_controller.addListener(_handle_scroll);
-    // 如果有初始分类 id，设置为默认选中
-    if (widget.initial_category_id != null && widget.initial_category_id! > 0) {
+
+    // 初始化选中分类
+    final int? cached_category = _store.get_selected_category_id(
+      widget.ranking_tab_id,
+    );
+    if (cached_category != null) {
+      _selected_category_id = cached_category;
+    } else if (widget.initial_category_id != null &&
+        widget.initial_category_id! > 0) {
       _selected_category_id = widget.initial_category_id;
+      _store.set_selected_category_id(
+        widget.ranking_tab_id,
+        _selected_category_id,
+      );
     }
-    _load_initial_data();
+
+    // 尝试从缓存加载数据
+    _load_from_cache_or_network();
   }
 
   @override
@@ -97,6 +126,30 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
     _scroll_controller.removeListener(_handle_scroll);
     _scroll_controller.dispose();
     super.dispose();
+  }
+
+  /// 从缓存加载数据，如果缓存不存在则从网络加载。
+  void _load_from_cache_or_network() {
+    final RankingCategoryCache? cache = _get_current_cache();
+    if (cache != null) {
+      // 缓存存在，直接使用
+      setState(() {
+        _visible_book_list = List<RecommendRankingItem>.from(cache.items);
+        _has_more = cache.has_more;
+        _is_initial_loading = false;
+      });
+    } else {
+      // 缓存不存在，从网络加载
+      _load_initial_data();
+    }
+  }
+
+  /// 获取当前分类的缓存数据。
+  RankingCategoryCache? _get_current_cache() {
+    return _store.get_category_cache(
+      widget.ranking_tab_id,
+      _selected_category_id,
+    );
   }
 
   @override
@@ -112,17 +165,22 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
                 (grid_count - 1) * Style.grid_cross_spacing) /
             grid_count;
 
+        /// 内容区域最大高度（3行内容 + 1px安全余量）。
+        final double content_area_height =
+            Style.book_title_font_size * Style.book_title_height * 2 +
+            Style.book_meta_font_size * 1.4 +
+            Style.book_title_top_spacing +
+            Style.book_meta_top_spacing +
+            1;
+
         final double item_height =
             item_width / Style.cover_aspect_ratio +
-            Style.book_title_top_spacing +
-            Style.book_title_min_height +
-            Style.book_meta_top_spacing +
-            18;
+            content_area_height;
 
         return Column(
           children: <Widget>[
             CategoryFilter(
-              initial_category_id: widget.initial_category_id,
+              initial_category_id: _selected_category_id ?? widget.initial_category_id,
               on_category_changed: _handle_category_changed,
             ),
             Expanded(
@@ -231,28 +289,58 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
       _is_initial_loading = true;
     });
 
-    final List<RecommendRankingItem> items = await _fetch_data();
+    // 保存请求发起时的状态快照
+    final int request_version = ++_request_version;
+    final int? request_category_id = _selected_category_id;
 
-    if (!mounted) return;
+    final List<RecommendRankingItem> items = await _fetch_data(
+      category_id: request_category_id,
+    );
+
+    // 检查版本号，如果不匹配说明有新请求发起，丢弃本次结果
+    if (!mounted || request_version != _request_version) return;
 
     setState(() {
       _visible_book_list = items;
       _has_more = items.length >= _page_size;
       _is_initial_loading = false;
     });
+
+    // 更新缓存（使用请求发起时的分类id）
+    _store.set_category_cache(
+      widget.ranking_tab_id,
+      request_category_id,
+      items: items,
+      has_more: _has_more,
+    );
   }
 
   /// 下拉刷新。
   Future<void> _handle_refresh() async {
-    final List<RecommendRankingItem> items = await _fetch_data();
+    // 保存请求发起时的状态快照
+    final int request_version = ++_request_version;
+    final int? request_category_id = _selected_category_id;
 
-    if (!mounted) return;
+    final List<RecommendRankingItem> items = await _fetch_data(
+      category_id: request_category_id,
+    );
+
+    // 检查版本号
+    if (!mounted || request_version != _request_version) return;
 
     setState(() {
       _visible_book_list = items;
       _has_more = items.length >= _page_size;
       _is_loading_more = false;
     });
+
+    // 更新缓存
+    _store.set_category_cache(
+      widget.ranking_tab_id,
+      request_category_id,
+      items: items,
+      has_more: _has_more,
+    );
   }
 
   /// 分类筛选变更。
@@ -260,26 +348,63 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
     if (_selected_category_id == category_id) return;
     _selected_category_id = category_id;
 
-    setState(() {
-      _is_initial_loading = true;
-    });
+    // 保存选中的分类到Store
+    _store.set_selected_category_id(widget.ranking_tab_id, category_id);
 
-    final List<RecommendRankingItem> items = await _fetch_data();
+    // 检查是否有缓存数据
+    final RankingCategoryCache? cache = _get_current_cache();
+    if (cache != null) {
+      // 缓存存在，直接使用
+      setState(() {
+        _visible_book_list = List<RecommendRankingItem>.from(cache.items);
+        _has_more = cache.has_more;
+        _is_initial_loading = false;
+      });
+      // 滚动到顶部
+      if (_scroll_controller.hasClients) {
+        _scroll_controller.jumpTo(0);
+      }
+    } else {
+      // 缓存不存在，从网络加载
+      setState(() {
+        _is_initial_loading = true;
+      });
 
-    if (!mounted) return;
+      // 保存请求发起时的状态快照
+      final int request_version = ++_request_version;
+      final int? request_category_id = category_id;
 
-    setState(() {
-      _visible_book_list = items;
-      _has_more = items.length >= _page_size;
-      _is_initial_loading = false;
-    });
+      final List<RecommendRankingItem> items = await _fetch_data(
+        category_id: request_category_id,
+      );
+
+      // 检查版本号
+      if (!mounted || request_version != _request_version) return;
+
+      setState(() {
+        _visible_book_list = items;
+        _has_more = items.length >= _page_size;
+        _is_initial_loading = false;
+      });
+
+      // 更新缓存（使用请求发起时的分类id）
+      _store.set_category_cache(
+        widget.ranking_tab_id,
+        request_category_id,
+        items: items,
+        has_more: _has_more,
+      );
+    }
   }
 
   /// 请求榜单数据。
   ///
   /// 根据 [widget.ranking_tab_id] 选择对应的 API 路径，
   /// 传入 [category_id] 进行分类筛选，传入 [no_ids] 排除已加载数据。
-  Future<List<RecommendRankingItem>> _fetch_data({List<int>? no_ids}) async {
+  Future<List<RecommendRankingItem>> _fetch_data({
+    int? category_id,
+    List<int>? no_ids,
+  }) async {
     final String api_path = RankingFullListLogic.resolve_api_path(
       widget.ranking_tab_id,
     );
@@ -290,8 +415,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
         showTips: false,
         parameter: <String, dynamic>{
           'limit': _page_size,
-          if (_selected_category_id != null)
-            'category_id': _selected_category_id,
+          if (category_id != null) 'category_id': category_id,
           if (no_ids != null && no_ids.isNotEmpty) 'no_ids': no_ids,
         },
         fromJsonList: (List<dynamic> json) =>
@@ -354,17 +478,31 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
         .map((RecommendRankingItem item) => item.id)
         .toList();
 
+    // 保存请求发起时的状态快照
+    final int request_version = _request_version;
+    final int? request_category_id = _selected_category_id;
+
     final List<RecommendRankingItem> new_items = await _fetch_data(
+      category_id: request_category_id,
       no_ids: no_ids,
     );
 
-    if (!mounted) return;
+    // 检查版本号
+    if (!mounted || request_version != _request_version) return;
 
     setState(() {
       _visible_book_list.addAll(new_items);
       _has_more = new_items.length >= _page_size;
       _is_loading_more = false;
     });
+
+    // 更新缓存
+    _store.append_category_cache(
+      widget.ranking_tab_id,
+      request_category_id,
+      new_items: new_items,
+      has_more: _has_more,
+    );
   }
 }
 
@@ -392,24 +530,31 @@ class _BookCardSkeleton extends StatelessWidget {
           ),
         ),
         const SizedBox(height: Style.book_title_top_spacing),
-        Container(
-          height: 13,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: block_color,
-            borderRadius: BorderRadius.circular(LayoutConfig.tag_radius),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          height: 13,
-          width: 72,
-          decoration: BoxDecoration(
-            color: block_color,
-            borderRadius: BorderRadius.circular(LayoutConfig.tag_radius),
-          ),
+        // 标题骨架（双行）
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 13,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: block_color,
+                borderRadius: BorderRadius.circular(LayoutConfig.tag_radius),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              height: 13,
+              width: 72,
+              decoration: BoxDecoration(
+                color: block_color,
+                borderRadius: BorderRadius.circular(LayoutConfig.tag_radius),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: Style.book_meta_top_spacing),
+        // 底部信息骨架（单行，与双行标题时的实际内容一致）
         Container(
           height: Style.book_meta_skeleton_height,
           width: 88,

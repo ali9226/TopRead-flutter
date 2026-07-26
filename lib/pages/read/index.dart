@@ -1639,15 +1639,7 @@ class _ReadPageState extends State<ReadPage>
                                 ),
                               );
                           if (!is_logged_in) return;
-                          final bool was_liked = logic.is_liked.value;
                           unawaited(logic.toggle_like());
-                          showBottomTip(
-                            easy.tr(
-                              was_liked
-                                  ? 'like_tip.remove_success'
-                                  : 'like_tip.add_success',
-                            ),
-                          );
                         },
                       );
                     },

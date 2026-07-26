@@ -48,8 +48,8 @@ class CatalogSheet extends StatefulWidget {
   /// 列表项点击回调（参数为小说 ID）。
   final void Function(int story_id) on_item_tap;
 
-  /// 列表项点赞回调（参数为小说 ID）。
-  final Future<void> Function(int story_id) on_like_tap;
+  /// 列表项点赞回调（参数为小说 ID，乐观更新，无需等待）。
+  final void Function(int story_id) on_like_tap;
 
   /// 关闭弹窗回调。
   final VoidCallback on_close;
@@ -101,8 +101,7 @@ class _CatalogSheetState extends State<CatalogSheet> {
   /// 已构建目录项的布局锚点。
   final Map<int, GlobalKey> _item_keys = <int, GlobalKey>{};
 
-  /// 目录列表中正在点赞的小说 ID 集合（控制转圈动画，本地管理）。
-  final Set<int> _like_loading_ids = <int>{};
+
 
   /// 是否已自动滚动到当前阅读位置（仅首次数据加载时触发一次）。
   bool _has_scrolled_to_current = false;
@@ -348,29 +347,6 @@ class _CatalogSheetState extends State<CatalogSheet> {
     }
   }
 
-  // ==================== 点赞处理 ====================
-
-  /// 处理列表项点赞。
-  ///
-  /// 立即显示转圈，调用外部点赞回调，完成后清除 loading 状态。
-  Future<void> _handle_like_tap(int story_id) async {
-    if (_like_loading_ids.contains(story_id)) return;
-
-    setState(() {
-      _like_loading_ids.add(story_id);
-    });
-
-    try {
-      await widget.on_like_tap(story_id);
-    } finally {
-      if (mounted) {
-        setState(() {
-          _like_loading_ids.remove(story_id);
-        });
-      }
-    }
-  }
-
   // ==================== UI 构建 ====================
 
   @override
@@ -490,10 +466,9 @@ class _CatalogSheetState extends State<CatalogSheet> {
           item: item,
           is_current: is_current,
           is_dark: is_dark,
-          is_like_loading: _like_loading_ids.contains(item.id),
           reading_progress: is_current ? widget.reading_progress : 0.0,
           on_tap: is_current ? null : () => widget.on_item_tap(item.id),
-          on_like_tap: () => _handle_like_tap(item.id),
+          on_like_tap: () => widget.on_like_tap(item.id),
         );
       },
     );

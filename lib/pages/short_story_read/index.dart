@@ -765,18 +765,14 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     );
     if (!is_logged_in) return;
     final ShortStoryReadLogic action_logic = _logic;
-    final bool? is_liked = await action_logic.toggle_like();
-    if (!mounted || is_liked == null) return;
-    showBottomTip(
-      easy.tr(is_liked ? 'like_tip.add_success' : 'like_tip.remove_success'),
-    );
+    await action_logic.toggle_like();
   }
 
-  /// 处理目录弹窗中卡片点赞（带登录检查）。
+  /// 处理目录弹窗中卡片点赞（乐观更新）。
   ///
-  /// 未登录时弹出登录提示弹窗，已登录时调用点赞接口。
-  /// Loading 状态由 CatalogSheet 内部管理。
-  Future<void> _on_catalog_like_tap(int story_id) async {
+  /// 立即切换本地状态，然后静默发起请求。
+  /// 请求失败时回退状态，不显示任何提示。
+  void _on_catalog_like_tap(int story_id) async {
     final bool is_logged_in = await showLoginRequiredDialog(
       title: easy.tr('short_story_read.login_required'),
     );
@@ -787,9 +783,46 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       (ShortStoryItem item) => item.id == story_id,
     );
     if (catalog_index < 0) return;
+
+    // 记录乐观更新前的状态，用于失败时回退。
     final bool previous_catalog_status =
         action_logic.catalog_list[catalog_index].is_liked;
+    final int previous_catalog_count =
+        action_logic.catalog_list[catalog_index].like_count;
+    final bool optimistic_status = !previous_catalog_status;
+    final int optimistic_count = optimistic_status
+        ? previous_catalog_count + 1
+        : (previous_catalog_count > 0 ? previous_catalog_count - 1 : 0);
 
+    // 乐观更新：立即切换目录列表状态。
+    action_logic.sync_like_to_catalog(
+      story_id,
+      optimistic_status,
+      optimistic_status ? 1 : -1,
+    );
+
+    // 如果点赞的是当前阅读的小说，同步乐观更新正文页面数据。
+    bool previous_detail_status = false;
+    int previous_detail_count = 0;
+    final bool is_current_story = story_id == action_logic.story_id &&
+        action_logic.story_data.value != null;
+    if (is_current_story) {
+      previous_detail_status = action_logic.story_data.value!.is_liked;
+      previous_detail_count = action_logic.story_data.value!.like_count;
+      final int next_detail_count = optimistic_status
+          ? previous_detail_count + 1
+          : (previous_detail_count > 0 ? previous_detail_count - 1 : 0);
+      action_logic.story_data.value = action_logic.story_data.value!.copyWith(
+        is_liked: optimistic_status,
+        like_count: next_detail_count < 0 ? 0 : next_detail_count,
+      );
+      action_logic.sync_current_story_cache();
+    }
+
+    // 回退用的 delta（撤销乐观更新的增量）。
+    final int revert_delta = optimistic_status ? -1 : 1;
+
+    // 静默发起请求。
     try {
       final ResultsType<Map<String, dynamic>> results =
           await postRequest<Map<String, dynamic>>(
@@ -798,39 +831,59 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
             fromJson: (Map<String, dynamic> json) => json,
           );
 
-      if (!results.status || results.content == null) return;
+      if (!results.status || results.content == null) {
+        // 请求失败，回退目录列表状态。
+        action_logic.sync_like_to_catalog(
+          story_id,
+          previous_catalog_status,
+          revert_delta,
+        );
+        // 回退正文页面数据。
+        if (is_current_story) {
+          action_logic.story_data.value =
+              action_logic.story_data.value!.copyWith(
+            is_liked: previous_detail_status,
+            like_count: previous_detail_count,
+          );
+          action_logic.sync_current_story_cache();
+        }
+        return;
+      }
 
+      // 以服务端状态为准，修正乐观更新。
       final dynamic server_like = results.content!['like'];
-      final bool new_like_status = server_like == true || server_like == 1;
-      final int like_count_delta = new_like_status == previous_catalog_status
-          ? 0
-          : (new_like_status ? 1 : -1);
-
-      // 更新目录列表中对应小说的点赞状态。
+      final bool server_status = server_like == true || server_like == 1;
+      if (server_status != optimistic_status) {
+        action_logic.sync_like_to_catalog(
+          story_id,
+          server_status,
+          revert_delta,
+        );
+        if (is_current_story) {
+          action_logic.story_data.value =
+              action_logic.story_data.value!.copyWith(
+            is_liked: server_status,
+            like_count: previous_detail_count,
+          );
+          action_logic.sync_current_story_cache();
+        }
+      }
+    } catch (_) {
+      // 异常时回退目录列表状态。
       action_logic.sync_like_to_catalog(
         story_id,
-        new_like_status,
-        like_count_delta,
+        previous_catalog_status,
+        revert_delta,
       );
-
-      // 如果点赞的是当前阅读的小说，同步更新正文页面数据。
-      if (story_id == action_logic.story_id &&
-          action_logic.story_data.value != null) {
-        final bool previous_detail_status =
-            action_logic.story_data.value!.is_liked;
-        final int detail_delta = new_like_status == previous_detail_status
-            ? 0
-            : (new_like_status ? 1 : -1);
-        final int next_detail_count =
-            action_logic.story_data.value!.like_count + detail_delta;
-        action_logic.story_data.value = action_logic.story_data.value!.copyWith(
-          is_liked: new_like_status,
-          like_count: next_detail_count < 0 ? 0 : next_detail_count,
+      // 回退正文页面数据。
+      if (is_current_story) {
+        action_logic.story_data.value =
+            action_logic.story_data.value!.copyWith(
+          is_liked: previous_detail_status,
+          like_count: previous_detail_count,
         );
         action_logic.sync_current_story_cache();
       }
-    } catch (_) {
-      // 点赞失败静默处理。
     }
   }
 

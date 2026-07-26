@@ -24,6 +24,7 @@ import 'package:app/stores/preference_store.dart';
 import 'package:app/stores/share_store.dart';
 import 'package:app/stores/message_store.dart';
 import 'package:app/stores/bookshelf_store.dart';
+import 'package:app/stores/ranking_full_list_store.dart';
 import 'package:app/util/router/web_url_strategy.dart';
 import 'package:app/util/device/get_theme_mode.dart';
 import 'package:get_storage/get_storage.dart';
@@ -82,6 +83,7 @@ void main() async {
   Get.put(ShareStore());
   Get.put(MessageStore());
   Get.put(BookshelfStore());
+  Get.put(RankingFullListStore());
 
   /// TODO 注册全局语种基础配置刷新任务。
   ///

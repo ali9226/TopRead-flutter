@@ -41,9 +41,6 @@ class CatalogItem extends StatefulWidget {
   /// 点赞按钮点击回调（可选，不传则点赞区域不可点击）。
   final VoidCallback? on_like_tap;
 
-  /// 是否正在点赞请求中（为 true 时显示加载指示器）。
-  final bool is_like_loading;
-
   /// 当前阅读进度（0.0 ~ 1.0），仅当前小说有效。
   final double reading_progress;
 
@@ -54,7 +51,6 @@ class CatalogItem extends StatefulWidget {
     required this.is_dark,
     required this.on_tap,
     this.on_like_tap,
-    this.is_like_loading = false,
     this.reading_progress = 0.0,
   });
 
@@ -483,33 +479,23 @@ class _CatalogItemState extends State<CatalogItem>
 
         const SizedBox(width: 8),
 
-        /// 点赞数（图标 + 数字，与首页卡片一致）。
+        /// 点赞数（图标 + 数字，乐观更新，无加载态）。
         GestureDetector(
-          onTap: widget.is_like_loading ? null : widget.on_like_tap,
+          onTap: widget.on_like_tap,
           behavior: HitTestBehavior.opaque,
           child: Padding(
             padding: const EdgeInsets.only(left: 8),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                if (widget.is_like_loading)
-                  SizedBox(
-                    width: ShortStoryTabStyle.card_like_icon_size,
-                    height: ShortStoryTabStyle.card_like_icon_size,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 1.8,
-                      valueColor: AlwaysStoppedAnimation<Color>(like_color),
-                    ),
-                  )
-                else
-                  SvgPicture.asset(
-                    widget.item.is_liked
-                        ? 'assets/svg/love_02.svg'
-                        : 'assets/svg/love.svg',
-                    width: ShortStoryTabStyle.card_like_icon_size,
-                    height: ShortStoryTabStyle.card_like_icon_size,
-                    colorFilter: ColorFilter.mode(like_color, BlendMode.srcIn),
-                  ),
+                SvgPicture.asset(
+                  widget.item.is_liked
+                      ? 'assets/svg/love_02.svg'
+                      : 'assets/svg/love.svg',
+                  width: ShortStoryTabStyle.card_like_icon_size,
+                  height: ShortStoryTabStyle.card_like_icon_size,
+                  colorFilter: ColorFilter.mode(like_color, BlendMode.srcIn),
+                ),
                 SizedBox(width: ShortStoryTabStyle.card_like_gap),
                 Text(
                   NumberFormatUtil.format_count(widget.item.like_count),
