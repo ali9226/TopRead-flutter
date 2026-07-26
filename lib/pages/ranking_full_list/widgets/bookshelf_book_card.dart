@@ -39,7 +39,8 @@ class _BookshelfBookCardState extends State<BookshelfBookCard> {
   final GlobalKey _title_key = GlobalKey();
 
   /// 标题是否为单行显示。
-  bool _is_single_line = true;
+  /// 默认 false，避免首次渲染时标题双行但底部显示两行导致溢出。
+  bool _is_single_line = false;
 
   /// 是否已完成标题行数计算。
   bool _has_calculated = false;
