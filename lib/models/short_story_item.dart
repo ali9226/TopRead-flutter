@@ -113,7 +113,7 @@ class ShortStoryItem {
       like_count: _to_int(json['like_count']),
       favorite_count: _to_int(json['favorite_count']),
       score: _to_string(json['score']),
-      is_liked: json['like'] == true,
+      is_liked: json['like'] == true || json['like'] == 1,
       content_url: _to_string(json['content_url']),
     );
   }

@@ -33,12 +33,20 @@ class ShortStoryCatalogStore extends GetxController {
 
   /// 设置目录列表数据（替换现有数据）。
   void set_catalog_list(List<ShortStoryItem> list) {
-    catalog_list.assignAll(list);
+    final Set<int> seen_ids = <int>{};
+    catalog_list.assignAll(
+      list.where((ShortStoryItem item) => seen_ids.add(item.id)),
+    );
   }
 
   /// 追加目录列表数据（加载更多时使用）。
   void append_catalog_list(List<ShortStoryItem> list) {
-    catalog_list.addAll(list);
+    final Set<int> seen_ids = catalog_list
+        .map((ShortStoryItem item) => item.id)
+        .toSet();
+    catalog_list.addAll(
+      list.where((ShortStoryItem item) => seen_ids.add(item.id)),
+    );
   }
 
   /// 检查指定 ID 的小说是否已在列表中。
@@ -48,7 +56,9 @@ class ShortStoryCatalogStore extends GetxController {
 
   /// 获取指定 ID 的小说在列表中的索引，不存在返回 -1。
   int index_of_story(int story_id) {
-    return catalog_list.indexWhere((ShortStoryItem item) => item.id == story_id);
+    return catalog_list.indexWhere(
+      (ShortStoryItem item) => item.id == story_id,
+    );
   }
 
   /// 确保指定小说在列表首位（如果不存在则插入）。

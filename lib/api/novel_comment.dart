@@ -1,6 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'package:flutter/foundation.dart';
 import 'package:app/api/post_request.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/components/comment_list/models/comment_data.dart';
@@ -57,10 +56,7 @@ class CommentLikeResult {
   /// 更新后的点赞数。
   final int like_count;
 
-  const CommentLikeResult({
-    required this.like,
-    required this.like_count,
-  });
+  const CommentLikeResult({required this.like, required this.like_count});
 
   /// 从后端接口返回的 JSON 数据解析。
   factory CommentLikeResult.from_json(Map<String, dynamic> json) {
@@ -98,18 +94,17 @@ Future<CommentListResult?> inquire_comment_list({
   };
   if (highlight_id > 0) parameter['highlight_id'] = highlight_id;
 
-  final ResultsType<Map<String, dynamic>> results = await postRequest<Map<String, dynamic>>(
-    path: 'novel_comment/inquire',
-    parameter: parameter,
-    showTips: false,
-    fromJson: (json) => json,
-  );
+  final ResultsType<Map<String, dynamic>> results =
+      await postRequest<Map<String, dynamic>>(
+        path: 'novel_comment/inquire',
+        parameter: parameter,
+        showTips: false,
+        fromJson: (json) => json,
+      );
 
   if (!results.status || results.content == null) {
-    debugPrint('TODO inquire_comment_list 失败: status=${results.status}, message=${results.message}, content=${results.content}');
     return null;
   }
-  debugPrint('TODO inquire_comment_list content: ${results.content}');
   return CommentListResult.from_json(results.content!);
 }
 
@@ -124,16 +119,17 @@ Future<bool> add_comment({
   required String comment_content,
   int parent_id = 0,
 }) async {
-  final ResultsType<Map<String, dynamic>> results = await postRequest<Map<String, dynamic>>(
-    path: 'novel_comment/add',
-    parameter: {
-      'novel_id': novel_id,
-      'comment_content': comment_content,
-      'parent_id': parent_id,
-    },
-    showTips: false,
-    fromJson: (json) => json,
-  );
+  final ResultsType<Map<String, dynamic>> results =
+      await postRequest<Map<String, dynamic>>(
+        path: 'novel_comment/add',
+        parameter: {
+          'novel_id': novel_id,
+          'comment_content': comment_content,
+          'parent_id': parent_id,
+        },
+        showTips: false,
+        fromJson: (json) => json,
+      );
 
   return results.status;
 }
@@ -142,17 +138,14 @@ Future<bool> add_comment({
 ///
 /// [comment_id] 评论ID（必传）。
 /// 返回点赞结果（包含最新点赞状态和点赞数），失败时返回 null。
-Future<CommentLikeResult?> like_comment({
-  required int comment_id,
-}) async {
-  final ResultsType<Map<String, dynamic>> results = await postRequest<Map<String, dynamic>>(
-    path: 'novel_comment/like',
-    parameter: {
-      'comment_id': comment_id,
-    },
-    showTips: true,
-    fromJson: (json) => json,
-  );
+Future<CommentLikeResult?> like_comment({required int comment_id}) async {
+  final ResultsType<Map<String, dynamic>> results =
+      await postRequest<Map<String, dynamic>>(
+        path: 'novel_comment/like',
+        parameter: {'comment_id': comment_id},
+        showTips: true,
+        fromJson: (json) => json,
+      );
 
   if (!results.status || results.content == null) return null;
   return CommentLikeResult.from_json(results.content!);

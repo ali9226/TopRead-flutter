@@ -626,6 +626,7 @@
     "load_error_title": "Failed to load comments",
     "load_error_desc": "Network issue. Tap to try again.",
     "send_success": "Comment posted",
+    "send_failed": "Couldn't post. Please try again.",
     "time": {
       "just_now": "Just now",
       "minutes_ago": "m ago",

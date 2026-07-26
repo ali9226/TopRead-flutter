@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -112,12 +113,19 @@ Future<int?> showCommentSheet({
   return route_result ?? changed_comment_count;
 }
 
-class _CommentSheetState extends State<CommentSheet> {
+class _CommentSheetState extends State<CommentSheet>
+    with WidgetsBindingObserver {
   /// 评论列表数据。
   List<CommentData> _comments = [];
 
   /// 滚动控制器。
   final ScrollController _scroll_controller = ScrollController();
+
+  /// 评论列表真实视口，用于计算键盘弹出后的可见区域。
+  final GlobalKey _list_view_key = GlobalKey();
+
+  /// 每条评论的真实布局锚点。
+  final Map<int, GlobalKey> _comment_target_keys = <int, GlobalKey>{};
 
   /// 输入框焦点节点（用于关闭键盘）。
   final FocusNode _input_focus_node = FocusNode();
@@ -149,21 +157,73 @@ class _CommentSheetState extends State<CommentSheet> {
   /// 当前高亮的评论ID（用于闪烁动画，0 表示无高亮）。
   int _highlighted_comment_id = 0;
 
+  /// 当前被回复评论的布局上下文。
+  BuildContext? _reply_target_context;
+
+  /// 正在提交点赞请求的评论 ID，防止快速重复点击导致状态反转。
+  final Set<int> _like_loading_ids = <int>{};
+
+  /// 键盘关闭动画结束后是否仍需重新聚焦。
+  bool _pending_reply_focus = false;
+
+  /// 合并同一帧内的多次键盘尺寸回调。
+  bool _reply_visibility_scheduled = false;
+
+  /// 防止重复发送。
+  bool _is_sending = false;
+
+  /// 取消过期高亮计时器。
+  Timer? _highlight_timer;
+
+  /// 使过期的首次加载请求失效。
+  int _load_generation = 0;
+
   @override
   void initState() {
     super.initState();
-    // TODO 监听滚动事件，实现上拉加载更多
+    WidgetsBinding.instance.addObserver(this);
     _scroll_controller.addListener(_on_scroll);
-    // TODO 首次加载评论数据
-    _load_comments();
+    unawaited(_load_comments());
   }
 
   @override
   void dispose() {
+    _load_generation += 1;
+    _highlight_timer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _scroll_controller.removeListener(_on_scroll);
     _scroll_controller.dispose();
     _input_focus_node.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    if (!mounted || _reply_target == null) return;
+
+    if (_read_keyboard_height() <=
+        CommentListStyle.keyboard_close_hide_threshold) {
+      if (_pending_reply_focus) {
+        _pending_reply_focus = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _reply_target == null) return;
+          _input_focus_node.requestFocus();
+        });
+      }
+      return;
+    }
+
+    _schedule_reply_visibility();
+  }
+
+  GlobalKey _target_key_for(int comment_id) {
+    return _comment_target_keys.putIfAbsent(comment_id, GlobalKey.new);
+  }
+
+  double _read_keyboard_height() {
+    final view = View.maybeOf(context);
+    if (view == null || view.devicePixelRatio == 0) return 0;
+    return view.viewInsets.bottom / view.devicePixelRatio;
   }
 
   /// 滚动监听，触底时加载更多。
@@ -183,42 +243,41 @@ class _CommentSheetState extends State<CommentSheet> {
   /// 用于显示"A → B"的回复关系。
   List<CommentData> _flatten_replies(List<CommentData> nested_replies) {
     final List<CommentData> flat = [];
-    // TODO 构建回复ID -> 昵称的映射，用于推导 reply_to_nickname
     final Map<int, String> nickname_map = {};
     void collect_nicknames(List<CommentData> replies) {
-      for (final r in replies) {
-        nickname_map[r.id] = r.nickname;
-        if (r.replies.isNotEmpty) collect_nicknames(r.replies);
+      for (final CommentData reply in replies) {
+        nickname_map[reply.id] = reply.nickname;
+        if (reply.replies.isNotEmpty) {
+          collect_nicknames(reply.replies);
+        }
       }
     }
 
     collect_nicknames(nested_replies);
 
-    // TODO 递归展平
     void flatten(List<CommentData> replies) {
-      for (final reply in replies) {
-        flat.add(reply);
+      for (final CommentData reply in replies) {
+        final String? inferred_nickname =
+            reply.reply_to_nickname ?? nickname_map[reply.parent_id];
+        flat.add(
+          reply.copy_with(
+            replies: const <CommentData>[],
+            reply_to_nickname: inferred_nickname?.isNotEmpty == true
+                ? inferred_nickname
+                : null,
+          ),
+        );
         if (reply.replies.isNotEmpty) flatten(reply.replies);
       }
     }
 
     flatten(nested_replies);
-
-    // TODO 为每条回复设置正确的 reply_to_nickname（基于 parent_id）
-    return flat.map((reply) {
-      // TODO 如果已有 reply_to_nickname（来自后端），保持不变
-      if (reply.reply_to_nickname != null) return reply;
-      // TODO 通过 parent_id 查找被回复者的昵称
-      final parent_nickname = nickname_map[reply.parent_id];
-      if (parent_nickname != null && parent_nickname.isNotEmpty) {
-        return reply.copy_with(reply_to_nickname: parent_nickname);
-      }
-      return reply;
-    }).toList();
+    return flat;
   }
 
   /// 加载评论列表（首次加载或刷新）。
   Future<void> _load_comments() async {
+    final int generation = ++_load_generation;
     setState(() {
       _load_status = 'loading';
       _current_page = 1;
@@ -226,8 +285,6 @@ class _CommentSheetState extends State<CommentSheet> {
     });
 
     try {
-      // highlight_id 传给后端，由后端将目标评论的顶层父评论排到第一位
-      debugPrint('TODO _load_comments: highlight_id=${widget.scroll_to_comment_id}');
       final CommentListResult? result = await inquire_comment_list(
         novel_id: widget.novel_id,
         page: 1,
@@ -235,7 +292,7 @@ class _CommentSheetState extends State<CommentSheet> {
         highlight_id: widget.scroll_to_comment_id,
       );
 
-      if (!mounted) return;
+      if (!mounted || generation != _load_generation) return;
 
       if (result == null) {
         setState(() {
@@ -251,15 +308,14 @@ class _CommentSheetState extends State<CommentSheet> {
           return c.copy_with(replies: _flatten_replies(c.replies));
         }).toList();
         _total_count = result.total;
-        _has_more = result.list.length >= _page_size;
+        _has_more = result.page * result.page_size < result.total;
       });
 
-      // TODO 加载完成后，滚动到顶部（目标评论已置顶）
       if (widget.scroll_to_comment_id > 0) {
-        _scroll_to_comment(widget.scroll_to_comment_id);
+        unawaited(_scroll_to_comment(widget.scroll_to_comment_id));
       }
-    } catch (e) {
-      if (!mounted) return;
+    } catch (_) {
+      if (!mounted || generation != _load_generation) return;
       setState(() {
         _load_status = 'error';
       });
@@ -267,56 +323,43 @@ class _CommentSheetState extends State<CommentSheet> {
   }
 
   /// 滚动到指定评论ID所在的位置，并触发闪烁高亮。
-  void _scroll_to_comment(int comment_id) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scroll_controller.hasClients) return;
+  Future<void> _scroll_to_comment(int comment_id) async {
+    if (!_comments.any(
+      (CommentData comment) =>
+          comment.id == comment_id ||
+          comment.replies.any((CommentData reply) => reply.id == comment_id),
+    )) {
+      return;
+    }
 
-      // 查找目标评论：先在顶层找，再在回复中找
-      int target_index = _comments.indexWhere((c) => c.id == comment_id);
-      int reply_offset = 0;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || !_scroll_controller.hasClients) return;
 
-      if (target_index < 0) {
-        // 在子回复中查找，记录回复位置偏移
-        for (int i = 0; i < _comments.length; i++) {
-          final reply_index = _comments[i].replies.indexWhere(
-            (r) => r.id == comment_id,
-          );
-          if (reply_index >= 0) {
-            target_index = i;
-            reply_offset = reply_index;
-            break;
-          }
-        }
-      }
+    // highlight_id 会让后端把目标所在的顶层评论放到第一页首位。先回到列表
+    // 顶部，确保目标真实布局完成，再按 RenderObject 的实际位置定位。
+    _scroll_controller.jumpTo(0);
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
 
-      if (target_index < 0) return;
+    final BuildContext? target_context = _target_key_for(
+      comment_id,
+    ).currentContext;
+    if (target_context == null || !target_context.mounted) return;
 
-      // 估算目标位置：主评论高度 + 回复区域内的偏移
-      final double main_height =
-          CommentListStyle.scroll_to_comment_estimated_item_height;
-      final double target_offset =
-          target_index * main_height + reply_offset * 48.0;
-      final double max_offset = _scroll_controller.position.maxScrollExtent;
-      final double offset = target_offset.clamp(0.0, max_offset);
+    await Scrollable.ensureVisible(
+      target_context,
+      alignment: 0.12,
+      duration: const Duration(
+        milliseconds: CommentListStyle.scroll_to_comment_animation_duration_ms,
+      ),
+      curve: Curves.easeOutCubic,
+    );
+    if (!mounted) return;
 
-      _scroll_controller
-          .animateTo(
-        offset,
-        duration: const Duration(
-          milliseconds:
-              CommentListStyle.scroll_to_comment_animation_duration_ms,
-        ),
-        curve: Curves.easeOutCubic,
-      )
-          .then((_) {
-        // 滚动完成后触发闪烁高亮
-        if (mounted) {
-          setState(() => _highlighted_comment_id = comment_id);
-          Timer(const Duration(seconds: 2), () {
-            if (mounted) setState(() => _highlighted_comment_id = 0);
-          });
-        }
-      });
+    _highlight_timer?.cancel();
+    setState(() => _highlighted_comment_id = comment_id);
+    _highlight_timer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _highlighted_comment_id = 0);
     });
   }
 
@@ -338,19 +381,25 @@ class _CommentSheetState extends State<CommentSheet> {
       if (!mounted) return;
 
       if (result != null) {
-        // TODO 展平每条评论的嵌套回复为扁平列表
-        final new_comments = result.list.map((CommentData c) {
-          if (c.replies.isEmpty) return c;
-          return c.copy_with(replies: _flatten_replies(c.replies));
-        }).toList();
+        final Set<int> existing_ids = _comments
+            .map((CommentData comment) => comment.id)
+            .toSet();
+        final List<CommentData> new_comments = result.list
+            .where((CommentData comment) => existing_ids.add(comment.id))
+            .map((CommentData c) {
+              if (c.replies.isEmpty) return c;
+              return c.copy_with(replies: _flatten_replies(c.replies));
+            })
+            .toList();
         setState(() {
           _current_page = result.page;
           _comments = [..._comments, ...new_comments];
-          _has_more = result.list.length >= _page_size;
+          _total_count = math.max(_total_count, result.total);
+          _has_more = result.page * result.page_size < result.total;
         });
       }
-    } catch (e) {
-      // TODO 加载更多失败时不提示，静默处理
+    } catch (_) {
+      // 保留当前分页状态，下一次触底时允许重试。
     } finally {
       if (mounted) {
         setState(() {
@@ -370,26 +419,16 @@ class _CommentSheetState extends State<CommentSheet> {
 
   /// 设置回复目标。
   void _set_reply_target(CommentData? comment) {
+    if (!mounted || identical(_reply_target, comment)) return;
     setState(() {
       _reply_target = comment;
     });
   }
 
-  /// 输入框是否仍处于本轮交互中。
-  ///
-  /// iOS 在焦点释放后键盘还会继续执行一段关闭动画，因此除了焦点，也要检查
-  /// viewInsets。只要任一状态仍然存在，点击评论就应当完成关闭，而不是立刻重开。
-  bool _is_input_active() {
-    if (_input_focus_node.hasFocus) return true;
-    final view = View.maybeOf(context);
-    if (view == null || view.devicePixelRatio == 0) return false;
-    final double keyboard_height =
-        view.viewInsets.bottom / view.devicePixelRatio;
-    return keyboard_height > CommentListStyle.keyboard_close_hide_threshold;
-  }
-
   /// 关闭输入框并退出回复模式。
   void _dismiss_input() {
+    _pending_reply_focus = false;
+    _reply_target_context = null;
     _input_focus_node.unfocus();
     if (_reply_target != null) {
       _set_reply_target(null);
@@ -397,63 +436,147 @@ class _CommentSheetState extends State<CommentSheet> {
   }
 
   /// 处理回复操作。
-  void _handle_reply(CommentData comment) {
-    // 输入框已打开或键盘仍在关闭动画中时，本次点击只负责收起。避免 iOS 同一
-    // 次点击先 unfocus、随后又 requestFocus，造成键盘下滑后立即回弹。
-    if (_is_input_active()) {
-      _dismiss_input();
+  void _handle_reply(CommentData comment, BuildContext target_context) {
+    _pending_reply_focus = false;
+    _reply_target_context = target_context;
+    _set_reply_target(comment);
+
+    if (_input_focus_node.hasFocus) {
+      _schedule_reply_visibility();
       return;
     }
 
-    _set_reply_target(comment);
-    // TODO 等当前帧渲染完成后再聚焦，避免键盘弹出时的卡顿
+    // iOS 键盘关闭动画未结束时立即 requestFocus 会产生先下滑再回弹。等待
+    // viewInsets 真实归零后，由 didChangeMetrics 继续本次回复交互。
+    if (_read_keyboard_height() >
+        CommentListStyle.keyboard_close_hide_threshold) {
+      _pending_reply_focus = true;
+      return;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _reply_target?.id != comment.id) return;
       _input_focus_node.requestFocus();
     });
+  }
+
+  void _schedule_reply_visibility() {
+    if (_reply_visibility_scheduled) return;
+    _reply_visibility_scheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _reply_visibility_scheduled = false;
+      _keep_reply_target_visible();
+    });
+  }
+
+  void _keep_reply_target_visible() {
+    if (!mounted || !_scroll_controller.hasClients) return;
+
+    final BuildContext? target_context =
+        _reply_target_context ??
+        (_reply_target == null
+            ? null
+            : _target_key_for(_reply_target!.id).currentContext);
+    final BuildContext? viewport_context = _list_view_key.currentContext;
+    final RenderObject? target_object = target_context?.findRenderObject();
+    final RenderObject? viewport_object = viewport_context?.findRenderObject();
+    if (target_object is! RenderBox ||
+        viewport_object is! RenderBox ||
+        !target_object.attached ||
+        !viewport_object.attached) {
+      return;
+    }
+
+    final double keyboard_height = _read_keyboard_height();
+    if (keyboard_height <= CommentListStyle.keyboard_close_hide_threshold) {
+      return;
+    }
+
+    final Rect target_rect =
+        target_object.localToGlobal(Offset.zero) & target_object.size;
+    final Rect viewport_rect =
+        viewport_object.localToGlobal(Offset.zero) & viewport_object.size;
+    final double keyboard_top =
+        MediaQuery.sizeOf(context).height - keyboard_height;
+    final double visible_top =
+        viewport_rect.top + CommentListStyle.reply_visibility_margin;
+    final double visible_bottom = math.min(
+      viewport_rect.bottom,
+      keyboard_top -
+          CommentListStyle.input_area_height -
+          CommentListStyle.reply_visibility_margin,
+    );
+    if (visible_bottom <= visible_top) return;
+
+    double delta = 0;
+    final double visible_height = visible_bottom - visible_top;
+    if (target_rect.height > visible_height) {
+      delta = target_rect.top - visible_top;
+    } else if (target_rect.bottom > visible_bottom) {
+      delta = target_rect.bottom - visible_bottom;
+    } else if (target_rect.top < visible_top) {
+      delta = target_rect.top - visible_top;
+    }
+    if (delta.abs() < 0.5) return;
+
+    final ScrollPosition position = _scroll_controller.position;
+    final double target_offset = (position.pixels + delta).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    if ((target_offset - position.pixels).abs() < 0.5) return;
+    _scroll_controller.jumpTo(target_offset);
   }
 
   /// 处理点赞操作。
   ///
   /// 未登录时弹出登录提示弹窗，已登录时调用点赞接口。
   Future<void> _handle_like(CommentData comment) async {
-    // TODO 登录检查
-    final bool is_logged_in = await showLoginRequiredDialog(
-      title: tr('short_story_read.login_required'),
-    );
-    if (!is_logged_in) return;
+    if (comment.id <= 0) return;
+    if (!_like_loading_ids.add(comment.id)) return;
 
-    // TODO 先乐观更新UI
-    final bool new_liked = !comment.is_liked;
-    final int new_count = new_liked
-        ? comment.like_count + 1
-        : (comment.like_count > 0 ? comment.like_count - 1 : 0);
-
-    _update_comment_like_state(comment.id, new_liked, new_count);
-
-    // TODO 调用接口
-    final CommentLikeResult? result = await like_comment(
-      comment_id: comment.id,
-    );
-
-    if (!mounted) return;
-
-    if (result == null) {
-      // TODO 接口失败，回滚UI状态
-      _update_comment_like_state(
-        comment.id,
-        comment.is_liked,
-        comment.like_count,
+    try {
+      // TODO 登录检查
+      final bool is_logged_in = await showLoginRequiredDialog(
+        title: tr('short_story_read.login_required'),
       );
-      return;
+      if (!is_logged_in || !mounted) return;
+
+      // TODO 先乐观更新UI
+      final bool new_liked = !comment.is_liked;
+      final int new_count = new_liked
+          ? comment.like_count + 1
+          : (comment.like_count > 0 ? comment.like_count - 1 : 0);
+
+      _update_comment_like_state(comment.id, new_liked, new_count);
+
+      // TODO 调用接口
+      final CommentLikeResult? result = await like_comment(
+        comment_id: comment.id,
+      );
+
+      if (!mounted) return;
+
+      if (result == null) {
+        // TODO 接口失败，回滚UI状态
+        _update_comment_like_state(
+          comment.id,
+          comment.is_liked,
+          comment.like_count,
+        );
+        return;
+      }
+
+      // TODO 用接口返回的真实数据更新UI
+      _update_comment_like_state(comment.id, result.like, result.like_count);
+
+      // TODO 提示点赞/取消点赞成功
+      showBottomTip(
+        tr(result.like ? 'like_tip.add_success' : 'like_tip.remove_success'),
+      );
+    } finally {
+      _like_loading_ids.remove(comment.id);
     }
-
-    // TODO 用接口返回的真实数据更新UI
-    _update_comment_like_state(comment.id, result.like, result.like_count);
-
-    // TODO 提示点赞/取消点赞成功
-    showBottomTip(
-      tr(result.like ? 'like_tip.add_success' : 'like_tip.remove_success'),
-    );
   }
 
   /// 更新评论的点赞状态（在列表中查找并更新）。
@@ -485,35 +608,26 @@ class _CommentSheetState extends State<CommentSheet> {
     });
   }
 
-  /// 处理发送评论（乐观更新）。
-  ///
-  /// 先在本地插入评论，立即展示给用户，后端请求静默进行。
-  /// 失败时回滚本地数据。
-  Future<void> _handle_send(String content) async {
-    // 输入组件发送后会立刻关闭并取消回复状态，因此必须在首次 await 前保存目标。
+  /// 处理发送评论（乐观更新，失败时保留草稿与回复目标）。
+  Future<bool> _handle_send(String content) async {
+    if (_is_sending || _load_status != 'success') return false;
     final CommentData? reply_target = _reply_target;
     final int parent_id = reply_target?.id ?? 0;
     final bool is_reply_to_nested =
         reply_target != null && reply_target.parent_id > 0;
 
-    // TODO 登录检查（在乐观更新之前）
     final bool is_logged_in = await showLoginRequiredDialog(
       title: tr('short_story_read.login_required'),
     );
-    if (!is_logged_in) return;
+    if (!is_logged_in || !mounted) return false;
 
-    if (!mounted) return;
-
-    // TODO 获取当前用户信息，用于构建本地评论
     final user_info = Get.find<UserInformation>().userInfo.value;
-    if (user_info == null) return;
+    if (user_info == null) return false;
 
-    // TODO 使用负数临时ID，避免与后端真实ID冲突
-    final int temp_id = -DateTime.now().millisecondsSinceEpoch;
-    final String now_str = DateTime.now().toString().substring(0, 19);
+    final int temp_id = -DateTime.now().microsecondsSinceEpoch;
+    final String now_str = DateTime.now().toUtc().toIso8601String();
 
-    // TODO 构建本地评论，立即插入列表
-    CommentData comment_to_insert = CommentData(
+    final CommentData comment_to_insert = CommentData(
       id: temp_id,
       user_id: user_info.id,
       avatar: user_info.avatarUrl,
@@ -524,88 +638,108 @@ class _CommentSheetState extends State<CommentSheet> {
       reply_to_nickname: is_reply_to_nested ? reply_target.nickname : null,
     );
 
-    // TODO 清除回复目标
-    _set_reply_target(null);
+    int root_index = -1;
+    if (parent_id > 0) {
+      root_index = _comments.indexWhere(
+        (CommentData comment) =>
+            comment.id == parent_id ||
+            comment.replies.any((CommentData reply) => reply.id == parent_id),
+      );
+      if (root_index < 0) return false;
+    }
 
-    // TODO 提示评论成功
-    showBottomTip(tr('comment.send_success'));
-
-    // TODO 立即插入本地列表
+    _is_sending = true;
     setState(() {
       if (parent_id > 0) {
-        // TODO 回复评论：递归查找目标评论，追加到其 replies 列表
-        CommentData? try_add_reply(CommentData c) {
-          if (c.id == parent_id) {
-            return c.copy_with(replies: [...c.replies, comment_to_insert]);
-          }
-          if (c.replies.isNotEmpty) {
-            for (int i = 0; i < c.replies.length; i++) {
-              final updated = try_add_reply(c.replies[i]);
-              if (updated != null) {
-                final new_replies = [...c.replies];
-                new_replies[i] = updated;
-                return c.copy_with(replies: new_replies);
-              }
-            }
-          }
-          return null;
-        }
-
-        _comments = _comments.map((CommentData c) {
-          return try_add_reply(c) ?? c;
-        }).toList();
+        final List<CommentData> next_comments = List<CommentData>.of(_comments);
+        final CommentData root = next_comments[root_index];
+        next_comments[root_index] = root.copy_with(
+          replies: <CommentData>[...root.replies, comment_to_insert],
+        );
+        _comments = next_comments;
       } else {
-        // TODO 顶层评论：插入到列表顶部
-        _comments.insert(0, comment_to_insert);
+        _comments = <CommentData>[comment_to_insert, ..._comments];
       }
       _total_count += 1;
-      _has_new_comments = true;
     });
     widget.on_count_changed?.call(_total_count);
 
-    // TODO 滚动到顶部，让用户看到新评论
-    if (_scroll_controller.hasClients) {
-      _scroll_controller.animateTo(
-        0,
-        duration: const Duration(
-          milliseconds: CommentListStyle.scroll_to_top_animation_duration_ms,
-        ),
-        curve: Curves.easeOut,
-      );
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll_controller.hasClients) return;
+      if (parent_id == 0) {
+        unawaited(
+          _scroll_controller.animateTo(
+            0,
+            duration: const Duration(
+              milliseconds:
+                  CommentListStyle.scroll_to_top_animation_duration_ms,
+            ),
+            curve: Curves.easeOutCubic,
+          ),
+        );
+        return;
+      }
 
-    // TODO 后台静默请求后端，失败时回滚本地数据
-    add_comment(
-      novel_id: widget.novel_id,
-      comment_content: content,
-      parent_id: parent_id,
-    ).then((bool success) {
-      if (!success && mounted) {
-        // TODO 后端失败，回滚乐观更新
-        setState(() {
-          _remove_optimistic_comment(_comments, temp_id);
-          _total_count -= 1;
-        });
-        widget.on_count_changed?.call(_total_count);
+      final BuildContext? inserted_context = _target_key_for(
+        temp_id,
+      ).currentContext;
+      if (inserted_context != null) {
+        unawaited(
+          Scrollable.ensureVisible(
+            inserted_context,
+            alignment: 0.82,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+          ),
+        );
       }
     });
+
+    bool success = false;
+    try {
+      success = await add_comment(
+        novel_id: widget.novel_id,
+        comment_content: content,
+        parent_id: parent_id,
+      );
+    } catch (_) {
+      success = false;
+    }
+    if (!mounted) return success;
+
+    _is_sending = false;
+    if (!success) {
+      setState(() {
+        _comments = _remove_optimistic_comment(_comments, temp_id);
+        _total_count = math.max(0, _total_count - 1);
+      });
+      widget.on_count_changed?.call(_total_count);
+      showBottomTip(tr('comment.send_failed'));
+      return false;
+    }
+
+    _has_new_comments = true;
+    _reply_target_context = null;
+    _set_reply_target(null);
+    showBottomTip(tr('comment.send_success'));
+    return true;
   }
 
-  /// 递归移除乐观更新失败的临时评论。
+  /// 从顶层或扁平回复列表移除乐观更新失败的临时评论。
   List<CommentData> _remove_optimistic_comment(
     List<CommentData> comments,
     int temp_id,
   ) {
-    for (int i = 0; i < comments.length; i++) {
-      if (comments[i].id == temp_id) {
-        comments.removeAt(i);
-        return comments;
-      }
-      if (comments[i].replies.isNotEmpty) {
-        _remove_optimistic_comment(comments[i].replies, temp_id);
-      }
-    }
-    return comments;
+    return comments
+        .where((CommentData comment) => comment.id != temp_id)
+        .map(
+          (CommentData comment) => comment.copy_with(
+            replies: comment.replies
+                .where((CommentData reply) => reply.id != temp_id)
+                .toList(),
+          ),
+        )
+        .toList();
   }
 
   @override
@@ -675,7 +809,10 @@ class _CommentSheetState extends State<CommentSheet> {
                 is_dark: is_dark,
                 on_send: _handle_send,
                 reply_target: _reply_target,
-                on_cancel_reply: () => _set_reply_target(null),
+                on_cancel_reply: () {
+                  _reply_target_context = null;
+                  _set_reply_target(null);
+                },
                 focus_node: _input_focus_node,
               ),
             ],
@@ -717,34 +854,37 @@ class _CommentSheetState extends State<CommentSheet> {
       return _buildEmptyState(key: key, is_dark: is_dark);
     }
 
-    return ListView.builder(
+    return KeyedSubtree(
       key: key,
-      controller: _scroll_controller,
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      scrollCacheExtent: const ScrollCacheExtent.pixels(
-        CommentListStyle.list_cache_extent,
-      ),
-      addRepaintBoundaries: false,
-      padding: const EdgeInsets.symmetric(
-        vertical: CommentListStyle.list_vertical_padding,
-      ),
-      itemCount: _comments.length + (_is_loading_more ? 1 : 0),
-      itemBuilder: (BuildContext context, int index) {
-        // TODO 最后一项：加载更多指示器
-        if (index == _comments.length) {
-          return _buildLoadMoreIndicator(is_dark: is_dark);
-        }
+      child: ListView.builder(
+        key: _list_view_key,
+        controller: _scroll_controller,
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        scrollCacheExtent: const ScrollCacheExtent.pixels(
+          CommentListStyle.list_cache_extent,
+        ),
+        addRepaintBoundaries: false,
+        padding: const EdgeInsets.symmetric(
+          vertical: CommentListStyle.list_vertical_padding,
+        ),
+        itemCount: _comments.length + (_is_loading_more ? 1 : 0),
+        itemBuilder: (BuildContext context, int index) {
+          if (index == _comments.length) {
+            return _buildLoadMoreIndicator(is_dark: is_dark);
+          }
 
-        final CommentData comment = _comments[index];
-        return CommentItem(
-          key: ValueKey<int>(comment.id),
-          comment: comment,
-          is_dark: is_dark,
-          on_reply: (CommentData target) => _handle_reply(target),
-          on_like: (CommentData target) => _handle_like(target),
-          highlighted_comment_id: _highlighted_comment_id,
-        );
-      },
+          final CommentData comment = _comments[index];
+          return CommentItem(
+            key: ValueKey<int>(comment.id),
+            comment: comment,
+            is_dark: is_dark,
+            on_reply: _handle_reply,
+            on_like: _handle_like,
+            highlighted_comment_id: _highlighted_comment_id,
+            target_key_builder: _target_key_for,
+          );
+        },
+      ),
     );
   }
 

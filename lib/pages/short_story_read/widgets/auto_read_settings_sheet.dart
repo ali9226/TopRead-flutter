@@ -186,14 +186,18 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
                   child: Slider(
                     value: widget.logic.auto_read_speed.value,
                     onChangeStart: (_) {
-                      setState(() { _is_dragging = true; });
+                      setState(() {
+                        _is_dragging = true;
+                      });
                     },
                     onChanged: (double value) {
                       widget.logic.auto_read_speed.value = value;
-                      save_auto_read_speed(value);
                     },
-                    onChangeEnd: (_) {
-                      setState(() { _is_dragging = false; });
+                    onChangeEnd: (double value) {
+                      save_auto_read_speed(value);
+                      setState(() {
+                        _is_dragging = false;
+                      });
                     },
                   ),
                 ),
@@ -217,7 +221,10 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.75),
                     borderRadius: BorderRadius.circular(4),
@@ -248,7 +255,9 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
         decoration: BoxDecoration(
           color: is_dark
               ? ShortStoryReadStyle.secondary_dark_color.withValues(alpha: 0.10)
-              : ShortStoryReadStyle.secondary_light_color.withValues(alpha: 0.08),
+              : ShortStoryReadStyle.secondary_light_color.withValues(
+                  alpha: 0.08,
+                ),
           borderRadius: BorderRadius.circular(24),
         ),
         child: Row(
@@ -281,10 +290,7 @@ class _CircleThumbShape extends SliderComponentShape {
   final double thumbSize;
   final Color shadowColor;
 
-  const _CircleThumbShape({
-    required this.thumbSize,
-    required this.shadowColor,
-  });
+  const _CircleThumbShape({required this.thumbSize, required this.shadowColor});
 
   @override
   Size getPreferredSize(bool isEnabled, bool isDiscrete) {

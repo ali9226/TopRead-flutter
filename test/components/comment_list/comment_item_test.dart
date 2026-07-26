@@ -55,7 +55,7 @@ void main() {
               child: CommentItem(
                 comment: comment,
                 is_dark: false,
-                on_reply: (CommentData target) {
+                on_reply: (CommentData target, BuildContext target_context) {
                   replied_comment_id = target.id;
                 },
                 on_like: (CommentData target) {

@@ -8,6 +8,12 @@ import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/util/language_util/index.dart';
 
+/// 评论回复点击回调，同时返回被点击区域的真实布局上下文。
+typedef CommentReplyCallback =
+    void Function(CommentData comment, BuildContext target_context);
+
+typedef CommentTargetKeyBuilder = GlobalKey Function(int comment_id);
+
 /// 微信视频号式评论项。
 ///
 /// 主评论使用“头像 + 内容 + 右侧点赞”的清晰结构；回复收进轻量灰色区域，
@@ -15,9 +21,10 @@ import 'package:app/util/language_util/index.dart';
 class CommentItem extends StatelessWidget {
   final CommentData comment;
   final bool is_dark;
-  final ValueChanged<CommentData> on_reply;
+  final CommentReplyCallback on_reply;
   final ValueChanged<CommentData> on_like;
   final int highlighted_comment_id;
+  final CommentTargetKeyBuilder? target_key_builder;
 
   const CommentItem({
     super.key,
@@ -26,6 +33,7 @@ class CommentItem extends StatelessWidget {
     required this.on_reply,
     required this.on_like,
     this.highlighted_comment_id = 0,
+    this.target_key_builder,
   });
 
   @override
@@ -59,46 +67,53 @@ class CommentItem extends StatelessWidget {
             _HighlightWrapper(
               highlighted: is_highlighted,
               is_dark: is_dark,
-              child: GestureDetector(
-                key: ValueKey<String>('comment_item_tap_${comment.id}'),
-                onTap: () => on_reply(comment),
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    top: CommentListStyle.item_top_padding,
-                    bottom: CommentListStyle.item_bottom_padding,
-                  ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    CommentAvatar(
-                      avatar_url: comment.avatar,
-                      user_id: comment.user_id,
-                      size: CommentListStyle.avatar_size,
-                      is_dark: is_dark,
-                    ),
-                    const SizedBox(width: CommentListStyle.avatar_content_gap),
-                    Expanded(
-                      child: _build_main_content(
-                        is_cjk: is_cjk,
-                        text_color: text_color,
-                        secondary_color: secondary_color,
-                        name_color: name_color,
+              child: Builder(
+                key: target_key_builder?.call(comment.id),
+                builder: (BuildContext target_context) {
+                  return GestureDetector(
+                    key: ValueKey<String>('comment_item_tap_${comment.id}'),
+                    onTap: () => on_reply(comment, target_context),
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        top: CommentListStyle.item_top_padding,
+                        bottom: CommentListStyle.item_bottom_padding,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          CommentAvatar(
+                            avatar_url: comment.avatar,
+                            user_id: comment.user_id,
+                            size: CommentListStyle.avatar_size,
+                            is_dark: is_dark,
+                          ),
+                          const SizedBox(
+                            width: CommentListStyle.avatar_content_gap,
+                          ),
+                          Expanded(
+                            child: _build_main_content(
+                              is_cjk: is_cjk,
+                              text_color: text_color,
+                              secondary_color: secondary_color,
+                              name_color: name_color,
+                            ),
+                          ),
+                          _CommentLikeButton(
+                            key: ValueKey<String>('comment_like_${comment.id}'),
+                            is_dark: is_dark,
+                            is_liked: comment.is_liked,
+                            like_count: comment.like_count,
+                            on_tap: () => on_like(comment),
+                          ),
+                        ],
                       ),
                     ),
-                    _CommentLikeButton(
-                      key: ValueKey<String>('comment_like_${comment.id}'),
-                      is_dark: is_dark,
-                      is_liked: comment.is_liked,
-                      like_count: comment.like_count,
-                      on_tap: () => on_like(comment),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
-          ),
-          if (comment.replies.isNotEmpty)
+            if (comment.replies.isNotEmpty)
               _build_reply_section(
                 is_cjk: is_cjk,
                 text_color: text_color,
@@ -243,91 +258,107 @@ class CommentItem extends StatelessWidget {
     return _HighlightWrapper(
       highlighted: is_reply_highlighted,
       is_dark: is_dark,
-      child: GestureDetector(
-      key: ValueKey<String>('comment_reply_tap_${reply.id}'),
-      onTap: () => on_reply(reply),
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          RichText(
-            text: TextSpan(
-              style: TextStyle(
-                fontSize: reply_font_size,
-                height: reply_line_height,
-                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                color: text_color,
-              ),
-              children: <InlineSpan>[
-                TextSpan(
-                  text: reply.nickname,
-                  style: TextStyle(
-                    fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                    color: name_color,
+      child: Builder(
+        key: target_key_builder?.call(reply.id),
+        builder: (BuildContext target_context) {
+          return GestureDetector(
+            key: ValueKey<String>('comment_reply_tap_${reply.id}'),
+            onTap: () => on_reply(reply, target_context),
+            behavior: HitTestBehavior.opaque,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      fontSize: reply_font_size,
+                      height: reply_line_height,
+                      fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                      color: text_color,
+                    ),
+                    children: <InlineSpan>[
+                      TextSpan(
+                        text: reply.nickname,
+                        style: TextStyle(
+                          fontWeight: FontConfig.adjustedWeight(
+                            FontWeight.w500,
+                          ),
+                          color: name_color,
+                        ),
+                      ),
+                      if (reply.reply_to_nickname?.isNotEmpty ==
+                          true) ...<InlineSpan>[
+                        TextSpan(
+                          text: ' ${tr('comment.reply')} ',
+                          style: TextStyle(color: secondary_color),
+                        ),
+                        TextSpan(
+                          text: reply.reply_to_nickname,
+                          style: TextStyle(
+                            fontWeight: FontConfig.adjustedWeight(
+                              FontWeight.w500,
+                            ),
+                            color: name_color,
+                          ),
+                        ),
+                      ],
+                      TextSpan(text: '：${reply.content}'),
+                    ],
                   ),
                 ),
-                if (reply.reply_to_nickname?.isNotEmpty ==
-                    true) ...<InlineSpan>[
-                  TextSpan(
-                    text: ' ${tr('comment.reply')} ',
-                    style: TextStyle(color: secondary_color),
-                  ),
-                  TextSpan(
-                    text: reply.reply_to_nickname,
-                    style: TextStyle(
-                      fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                      color: name_color,
+                const SizedBox(
+                  height: CommentListStyle.reply_metadata_top_spacing,
+                ),
+                Row(
+                  children: <Widget>[
+                    Text(
+                      _format_time(reply.time),
+                      style: TextStyle(
+                        fontSize: CommentListStyle.time_font_size,
+                        fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                        color: secondary_color,
+                      ),
                     ),
-                  ),
-                ],
-                TextSpan(text: '：${reply.content}'),
+                    const SizedBox(width: CommentListStyle.action_spacing),
+                    Text(
+                      tr('comment.reply'),
+                      style: TextStyle(
+                        fontSize: is_cjk
+                            ? CommentListStyle.action_font_size_cjk
+                            : CommentListStyle.action_font_size_alphabetic,
+                        fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                        color: secondary_color,
+                      ),
+                    ),
+                    const Spacer(),
+                    _CommentLikeButton(
+                      key: ValueKey<String>('comment_like_${reply.id}'),
+                      is_dark: is_dark,
+                      is_liked: reply.is_liked,
+                      like_count: reply.like_count,
+                      compact: true,
+                      on_tap: () => on_like(reply),
+                    ),
+                  ],
+                ),
               ],
             ),
-          ),
-          const SizedBox(height: CommentListStyle.reply_metadata_top_spacing),
-          Row(
-            children: <Widget>[
-              Text(
-                _format_time(reply.time),
-                style: TextStyle(
-                  fontSize: CommentListStyle.time_font_size,
-                  fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                  color: secondary_color,
-                ),
-              ),
-              const SizedBox(width: CommentListStyle.action_spacing),
-              Text(
-                tr('comment.reply'),
-                style: TextStyle(
-                  fontSize: is_cjk
-                      ? CommentListStyle.action_font_size_cjk
-                      : CommentListStyle.action_font_size_alphabetic,
-                  fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                  color: secondary_color,
-                ),
-              ),
-              const Spacer(),
-              _CommentLikeButton(
-                key: ValueKey<String>('comment_like_${reply.id}'),
-                is_dark: is_dark,
-                is_liked: reply.is_liked,
-                like_count: reply.like_count,
-                compact: true,
-                on_tap: () => on_like(reply),
-              ),
-            ],
-          ),
-        ],
+          );
+        },
       ),
-    ),
     );
   }
 
   String _format_time(String time_str) {
     if (time_str.isEmpty) return '';
     try {
-      // 后端返回0时区时间，加 'Z' 后缀解析为 UTC，再转本地时间
-      final DateTime comment_time = DateTime.parse('${time_str}Z').toLocal();
+      final bool has_timezone = RegExp(
+        r'(Z|[+-]\d{2}:?\d{2})$',
+        caseSensitive: false,
+      ).hasMatch(time_str);
+      final DateTime comment_time = DateTime.parse(
+        has_timezone ? time_str : '${time_str}Z',
+      ).toLocal();
       final Duration difference = DateTime.now().difference(comment_time);
 
       if (difference.inMinutes < 1) {
@@ -384,34 +415,43 @@ class _CommentLikeButton extends StatelessWidget {
       onTap: on_tap,
       behavior: HitTestBehavior.opaque,
       child: compact
-          ? Padding(
-              padding: const EdgeInsets.only(
-                left: CommentListStyle.like_compact_left_padding,
+          ? ConstrainedBox(
+              constraints: const BoxConstraints(
+                minWidth: CommentListStyle.like_compact_touch_width,
+                minHeight: CommentListStyle.like_compact_touch_height,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  SvgIcon(
-                    name: is_liked ? 'love_02' : 'love',
-                    width: CommentListStyle.like_compact_icon_size,
-                    height: CommentListStyle.like_compact_icon_size,
-                    color: color,
-                    animateColor: false,
-                  ),
-                  if (like_count > 0) ...<Widget>[
-                    const SizedBox(
-                      width: CommentListStyle.like_icon_count_spacing,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  left: CommentListStyle.like_compact_left_padding,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: <Widget>[
+                    SvgIcon(
+                      name: is_liked ? 'love_02' : 'love',
+                      width: CommentListStyle.like_compact_icon_size,
+                      height: CommentListStyle.like_compact_icon_size,
+                      color: color,
+                      animateColor: false,
                     ),
-                    Text(
-                      count_text,
-                      style: TextStyle(
-                        fontSize: CommentListStyle.like_count_font_size,
-                        fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                        color: color,
+                    if (like_count > 0) ...<Widget>[
+                      const SizedBox(
+                        width: CommentListStyle.like_icon_count_spacing,
                       ),
-                    ),
+                      Text(
+                        count_text,
+                        style: TextStyle(
+                          fontSize: CommentListStyle.like_count_font_size,
+                          fontWeight: FontConfig.adjustedWeight(
+                            FontWeight.w400,
+                          ),
+                          color: color,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             )
           : SizedBox(
@@ -510,10 +550,7 @@ class _HighlightWrapperState extends State<_HighlightWrapper>
     _color_animation = ColorTween(
       begin: highlight_color,
       end: Colors.transparent,
-    ).animate(CurvedAnimation(
-      parent: _controller!,
-      curve: Curves.easeOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller!, curve: Curves.easeOut));
     _controller!.forward();
   }
 
@@ -531,10 +568,7 @@ class _HighlightWrapperState extends State<_HighlightWrapper>
     return AnimatedBuilder(
       animation: _controller!,
       builder: (context, child) {
-        return Container(
-          color: _color_animation!.value,
-          child: child,
-        );
+        return Container(color: _color_animation!.value, child: child);
       },
       child: widget.child,
     );

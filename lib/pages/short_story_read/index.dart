@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -76,7 +78,7 @@ class ShortStoryReadPage extends StatefulWidget {
 }
 
 class _ShortStoryReadPageState extends State<ShortStoryReadPage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   /// 设备信息仓库（用于获取当前主题模式）。
   final DeviceInfo device_info = Get.find<DeviceInfo>();
 
@@ -167,11 +169,11 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 是否由进度条拖动触发的滚动（为 true 时跳过导航栏显隐逻辑）。
   bool _is_progress_scrolling = false;
 
-  /// 自动阅读速度变化监听器（用于在停止自动阅读时移除）。
-  Worker? _auto_read_speed_worker;
-
   /// FCM 推送评论导航监听器。
   Worker? _comment_navigation_worker;
+
+  /// 底部栏可见性监听器。
+  Worker? _bottom_bar_visibility_worker;
 
   /// 自动阅读滚动 Ticker（每帧调用，实现平滑滚动）。
   Ticker? _auto_read_ticker;
@@ -181,6 +183,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// Ticker 是否正在执行滚动（用于区分 Ticker 滚动和用户手动滚动）。
   bool _is_auto_read_ticking = false;
+
+  /// 自动阅读是否因应用进入后台而暂停。
+  bool _auto_read_paused_by_lifecycle = false;
 
   /// 阅读进度定时保存定时器。
   Timer? _progress_save_timer;
@@ -192,18 +197,51 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 预加载切换小说时不会触发滚动，因此可用来区分"用户主动阅读"和"预加载"。
   bool _has_user_engaged = false;
 
+  /// 当前小说是否已经完成初始化和进度恢复。
+  bool _is_initialization_complete = false;
+
+  /// 当前是否正在恢复服务器阅读位置。
+  bool _is_restoring_position = false;
+
+  /// 正在保存进度的小说 ID；不同小说允许并行，同一小说按顺序提交。
+  final Set<int> _progress_save_in_flight_ids = <int>{};
+
+  /// 同一小说保存期间只保留最新进度快照，避免旧请求覆盖新进度。
+  final Map<int, ({int chapter_offset, double read_progress})>
+  _queued_progress_snapshots =
+      <int, ({int chapter_offset, double read_progress})>{};
+
+  /// 当前逻辑实例的版本号，用于丢弃切换小说前发起的异步结果。
+  int _logic_generation = 0;
+
+  /// 当前初始化尝试编号，用于丢弃同一小说重复重试产生的旧结果。
+  int _initialization_attempt = 0;
+
+  /// 当前篇正文末尾定位点。
+  ///
+  /// 阅读进度只计算当前篇，不把异步加载的下一篇预览算入总长度。
+  final GlobalKey _current_story_end_key = GlobalKey();
+
+  /// 当前篇可用于阅读进度计算的最大滚动距离。
+  double? _reading_progress_max_extent;
+
+  /// 正文字号连续变化时只执行最后一次重新排版定位。
+  int _font_relayout_generation = 0;
+
   // ==================== 生命周期 ====================
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    final bool has_valid_story_id = widget.story_id > 0;
 
     // 没有有效 id 时直接跳转首页。
-    if (widget.story_id <= 0) {
+    if (!has_valid_story_id) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         routerUtil(path: '/home', type: 'go');
       });
-      return;
     }
 
     // 初始化滚动控制器并监听滚动事件。
@@ -215,22 +253,22 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       vsync: this,
       duration: ShortStoryReadStyle.bar_animation_duration,
     );
-    _bottom_bar_slide_animation = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(0, 1),
-    ).animate(CurvedAnimation(
-      parent: _bottom_bar_animation_controller,
-      curve: ShortStoryReadStyle.bar_animation_curve,
-    ));
+    _bottom_bar_slide_animation =
+        Tween<Offset>(begin: Offset.zero, end: const Offset(0, 1)).animate(
+          CurvedAnimation(
+            parent: _bottom_bar_animation_controller,
+            curve: ShortStoryReadStyle.bar_animation_curve,
+          ),
+        );
 
     // 初始化浮动按钮淡入淡出动画（与底部栏动画同步）。
-    _floating_button_fade_animation = Tween<double>(
-      begin: 1.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _bottom_bar_animation_controller,
-      curve: ShortStoryReadStyle.bar_animation_curve,
-    ));
+    _floating_button_fade_animation = Tween<double>(begin: 1.0, end: 0.0)
+        .animate(
+          CurvedAnimation(
+            parent: _bottom_bar_animation_controller,
+            curve: ShortStoryReadStyle.bar_animation_curve,
+          ),
+        );
 
     // 初始化翻页动画控制器。
     _page_transition_controller = AnimationController(
@@ -254,11 +292,19 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     // 延迟到首帧之后执行，确保 context.locale 已就绪（iOS 上 initState 阶段可能未就绪）。
     _logic = ShortStoryReadLogic(
       context: context,
-      story_id: widget.story_id,
+      story_id: has_valid_story_id ? widget.story_id : 1,
     );
+    _logic_generation = 1;
+    _bind_bottom_bar_visibility();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _logic.initialize();
+      if (!mounted || !has_valid_story_id) return;
+      unawaited(
+        _initialize_logic(
+          logic: _logic,
+          generation: _logic_generation,
+          restore_position: true,
+        ),
+      );
     });
 
     // TODO 从消息页跳转时，自动打开评论区并定位到指定评论
@@ -269,31 +315,26 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     }
 
     // TODO 监听 FCM 推送点击事件（用户已在当前页面时收到推送）
-    _comment_navigation_worker = ever(CommentNavigation.pending_comment_id, (int comment_id) {
+    _comment_navigation_worker = ever(CommentNavigation.pending_comment_id, (
+      int comment_id,
+    ) {
       if (!mounted || comment_id <= 0) return;
-      if (CommentNavigation.pending_novel_id.value != widget.story_id) return;
+      if (CommentNavigation.pending_novel_id.value != _logic.story_id) return;
       CommentNavigation.consume();
       _on_comment_tap(scroll_to_comment_id: comment_id);
     });
-
-    // 启动阅读进度定时保存定时器。
-    _start_progress_save_timer();
-
-    // 查询并恢复上次阅读位置。
-    _restore_last_read_position();
-
-    // 监听底部栏可见性变化，触发动画。
-    ever(_logic.is_bottom_bar_visible, _on_bottom_bar_visibility_changed);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _progress_save_timer?.cancel();
     // 退出页面时保存一次阅读进度。
     _save_current_progress_on_exit();
+    _logic.dispose(clear_catalog: true);
     _auto_read_ticker?.dispose();
-    _auto_read_speed_worker?.dispose();
     _comment_navigation_worker?.dispose();
+    _bottom_bar_visibility_worker?.dispose();
     _scroll_controller.removeListener(_on_scroll);
     _scroll_controller.dispose();
     _bottom_bar_animation_controller.dispose();
@@ -301,6 +342,31 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     _previous_pull_animation_controller.dispose();
     _next_pull_animation_controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (_auto_read_paused_by_lifecycle && _logic.is_auto_reading.value) {
+        _auto_read_paused_by_lifecycle = false;
+        _begin_auto_read_ticker();
+      }
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(_save_current_progress());
+    }
+    if ((state == AppLifecycleState.hidden ||
+            state == AppLifecycleState.paused) &&
+        _logic.is_auto_reading.value) {
+      _auto_read_paused_by_lifecycle = true;
+      _auto_read_ticker?.stop();
+      _auto_read_last_tick = null;
+    }
   }
 
   /// 启动阅读进度定时保存定时器。
@@ -312,169 +378,208 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     );
   }
 
-  /// 退出页面时保存阅读进度（同步执行，确保数据不丢失）。
-  void _save_current_progress_on_exit() {
-    debugPrint('💾 [进度保存-退出] has_clients=${_scroll_controller.hasClients}');
-    if (!_scroll_controller.hasClients) return;
+  /// 当前逻辑实例和版本是否仍然有效。
+  bool _is_current_logic(ShortStoryReadLogic logic, int generation) {
+    return mounted &&
+        identical(_logic, logic) &&
+        _logic_generation == generation;
+  }
 
-    final double progress = _logic.reading_progress.value * 100;
-    final double offset = _scroll_controller.offset;
-    debugPrint('💾 [进度保存-退出] progress=$progress, offset=$offset');
+  bool _is_current_initialization(
+    ShortStoryReadLogic logic,
+    int generation,
+    int attempt,
+  ) {
+    return _is_current_logic(logic, generation) &&
+        _initialization_attempt == attempt;
+  }
 
-    if (!user_information.isLoggedIn.value) return;
+  /// 初始化指定小说，并在需要时恢复服务器阅读位置。
+  Future<void> _initialize_logic({
+    required ShortStoryReadLogic logic,
+    required int generation,
+    required bool restore_position,
+  }) async {
+    final int attempt = ++_initialization_attempt;
+    _is_initialization_complete = false;
+    final Future<LastReadRecord?> record_future = restore_position
+        ? get_last_read_record(novel_id: logic.story_id)
+        : Future<LastReadRecord?>.value(null);
 
-    save_read_progress(
-      novel_id: widget.story_id,
-      chapter_offset: offset.toInt(),
-      read_progress: progress,
+    final bool loaded = await logic.initialize();
+    LastReadRecord? record;
+    try {
+      record = await record_future;
+    } catch (_) {
+      record = null;
+    }
+
+    if (!_is_current_initialization(logic, generation, attempt) || !loaded) {
+      return;
+    }
+
+    if (restore_position && record != null) {
+      await _restore_last_read_position(
+        logic: logic,
+        generation: generation,
+        attempt: attempt,
+        record: record,
+      );
+    } else {
+      await _wait_for_story_layout(
+        logic: logic,
+        generation: generation,
+        attempt: attempt,
+      );
+    }
+
+    if (!_is_current_initialization(logic, generation, attempt)) return;
+    setState(() {
+      _is_initialization_complete = true;
+    });
+    _start_progress_save_timer();
+  }
+
+  /// 重试当前小说的详情和正文加载。
+  void _retry_current_story() {
+    _progress_save_timer?.cancel();
+    unawaited(
+      _initialize_logic(
+        logic: _logic,
+        generation: _logic_generation,
+        restore_position: true,
+      ),
     );
+  }
+
+  /// 退出页面时保存阅读进度。
+  void _save_current_progress_on_exit() {
+    if (!_is_initialization_complete || !_has_user_engaged) return;
+    unawaited(_save_progress_snapshot(_logic));
   }
 
   /// 保存当前阅读进度到服务器。
   Future<void> _save_current_progress() async {
-    debugPrint('💾 [进度保存-定时] mounted=$mounted, '
-        'has_clients=${_scroll_controller.hasClients}, '
-        'ui_progress=${_logic.reading_progress.value}');
-    if (!mounted || !_scroll_controller.hasClients) return;
-
-    // 获取当前阅读进度。
-    final double progress = _logic.reading_progress.value * 100;
-    final double offset = _scroll_controller.offset;
-
-    // 调用API保存进度（短篇小说没有章节，chapter_id 为 null）。
-    if (!user_information.isLoggedIn.value) return;
-
-    debugPrint('💾 [进度保存-定时] 调用API: novel_id=${widget.story_id}, '
-        'progress=$progress, offset=$offset');
-    final success = await save_read_progress(
-      novel_id: widget.story_id,
-      chapter_offset: offset.toInt(),
-      read_progress: progress,
-    );
-    debugPrint('💾 [进度保存-定时] API返回: success=$success');
+    if (!_is_initialization_complete || !_has_user_engaged) return;
+    await _save_progress_snapshot(_logic);
   }
 
-  /// 查询并恢复上次阅读位置。
-  Future<void> _restore_last_read_position() async {
-    // 等待页面初始加载。
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    if (!mounted) return;
-
-    debugPrint('📖 [进度恢复] 开始查询阅读记录, story_id=${widget.story_id}');
-
-    // 查询最后阅读记录。
-    final record = await get_last_read_record(novel_id: widget.story_id);
-
-    debugPrint('📖 [进度恢复] 查询结果: record=${record != null}, '
-        'read_progress=${record?.read_progress}, chapter_offset=${record?.chapter_offset}');
-
-    if (record == null || !mounted) return;
-
-    final bool has_offset = record.chapter_offset > 0;
-    final bool has_progress = record.read_progress > 0;
-    if (!has_offset && !has_progress) {
-      debugPrint('📖 [进度恢复] 无进度数据，跳过');
+  /// 保存指定逻辑实例对应的进度快照。
+  Future<void> _save_progress_snapshot(ShortStoryReadLogic logic) async {
+    if (!_scroll_controller.hasClients || !user_information.isLoggedIn.value) {
       return;
     }
 
-    debugPrint('📖 [进度恢复] is_content_loading=${_logic.is_content_loading.value}');
+    final int novel_id = logic.story_id;
+    _queued_progress_snapshots[novel_id] = (
+      chapter_offset: _scroll_controller.offset.round(),
+      read_progress: logic.reading_progress.value * 100,
+    );
+    if (!_progress_save_in_flight_ids.add(novel_id)) return;
 
-    // 如果内容还在加载中，先等待加载完成。
-    if (_logic.is_content_loading.value) {
-      debugPrint('📖 [进度恢复] 内容还在加载，等待加载完成...');
-      Worker? worker;
-      final completer = Completer<void>();
-      worker = ever(_logic.is_content_loading, (bool loading) {
-        if (loading) return;
-        worker?.dispose();
-        if (!completer.isCompleted) completer.complete();
-      });
-      // 安全超时：15秒后如果还没触发，取消监听。
-      await completer.future.timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          debugPrint('📖 [进度恢复] 等待加载超时');
-          worker?.dispose();
-        },
-      );
-      if (!mounted) return;
+    try {
+      while (_queued_progress_snapshots.containsKey(novel_id)) {
+        final snapshot = _queued_progress_snapshots.remove(novel_id)!;
+        try {
+          await save_read_progress(
+            novel_id: novel_id,
+            chapter_offset: snapshot.chapter_offset,
+            read_progress: snapshot.read_progress,
+          );
+        } catch (_) {
+          // 保存失败不影响阅读；下一次定时保存会提交更新后的快照。
+        }
+      }
+    } finally {
+      _progress_save_in_flight_ids.remove(novel_id);
+    }
+  }
+
+  /// 根据真实加载结果和正文布局恢复上次阅读位置。
+  Future<void> _restore_last_read_position({
+    required ShortStoryReadLogic logic,
+    required int generation,
+    required int attempt,
+    required LastReadRecord record,
+  }) async {
+    final bool has_offset = record.chapter_offset > 0;
+    final bool has_progress = record.read_progress > 0;
+    await _wait_for_story_layout(
+      logic: logic,
+      generation: generation,
+      attempt: attempt,
+    );
+    if (!_is_current_initialization(logic, generation, attempt) ||
+        (!has_offset && !has_progress)) {
+      return;
     }
 
-    debugPrint('📖 [进度恢复] 内容已加载，等待布局稳定...');
-
-    // 等待 ListView 布局稳定（maxScrollExtent 不再变化）后再恢复。
-    // 避免在布局未完成时恢复导致位置错误。
-    await _wait_for_scroll_layout_stable();
-    if (!mounted) return;
-
-    debugPrint('📖 [进度恢复] 布局稳定，执行恢复');
     _do_restore_position(record);
   }
 
-  /// 等待滚动视图布局稳定。
-  ///
-  /// 连续检测 maxScrollExtent，当值不再变化时认为布局完成。
-  /// 最多等待 3 秒，避免极端情况下无限等待。
-  Future<void> _wait_for_scroll_layout_stable() async {
-    double last_extent = -1;
-    int stable_count = 0;
+  /// 等待正文真实挂载，并计算只属于当前篇的滚动范围。
+  Future<void> _wait_for_story_layout({
+    required ShortStoryReadLogic logic,
+    required int generation,
+    required int attempt,
+  }) async {
+    for (int frame = 0; frame < 12; frame++) {
+      await WidgetsBinding.instance.endOfFrame;
+      if (!_is_current_initialization(logic, generation, attempt)) return;
 
-    for (int i = 0; i < 60; i++) {
-      if (!mounted) return;
-
-      if (_scroll_controller.hasClients) {
-        final double current_extent =
-            _scroll_controller.position.maxScrollExtent;
-        if (current_extent > 0 &&
-            (current_extent - last_extent).abs() < 1.0) {
-          stable_count++;
-          if (stable_count >= 3) return;
-        } else {
-          stable_count = 0;
-        }
-        last_extent = current_extent;
+      if (_scroll_controller.hasClients &&
+          _scroll_controller.position.hasContentDimensions &&
+          _current_story_end_key.currentContext != null) {
+        _reading_progress_max_extent = _calculate_current_story_extent();
+        return;
       }
-
-      await Future<void>.delayed(const Duration(milliseconds: 50));
     }
+  }
+
+  /// 计算正文末尾对齐可视区域底部时的真实滚动偏移。
+  double _calculate_current_story_extent() {
+    if (!_scroll_controller.hasClients) return 0;
+
+    final BuildContext? marker_context = _current_story_end_key.currentContext;
+    final RenderObject? marker = marker_context?.findRenderObject();
+    if (marker == null || !marker.attached) {
+      return _scroll_controller.position.maxScrollExtent;
+    }
+
+    final RenderAbstractViewport viewport = RenderAbstractViewport.of(marker);
+    final double reveal_offset = viewport.getOffsetToReveal(marker, 1).offset;
+    return reveal_offset.clamp(
+      _scroll_controller.position.minScrollExtent,
+      _scroll_controller.position.maxScrollExtent,
+    );
   }
 
   /// 执行滚动位置恢复。
   void _do_restore_position(LastReadRecord record) {
-    final bool has_clients = _scroll_controller.hasClients;
-    debugPrint('📖 [恢复执行] has_clients=$has_clients');
+    if (!_scroll_controller.hasClients) return;
 
-    if (!has_clients) return;
-
-    final double max_extent = _scroll_controller.position.maxScrollExtent;
-    debugPrint('📖 [恢复执行] max_extent=$max_extent');
-
-    if (max_extent <= 0) {
-      debugPrint('📖 [恢复执行] max_extent<=0，布局未完成，跳过');
-      return;
-    }
-
+    final double max_extent =
+        _reading_progress_max_extent ?? _calculate_current_story_extent();
+    if (max_extent <= 0) return;
     double target_offset = 0;
 
     // 优先使用百分比恢复，像素偏移在屏幕尺寸或字号变化后会失效。
     if (record.read_progress > 0) {
-      target_offset = (record.read_progress / 100 * max_extent).clamp(0.0, max_extent);
-      debugPrint('📖 [恢复执行] 使用 read_progress=${record.read_progress}%, '
-          '计算 offset=$target_offset (max=$max_extent)');
+      target_offset = (record.read_progress / 100 * max_extent).clamp(
+        0.0,
+        max_extent,
+      );
     } else if (record.chapter_offset > 0) {
-      target_offset = record.chapter_offset.clamp(0, max_extent.toInt()).toDouble();
-      debugPrint('📖 [恢复执行] 使用 chapter_offset=$target_offset');
+      target_offset = record.chapter_offset
+          .clamp(0, max_extent.toInt())
+          .toDouble();
     }
 
     if (target_offset > 0) {
-      debugPrint('📖 [恢复执行] 执行 animateTo($target_offset)');
-      _scroll_controller.animateTo(
-        target_offset,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutCubic,
-      );
-    } else {
-      debugPrint('📖 [恢复执行] target_offset<=0，不跳转');
+      _is_restoring_position = true;
+      _scroll_controller.jumpTo(target_offset);
+      _logic.update_reading_progress(target_offset, max_extent);
+      _is_restoring_position = false;
     }
   }
 
@@ -482,13 +587,12 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 停止自动阅读（停止 Ticker）。
   void _stop_auto_read() {
+    _auto_read_paused_by_lifecycle = false;
     if (_logic.is_auto_reading.value) {
       _logic.is_auto_reading.value = false;
       _auto_read_ticker?.stop();
       _auto_read_ticker?.dispose();
       _auto_read_ticker = null;
-      _auto_read_speed_worker?.dispose();
-      _auto_read_speed_worker = null;
     }
   }
 
@@ -498,25 +602,24 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// - 检测自动阅读期间的手动滑动
   /// - 检测上下篇加载触发
   void _on_scroll() {
-    // 用户有过滚动行为，标记为已参与阅读。
-    if (!_has_user_engaged) {
-      _has_user_engaged = true;
-      debugPrint('👆 [用户参与] 首次滚动，标记 engaged=true');
-    }
-
     // 自动阅读期间，如果滚动不是由 Ticker 触发的，说明用户手动滑动，退出自动阅读。
     if (_logic.is_auto_reading.value && !_is_auto_read_ticking) {
       _stop_auto_read();
     }
 
-    if (!_is_progress_scrolling) {
+    if (!_is_progress_scrolling && !_is_restoring_position) {
       _logic.on_scroll(_scroll_controller.offset);
     }
 
     // 更新阅读进度。
     if (_scroll_controller.hasClients) {
-      final double max_scroll_extent = _scroll_controller.position.maxScrollExtent;
-      _logic.update_reading_progress(_scroll_controller.offset, max_scroll_extent);
+      final double max_scroll_extent =
+          _reading_progress_max_extent ??
+          _scroll_controller.position.maxScrollExtent;
+      _logic.update_reading_progress(
+        _scroll_controller.offset,
+        max_scroll_extent,
+      );
     }
 
     _schedule_next_story_overlay_update();
@@ -553,7 +656,10 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
     // 标题顶部进入屏幕底部 10px 后开始淡入，向上再移动 72px 达到完整遮罩。
     final double fade_start_y = screen_height - 10;
-    final double next_opacity = ((fade_start_y - title_top) / 72).clamp(0.0, 1.0);
+    final double next_opacity = ((fade_start_y - title_top) / 72).clamp(
+      0.0,
+      1.0,
+    );
 
     if ((next_opacity - _next_story_overlay_opacity).abs() > 0.01) {
       setState(() => _next_story_overlay_opacity = next_opacity);
@@ -581,6 +687,18 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     }
   }
 
+  /// 绑定当前逻辑实例的底部栏状态，并同步动画当前位置。
+  void _bind_bottom_bar_visibility() {
+    _bottom_bar_visibility_worker?.dispose();
+    _bottom_bar_visibility_worker = ever(
+      _logic.is_bottom_bar_visible,
+      _on_bottom_bar_visibility_changed,
+    );
+    _bottom_bar_animation_controller.value = _logic.is_bottom_bar_visible.value
+        ? 0
+        : 1;
+  }
+
   // ==================== 按钮回调 ====================
 
   /// 处理返回按钮点击。
@@ -594,7 +712,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   void _on_share() {
     showShareSheet(
       context: context,
-      novel_id: widget.story_id,
+      novel_id: _logic.story_id,
       novel_title: _logic.title,
       novel_cover_url: _logic.story_data.value?.cover_url ?? '',
       novel_intro: _logic.story_data.value?.introduction ?? '',
@@ -602,29 +720,20 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     );
   }
 
-  /// 处理更多按钮点击。
-  void _on_more() {
-    // TODO 实现更多功能。
-  }
-
-  /// 处理信息按钮点击。
-  void _on_message() {
-    // TODO 实现信息功能。
-  }
-
   /// 处理评论输入框点击。
   ///
   /// 弹窗关闭后若有新增评论，同步更新底部评论栏的数量。
   Future<void> _on_comment_tap({int scroll_to_comment_id = 0}) async {
+    _stop_auto_read();
+    final ShortStoryReadLogic comment_logic = _logic;
     final int? new_count = await showCommentSheet(
       context: context,
-      novel_id: widget.story_id,
+      novel_id: comment_logic.story_id,
       on_close: () => Navigator.pop(context),
       scroll_to_comment_id: scroll_to_comment_id,
     );
-    // TODO 弹窗返回了最新评论数，同步到底部评论栏
-    if (new_count != null) {
-      _logic.update_comment_count(new_count);
+    if (new_count != null && mounted) {
+      comment_logic.update_comment_count(new_count);
     }
   }
 
@@ -636,11 +745,14 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       title: easy.tr('short_story_read.login_required'),
     );
     if (!is_logged_in) return;
-    final bool was_favorited = _logic.is_favorited;
-    await _logic.toggle_favorite();
-    setState(() {});
-    // TODO 提示收藏/取消收藏成功
-    showBottomTip(easy.tr(was_favorited ? 'favorite.remove_success' : 'favorite.add_success'));
+    final ShortStoryReadLogic action_logic = _logic;
+    final bool? is_favorited = await action_logic.toggle_favorite();
+    if (!mounted || is_favorited == null) return;
+    showBottomTip(
+      easy.tr(
+        is_favorited ? 'favorite.add_success' : 'favorite.remove_success',
+      ),
+    );
   }
 
   /// 处理底部栏点赞按钮点击（带登录检查）。
@@ -651,9 +763,12 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       title: easy.tr('short_story_read.login_required'),
     );
     if (!is_logged_in) return;
-    final bool was_liked = _logic.is_liked;
-    _logic.toggle_like();
-    showBottomTip(easy.tr(was_liked ? 'like_tip.remove_success' : 'like_tip.add_success'));
+    final ShortStoryReadLogic action_logic = _logic;
+    final bool? is_liked = await action_logic.toggle_like();
+    if (!mounted || is_liked == null) return;
+    showBottomTip(
+      easy.tr(is_liked ? 'like_tip.add_success' : 'like_tip.remove_success'),
+    );
   }
 
   /// 处理目录弹窗中卡片点赞（带登录检查）。
@@ -666,30 +781,52 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     );
     if (!is_logged_in) return;
 
+    final ShortStoryReadLogic action_logic = _logic;
+    final int catalog_index = action_logic.catalog_list.indexWhere(
+      (ShortStoryItem item) => item.id == story_id,
+    );
+    if (catalog_index < 0) return;
+    final bool previous_catalog_status =
+        action_logic.catalog_list[catalog_index].is_liked;
+
     try {
       final ResultsType<Map<String, dynamic>> results =
           await postRequest<Map<String, dynamic>>(
-        path: 'novel_like/click',
-        parameter: <String, dynamic>{
-          'novel_id': story_id,
-        },
-        fromJson: (Map<String, dynamic> json) => json,
-      );
+            path: 'novel_like/click',
+            parameter: <String, dynamic>{'novel_id': story_id},
+            fromJson: (Map<String, dynamic> json) => json,
+          );
 
       if (!results.status || results.content == null) return;
 
-      final bool new_like_status = results.content!['like'] == true;
-      final int like_count_delta = new_like_status ? 1 : -1;
+      final dynamic server_like = results.content!['like'];
+      final bool new_like_status = server_like == true || server_like == 1;
+      final int like_count_delta = new_like_status == previous_catalog_status
+          ? 0
+          : (new_like_status ? 1 : -1);
 
       // 更新目录列表中对应小说的点赞状态。
-      _logic.sync_like_to_catalog(story_id, new_like_status, like_count_delta);
+      action_logic.sync_like_to_catalog(
+        story_id,
+        new_like_status,
+        like_count_delta,
+      );
 
       // 如果点赞的是当前阅读的小说，同步更新正文页面数据。
-      if (story_id == _logic.story_id && _logic.story_data.value != null) {
-        _logic.story_data.value = _logic.story_data.value!.copyWith(
+      if (story_id == action_logic.story_id &&
+          action_logic.story_data.value != null) {
+        final bool previous_detail_status =
+            action_logic.story_data.value!.is_liked;
+        final int detail_delta = new_like_status == previous_detail_status
+            ? 0
+            : (new_like_status ? 1 : -1);
+        final int next_detail_count =
+            action_logic.story_data.value!.like_count + detail_delta;
+        action_logic.story_data.value = action_logic.story_data.value!.copyWith(
           is_liked: new_like_status,
-          like_count: _logic.story_data.value!.like_count + like_count_delta,
+          like_count: next_detail_count < 0 ? 0 : next_detail_count,
         );
+        action_logic.sync_current_story_cache();
       }
     } catch (_) {
       // 点赞失败静默处理。
@@ -701,6 +838,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 从底部弹出目录弹窗，使用预加载的目录数据（小说详情加载后立即请求）。
   /// 点击某一项时跳转到对应小说的阅读页面。
   void _on_catalog_tap() {
+    _stop_auto_read();
+    final ShortStoryReadLogic sheet_logic = _logic;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -709,18 +848,19 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       backgroundColor: Colors.transparent,
       builder: (BuildContext sheet_context) {
         return CatalogSheet(
-          current_story_id: _logic.story_id,
-          catalog_list: _logic.catalog_list,
-          is_catalog_loading: _logic.is_catalog_loading,
-          is_catalog_error: _logic.is_catalog_error,
-          reading_progress: _logic.reading_progress.value,
+          current_story_id: sheet_logic.story_id,
+          catalog_list: sheet_logic.catalog_list,
+          is_catalog_loading: sheet_logic.is_catalog_loading,
+          is_catalog_error: sheet_logic.is_catalog_error,
+          reading_progress: sheet_logic.reading_progress.value,
           on_item_tap: (int story_id) {
             Navigator.of(sheet_context).pop();
+            if (story_id == sheet_logic.story_id) return;
             _switch_to_story(story_id);
           },
           on_like_tap: _on_catalog_like_tap,
           on_close: () => Navigator.of(sheet_context).pop(),
-          on_reload: _logic.reload_catalog,
+          on_reload: sheet_logic.reload_catalog,
         );
       },
     );
@@ -729,8 +869,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 处理设置按钮点击。
   ///
   /// 从底部弹出阅读设置弹窗。
-  void _on_setting_tap() {
-    showModalBottomSheet(
+  Future<void> _on_setting_tap() async {
+    bool should_start_auto_read = false;
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       enableDrag: true,
@@ -740,13 +881,65 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         return ReadingSettingsSheet(
           logic: _logic,
           on_close: () => Navigator.of(sheet_context).pop(),
+          on_decrease_font_size: () {
+            _change_body_font_size(_logic.decrease_font_size);
+          },
+          on_increase_font_size: () {
+            _change_body_font_size(_logic.increase_font_size);
+          },
           on_auto_read: () {
+            should_start_auto_read = true;
             Navigator.of(sheet_context).pop();
-            _start_auto_read();
           },
         );
       },
     );
+    if (!mounted || !should_start_auto_read) return;
+    _start_auto_read();
+  }
+
+  /// 修改字号后按修改前的阅读百分比恢复位置，避免正文突然跳段。
+  void _change_body_font_size(VoidCallback change_font_size) {
+    if (!_scroll_controller.hasClients) {
+      change_font_size();
+      return;
+    }
+
+    final double old_extent =
+        _reading_progress_max_extent ?? _calculate_current_story_extent();
+    final double progress = old_extent <= 0
+        ? 0
+        : (_scroll_controller.offset / old_extent).clamp(0.0, 1.0);
+    change_font_size();
+    _reading_progress_max_extent = null;
+    final int generation = ++_font_relayout_generation;
+    unawaited(_restore_progress_after_font_relayout(progress, generation));
+  }
+
+  Future<void> _restore_progress_after_font_relayout(
+    double progress,
+    int generation,
+  ) async {
+    await WidgetsBinding.instance.endOfFrame;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted ||
+        generation != _font_relayout_generation ||
+        !_scroll_controller.hasClients) {
+      return;
+    }
+
+    final double new_extent = _calculate_current_story_extent();
+    _reading_progress_max_extent = new_extent;
+    if (new_extent <= 0) return;
+
+    final double target_offset = (new_extent * progress).clamp(
+      _scroll_controller.position.minScrollExtent,
+      _scroll_controller.position.maxScrollExtent,
+    );
+    _is_restoring_position = true;
+    _scroll_controller.jumpTo(target_offset);
+    _logic.update_reading_progress(target_offset, new_extent);
+    _is_restoring_position = false;
   }
 
   /// 开始自动阅读。
@@ -756,16 +949,14 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   void _start_auto_read() {
     if (_logic.is_auto_reading.value) return;
 
+    _has_user_engaged = true;
     _logic.is_auto_reading.value = true;
 
     // 隐藏导航栏和评论栏。
     _logic.is_appbar_visible.value = false;
     _logic.is_bottom_bar_visible.value = false;
 
-    // 等待弹窗关闭动画完成后再开始滚动。
-    Future<void>.delayed(const Duration(milliseconds: 350), () {
-      _begin_auto_read_ticker();
-    });
+    _begin_auto_read_ticker();
   }
 
   /// 启动自动阅读 Ticker（每帧根据当前速度滚动）。
@@ -786,7 +977,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       if (_auto_read_last_tick == null) {
         delta_seconds = 0;
       } else {
-        delta_seconds = (elapsed - _auto_read_last_tick!).inMicroseconds / 1000000.0;
+        delta_seconds =
+            (elapsed - _auto_read_last_tick!).inMicroseconds / 1000000.0;
       }
       _auto_read_last_tick = elapsed;
 
@@ -795,13 +987,16 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       final double pixels_per_second = 20 + speed * 280;
 
       final double current = _scroll_controller.offset;
-      final double max_extent = _scroll_controller.position.maxScrollExtent;
+      final double max_extent =
+          _reading_progress_max_extent ?? _calculate_current_story_extent();
       final double next = current + pixels_per_second * delta_seconds;
 
       _is_auto_read_ticking = true;
       if (next >= max_extent) {
         _scroll_controller.jumpTo(max_extent);
         _logic.is_auto_reading.value = false;
+        _logic.is_appbar_visible.value = true;
+        _logic.is_bottom_bar_visible.value = true;
         _auto_read_ticker?.stop();
       } else {
         _scroll_controller.jumpTo(next);
@@ -813,8 +1008,13 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   }
 
   /// 显示自动阅读设置弹窗。
-  void _on_auto_read_settings_tap() {
-    showModalBottomSheet(
+  Future<void> _on_auto_read_settings_tap() async {
+    final ShortStoryReadLogic sheet_logic = _logic;
+    final bool should_resume = sheet_logic.is_auto_reading.value;
+    _auto_read_ticker?.stop();
+    _auto_read_last_tick = null;
+
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       enableDrag: true,
@@ -831,6 +1031,13 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         );
       },
     );
+    if (!mounted ||
+        !should_resume ||
+        !identical(_logic, sheet_logic) ||
+        !sheet_logic.is_auto_reading.value) {
+      return;
+    }
+    _begin_auto_read_ticker();
   }
 
   /// 处理上一篇按钮点击。
@@ -857,9 +1064,10 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   ///
   /// 返回 [Future]，动画和切换完成后 resolve。
   Future<void> _switch_to_story(int story_id, {bool slide_up = true}) async {
-    if (_is_transitioning) return;
+    if (_is_transitioning || story_id == _logic.story_id) return;
 
     _is_transitioning = true;
+    _stop_auto_read();
     _is_slide_up = slide_up;
     _is_previous_pull_rebounding = false;
     _is_previous_pull_dragging = false;
@@ -876,8 +1084,13 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     final List<ShortStoryItem> existing_catalog = List<ShortStoryItem>.from(
       _logic.catalog_list,
     );
+    final ShortStoryReadLogic previous_logic = _logic;
+    if (_is_initialization_complete && _has_user_engaged) {
+      unawaited(_save_progress_snapshot(previous_logic));
+    }
 
     await _page_transition_controller.forward();
+    if (!mounted) return;
 
     // 动画完成：重置滚动位置。
     if (_scroll_controller.hasClients) {
@@ -885,31 +1098,40 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     }
 
     // 创建新的逻辑层（新 story_id），复用已有目录数据。
+    final ShortStoryReadLogic next_logic = ShortStoryReadLogic(
+      context: context,
+      story_id: story_id,
+    );
+    next_logic.set_existing_catalog(existing_catalog);
+    previous_logic.dispose();
+
     setState(() {
       _previous_pull_raw_offset = 0;
       _previous_pull_offset = 0;
       _next_pull_raw_offset = 0;
       _next_pull_offset = 0;
-      _logic = ShortStoryReadLogic(
-        context: context,
-        story_id: story_id,
-      );
-      _logic.set_existing_catalog(existing_catalog);
-      _logic.initialize();
+      _next_story_overlay_opacity = 0;
+      _reading_progress_max_extent = null;
+      _is_initialization_complete = false;
+      _has_user_engaged = false;
+      _logic = next_logic;
+      _logic_generation++;
     });
 
     // 重新注册底部栏可见性监听（新逻辑实例需要新绑定）。
-    ever(_logic.is_bottom_bar_visible, _on_bottom_bar_visibility_changed);
+    _bind_bottom_bar_visibility();
 
     // 重置翻页动画（骨架屏已显示，无需过渡）。
     _page_transition_controller.reset();
-
-    // 短暂延迟后恢复导航栏和评论栏，让骨架屏先展示。
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    if (!mounted) return;
-    _logic.is_appbar_visible.value = true;
-    _logic.is_bottom_bar_visible.value = true;
     _is_transitioning = false;
+
+    unawaited(
+      _initialize_logic(
+        logic: next_logic,
+        generation: _logic_generation,
+        restore_position: false,
+      ),
+    );
   }
 
   /// 处理进度条拖动变化。
@@ -929,21 +1151,25 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       return;
     }
 
+    _has_user_engaged = true;
     _is_progress_scrolling = true;
 
-    final double max_scroll_extent = _scroll_controller.position.maxScrollExtent;
+    final double max_scroll_extent =
+        _reading_progress_max_extent ??
+        _scroll_controller.position.maxScrollExtent;
     final double target_offset = max_scroll_extent * progress;
 
     _scroll_controller
         .animateTo(
-      target_offset,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    )
-        .then((_) {
-      _is_progress_scrolling = false;
-      on_complete();
-    });
+          target_offset,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        )
+        .whenComplete(() {
+          if (!mounted) return;
+          _is_progress_scrolling = false;
+          on_complete();
+        });
   }
 
   /// 处理浮动按钮点击（加载下一篇小说）。
@@ -978,16 +1204,18 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// - 当前小说不是目录中的最后一个
   /// - 导航栏和评论栏可见（与顶部/底部栏同步）
   /// - 不在加载中或错误状态
-  bool get _should_show_floating_button {
+  bool get _has_floating_button {
     return _next_story_id != null &&
-        _logic.is_appbar_visible.value &&
         !_logic.is_loading.value &&
         !_logic.is_error.value;
   }
 
   /// 当前是否允许从正文顶部下拉切换上一篇。
   bool get _can_pull_previous_story {
-    if (_is_transitioning || _is_previous_pull_rebounding || _is_next_pull_rebounding) return false;
+    if (_is_transitioning ||
+        _is_previous_pull_rebounding ||
+        _is_next_pull_rebounding)
+      return false;
     if (_logic.is_loading.value || _logic.is_error.value) return false;
     if (_logic.is_auto_reading.value) return false;
     return _logic.has_previous_story;
@@ -1002,7 +1230,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 当前是否允许从正文底部上拉切换下一篇。
   bool get _can_pull_next_story {
-    if (_is_transitioning || _is_previous_pull_rebounding || _is_next_pull_rebounding) {
+    if (_is_transitioning ||
+        _is_previous_pull_rebounding ||
+        _is_next_pull_rebounding) {
       return false;
     }
     if (_logic.is_loading.value || _logic.is_error.value) return false;
@@ -1021,33 +1251,36 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   ///
   /// 这里不用强依赖外部 json，避免只改页面源码后缺少翻译 key。
   String _readerText(String key) {
-    final String lang = Localizations.localeOf(context).languageCode.toLowerCase();
-    const Map<String, Map<String, String>> values = <String, Map<String, String>>{
-      'zh': <String, String>{
-        'pull_down_view': '下拉查看',
-        'release_view': '松开查看',
-        'view_next': '查看下一篇',
-        'next_story': '下一篇',
-      },
-      'en': <String, String>{
-        'pull_down_view': 'Pull to view',
-        'release_view': 'Release to view',
-        'view_next': 'View next story',
-        'next_story': 'Next story',
-      },
-      'fr': <String, String>{
-        'pull_down_view': 'Tirez pour voir',
-        'release_view': 'Relâchez pour voir',
-        'view_next': 'Voir la suite',
-        'next_story': 'Suite',
-      },
-      'sw': <String, String>{
-        'pull_down_view': 'Vuta ili kuona',
-        'release_view': 'Achia ili kuona',
-        'view_next': 'Soma inayofuata',
-        'next_story': 'Inayofuata',
-      },
-    };
+    final String lang = Localizations.localeOf(
+      context,
+    ).languageCode.toLowerCase();
+    const Map<String, Map<String, String>> values =
+        <String, Map<String, String>>{
+          'zh': <String, String>{
+            'pull_down_view': '下拉查看',
+            'release_view': '松开查看',
+            'view_next': '查看下一篇',
+            'next_story': '下一篇',
+          },
+          'en': <String, String>{
+            'pull_down_view': 'Pull to view',
+            'release_view': 'Release to view',
+            'view_next': 'View next story',
+            'next_story': 'Next story',
+          },
+          'fr': <String, String>{
+            'pull_down_view': 'Tirez pour voir',
+            'release_view': 'Relâchez pour voir',
+            'view_next': 'Voir la suite',
+            'next_story': 'Suite',
+          },
+          'sw': <String, String>{
+            'pull_down_view': 'Vuta ili kuona',
+            'release_view': 'Achia ili kuona',
+            'view_next': 'Soma inayofuata',
+            'next_story': 'Inayofuata',
+          },
+        };
 
     return values[lang]?[key] ?? values['en']![key] ?? key;
   }
@@ -1063,8 +1296,10 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
     final double extra = raw_offset - _previous_pull_trigger_distance;
     final double resisted_extra = extra * 0.38;
-    return (_previous_pull_trigger_distance + resisted_extra)
-        .clamp(0.0, _previous_pull_max_distance);
+    return (_previous_pull_trigger_distance + resisted_extra).clamp(
+      0.0,
+      _previous_pull_max_distance,
+    );
   }
 
   /// 把底部真实上拉距离转换成视觉位移。
@@ -1076,8 +1311,10 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
     final double viewport_height = MediaQuery.sizeOf(context).height;
     final double max_visual_offset =
-        (viewport_height * _next_pull_max_viewport_ratio)
-            .clamp(_next_pull_trigger_distance, viewport_height - 24.0);
+        (viewport_height * _next_pull_max_viewport_ratio).clamp(
+          _next_pull_trigger_distance,
+          viewport_height - 24.0,
+        );
 
     final double extra = raw_offset - _next_pull_trigger_distance;
 
@@ -1085,13 +1322,18 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     // 否则用户继续上拉时，下一篇正文看起来还是被固定裁剪在几行。
     final double resisted_extra = extra * 0.82;
 
-    return (_next_pull_trigger_distance + resisted_extra)
-        .clamp(0.0, max_visual_offset);
+    return (_next_pull_trigger_distance + resisted_extra).clamp(
+      0.0,
+      max_visual_offset,
+    );
   }
 
   /// 指针移动：在顶部向下拖拽切上一篇，在底部向上拖拽切下一篇。
   void _on_reader_pointer_move(PointerMoveEvent event) {
     final double dy = event.delta.dy;
+    if (dy != 0) {
+      _has_user_engaged = true;
+    }
 
     if (_is_previous_pull_dragging || _previous_pull_offset > 0) {
       _handle_previous_pull_move(dy);
@@ -1241,13 +1483,13 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     _is_previous_pull_rebounding = true;
 
     final double begin_visual = _previous_pull_offset;
-    final Animation<double> animation = Tween<double>(
-      begin: begin_visual,
-      end: 0,
-    ).animate(CurvedAnimation(
-      parent: _previous_pull_animation_controller,
-      curve: Curves.easeOutCubic,
-    ));
+    final Animation<double> animation =
+        Tween<double>(begin: begin_visual, end: 0).animate(
+          CurvedAnimation(
+            parent: _previous_pull_animation_controller,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     void listener() {
       if (!mounted) return;
@@ -1287,13 +1529,13 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     _is_next_pull_rebounding = true;
 
     final double begin_visual = _next_pull_offset;
-    final Animation<double> animation = Tween<double>(
-      begin: begin_visual,
-      end: 0,
-    ).animate(CurvedAnimation(
-      parent: _next_pull_animation_controller,
-      curve: Curves.easeOutCubic,
-    ));
+    final Animation<double> animation =
+        Tween<double>(begin: begin_visual, end: 0).animate(
+          CurvedAnimation(
+            parent: _next_pull_animation_controller,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     void listener() {
       if (!mounted) return;
@@ -1359,8 +1601,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       runSpacing: ShortStoryReadStyle.tag_spacing,
       children: List<Widget>.generate(tags.length, (int index) {
         /// 从 tagColorList 取色，使用 story_id 和 index 生成固定的颜色索引。
-        final Color tag_color = ColorConstants.tagColorList[
-            (story_id * 7 + index * 3) % ColorConstants.tagColorList.length];
+        final Color tag_color =
+            ColorConstants.tagColorList[(story_id * 7 + index * 3) %
+                ColorConstants.tagColorList.length];
 
         /// 标签背景色（使用 12% 透明度）。
         final Color tag_bg = tag_color.withValues(alpha: 0.12);
@@ -1385,7 +1628,6 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       }),
     );
   }
-
 
   /// 构建当前篇和下一篇之间的衔接装饰。
   ///
@@ -1543,7 +1785,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                           _readerText('view_next'),
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                            fontWeight: FontConfig.adjustedWeight(
+                              FontWeight.w500,
+                            ),
                             color: text_color,
                             height: 1.2,
                           ),
@@ -1591,19 +1835,44 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       /// 状态栏高度。
       final double status_bar_height = MediaQuery.viewPaddingOf(context).top;
 
+      final Widget page_body;
+      if (_logic.is_loading.value) {
+        page_body = _buildSkeleton(
+          is_dark: is_dark,
+          status_bar_height: status_bar_height,
+        );
+      } else if (_logic.is_error.value) {
+        page_body = _buildError(
+          is_dark: is_dark,
+          status_bar_height: status_bar_height,
+        );
+      } else {
+        final Widget content = _buildContent(
+          is_dark: is_dark,
+          status_bar_height: status_bar_height,
+        );
+        page_body = _is_initialization_complete
+            ? content
+            : Stack(
+                children: <Widget>[
+                  content,
+                  Positioned.fill(
+                    child: ColoredBox(
+                      color: bg_color,
+                      child: _buildSkeleton(
+                        is_dark: is_dark,
+                        status_bar_height: status_bar_height,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+      }
+
       return Scaffold(
         resizeToAvoidBottomInset: false,
         backgroundColor: bg_color,
-        body: _logic.is_loading.value
-            ? _buildSkeleton(
-                is_dark: is_dark, status_bar_height: status_bar_height)
-            : _logic.is_error.value
-                ? _buildError(
-                    is_dark: is_dark, status_bar_height: status_bar_height)
-                : _buildContent(
-                    is_dark: is_dark,
-                    status_bar_height: status_bar_height,
-                  ),
+        body: page_body,
       );
     });
   }
@@ -1648,10 +1917,10 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     /// 简介只在可视区域底部露出一点点；继续上拉时再逐步展开。
     final double scroll_bottom_padding =
         (has_next_preview ? 18.0 : ShortStoryReadStyle.page_bottom_padding) +
-            bottom_padding;
+        bottom_padding;
 
-    final double next_pull_hint_opacity =
-        ((_next_pull_offset - 22.0) / 96.0).clamp(0.0, 1.0);
+    final double next_pull_hint_opacity = ((_next_pull_offset - 22.0) / 96.0)
+        .clamp(0.0, 1.0);
     final bool next_pull_ready =
         _next_pull_offset >= _next_pull_trigger_distance;
     final String next_story_content = _logic.next_story_content.value.trim();
@@ -1660,6 +1929,14 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     // 默认只露出一点正文；一旦用户上拉，它的可见高度就按真实上拉距离增长。
     final double next_preview_body_height =
         72.0 + bottom_padding + _next_pull_offset;
+    final double next_preview_line_height = is_cjk ? 1.8 : 1.7;
+    final int next_preview_max_lines = math.max(
+      3,
+      (next_preview_body_height /
+                  (_logic.body_font_size.value * next_preview_line_height))
+              .ceil() +
+          1,
+    );
 
     final bool show_next_bottom_overlay =
         has_next_preview && _next_story_overlay_opacity > 0.01;
@@ -1761,6 +2038,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                       font_size: _logic.body_font_size.value,
                     ),
 
+                    /// 当前篇正文结束位置，用于准确计算进度和恢复位置。
+                    SizedBox(key: _current_story_end_key, height: 0),
+
                     /// 下一篇小说预览（固定显示在正文下方）。
                     if (has_next_preview)
                       SizedBox(
@@ -1782,7 +2062,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: title_font_size,
-                                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                                fontWeight: FontConfig.adjustedWeight(
+                                  FontWeight.w500,
+                                ),
                                 color: title_color,
                                 height: 1.4,
                               ),
@@ -1814,13 +2096,15 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                                   child: Text(
                                     next_story_content,
                                     softWrap: true,
+                                    maxLines: next_preview_max_lines,
                                     overflow: TextOverflow.fade,
                                     style: TextStyle(
                                       fontSize: _logic.body_font_size.value,
                                       color: is_dark
                                           ? ShortStoryReadStyle.body_dark_color
-                                          : ShortStoryReadStyle.body_light_color,
-                                      height: is_cjk ? 1.8 : 1.7,
+                                          : ShortStoryReadStyle
+                                                .body_light_color,
+                                      height: next_preview_line_height,
                                     ),
                                   ),
                                 ),
@@ -1884,45 +2168,54 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
           right: 0,
           child: SlideTransition(
             position: _bottom_bar_slide_animation,
-            child: BottomCommentBar(
-              is_dark: is_dark,
-              comment_count: _logic.comment_count,
-              like_count: _logic.like_count,
-              is_liked: _logic.is_liked,
-              is_like_loading: _logic.is_like_loading.value,
-              on_catalog_tap: _on_catalog_tap,
-              on_comment_tap: _on_comment_tap,
-              on_like_tap: _on_like_tap,
-              on_setting_tap: _on_setting_tap,
-              show_progress_bar: !_logic.is_loading.value && !_logic.is_error.value,
-              catalog_loaded: !_logic.is_catalog_loading.value && _logic.catalog_list.isNotEmpty,
-              progress: _logic.reading_progress.value,
-              has_previous: _logic.has_previous_story,
-              has_next: _logic.has_next_story,
-              on_previous_tap: _on_previous_tap,
-              on_next_tap: _on_next_tap,
-              on_progress_changed: _on_progress_changed,
-              on_progress_change_end: _on_progress_change_end,
+            child: Obx(
+              () => BottomCommentBar(
+                is_dark: is_dark,
+                comment_count: _logic.comment_count,
+                like_count: _logic.like_count,
+                is_liked: _logic.is_liked,
+                is_like_loading: _logic.is_like_loading.value,
+                on_catalog_tap: _on_catalog_tap,
+                on_comment_tap: _on_comment_tap,
+                on_like_tap: _on_like_tap,
+                on_setting_tap: _on_setting_tap,
+                show_progress_bar:
+                    !_logic.is_loading.value && !_logic.is_error.value,
+                catalog_loaded:
+                    !_logic.is_catalog_loading.value &&
+                    _logic.catalog_list.isNotEmpty,
+                progress: _logic.reading_progress.value,
+                has_previous: _logic.has_previous_story,
+                has_next: _logic.has_next_story,
+                on_previous_tap: _on_previous_tap,
+                on_next_tap: _on_next_tap,
+                on_progress_changed: _on_progress_changed,
+                on_progress_change_end: _on_progress_change_end,
+              ),
             ),
           ),
         ),
 
         /// 右下角浮动按钮（目录有下一篇小说时显示，与顶部/底部栏同步淡入淡出）。
-        if (_should_show_floating_button)
+        if (_has_floating_button)
           Positioned(
             right: 16,
-            bottom: (!_logic.is_loading.value && !_logic.is_error.value
+            bottom:
+                (!_logic.is_loading.value && !_logic.is_error.value
                     ? ShortStoryReadStyle.bottom_bar_height +
-                        ShortStoryReadStyle.progress_bar_height
+                          ShortStoryReadStyle.progress_bar_height
                     : ShortStoryReadStyle.bottom_bar_height) +
                 bottom_padding +
                 16,
             child: FadeTransition(
               opacity: _floating_button_fade_animation,
-              child: ScrollToBottomButton(
-                is_dark: is_dark,
-                opacity: 1.0,
-                on_tap: _showNextStory,
+              child: IgnorePointer(
+                ignoring: !_logic.is_bottom_bar_visible.value,
+                child: ScrollToBottomButton(
+                  is_dark: is_dark,
+                  opacity: 1.0,
+                  on_tap: _showNextStory,
+                ),
               ),
             ),
           ),
@@ -2005,7 +2298,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
           is_dark: is_dark,
           title: easy.tr('no_internet.title'),
           description: easy.tr('no_internet.description'),
-          on_reload: _logic.retry,
+          on_reload: _retry_current_story,
         ),
 
         /// 顶部导航栏。

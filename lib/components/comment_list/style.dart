@@ -75,11 +75,11 @@ class CommentListStyle {
   /// 触底加载更多的距离阈值（像素）。
   static const double load_more_trigger_distance = 100;
 
-  /// 定位评论时的估算项高（像素）。
-  static const double scroll_to_comment_estimated_item_height = 120;
-
   /// 定位评论时的滚动动画时长（毫秒）。
   static const int scroll_to_comment_animation_duration_ms = 400;
+
+  /// 回复目标与键盘、列表视口边缘之间的安全距离。
+  static const double reply_visibility_margin = 12;
 
   /// 发送评论后滚动到顶部的动画时长（毫秒）。
   static const int scroll_to_top_animation_duration_ms = 300;
@@ -139,7 +139,7 @@ class CommentListStyle {
   static const double action_spacing = 14;
 
   /// 点赞按钮点击区域宽度。
-  static const double like_touch_width = 42;
+  static const double like_touch_width = 44;
 
   /// 点赞图标尺寸。
   static const double like_icon_size = 18;
@@ -152,6 +152,12 @@ class CommentListStyle {
 
   /// 紧凑模式点赞左侧内边距。
   static const double like_compact_left_padding = 8;
+
+  /// 紧凑模式点赞点击区域最小宽度。
+  static const double like_compact_touch_width = 44;
+
+  /// 紧凑模式点赞点击区域最小高度。
+  static const double like_compact_touch_height = 36;
 
   /// 紧凑模式点赞图标尺寸。
   static const double like_compact_icon_size = 14;
@@ -252,7 +258,8 @@ class CommentListStyle {
   static const double input_inner_padding = InputBarStyle.inner_padding;
 
   /// 输入框内垂直内边距。
-  static const double input_content_vertical_padding = InputBarStyle.content_vertical_padding;
+  static const double input_content_vertical_padding =
+      InputBarStyle.content_vertical_padding;
 
   /// 输入框文字行高。
   static const double input_text_line_height = InputBarStyle.text_line_height;
@@ -264,7 +271,8 @@ class CommentListStyle {
   static const double input_font_size_cjk = InputBarStyle.font_size_cjk;
 
   /// 输入框字号（字母语系）。
-  static const double input_font_size_alphabetic = InputBarStyle.font_size_alphabetic;
+  static const double input_font_size_alphabetic =
+      InputBarStyle.font_size_alphabetic;
 
   /// 输入框字号（当前使用 CJK）。
   static const double input_font_size = input_font_size_cjk;
@@ -285,34 +293,43 @@ class CommentListStyle {
   static const double send_button_height = InputBarStyle.send_height;
 
   /// 发送按钮最小宽度（CJK 语系）。
-  static const double send_button_min_width_cjk = InputBarStyle.send_min_width_cjk;
+  static const double send_button_min_width_cjk =
+      InputBarStyle.send_min_width_cjk;
 
   /// 发送按钮最小宽度（字母语系）。
-  static const double send_button_min_width_alphabetic = InputBarStyle.send_min_width_alphabetic;
+  static const double send_button_min_width_alphabetic =
+      InputBarStyle.send_min_width_alphabetic;
 
   /// 发送按钮圆角。
   static const double send_button_radius = InputBarStyle.send_radius;
 
   /// 发送按钮水平内边距。
-  static const double send_button_horizontal_padding = InputBarStyle.send_padding_h;
+  static const double send_button_horizontal_padding =
+      InputBarStyle.send_padding_h;
 
   /// 发送按钮字号（CJK 语系）。
-  static const double send_button_font_size_cjk = InputBarStyle.send_font_size_cjk;
+  static const double send_button_font_size_cjk =
+      InputBarStyle.send_font_size_cjk;
 
   /// 发送按钮字号（字母语系）。
-  static const double send_button_font_size_alphabetic = InputBarStyle.send_font_size_alphabetic;
+  static const double send_button_font_size_alphabetic =
+      InputBarStyle.send_font_size_alphabetic;
 
   /// 发送按钮禁用状态背景色（日间模式）。
-  static const Color send_disabled_light_bg = InputBarStyle.send_disabled_bg_light;
+  static const Color send_disabled_light_bg =
+      InputBarStyle.send_disabled_bg_light;
 
   /// 发送按钮禁用状态背景色（夜间模式）。
-  static const Color send_disabled_dark_bg = InputBarStyle.send_disabled_bg_dark;
+  static const Color send_disabled_dark_bg =
+      InputBarStyle.send_disabled_bg_dark;
 
   /// 发送按钮禁用状态文字色（日间模式）。
-  static const Color send_disabled_light_text = InputBarStyle.send_disabled_text_light;
+  static const Color send_disabled_light_text =
+      InputBarStyle.send_disabled_text_light;
 
   /// 发送按钮禁用状态文字色（夜间模式）。
-  static const Color send_disabled_dark_text = InputBarStyle.send_disabled_text_dark;
+  static const Color send_disabled_dark_text =
+      InputBarStyle.send_disabled_text_dark;
 
   // ==================== 骨架屏 ====================
 

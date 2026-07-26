@@ -98,8 +98,8 @@ class ShortStoryReadData {
       favorite_count: _to_int(json['favorite_count']),
       score: _to_string(json['score']),
       category_list: _parse_string_list(json['category_list']),
-      is_liked: json['like'] == true,
-      is_favorited: json['favorite'] == true,
+      is_liked: json['like'] == true || json['like'] == 1,
+      is_favorited: json['favorite'] == true || json['favorite'] == 1,
     );
   }
 }

@@ -36,7 +36,7 @@ class CatalogItem extends StatefulWidget {
   final bool is_dark;
 
   /// 点击回调。
-  final VoidCallback on_tap;
+  final VoidCallback? on_tap;
 
   /// 点赞按钮点击回调（可选，不传则点赞区域不可点击）。
   final VoidCallback? on_like_tap;
@@ -76,16 +76,20 @@ class _CatalogItemState extends State<CatalogItem>
     _scale_controller = AnimationController(
       vsync: this,
       duration: const Duration(
-          milliseconds: ShortStoryTabStyle.long_press_scale_duration_ms),
+        milliseconds: ShortStoryTabStyle.long_press_scale_duration_ms,
+      ),
     );
 
-    _scale_animation = Tween<double>(
-      begin: 1.0,
-      end: ShortStoryTabStyle.long_press_scale,
-    ).animate(CurvedAnimation(
-      parent: _scale_controller,
-      curve: Curves.easeOutCubic,
-    ));
+    _scale_animation =
+        Tween<double>(
+          begin: 1.0,
+          end: ShortStoryTabStyle.long_press_scale,
+        ).animate(
+          CurvedAnimation(
+            parent: _scale_controller,
+            curve: Curves.easeOutCubic,
+          ),
+        );
   }
 
   @override
@@ -118,8 +122,8 @@ class _CatalogItemState extends State<CatalogItem>
     final Color title_color = widget.is_current
         ? ColorConstants.dangerColor
         : (widget.is_dark
-            ? ShortStoryTabStyle.card_title_dark_text
-            : ShortStoryTabStyle.card_title_light_text);
+              ? ShortStoryTabStyle.card_title_dark_text
+              : ShortStoryTabStyle.card_title_light_text);
 
     /// 当前阅读中卡片的高亮色（日间和夜间都用红色）。
     final Color current_highlight_color = ColorConstants.dangerColor;
@@ -133,8 +137,8 @@ class _CatalogItemState extends State<CatalogItem>
     final Color like_color = widget.item.is_liked
         ? ColorConstants.dangerColor
         : (widget.is_dark
-            ? ShortStoryTabStyle.card_like_dark_text
-            : ShortStoryTabStyle.card_like_light_text);
+              ? ShortStoryTabStyle.card_like_dark_text
+              : ShortStoryTabStyle.card_like_light_text);
 
     /// 卡片背景色（与首页卡片一致）。
     final Color card_bg = widget.is_dark
@@ -162,12 +166,14 @@ class _CatalogItemState extends State<CatalogItem>
         vertical: 4,
       ),
       child: Listener(
-        onPointerDown: _on_pointer_down,
-        onPointerUp: _on_pointer_up,
-        onPointerCancel: _on_pointer_cancel,
+        onPointerDown: widget.on_tap == null ? null : _on_pointer_down,
+        onPointerUp: widget.on_tap == null ? null : _on_pointer_up,
+        onPointerCancel: widget.on_tap == null ? null : _on_pointer_cancel,
         child: Material(
           color: card_bg,
-          borderRadius: BorderRadius.circular(ShortStoryTabStyle.card_border_radius),
+          borderRadius: BorderRadius.circular(
+            ShortStoryTabStyle.card_border_radius,
+          ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: widget.on_tap,
@@ -183,7 +189,9 @@ class _CatalogItemState extends State<CatalogItem>
               },
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(ShortStoryTabStyle.card_border_radius),
+                  borderRadius: BorderRadius.circular(
+                    ShortStoryTabStyle.card_border_radius,
+                  ),
                   border: widget.is_current
                       ? Border.all(
                           color: current_highlight_color.withValues(alpha: 0.3),
@@ -243,9 +251,11 @@ class _CatalogItemState extends State<CatalogItem>
     final double cover_width = cover_height * (100 / 75);
 
     return Padding(
-      padding: EdgeInsets.all(is_cjk
-          ? ShortStoryTabStyle.card_vertical_padding_cjk
-          : ShortStoryTabStyle.card_vertical_padding_alphabetic),
+      padding: EdgeInsets.all(
+        is_cjk
+            ? ShortStoryTabStyle.card_vertical_padding_cjk
+            : ShortStoryTabStyle.card_vertical_padding_alphabetic,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -258,9 +268,11 @@ class _CatalogItemState extends State<CatalogItem>
           ),
 
           /// 标题与简介间距。
-          SizedBox(height: is_cjk
-              ? ShortStoryTabStyle.card_title_desc_gap_cjk
-              : ShortStoryTabStyle.card_title_desc_gap_alphabetic),
+          SizedBox(
+            height: is_cjk
+                ? ShortStoryTabStyle.card_title_desc_gap_cjk
+                : ShortStoryTabStyle.card_title_desc_gap_alphabetic,
+          ),
 
           /// 简介行：左侧简介文字，右侧封面图片。
           if (widget.item.description.isNotEmpty)
@@ -275,15 +287,14 @@ class _CatalogItemState extends State<CatalogItem>
             ),
 
           /// 简介与底部标签栏间距。
-          SizedBox(height: is_cjk
-              ? ShortStoryTabStyle.card_desc_bottom_gap_cjk
-              : ShortStoryTabStyle.card_desc_bottom_gap_alphabetic),
+          SizedBox(
+            height: is_cjk
+                ? ShortStoryTabStyle.card_desc_bottom_gap_cjk
+                : ShortStoryTabStyle.card_desc_bottom_gap_alphabetic,
+          ),
 
           /// 底部：标签列表 + 点赞数。
-          _buildBottomRow(
-            like_color: like_color,
-            is_cjk: is_cjk,
-          ),
+          _buildBottomRow(like_color: like_color, is_cjk: is_cjk),
         ],
       ),
     );
@@ -347,9 +358,11 @@ class _CatalogItemState extends State<CatalogItem>
     required bool is_cjk,
   }) {
     return Padding(
-      padding: EdgeInsets.all(is_cjk
-          ? ShortStoryTabStyle.card_vertical_padding_cjk
-          : ShortStoryTabStyle.card_vertical_padding_alphabetic),
+      padding: EdgeInsets.all(
+        is_cjk
+            ? ShortStoryTabStyle.card_vertical_padding_cjk
+            : ShortStoryTabStyle.card_vertical_padding_alphabetic,
+      ),
       child: _buildTextContent(
         title_color: title_color,
         current_highlight_color: current_highlight_color,
@@ -386,9 +399,11 @@ class _CatalogItemState extends State<CatalogItem>
 
         /// 简介（最多 2 行）。
         if (widget.item.description.isNotEmpty) ...[
-          SizedBox(height: is_cjk
-              ? ShortStoryTabStyle.card_title_desc_gap_cjk
-              : ShortStoryTabStyle.card_title_desc_gap_alphabetic),
+          SizedBox(
+            height: is_cjk
+                ? ShortStoryTabStyle.card_title_desc_gap_cjk
+                : ShortStoryTabStyle.card_title_desc_gap_alphabetic,
+          ),
           Text(
             widget.item.description,
             maxLines: 2,
@@ -403,15 +418,14 @@ class _CatalogItemState extends State<CatalogItem>
           ),
         ],
 
-        SizedBox(height: is_cjk
-            ? ShortStoryTabStyle.card_desc_bottom_gap_cjk
-            : ShortStoryTabStyle.card_desc_bottom_gap_alphabetic),
+        SizedBox(
+          height: is_cjk
+              ? ShortStoryTabStyle.card_desc_bottom_gap_cjk
+              : ShortStoryTabStyle.card_desc_bottom_gap_alphabetic,
+        ),
 
         /// 底部：标签列表 + 点赞数。
-        _buildBottomRow(
-          like_color: like_color,
-          is_cjk: is_cjk,
-        ),
+        _buildBottomRow(like_color: like_color, is_cjk: is_cjk),
       ],
     );
   }
@@ -421,10 +435,7 @@ class _CatalogItemState extends State<CatalogItem>
   /// 参数：
   /// - [like_color] 点赞图标和文字颜色。
   /// - [is_cjk] 当前语种是否为 CJK。
-  Widget _buildBottomRow({
-    required Color like_color,
-    required bool is_cjk,
-  }) {
+  Widget _buildBottomRow({required Color like_color, required bool is_cjk}) {
     /// 标签字号（与首页卡片一致）。
     final double tag_font_size = is_cjk
         ? ShortStoryTabStyle.card_tag_font_size_cjk
@@ -442,34 +453,31 @@ class _CatalogItemState extends State<CatalogItem>
           child: Wrap(
             spacing: ShortStoryTabStyle.card_tag_spacing,
             runSpacing: ShortStoryTabStyle.card_tag_spacing,
-            children: List<Widget>.generate(
-              widget.item.tags.take(3).length,
-              (int index) {
-                /// 标签颜色（使用 tagColorList，通过 id 和 index 生成固定索引）。
-                final Color tag_color = ColorConstants.tagColorList[
-                    (widget.item.id * 7 + index * 3) %
-                        ColorConstants.tagColorList.length];
+            children: List<Widget>.generate(widget.item.tags.take(3).length, (
+              int index,
+            ) {
+              /// 标签颜色（使用 tagColorList，通过 id 和 index 生成固定索引）。
+              final Color tag_color =
+                  ColorConstants.tagColorList[(widget.item.id * 7 + index * 3) %
+                      ColorConstants.tagColorList.length];
 
-                return Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: tag_horizontal_padding,
-                    vertical: ShortStoryTabStyle.card_tag_vertical_padding,
+              return Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: tag_horizontal_padding,
+                  vertical: ShortStoryTabStyle.card_tag_vertical_padding,
+                ),
+                decoration: BoxDecoration(
+                  color: tag_color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(
+                    ShortStoryTabStyle.card_tag_border_radius,
                   ),
-                  decoration: BoxDecoration(
-                    color: tag_color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(
-                        ShortStoryTabStyle.card_tag_border_radius),
-                  ),
-                  child: Text(
-                    widget.item.tags[index],
-                    style: TextStyle(
-                      fontSize: tag_font_size,
-                      color: tag_color,
-                    ),
-                  ),
-                );
-              },
-            ),
+                ),
+                child: Text(
+                  widget.item.tags[index],
+                  style: TextStyle(fontSize: tag_font_size, color: tag_color),
+                ),
+              );
+            }),
           ),
         ),
 
@@ -547,10 +555,7 @@ class _CatalogItemState extends State<CatalogItem>
         if (widget.is_current)
           Container(
             margin: const EdgeInsets.only(left: 8),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 3,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: current_highlight_color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(4),

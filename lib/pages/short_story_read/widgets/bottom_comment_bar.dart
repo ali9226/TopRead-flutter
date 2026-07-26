@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/svg_icon/index.dart';
@@ -69,7 +71,8 @@ class BottomCommentBar extends StatefulWidget {
 
   /// 进度变化完成回调（松开进度条时触发）。
   /// 参数：[progress] 目标进度值，[on_complete] 滚动动画完成后的回调。
-  final void Function(double progress, VoidCallback on_complete)? on_progress_change_end;
+  final void Function(double progress, VoidCallback on_complete)?
+  on_progress_change_end;
 
   const BottomCommentBar({
     super.key,
@@ -107,15 +110,8 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
   /// 进度条区域的全局键（用于计算弹窗位置）。
   final GlobalKey _progress_key = GlobalKey();
 
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
+  /// 整个进度区域的全局键（用于把全局坐标换算为 Stack 局部坐标）。
+  final GlobalKey _progress_section_key = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -141,9 +137,7 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
       padding: EdgeInsets.only(bottom: bottom_padding),
       decoration: BoxDecoration(
         color: bg_color,
-        border: Border(
-          top: BorderSide(color: divider_color, width: 0.5),
-        ),
+        border: Border(top: BorderSide(color: divider_color, width: 0.5)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -187,9 +181,7 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
                 ),
 
                 /// 4. 喜欢（图标 + 数字，上下排列，已点赞使用红色）。
-                Expanded(
-                  child: _buildLikeItem(icon_color: icon_color),
-                ),
+                Expanded(child: _buildLikeItem(icon_color: icon_color)),
               ],
             ),
           ),
@@ -236,6 +228,7 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
         : ShortStoryReadStyle.nav_text_font_size_alphabetic;
 
     return Stack(
+      key: _progress_section_key,
       clipBehavior: Clip.none,
       children: <Widget>[
         /// 主要内容行。
@@ -323,14 +316,16 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
     required Color thumb_shadow_color,
   }) {
     /// 当前显示的进度值。
-    final double current_progress =
-        _is_dragging ? _drag_progress : widget.progress;
+    final double current_progress = _is_dragging
+        ? _drag_progress
+        : widget.progress;
 
     return Listener(
       key: _progress_key,
       onPointerDown: _on_pointer_down,
       onPointerMove: _on_pointer_move,
       onPointerUp: _on_pointer_up,
+      onPointerCancel: _on_pointer_cancel,
       behavior: HitTestBehavior.opaque,
       child: AbsorbPointer(
         absorbing: _is_dragging,
@@ -345,13 +340,19 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 /// 滑块半径。
-                final double thumb_radius = ShortStoryReadStyle.progress_thumb_size / 2;
+                final double thumb_radius =
+                    ShortStoryReadStyle.progress_thumb_size / 2;
 
                 /// 轨道可用宽度（减去滑块直径，确保滑块在边缘不被裁剪）。
-                final double track_width = constraints.maxWidth - ShortStoryReadStyle.progress_thumb_size;
+                final double track_width = math.max(
+                  0,
+                  constraints.maxWidth -
+                      ShortStoryReadStyle.progress_thumb_size,
+                );
 
                 /// 滑块中心 X 坐标（从滑块半径位置开始）。
-                final double thumb_center_x = thumb_radius + current_progress * track_width;
+                final double thumb_center_x =
+                    thumb_radius + current_progress * track_width;
 
                 return Stack(
                   clipBehavior: Clip.none,
@@ -360,7 +361,10 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
                     Positioned(
                       left: thumb_radius,
                       right: thumb_radius,
-                      top: (ShortStoryReadStyle.progress_bar_height - ShortStoryReadStyle.progress_track_height) / 2,
+                      top:
+                          (ShortStoryReadStyle.progress_bar_height -
+                              ShortStoryReadStyle.progress_track_height) /
+                          2,
                       child: Container(
                         height: ShortStoryReadStyle.progress_track_height,
                         decoration: BoxDecoration(
@@ -375,7 +379,10 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
                     /// 带投影的滑块圆圈。
                     Positioned(
                       left: thumb_center_x - thumb_radius,
-                      top: (ShortStoryReadStyle.progress_bar_height - ShortStoryReadStyle.progress_thumb_size) / 2,
+                      top:
+                          (ShortStoryReadStyle.progress_bar_height -
+                              ShortStoryReadStyle.progress_thumb_size) /
+                          2,
                       child: Container(
                         width: ShortStoryReadStyle.progress_thumb_size,
                         height: ShortStoryReadStyle.progress_thumb_size,
@@ -385,10 +392,12 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
                           boxShadow: <BoxShadow>[
                             BoxShadow(
                               color: thumb_shadow_color,
-                              blurRadius: ShortStoryReadStyle.progress_thumb_shadow_blur,
+                              blurRadius: ShortStoryReadStyle
+                                  .progress_thumb_shadow_blur,
                               offset: const Offset(
                                 0,
-                                ShortStoryReadStyle.progress_thumb_shadow_offset_y,
+                                ShortStoryReadStyle
+                                    .progress_thumb_shadow_offset_y,
                               ),
                             ),
                           ],
@@ -412,7 +421,11 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
     if (render_box == null) return;
 
     final double thumb_radius = ShortStoryReadStyle.progress_thumb_size / 2;
-    final double track_width = render_box.size.width - ShortStoryReadStyle.progress_thumb_size;
+    final double track_width = math.max(
+      0,
+      render_box.size.width - ShortStoryReadStyle.progress_thumb_size,
+    );
+    if (track_width <= 0) return;
     final double new_progress =
         ((event.localPosition.dx - thumb_radius) / track_width).clamp(0.0, 1.0);
 
@@ -420,6 +433,7 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
       _is_dragging = true;
       _drag_progress = new_progress;
     });
+    widget.on_progress_changed?.call(new_progress);
   }
 
   /// 指针移动时更新拖动进度。
@@ -431,19 +445,33 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
     if (render_box == null) return;
 
     final double thumb_radius = ShortStoryReadStyle.progress_thumb_size / 2;
-    final double track_width = render_box.size.width - ShortStoryReadStyle.progress_thumb_size;
+    final double track_width = math.max(
+      0,
+      render_box.size.width - ShortStoryReadStyle.progress_thumb_size,
+    );
+    if (track_width <= 0) return;
     final double new_progress =
         ((event.localPosition.dx - thumb_radius) / track_width).clamp(0.0, 1.0);
 
     setState(() {
       _drag_progress = new_progress;
     });
+    widget.on_progress_changed?.call(new_progress);
   }
 
   /// 指针抬起时结束拖动，触发滚动。
   void _on_pointer_up(PointerUpEvent event) {
     if (!_is_dragging) return;
-    widget.on_progress_change_end?.call(_drag_progress, _on_scroll_complete);
+    final progress_callback = widget.on_progress_change_end;
+    if (progress_callback == null) {
+      _on_scroll_complete();
+      return;
+    }
+    progress_callback(_drag_progress, _on_scroll_complete);
+  }
+
+  void _on_pointer_cancel(PointerCancelEvent event) {
+    _on_scroll_complete();
   }
 
   /// 构建进度百分比弹窗（显示在滑块上方）。
@@ -451,20 +479,33 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
     /// 进度条区域的渲染对象。
     final RenderBox? render_box =
         _progress_key.currentContext?.findRenderObject() as RenderBox?;
-
-    if (render_box == null) return const SizedBox.shrink();
+    final RenderBox? section_box =
+        _progress_section_key.currentContext?.findRenderObject() as RenderBox?;
+    if (render_box == null || section_box == null) {
+      return const SizedBox.shrink();
+    }
 
     /// 进度条区域在屏幕上的位置。
     final Offset position = render_box.localToGlobal(Offset.zero);
+    final Offset section_position = section_box.localToGlobal(Offset.zero);
 
     /// 滑块半径。
     final double thumb_radius = ShortStoryReadStyle.progress_thumb_size / 2;
 
     /// 轨道实际宽度（减去滑块直径）。
-    final double track_width = render_box.size.width - ShortStoryReadStyle.progress_thumb_size;
+    final double track_width = math.max(
+      0,
+      render_box.size.width - ShortStoryReadStyle.progress_thumb_size,
+    );
 
     /// 弹窗水平位置（基于拖动进度计算，居中于滑块）。
-    final double popup_left = position.dx + thumb_radius + (track_width * _drag_progress) - 20;
+    final double popup_left =
+        (position.dx -
+                section_position.dx +
+                thumb_radius +
+                track_width * _drag_progress -
+                20)
+            .clamp(0.0, math.max(0.0, section_box.size.width - 40));
 
     /// 百分比文字。
     final String percentage_text = '${(_drag_progress * 100).round()}%';
@@ -537,19 +578,11 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          SvgIcon(
-            name: icon,
-            width: 22,
-            height: 22,
-            color: icon_color,
-          ),
+          SvgIcon(name: icon, width: 22, height: 22, color: icon_color),
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 11,
-              color: icon_color,
-            ),
+            style: TextStyle(fontSize: 11, color: icon_color),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -578,10 +611,7 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
           TweenAnimationBuilder<double>(
             duration: const Duration(milliseconds: 560),
             curve: Curves.elasticOut,
-            tween: Tween<double>(
-              begin: 0.6,
-              end: widget.is_liked ? 1.0 : 1.0,
-            ),
+            tween: Tween<double>(begin: 0.6, end: widget.is_liked ? 1.0 : 1.0),
             builder: (context, scale, child) {
               return Transform.scale(scale: scale, child: child);
             },
@@ -596,10 +626,7 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
           const SizedBox(height: 4),
           Text(
             NumberFormatUtil.format_count(widget.like_count),
-            style: TextStyle(
-              fontSize: 11,
-              color: current_color,
-            ),
+            style: TextStyle(fontSize: 11, color: current_color),
           ),
         ],
       ),

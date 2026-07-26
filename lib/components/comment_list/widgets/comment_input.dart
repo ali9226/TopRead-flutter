@@ -16,7 +16,7 @@ import 'package:app/components/comment_list/widgets/emoji_panel.dart';
 /// 出现真假输入框重叠、下滑或安全区回弹。
 class CommentInput extends StatefulWidget {
   final bool is_dark;
-  final ValueChanged<String> on_send;
+  final Future<bool> Function(String content) on_send;
   final CommentData? reply_target;
   final VoidCallback? on_cancel_reply;
   final FocusNode? focus_node;
@@ -46,6 +46,7 @@ class _CommentInputState extends State<CommentInput>
   bool _is_overlay_rebuild_scheduled = false;
   bool _keyboard_opened_in_current_session = false;
   bool _show_emoji_panel = false;
+  bool _is_sending = false;
   double _last_keyboard_height = 0;
 
   FocusNode get _focus_node => widget.focus_node ?? _internal_focus_node;
@@ -65,7 +66,7 @@ class _CommentInputState extends State<CommentInput>
         return _CommentEditorOverlay(
           is_dark: widget.is_dark,
           is_visible: _is_editor_visible,
-          has_text: _has_text,
+          has_text: _has_text && !_is_sending,
           show_emoji_panel: _show_emoji_panel,
           controller: _controller,
           focus_node: _focus_node,
@@ -176,7 +177,7 @@ class _CommentInputState extends State<CommentInput>
         child: CommentComposerSurface(
           is_dark: widget.is_dark,
           is_editor: false,
-          has_text: _has_text,
+          has_text: _has_text && !_is_sending,
           show_emoji_panel: _show_emoji_panel,
           bottom_padding: stable_bottom_padding,
           controller: _controller,
@@ -237,11 +238,19 @@ class _CommentInputState extends State<CommentInput>
     _mark_overlay_needs_build();
   }
 
-  void _handle_send() {
+  Future<void> _handle_send() async {
     final String content = _controller.text.trim();
-    if (content.isEmpty) return;
+    if (content.isEmpty || _is_sending) return;
 
-    widget.on_send(content);
+    setState(() => _is_sending = true);
+    _mark_overlay_needs_build();
+    final bool success = await widget.on_send(content);
+    if (!mounted) return;
+
+    setState(() => _is_sending = false);
+    _mark_overlay_needs_build();
+    if (!success) return;
+
     _controller.clear();
     _hide_editor();
   }
@@ -274,9 +283,13 @@ class _CommentInputState extends State<CommentInput>
 
   void _on_emoji_selected(String emoji) {
     final TextEditingValue value = _controller.value;
-    final int start = value.selection.baseOffset;
-    final int end = value.selection.extentOffset;
     final String old_text = value.text;
+    final int raw_start = value.selection.start;
+    final int raw_end = value.selection.end;
+    final int start = raw_start < 0
+        ? old_text.length
+        : raw_start.clamp(0, old_text.length);
+    final int end = raw_end < 0 ? start : raw_end.clamp(start, old_text.length);
     final String new_text =
         old_text.substring(0, start) + emoji + old_text.substring(end);
     _controller.value = TextEditingValue(
@@ -418,8 +431,9 @@ class _CommentEditorOverlay extends StatelessWidget {
                         is_editor: true,
                         has_text: has_text,
                         show_emoji_panel: show_emoji_panel,
-                        bottom_padding:
-                            keyboard_height > 0 ? 0 : stable_bottom_padding,
+                        bottom_padding: keyboard_height > 0
+                            ? 0
+                            : stable_bottom_padding,
                         controller: controller,
                         focus_node: focus_node,
                         reply_target: reply_target,

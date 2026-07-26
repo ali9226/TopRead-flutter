@@ -262,6 +262,9 @@ class CommentComposerSurface extends StatelessWidget {
         : CommentListStyle.send_disabled_light_text;
 
     return GestureDetector(
+      key: ValueKey<String>(
+        is_editor ? 'comment_send_button_editor' : 'comment_send_button_preview',
+      ),
       onTap: has_text ? on_send : null,
       behavior: HitTestBehavior.opaque,
       child: Container(

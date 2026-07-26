@@ -627,6 +627,7 @@
     "load_error_title": "评论加载失败",
     "load_error_desc": "网络开小差了，点击重新加载试试",
     "send_success": "评论成功",
+    "send_failed": "发送失败，请重试",
     "time": {
       "just_now": "刚刚",
       "minutes_ago": "分钟前",

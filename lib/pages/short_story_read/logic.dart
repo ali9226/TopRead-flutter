@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 
 import 'package:dio/dio.dart' as dio_lib;
@@ -28,8 +30,15 @@ class ShortStoryReadLogic {
   /// 小说 ID。
   final int story_id;
 
+  /// 当前逻辑实例是否已经退出使用。
+  ///
+  /// 页面切换小说或退出后，旧请求可能仍在网络层执行。该标记用于阻止旧请求
+  /// 回写响应式状态和共享目录，避免新页面被过期结果覆盖。
+  bool _is_disposed = false;
+
   /// 短篇小说目录列表 Store。
-  final ShortStoryCatalogStore _catalog_store = Get.find<ShortStoryCatalogStore>();
+  final ShortStoryCatalogStore _catalog_store =
+      Get.find<ShortStoryCatalogStore>();
 
   // ==================== 数据状态 ====================
 
@@ -99,32 +108,27 @@ class ShortStoryReadLogic {
   /// 自动阅读速度（0.0 = 最慢，1.0 = 最快，默认 0.2）。
   late final RxDouble auto_read_speed;
 
-  /// 速度变化时触发的回调（由 index.dart 设置，用于重启滚动动画）。
-  VoidCallback? on_speed_changed;
-
   /// 是否正在点赞请求中（防止重复点击）。
   final RxBool is_like_loading = false.obs;
 
   /// 是否正在收藏请求中（防止重复点击）。
   final RxBool is_favorite_loading = false.obs;
 
-  /// 导航栏显示时记录的滚动位置。
-  ///
-  /// 用于计算滚动距离，当滚动超过阈值时自动隐藏导航栏。
-  double _scroll_offset_when_visible = 0;
-
-  /// 滚动方向（true = 向下滚动，false = 向上滚动）。
-  ///
-  /// 用于判断是否需要隐藏/显示导航栏。
-  bool _is_scrolling_down = false;
-
   /// 上一次滚动偏移量（用于计算滚动方向）。
   double _last_scroll_offset = 0;
 
-  ShortStoryReadLogic({
-    required this.context,
-    required this.story_id,
-  }) {
+  /// 当前滚动方向开始时的偏移量。
+  ///
+  /// 使用方向累计距离而不是单帧位移，慢速滚动也能稳定触发栏位显隐。
+  double _scroll_direction_anchor_offset = 0;
+
+  /// 上一次有效滚动方向；null 表示尚未发生滚动。
+  bool? _last_scroll_direction_down;
+
+  /// 导航栏显隐需要累计的滚动距离。
+  static const double _bar_visibility_scroll_threshold = 8;
+
+  ShortStoryReadLogic({required this.context, required this.story_id}) {
     final double? saved_size = load_body_font_size();
     body_font_size = (saved_size ?? 18.0).obs;
 
@@ -167,6 +171,7 @@ class ShortStoryReadLogic {
     _skip_catalog_fetch = true;
     _catalog_store.set_catalog_list(existing_catalog);
     _catalog_store.is_loading.value = false;
+    _catalog_store.is_error.value = false;
   }
 
   /// 是否跳过目录请求（翻页时复用已有数据）。
@@ -188,33 +193,97 @@ class ShortStoryReadLogic {
   ///
   /// 用于切换上一篇/下一篇时减少等待；点赞等强实时字段仍会在用户操作后同步更新当前页面。
   /// key 格式："{story_id}_{language_code}"，避免语种切换后命中旧语种缓存。
-  static final Map<String, ShortStoryReadData> _story_detail_memory_cache =
-      <String, ShortStoryReadData>{};
+  static final LinkedHashMap<String, ShortStoryReadData>
+  _story_detail_memory_cache = LinkedHashMap<String, ShortStoryReadData>();
+
+  /// 详情内存缓存最多保留的小说数量。
+  static const int _story_detail_memory_cache_capacity = 40;
 
   /// 正文内存缓存。
-  static final Map<String, String> _content_memory_cache = <String, String>{};
+  static final LinkedHashMap<String, String> _content_memory_cache =
+      LinkedHashMap<String, String>();
+
+  /// 正文内存缓存最多保留的小说数量。
+  static const int _content_memory_cache_capacity = 12;
+
+  /// 正在进行的正文加载任务，避免预加载与页面加载重复下载同一文件。
+  static final Map<String, Future<String>> _content_load_futures =
+      <String, Future<String>>{};
 
   /// 正文磁盘缓存有效期。
   static const Duration _content_disk_cache_ttl = Duration(days: 7);
 
+  /// 正文文件连接超时。
+  static const Duration _content_connect_timeout = Duration(seconds: 12);
+
+  /// 正文文件接收超时。
+  static const Duration _content_receive_timeout = Duration(seconds: 25);
+
+  /// 从 LRU 缓存读取数据，并把命中的条目移动到队尾。
+  static T? _read_memory_cache<T>(LinkedHashMap<String, T> cache, String key) {
+    final T? value = cache.remove(key);
+    if (value != null) {
+      cache[key] = value;
+    }
+    return value;
+  }
+
+  /// 写入 LRU 缓存，并在超过容量后移除最久未使用的条目。
+  static void _write_memory_cache<T>(
+    LinkedHashMap<String, T> cache,
+    String key,
+    T value,
+    int capacity,
+  ) {
+    cache.remove(key);
+    cache[key] = value;
+    while (cache.length > capacity) {
+      cache.remove(cache.keys.first);
+    }
+  }
+
+  /// 读取详情内存缓存。
+  ShortStoryReadData? _read_story_detail_cache(int target_story_id) {
+    return _read_memory_cache<ShortStoryReadData>(
+      _story_detail_memory_cache,
+      _cache_key(target_story_id),
+    );
+  }
+
+  /// 写入详情内存缓存。
+  void _write_story_detail_cache(
+    int target_story_id,
+    ShortStoryReadData detail,
+  ) {
+    _write_memory_cache<ShortStoryReadData>(
+      _story_detail_memory_cache,
+      _cache_key(target_story_id),
+      detail,
+      _story_detail_memory_cache_capacity,
+    );
+  }
+
   /// 正文磁盘缓存目录。
   Directory get _content_cache_directory {
-    return Directory('${Directory.systemTemp.path}/short_story_read_content_cache');
+    return Directory(
+      '${Directory.systemTemp.path}/short_story_read_content_cache',
+    );
   }
 
   /// 把 url 转成安全的缓存文件名。
   String _content_cache_file_name(String content_url) {
-    final String encoded = Uri.encodeComponent(content_url)
-        .replaceAll('%', '_')
-        .replaceAll('.', '_')
-        .replaceAll('-', '_');
+    final String encoded = Uri.encodeComponent(
+      content_url,
+    ).replaceAll('%', '_').replaceAll('.', '_').replaceAll('-', '_');
     if (encoded.length <= 180) return '$encoded.txt';
     return '${encoded.substring(0, 180)}_${content_url.hashCode.abs()}.txt';
   }
 
   /// 正文磁盘缓存文件。
   File _content_cache_file(String content_url) {
-    return File('${_content_cache_directory.path}/${_content_cache_file_name(content_url)}');
+    return File(
+      '${_content_cache_directory.path}/${_content_cache_file_name(content_url)}',
+    );
   }
 
   /// 从磁盘缓存读取正文。
@@ -224,7 +293,8 @@ class ShortStoryReadLogic {
       if (!await file.exists()) return null;
 
       final DateTime modified = await file.lastModified();
-      final bool expired = DateTime.now().difference(modified) > _content_disk_cache_ttl;
+      final bool expired =
+          DateTime.now().difference(modified) > _content_disk_cache_ttl;
       if (expired) {
         await file.delete();
         return null;
@@ -257,16 +327,44 @@ class ShortStoryReadLogic {
   Future<String> _fetch_content_text_with_cache(String content_url) async {
     if (content_url.isEmpty) return '';
 
-    final String? memory_text = _content_memory_cache[content_url];
+    final String? memory_text = _read_memory_cache<String>(
+      _content_memory_cache,
+      content_url,
+    );
     if (memory_text != null) return memory_text;
 
+    final Future<String>? existing_future = _content_load_futures[content_url];
+    if (existing_future != null) return existing_future;
+
+    final Future<String> load_future = _load_content_text(content_url);
+    _content_load_futures[content_url] = load_future;
+    try {
+      return await load_future;
+    } finally {
+      if (identical(_content_load_futures[content_url], load_future)) {
+        _content_load_futures.remove(content_url);
+      }
+    }
+  }
+
+  Future<String> _load_content_text(String content_url) async {
     final String? disk_text = await _read_content_from_disk_cache(content_url);
     if (disk_text != null) {
-      _content_memory_cache[content_url] = disk_text;
+      _write_memory_cache<String>(
+        _content_memory_cache,
+        content_url,
+        disk_text,
+        _content_memory_cache_capacity,
+      );
       return disk_text;
     }
 
-    final dio_lib.Dio dio = dio_lib.Dio();
+    final dio_lib.Dio dio = dio_lib.Dio(
+      dio_lib.BaseOptions(
+        connectTimeout: _content_connect_timeout,
+        receiveTimeout: _content_receive_timeout,
+      ),
+    );
     final dio_lib.Response<String> response = await dio.get<String>(
       content_url,
       options: dio_lib.Options(responseType: dio_lib.ResponseType.plain),
@@ -274,7 +372,12 @@ class ShortStoryReadLogic {
 
     if (response.statusCode == 200 && response.data != null) {
       final String text = response.data!;
-      _content_memory_cache[content_url] = text;
+      _write_memory_cache<String>(
+        _content_memory_cache,
+        content_url,
+        text,
+        _content_memory_cache_capacity,
+      );
       await _write_content_to_disk_cache(content_url, text);
       return text;
     }
@@ -296,12 +399,10 @@ class ShortStoryReadLogic {
   /// 更新评论数（评论弹窗关闭后同步最新数量）。
   void update_comment_count(int new_count) {
     if (story_data.value == null) return;
-    final updated = story_data.value!.copyWith(
-      comment_count: new_count,
-    );
+    final updated = story_data.value!.copyWith(comment_count: new_count);
     story_data.value = updated;
     // 同步更新内存缓存，避免下次进入时读到旧数据。
-    _story_detail_memory_cache[_cache_key(story_id)] = updated;
+    _write_story_detail_cache(story_id, updated);
   }
 
   /// 点赞数。
@@ -393,8 +494,8 @@ class ShortStoryReadLogic {
   /// 初始化页面数据。
   ///
   /// 开始加载小说详情和正文。
-  void initialize() {
-    _load_story_detail();
+  Future<bool> initialize() {
+    return _load_story_detail();
   }
 
   /// 加载小说详情。
@@ -402,53 +503,69 @@ class ShortStoryReadLogic {
   /// 调用 `novel/short_story_read` 接口获取短篇小说详情，
   /// 成功后加载正文内容。
   /// 骨架屏持续到所有内容加载完成才消失。
-  Future<void> _load_story_detail() async {
+  Future<bool> _load_story_detail() async {
+    if (_is_disposed) return false;
+
     is_loading.value = true;
     is_error.value = false;
 
     try {
-      final String cache_key = _cache_key(story_id);
-      ShortStoryReadData? detail = _story_detail_memory_cache[cache_key];
+      final ShortStoryReadData? cached_detail = _read_story_detail_cache(
+        story_id,
+      );
+      final ResultsType<ShortStoryReadData> results =
+          await postRequest<ShortStoryReadData>(
+            path: 'novel/short_story_read',
+            parameter: <String, dynamic>{'id': story_id},
+            fromJson: (Map<String, dynamic> json) =>
+                ShortStoryReadData.from_json(json),
+          );
 
+      if (_is_disposed) return false;
+
+      final ShortStoryReadData? detail =
+          results.status && results.content != null
+          ? results.content
+          : cached_detail;
       if (detail == null) {
-        final ResultsType<ShortStoryReadData> results =
-            await postRequest<ShortStoryReadData>(
-          path: 'novel/short_story_read',
-          parameter: <String, dynamic>{
-            'id': story_id,
-          },
-          fromJson: (Map<String, dynamic> json) =>
-              ShortStoryReadData.from_json(json),
-        );
-
-        if (!results.status || results.content == null) {
-          is_loading.value = false;
-          is_error.value = true;
-          return;
-        }
-
-        detail = results.content!;
-        _story_detail_memory_cache[cache_key] = detail;
+        is_loading.value = false;
+        is_error.value = true;
+        is_content_loading.value = false;
+        return false;
       }
+      _write_story_detail_cache(story_id, detail);
 
+      if (_is_disposed) return false;
       story_data.value = detail;
 
       // 加载正文内容（优先内存/磁盘缓存，其次远程 txt）。
-      await _load_story_content(detail.content_url);
+      final bool content_loaded = await _load_story_content(detail.content_url);
+
+      if (_is_disposed) return false;
+
+      if (!content_loaded) {
+        is_loading.value = false;
+        is_error.value = true;
+        return false;
+      }
 
       // 骨架屏持续到内容加载完成才消失。
       is_loading.value = false;
 
       // 小说详情加载完成后立即预加载目录列表（不等用户打开弹窗）。
-      _load_catalog();
+      unawaited(_load_catalog());
 
       // 如果目录已经复用完成，也立即预加载上一篇/下一篇正文。
       if (catalog_list.isNotEmpty) {
         _preload_adjacent_story_contents();
       }
+      return true;
     } catch (e) {
+      if (_is_disposed) return false;
       is_loading.value = false;
       is_error.value = true;
+      is_content_loading.value = false;
+      return false;
     }
   }
 
@@ -456,20 +573,30 @@ class ShortStoryReadLogic {
   ///
   /// 从 [content_url] 下载 txt 文件并解析内容。
   /// 加载失败时 content 设为空字符串，不影响页面展示。
-  Future<void> _load_story_content(String content_url) async {
+  Future<bool> _load_story_content(String content_url) async {
     if (content_url.isEmpty) {
+      content.value = '';
       is_content_loading.value = false;
-      return;
+      return false;
     }
 
     is_content_loading.value = true;
 
     try {
-      content.value = await _fetch_content_text_with_cache(content_url);
+      final String loaded_content = await _fetch_content_text_with_cache(
+        content_url,
+      );
+      if (_is_disposed) return false;
+      content.value = loaded_content;
+      return loaded_content.trim().isNotEmpty;
     } catch (e) {
+      if (_is_disposed) return false;
       content.value = '';
+      return false;
     } finally {
-      is_content_loading.value = false;
+      if (!_is_disposed) {
+        is_content_loading.value = false;
+      }
     }
   }
 
@@ -484,6 +611,8 @@ class ShortStoryReadLogic {
   /// 如果当前语种缺少语言记录，当前小说会被静默过滤。
   /// 所以加载完成后会检查当前小说是否在列表中，不在则用已加载的详情数据补到首位。
   Future<void> _load_catalog() async {
+    if (_is_disposed) return;
+
     if (_skip_catalog_fetch) {
       _preload_adjacent_story_contents();
       return;
@@ -494,15 +623,16 @@ class ShortStoryReadLogic {
     try {
       final ResultsType<List<ShortStoryItem>> results =
           await postRequest<List<ShortStoryItem>>(
-        path: 'novel/short_story',
-        parameter: <String, dynamic>{
-          'id': story_id,
-        },
-        fromJsonList: (List<dynamic> json) =>
-            ShortStoryItem.from_json_list(json),
-      );
+            path: 'novel/short_story',
+            parameter: <String, dynamic>{'id': story_id},
+            fromJsonList: (List<dynamic> json) =>
+                ShortStoryItem.from_json_list(json),
+          );
+
+      if (_is_disposed) return;
 
       if (results.status && results.content != null) {
+        final bool server_has_more = results.content!.isNotEmpty;
         List<ShortStoryItem> items = results.content!;
 
         // 列表接口可能因语种记录缺失等原因未返回当前小说，
@@ -525,15 +655,18 @@ class ShortStoryReadLogic {
         }
 
         _catalog_store.set_catalog_list(items);
-        _catalog_store.has_more = items.isNotEmpty;
+        _catalog_store.has_more = server_has_more;
         _preload_adjacent_story_contents();
       } else {
         _catalog_store.is_error.value = true;
       }
     } catch (e) {
+      if (_is_disposed) return;
       _catalog_store.is_error.value = true;
     } finally {
-      _catalog_store.is_loading.value = false;
+      if (!_is_disposed) {
+        _catalog_store.is_loading.value = false;
+      }
     }
   }
 
@@ -563,37 +696,41 @@ class ShortStoryReadLogic {
     int target_story_id, {
     required bool is_next,
   }) async {
-    final RxBool loading_flag =
-        is_next ? is_next_story_preloading : is_previous_story_preloading;
-    final RxString target_content =
-        is_next ? next_story_content : previous_story_content;
+    final RxBool loading_flag = is_next
+        ? is_next_story_preloading
+        : is_previous_story_preloading;
+    final RxString target_content = is_next
+        ? next_story_content
+        : previous_story_content;
 
     if (loading_flag.value) return;
     loading_flag.value = true;
 
     try {
-      final String cache_key = _cache_key(target_story_id);
-      ShortStoryReadData? detail = _story_detail_memory_cache[cache_key];
+      ShortStoryReadData? detail = _read_story_detail_cache(target_story_id);
 
       if (detail == null) {
         // TODO 预加载使用 preview 接口，不记录历史、不增加阅读数
         final ResultsType<ShortStoryReadData> results =
             await postRequest<ShortStoryReadData>(
-          path: 'novel/short_story_read_preview',
-          parameter: <String, dynamic>{
-            'id': target_story_id,
-          },
-          fromJson: (Map<String, dynamic> json) =>
-              ShortStoryReadData.from_json(json),
-        );
+              path: 'novel/short_story_read_preview',
+              parameter: <String, dynamic>{'id': target_story_id},
+              fromJson: (Map<String, dynamic> json) =>
+                  ShortStoryReadData.from_json(json),
+            );
 
-        if (!results.status || results.content == null) return;
+        if (_is_disposed || !results.status || results.content == null) {
+          return;
+        }
         detail = results.content!;
-        _story_detail_memory_cache[cache_key] = detail;
+        _write_story_detail_cache(target_story_id, detail);
       }
 
-      final String text = await _fetch_content_text_with_cache(detail.content_url);
+      final String text = await _fetch_content_text_with_cache(
+        detail.content_url,
+      );
 
+      if (_is_disposed) return;
       if (is_next && next_story_id == target_story_id) {
         target_content.value = text;
       }
@@ -603,7 +740,9 @@ class ShortStoryReadLogic {
     } catch (_) {
       // 静默预加载失败不影响当前阅读；用户真正切换时仍会正常加载。
     } finally {
-      loading_flag.value = false;
+      if (!_is_disposed) {
+        loading_flag.value = false;
+      }
     }
   }
 
@@ -611,6 +750,7 @@ class ShortStoryReadLogic {
   ///
   /// 目录弹窗中点击重试时调用。
   Future<void> reload_catalog() async {
+    _skip_catalog_fetch = false;
     await _load_catalog();
   }
 
@@ -623,10 +763,8 @@ class ShortStoryReadLogic {
     is_appbar_visible.value = !is_appbar_visible.value;
     is_bottom_bar_visible.value = !is_bottom_bar_visible.value;
 
-    // 显示时重置滚动位置记录。
-    if (is_appbar_visible.value) {
-      _scroll_offset_when_visible = 0;
-    }
+    _scroll_direction_anchor_offset = _last_scroll_offset;
+    _last_scroll_direction_down = null;
   }
 
   /// 处理滚动事件。
@@ -641,41 +779,41 @@ class ShortStoryReadLogic {
     if (offset <= 0 && !is_appbar_visible.value) {
       is_appbar_visible.value = true;
       is_bottom_bar_visible.value = true;
-      _scroll_offset_when_visible = 0;
       _last_scroll_offset = 0;
+      _scroll_direction_anchor_offset = 0;
+      _last_scroll_direction_down = null;
       return;
     }
 
-    // 计算滚动方向。
-    _is_scrolling_down = offset > _last_scroll_offset;
-    final double delta = (offset - _last_scroll_offset).abs();
+    if (offset == _last_scroll_offset) return;
+
+    final bool is_scrolling_down = offset > _last_scroll_offset;
+    if (_last_scroll_direction_down == null ||
+        _last_scroll_direction_down != is_scrolling_down) {
+      _scroll_direction_anchor_offset = _last_scroll_offset;
+      _last_scroll_direction_down = is_scrolling_down;
+    }
     _last_scroll_offset = offset;
 
-    // 记录初始滚动位置。
-    if (_scroll_offset_when_visible == 0 && is_appbar_visible.value) {
-      _scroll_offset_when_visible = offset;
-    }
-
-    // 计算从记录位置开始的滚动距离。
-    final double scroll_distance =
-        (offset - _scroll_offset_when_visible).abs();
+    final double scroll_distance = (offset - _scroll_direction_anchor_offset)
+        .abs();
 
     // 向下滚动且超过阈值：隐藏导航栏和评论栏。
-    if (_is_scrolling_down &&
+    if (is_scrolling_down &&
         is_appbar_visible.value &&
-        scroll_distance > 8) {
+        scroll_distance > _bar_visibility_scroll_threshold) {
       is_appbar_visible.value = false;
       is_bottom_bar_visible.value = false;
-      _scroll_offset_when_visible = 0;
+      _scroll_direction_anchor_offset = offset;
     }
 
     // 向上滚动且超过阈值：显示导航栏和评论栏。
-    if (!_is_scrolling_down &&
+    if (!is_scrolling_down &&
         !is_appbar_visible.value &&
-        delta > 8) {
+        scroll_distance > _bar_visibility_scroll_threshold) {
       is_appbar_visible.value = true;
       is_bottom_bar_visible.value = true;
-      _scroll_offset_when_visible = offset;
+      _scroll_direction_anchor_offset = offset;
     }
   }
 
@@ -707,9 +845,8 @@ class ShortStoryReadLogic {
   /// 立即切换本地状态，然后发起请求。
   /// 请求失败时回退状态，请求成功时保持不变。
   /// 请求期间通过 is_like_loading 防止重复点击。
-  Future<void> toggle_like() async {
-    if (story_data.value == null) return;
-    if (is_like_loading.value) return;
+  Future<bool?> toggle_like() async {
+    if (story_data.value == null || is_like_loading.value) return null;
 
     is_like_loading.value = true;
 
@@ -717,25 +854,29 @@ class ShortStoryReadLogic {
     final bool previous_status = story_data.value!.is_liked;
     final int previous_count = story_data.value!.like_count;
     final bool optimistic_status = !previous_status;
-    final int optimistic_count = previous_count + (optimistic_status ? 1 : -1);
+    final int optimistic_count = optimistic_status
+        ? previous_count + 1
+        : (previous_count > 0 ? previous_count - 1 : 0);
 
     final optimistic_data = story_data.value!.copyWith(
       is_liked: optimistic_status,
       like_count: optimistic_count,
     );
     story_data.value = optimistic_data;
-    _story_detail_memory_cache[_cache_key(story_id)] = optimistic_data;
-    sync_like_to_catalog(story_id, optimistic_status, optimistic_status ? 1 : -1);
+    _write_story_detail_cache(story_id, optimistic_data);
+    sync_like_to_catalog(
+      story_id,
+      optimistic_status,
+      optimistic_status ? 1 : -1,
+    );
 
     try {
       final ResultsType<Map<String, dynamic>> results =
           await postRequest<Map<String, dynamic>>(
-        path: 'novel_like/click',
-        parameter: <String, dynamic>{
-          'novel_id': story_id,
-        },
-        fromJson: (Map<String, dynamic> json) => json,
-      );
+            path: 'novel_like/click',
+            parameter: <String, dynamic>{'novel_id': story_id},
+            fromJson: (Map<String, dynamic> json) => json,
+          );
 
       if (!results.status || results.content == null) {
         // 请求失败，回退状态。
@@ -744,23 +885,28 @@ class ShortStoryReadLogic {
           like_count: previous_count,
         );
         story_data.value = reverted;
-        _story_detail_memory_cache[_cache_key(story_id)] = reverted;
-        sync_like_to_catalog(story_id, previous_status, previous_status ? 1 : -1);
-        return;
+        _write_story_detail_cache(story_id, reverted);
+        sync_like_to_catalog(
+          story_id,
+          previous_status,
+          previous_status ? 1 : -1,
+        );
+        return null;
       }
 
-      final bool server_status = results.content!['like'] == true;
+      final dynamic server_like = results.content!['like'];
+      final bool server_status = server_like == true || server_like == 1;
       // 服务端状态与乐观更新不一致时，以服务端为准。
       if (server_status != optimistic_status) {
-        final int server_count = previous_count + (server_status ? 1 : -1);
         final server_data = story_data.value!.copyWith(
           is_liked: server_status,
-          like_count: server_count,
+          like_count: previous_count,
         );
         story_data.value = server_data;
-        _story_detail_memory_cache[_cache_key(story_id)] = server_data;
+        _write_story_detail_cache(story_id, server_data);
         sync_like_to_catalog(story_id, server_status, server_status ? 1 : -1);
       }
+      return story_data.value?.is_liked;
     } catch (_) {
       // 异常时回退状态。
       final reverted = story_data.value!.copyWith(
@@ -768,8 +914,9 @@ class ShortStoryReadLogic {
         like_count: previous_count,
       );
       story_data.value = reverted;
-      _story_detail_memory_cache[_cache_key(story_id)] = reverted;
+      _write_story_detail_cache(story_id, reverted);
       sync_like_to_catalog(story_id, previous_status, previous_status ? 1 : -1);
+      return null;
     } finally {
       is_like_loading.value = false;
     }
@@ -780,9 +927,8 @@ class ShortStoryReadLogic {
   /// 立即切换本地状态，然后发起请求。
   /// 请求失败时回退状态，请求成功时保持不变。
   /// 请求期间通过 is_favorite_loading 防止重复点击。
-  Future<void> toggle_favorite() async {
-    if (story_data.value == null) return;
-    if (is_favorite_loading.value) return;
+  Future<bool?> toggle_favorite() async {
+    if (story_data.value == null || is_favorite_loading.value) return null;
 
     is_favorite_loading.value = true;
 
@@ -790,24 +936,24 @@ class ShortStoryReadLogic {
     final bool previous_status = story_data.value!.is_favorited;
     final int previous_count = story_data.value!.favorite_count;
     final bool optimistic_status = !previous_status;
-    final int optimistic_count = previous_count + (optimistic_status ? 1 : -1);
+    final int optimistic_count = optimistic_status
+        ? previous_count + 1
+        : (previous_count > 0 ? previous_count - 1 : 0);
 
     final optimistic_data = story_data.value!.copyWith(
       is_favorited: optimistic_status,
       favorite_count: optimistic_count,
     );
     story_data.value = optimistic_data;
-    _story_detail_memory_cache[_cache_key(story_id)] = optimistic_data;
+    _write_story_detail_cache(story_id, optimistic_data);
 
     try {
       final ResultsType<Map<String, dynamic>> results =
           await postRequest<Map<String, dynamic>>(
-        path: 'novel_favorite/click',
-        parameter: <String, dynamic>{
-          'novel_id': story_id,
-        },
-        fromJson: (Map<String, dynamic> json) => json,
-      );
+            path: 'novel_favorite/click',
+            parameter: <String, dynamic>{'novel_id': story_id},
+            fromJson: (Map<String, dynamic> json) => json,
+          );
 
       if (!results.status || results.content == null) {
         // 请求失败，回退状态。
@@ -816,21 +962,23 @@ class ShortStoryReadLogic {
           favorite_count: previous_count,
         );
         story_data.value = reverted;
-        _story_detail_memory_cache[_cache_key(story_id)] = reverted;
-        return;
+        _write_story_detail_cache(story_id, reverted);
+        return null;
       }
 
-      final bool server_status = results.content!['favorite'] == true;
+      final dynamic server_favorite = results.content!['favorite'];
+      final bool server_status =
+          server_favorite == true || server_favorite == 1;
       // 服务端状态与乐观更新不一致时，以服务端为准。
       if (server_status != optimistic_status) {
-        final int server_count = previous_count + (server_status ? 1 : -1);
         final server_data = story_data.value!.copyWith(
           is_favorited: server_status,
-          favorite_count: server_count,
+          favorite_count: previous_count,
         );
         story_data.value = server_data;
-        _story_detail_memory_cache[_cache_key(story_id)] = server_data;
+        _write_story_detail_cache(story_id, server_data);
       }
+      return story_data.value?.is_favorited;
     } catch (_) {
       // 异常时回退状态。
       final reverted = story_data.value!.copyWith(
@@ -838,7 +986,8 @@ class ShortStoryReadLogic {
         favorite_count: previous_count,
       );
       story_data.value = reverted;
-      _story_detail_memory_cache[_cache_key(story_id)] = reverted;
+      _write_story_detail_cache(story_id, reverted);
+      return null;
     } finally {
       is_favorite_loading.value = false;
     }
@@ -849,6 +998,24 @@ class ShortStoryReadLogic {
   /// 错误状态下的重试按钮调用此方法。
   Future<void> retry() async {
     await _load_story_detail();
+  }
+
+  /// 同步当前详情到内存缓存。
+  ///
+  /// 目录弹窗内操作当前小说时会直接更新详情对象，需要同时刷新缓存，
+  /// 防止切换离开再返回后重新显示旧状态。
+  void sync_current_story_cache() {
+    final ShortStoryReadData? detail = story_data.value;
+    if (detail == null) return;
+    _write_story_detail_cache(story_id, detail);
+  }
+
+  /// 停止当前逻辑实例接收异步结果。
+  void dispose({bool clear_catalog = false}) {
+    _is_disposed = true;
+    if (clear_catalog) {
+      _catalog_store.clear();
+    }
   }
 
   /// 同步点赞状态到目录列表。
@@ -871,9 +1038,10 @@ class ShortStoryReadLogic {
     if (index == -1) return;
 
     final ShortStoryItem old_item = catalog_list[index];
+    final int next_count = old_item.like_count + count_delta;
     catalog_list[index] = old_item.copyWith(
       is_liked: is_liked,
-      like_count: old_item.like_count + count_delta,
+      like_count: next_count < 0 ? 0 : next_count,
     );
   }
 }

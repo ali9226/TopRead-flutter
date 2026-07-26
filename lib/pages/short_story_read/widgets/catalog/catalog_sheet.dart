@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -12,6 +15,7 @@ import 'package:app/stores/short_story_catalog_store.dart';
 import 'package:app/pages/short_story_read/style.dart';
 import 'package:app/pages/short_story_read/widgets/catalog/catalog_header.dart';
 import 'package:app/pages/short_story_read/widgets/catalog/catalog_item.dart';
+import 'package:app/pages/home/widgets/tab_contents/short_story_tab/style.dart';
 import 'package:app/components/load_more_footer/index.dart';
 import 'package:app/components/no_internet/index.dart';
 import 'package:app/components/positioning/index.dart';
@@ -90,11 +94,11 @@ class _CatalogSheetState extends State<CatalogSheet> {
   static const double _horizontal_padding =
       LayoutConfig.page_horizontal_padding;
 
-  /// 测量到的实际卡片高度（首次布局后自动测量）。
-  double? _measured_card_height;
+  /// 目录列表真实可视区域。
+  final GlobalKey _list_view_key = GlobalKey();
 
-  /// 测量卡片高度用的 GlobalKey。
-  final GlobalKey _measure_card_key = GlobalKey();
+  /// 已构建目录项的布局锚点。
+  final Map<int, GlobalKey> _item_keys = <int, GlobalKey>{};
 
   /// 目录列表中正在点赞的小说 ID 集合（控制转圈动画，本地管理）。
   final Set<int> _like_loading_ids = <int>{};
@@ -102,8 +106,11 @@ class _CatalogSheetState extends State<CatalogSheet> {
   /// 是否已自动滚动到当前阅读位置（仅首次数据加载时触发一次）。
   bool _has_scrolled_to_current = false;
 
-  /// 当前阅读小说的 GlobalKey（用于精确定位滚动位置）。
-  final GlobalKey _current_item_key = GlobalKey();
+  /// 防止同一时间重复执行定位。
+  bool _is_locating_current = false;
+
+  /// 防止响应式重建重复注册首次定位回调。
+  bool _initial_positioning_scheduled = false;
 
   /// 当前阅读小说是否在可视区域内。
   bool _is_current_visible = true;
@@ -125,58 +132,96 @@ class _CatalogSheetState extends State<CatalogSheet> {
 
   /// 滚动到当前阅读的小说位置。
   ///
-  /// 先测量实际卡片高度，然后通过索引计算目标位置。
-  void _scroll_to_current_story() {
-    if (!_scroll_controller.hasClients) return;
-
+  /// 通过“索引粗定位 + RenderObject 精定位”兼容不同高度的目录卡片。
+  Future<bool> _scroll_to_current_story() async {
+    if (_is_locating_current) return false;
     final int current_index = widget.catalog_list.indexWhere(
       (ShortStoryItem item) => item.id == widget.current_story_id,
     );
-    if (current_index < 0) return;
+    if (current_index < 0) return false;
 
-    // 如果还没测量过卡片高度，先测量。
-    _measure_card_height_if_needed();
+    _is_locating_current = true;
+    try {
+      for (int attempt = 0; attempt < 6; attempt++) {
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted || !_scroll_controller.hasClients) return false;
 
-    // 使用测量到的实际高度，或默认值 130。
-    final double card_height = _measured_card_height ?? 130.0;
-
-    // ListView 顶部 padding。
-    const double list_padding_top = 8.0;
-
-    // 计算目标偏移：ListView顶部padding + 索引 * 卡片高度。
-    final double target_offset =
-        (list_padding_top + current_index * card_height).clamp(
-          0.0,
-          _scroll_controller.position.maxScrollExtent,
-        );
-
-    // 动画滚动到目标位置。
-    _scroll_controller
-        .animateTo(
-          target_offset,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOutCubic,
-        )
-        .then((_) {
-          // 动画完成后更新可视状态。
+        final BuildContext? current_context = _item_key_for(
+          widget.current_story_id,
+        ).currentContext;
+        if (current_context != null) {
+          await Scrollable.ensureVisible(
+            current_context,
+            alignment: 0.28,
+            duration: const Duration(milliseconds: 360),
+            curve: Curves.easeOutCubic,
+          );
+          if (!mounted) return false;
           _check_current_visibility();
-        });
+          return true;
+        }
+
+        final ScrollPosition position = _scroll_controller.position;
+        final double target_offset = attempt == 0
+            ? position.maxScrollExtent *
+                  current_index /
+                  math.max(1, widget.catalog_list.length - 1)
+            : _estimate_next_offset(current_index, position);
+        final double clamped_offset = target_offset.clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        );
+        if ((clamped_offset - position.pixels).abs() < 0.5) break;
+        _scroll_controller.jumpTo(clamped_offset);
+      }
+      _check_current_visibility();
+      return false;
+    } finally {
+      _is_locating_current = false;
+    }
   }
 
-  /// 测量实际卡片高度。
-  ///
-  /// 通过第一个卡片的 GlobalKey 获取实际渲染高度，
-  /// 用于后续精确计算滚动位置。
-  void _measure_card_height_if_needed() {
-    if (_measured_card_height != null) return;
+  GlobalKey _item_key_for(int story_id) {
+    return _item_keys.putIfAbsent(story_id, GlobalKey.new);
+  }
 
-    final BuildContext? context = _measure_card_key.currentContext;
-    if (context == null) return;
+  double _estimate_next_offset(int target_index, ScrollPosition position) {
+    final List<({int index, double top, double height})> visible_items =
+        <({int index, double top, double height})>[];
 
-    final RenderObject? render_object = context.findRenderObject();
-    if (render_object is RenderBox && render_object.hasSize) {
-      _measured_card_height = render_object.size.height;
+    for (int index = 0; index < widget.catalog_list.length; index++) {
+      final BuildContext? item_context =
+          _item_keys[widget.catalog_list[index].id]?.currentContext;
+      final RenderObject? render_object = item_context?.findRenderObject();
+      if (render_object is! RenderBox ||
+          !render_object.attached ||
+          !render_object.hasSize) {
+        continue;
+      }
+      visible_items.add((
+        index: index,
+        top: render_object.localToGlobal(Offset.zero).dy,
+        height: render_object.size.height,
+      ));
     }
+
+    if (visible_items.isEmpty) {
+      return position.maxScrollExtent *
+          target_index /
+          math.max(1, widget.catalog_list.length - 1);
+    }
+
+    visible_items.sort((a, b) => a.index.compareTo(b.index));
+    final double average_extent =
+        visible_items.fold<double>(
+          0,
+          (double total, item) => total + item.height,
+        ) /
+        visible_items.length;
+    final int nearest_index = target_index < visible_items.first.index
+        ? visible_items.first.index
+        : visible_items.last.index;
+    return position.pixels + (target_index - nearest_index) * average_extent;
   }
 
   /// 加载更多数据。
@@ -191,35 +236,37 @@ class _CatalogSheetState extends State<CatalogSheet> {
     });
 
     try {
-      // 收集已加载数据的 ID（包括当前小说 ID）。
-      final List<int> no_ids =
-          widget.catalog_list.map((ShortStoryItem item) => item.id).toList()
-            ..add(widget.current_story_id);
+      final List<int> no_ids = <int>{
+        ...widget.catalog_list.map((ShortStoryItem item) => item.id),
+        widget.current_story_id,
+      }.toList();
 
       final ResultsType<List<ShortStoryItem>> results =
           await postRequest<List<ShortStoryItem>>(
             path: 'novel/short_story',
             parameter: <String, dynamic>{'no_ids': no_ids},
+            showTips: false,
             fromJsonList: (List<dynamic> json) =>
                 ShortStoryItem.from_json_list(json),
           );
 
       if (!mounted) return;
 
-      setState(() {
-        if (results.status && results.content != null) {
-          _catalog_store.append_catalog_list(results.content!);
-          _catalog_store.has_more = results.content!.isNotEmpty;
-        } else {
-          _catalog_store.has_more = false;
-        }
-        _is_loading_more = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _is_loading_more = false;
-      });
+      if (results.status && results.content != null) {
+        final int previous_length = _catalog_store.catalog_list.length;
+        _catalog_store.append_catalog_list(results.content!);
+        _catalog_store.has_more =
+            results.content!.isNotEmpty &&
+            _catalog_store.catalog_list.length > previous_length;
+      }
+    } catch (_) {
+      // 网络失败不等于没有更多；保留状态以便用户再次触底重试。
+    } finally {
+      if (mounted) {
+        setState(() {
+          _is_loading_more = false;
+        });
+      }
     }
   }
 
@@ -247,7 +294,11 @@ class _CatalogSheetState extends State<CatalogSheet> {
   /// 通过 GlobalKey 获取当前阅读小说的 RenderBox，
   /// 判断其是否在 ListView 的可视范围内。
   void _check_current_visibility() {
-    final BuildContext? item_context = _current_item_key.currentContext;
+    if (!mounted) return;
+    final BuildContext? item_context = _item_key_for(
+      widget.current_story_id,
+    ).currentContext;
+    final BuildContext? viewport_context = _list_view_key.currentContext;
     if (item_context == null) {
       if (_is_current_visible) {
         setState(() {
@@ -258,17 +309,21 @@ class _CatalogSheetState extends State<CatalogSheet> {
     }
 
     final RenderObject? render_object = item_context.findRenderObject();
-    if (render_object is! RenderBox || !render_object.hasSize) {
+    final RenderObject? viewport_object = viewport_context?.findRenderObject();
+    if (render_object is! RenderBox ||
+        viewport_object is! RenderBox ||
+        !render_object.attached ||
+        !viewport_object.attached ||
+        !render_object.hasSize ||
+        !viewport_object.hasSize) {
       return;
     }
 
-    final double item_top = render_object.localToGlobal(Offset.zero).dy;
-    final double item_bottom = item_top + render_object.size.height;
-    final double screen_top = MediaQuery.viewPaddingOf(context).top;
-    final double screen_bottom = MediaQuery.of(context).size.height;
-
-    final bool is_visible =
-        item_bottom > screen_top && item_top < screen_bottom;
+    final Rect item_rect =
+        render_object.localToGlobal(Offset.zero) & render_object.size;
+    final Rect viewport_rect =
+        viewport_object.localToGlobal(Offset.zero) & viewport_object.size;
+    final bool is_visible = item_rect.overlaps(viewport_rect);
 
     if (_is_current_visible != is_visible) {
       setState(() {
@@ -292,10 +347,11 @@ class _CatalogSheetState extends State<CatalogSheet> {
     try {
       await widget.on_like_tap(story_id);
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _like_loading_ids.remove(story_id);
-      });
+      if (mounted) {
+        setState(() {
+          _like_loading_ids.remove(story_id);
+        });
+      }
     }
   }
 
@@ -366,7 +422,7 @@ class _CatalogSheetState extends State<CatalogSheet> {
               show: show_button,
               is_dark: is_dark,
               icon_color: ColorConstants.dangerColor,
-              on_tap: _scroll_to_current_story,
+              on_tap: () => unawaited(_scroll_to_current_story()),
               right: 16.0,
               bottom: safe_bottom + 24.0,
             );
@@ -381,15 +437,20 @@ class _CatalogSheetState extends State<CatalogSheet> {
   /// 可滚动的卡片列表，底部包含加载更多组件。
   /// 首次数据加载完成后自动滚动到当前阅读的小说。
   Widget _buildStoryList({required bool is_dark}) {
-    // 首次数据加载完成后，自动滚动到当前阅读的小说。
-    if (!_has_scrolled_to_current) {
-      _has_scrolled_to_current = true;
+    if (!_has_scrolled_to_current && !_initial_positioning_scheduled) {
+      _initial_positioning_scheduled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scroll_to_current_story();
+        unawaited(() async {
+          final bool positioned = await _scroll_to_current_story();
+          if (!mounted) return;
+          _has_scrolled_to_current = positioned;
+          _initial_positioning_scheduled = false;
+        }());
       });
     }
 
     return ListView.builder(
+      key: _list_view_key,
       controller: _scroll_controller,
       padding: const EdgeInsets.symmetric(vertical: 8),
       // 列表项数量 + 底部加载更多组件。
@@ -408,19 +469,14 @@ class _CatalogSheetState extends State<CatalogSheet> {
         final ShortStoryItem item = widget.catalog_list[index];
         final bool is_current = item.id == widget.current_story_id;
 
-        // 第一个卡片用于测量实际高度。
-        final bool is_measure_card = index == 0;
-
         return CatalogItem(
-          key: is_current
-              ? _current_item_key
-              : (is_measure_card ? _measure_card_key : null),
+          key: _item_key_for(item.id),
           item: item,
           is_current: is_current,
           is_dark: is_dark,
           is_like_loading: _like_loading_ids.contains(item.id),
           reading_progress: is_current ? widget.reading_progress : 0.0,
-          on_tap: () => widget.on_item_tap(item.id),
+          on_tap: is_current ? null : () => widget.on_item_tap(item.id),
           on_like_tap: () => _handle_like_tap(item.id),
         );
       },
@@ -438,8 +494,8 @@ class _CatalogSheetState extends State<CatalogSheet> {
 
     /// 卡片背景色。
     final Color card_bg = is_dark
-        ? ShortStoryReadStyle.card_dark_bg
-        : ShortStoryReadStyle.card_light_bg;
+        ? ShortStoryTabStyle.card_dark_bg
+        : ShortStoryTabStyle.card_light_bg;
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(

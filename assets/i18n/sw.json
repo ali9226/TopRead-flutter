@@ -604,6 +604,7 @@
     "load_error_title": "Imeshindwa kupakia maoni",
     "load_error_desc": "Tatizo la mtandao. Gusa ili kujaribu tena.",
     "send_success": "Maoni yametumwa",
+    "send_failed": "Imeshindwa kutuma. Jaribu tena.",
     "time": {
       "just_now": "Sasa hivi",
       "minutes_ago": "dakika zilizopita",

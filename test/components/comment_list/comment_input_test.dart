@@ -26,6 +26,7 @@ void main() {
   });
 
   testWidgets('父级重建、键盘下降和再次唤起均保持稳定', (WidgetTester tester) async {
+    addTearDown(tester.view.resetViewInsets);
     StateSetter? rebuild_parent;
     CommentData? reply_target;
 
@@ -51,7 +52,7 @@ void main() {
                         reply_target = null;
                       });
                     },
-                    on_send: (_) {},
+                    on_send: (_) async => true,
                   ),
                 ),
               );
@@ -120,6 +121,58 @@ void main() {
 
     editor = tester.widget<TextField>(find.byType(TextField));
     expect(editor.focusNode?.hasFocus, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('发送失败保留草稿，成功后才清空输入', (WidgetTester tester) async {
+    int send_count = 0;
+
+    await tester.pumpWidget(
+      EasyLocalization(
+        supportedLocales: const <Locale>[Locale('zh')],
+        path: 'assets/i18n',
+        assetLoader: const _CommentTestAssetLoader(),
+        startLocale: const Locale('zh'),
+        fallbackLocale: const Locale('zh'),
+        child: MaterialApp(
+          home: Material(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: CommentInput(
+                is_dark: false,
+                on_send: (String content) async {
+                  send_count += 1;
+                  expect(content, '保留这段草稿');
+                  return send_count > 1;
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('comment_input_preview')),
+    );
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), '保留这段草稿');
+    await tester.pump();
+
+    final Finder send_button = find.byKey(
+      const ValueKey<String>('comment_send_button_editor'),
+    );
+    await tester.tap(send_button);
+    await tester.pumpAndSettle();
+    TextField editor = tester.widget<TextField>(find.byType(TextField));
+    expect(editor.controller?.text, '保留这段草稿');
+
+    await tester.tap(send_button);
+    await tester.pumpAndSettle();
+    editor = tester.widget<TextField>(find.byType(TextField));
+    expect(editor.controller?.text, isEmpty);
+    expect(send_count, 2);
     expect(tester.takeException(), isNull);
   });
 }

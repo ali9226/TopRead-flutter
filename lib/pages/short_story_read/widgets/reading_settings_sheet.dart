@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -26,11 +28,19 @@ class ReadingSettingsSheet extends StatefulWidget {
   /// 自动阅读回调（关闭弹窗并开始自动滚动）。
   final VoidCallback on_auto_read;
 
+  /// 减小字号回调，用于让阅读页在重新排版后保持原阅读进度。
+  final VoidCallback on_decrease_font_size;
+
+  /// 增大字号回调，用于让阅读页在重新排版后保持原阅读进度。
+  final VoidCallback on_increase_font_size;
+
   const ReadingSettingsSheet({
     super.key,
     required this.logic,
     required this.on_close,
     required this.on_auto_read,
+    required this.on_decrease_font_size,
+    required this.on_increase_font_size,
   });
 
   @override
@@ -57,14 +67,19 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
     );
     _theme_overlay_opacity = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween(
+          begin: 0.0,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 50,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 0.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 50 ),
+        tween: Tween(
+          begin: 1.0,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 50,
+      ),
     ]).animate(_theme_overlay_controller);
   }
 
@@ -77,7 +92,11 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
   }
 
   /// 显示主题切换遮罩层（与 user_info 页面效果一致）。
-  void _show_theme_overlay(bool to_dark) {
+  Future<void> _show_theme_overlay(bool to_dark) async {
+    if (_overlay_entry != null || _theme_overlay_controller.isAnimating) {
+      return;
+    }
+
     bool theme_changed = false;
     final OverlayState overlay_state = Overlay.of(context, rootOverlay: true);
 
@@ -118,26 +137,25 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
     );
 
     overlay_state.insert(_overlay_entry!);
-    _theme_overlay_controller.forward(from: 0);
 
-    late VoidCallback listener;
-    listener = () {
+    void animation_listener() {
       if (_theme_overlay_controller.value >= 0.5 && !theme_changed) {
         theme_changed = true;
         final DeviceInfo device_info = Get.find<DeviceInfo>();
         device_info.changeTheme(to_dark ? ThemeMode.dark : ThemeMode.light);
       }
-    };
+    }
 
-    _theme_overlay_controller.addListener(listener);
-
-    _theme_overlay_controller.addStatusListener((AnimationStatus status) {
-      if (status == AnimationStatus.completed) {
-        _overlay_entry?.remove();
-        _overlay_entry = null;
-        _theme_overlay_controller.removeListener(listener);
-      }
-    });
+    _theme_overlay_controller.addListener(animation_listener);
+    try {
+      await _theme_overlay_controller.forward(from: 0).orCancel;
+    } on TickerCanceled {
+      // 页面关闭时动画会被取消，由 finally 统一释放 Overlay。
+    } finally {
+      _theme_overlay_controller.removeListener(animation_listener);
+      _overlay_entry?.remove();
+      _overlay_entry = null;
+    }
   }
 
   @override
@@ -175,22 +193,24 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
             Flexible(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    /// 第一行：字号调节。
-                    _buildFontSizeRow(is_dark: is_dark),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      /// 第一行：字号调节。
+                      _buildFontSizeRow(is_dark: is_dark),
 
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
-                    /// 第二行：主题切换。
-                    _buildThemeRow(is_dark: is_dark),
+                      /// 第二行：主题切换。
+                      _buildThemeRow(is_dark: is_dark),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    /// 第三行：其它标题。
-                    _buildOtherSection(is_dark: is_dark),
-                  ],
+                      /// 第三行：其它标题。
+                      _buildOtherSection(is_dark: is_dark),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -270,7 +290,10 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
     );
 
     final TextPainter size_painter = TextPainter(
-      text: TextSpan(text: tr('short_story_read.font_size'), style: label_style),
+      text: TextSpan(
+        text: tr('short_story_read.font_size'),
+        style: label_style,
+      ),
       textDirection: Directionality.of(context),
     )..layout();
 
@@ -330,7 +353,7 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
             is_dark: is_dark,
             icon: 'font_size_reduce',
             is_enabled: can_decrease,
-            onTap: widget.logic.decrease_font_size,
+            onTap: widget.on_decrease_font_size,
           ),
         ),
 
@@ -349,7 +372,7 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
             is_dark: is_dark,
             icon: 'font_size_add',
             is_enabled: can_increase,
-            onTap: widget.logic.increase_font_size,
+            onTap: widget.on_increase_font_size,
           ),
         ),
       ],
@@ -430,7 +453,7 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
             border_color: !is_dark ? ColorConstants.dangerColor : null,
             onTap: () {
               if (is_dark) {
-                _show_theme_overlay(false);
+                unawaited(_show_theme_overlay(false));
               }
             },
           ),
@@ -449,7 +472,7 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
             border_color: is_dark ? ColorConstants.dangerColor : null,
             onTap: () {
               if (!is_dark) {
-                _show_theme_overlay(true);
+                unawaited(_show_theme_overlay(true));
               }
             },
           ),
@@ -495,8 +518,12 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
               height: 36,
               decoration: BoxDecoration(
                 color: is_dark
-                    ? ShortStoryReadStyle.secondary_dark_color.withValues(alpha: 0.15)
-                    : ShortStoryReadStyle.secondary_light_color.withValues(alpha: 0.10),
+                    ? ShortStoryReadStyle.secondary_dark_color.withValues(
+                        alpha: 0.15,
+                      )
+                    : ShortStoryReadStyle.secondary_light_color.withValues(
+                        alpha: 0.10,
+                      ),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Center(
@@ -526,20 +553,28 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
     /// 胶囊背景色。
     final Color bg_color = is_dark
         ? (is_enabled
-            ? ShortStoryReadStyle.secondary_dark_color.withValues(alpha: 0.15)
-            : ShortStoryReadStyle.secondary_dark_color.withValues(alpha: 0.08))
+              ? ShortStoryReadStyle.secondary_dark_color.withValues(alpha: 0.15)
+              : ShortStoryReadStyle.secondary_dark_color.withValues(
+                  alpha: 0.08,
+                ))
         : (is_enabled
-            ? ShortStoryReadStyle.secondary_light_color.withValues(alpha: 0.10)
-            : ShortStoryReadStyle.secondary_light_color.withValues(alpha: 0.05));
+              ? ShortStoryReadStyle.secondary_light_color.withValues(
+                  alpha: 0.10,
+                )
+              : ShortStoryReadStyle.secondary_light_color.withValues(
+                  alpha: 0.05,
+                ));
 
     /// 图标颜色。
     final Color icon_color = is_dark
         ? (is_enabled
-            ? ShortStoryReadStyle.title_dark_color
-            : ShortStoryReadStyle.secondary_dark_color.withValues(alpha: 0.3))
+              ? ShortStoryReadStyle.title_dark_color
+              : ShortStoryReadStyle.secondary_dark_color.withValues(alpha: 0.3))
         : (is_enabled
-            ? ShortStoryReadStyle.title_light_color
-            : ShortStoryReadStyle.secondary_light_color.withValues(alpha: 0.3));
+              ? ShortStoryReadStyle.title_light_color
+              : ShortStoryReadStyle.secondary_light_color.withValues(
+                  alpha: 0.3,
+                ));
 
     return GestureDetector(
       onTap: is_enabled ? onTap : null,

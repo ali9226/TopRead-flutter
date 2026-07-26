@@ -662,6 +662,7 @@
     "load_error_title": "Échec du chargement",
     "load_error_desc": "Problème réseau. Appuyez pour réessayer.",
     "send_success": "Commentaire publié",
+    "send_failed": "Échec de l’envoi. Réessayez.",
     "time": {
       "just_now": "À l'instant",
       "minutes_ago": "min",
