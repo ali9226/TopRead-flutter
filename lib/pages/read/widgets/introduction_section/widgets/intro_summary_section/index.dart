@@ -17,11 +17,15 @@ class ReadIntroSummarySection extends StatefulWidget {
   /// 是否初始展开。
   final bool initial_expanded;
 
+  /// 自定义简介字号（可选，默认使用样式常量）。
+  final double? font_size;
+
   const ReadIntroSummarySection({
     super.key,
     required this.is_dark,
     required this.intro_text,
     this.initial_expanded = false,
+    this.font_size,
   });
 
   @override
@@ -58,6 +62,8 @@ class _ReadIntroSummarySectionState extends State<ReadIntroSummarySection> {
 
   /// 构建收起状态的摘要行。
   Widget _build_collapsed_summary(Color text_color) {
+    final double font_size = widget.font_size ?? IntroSummaryStyle.intro_font_size;
+
     return Row(
       children: <Widget>[
         // 简介文案区域占满剩余空间，超长时使用省略号截断。
@@ -72,7 +78,7 @@ class _ReadIntroSummarySectionState extends State<ReadIntroSummarySection> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: text_color,
-                fontSize: IntroSummaryStyle.intro_font_size,
+                fontSize: font_size,
                 height: IntroSummaryStyle.intro_line_height,
               ),
             ),
@@ -96,6 +102,8 @@ class _ReadIntroSummarySectionState extends State<ReadIntroSummarySection> {
 
   /// 构建展开状态的完整简介。
   Widget _build_expanded_summary(Color text_color) {
+    final double font_size = widget.font_size ?? IntroSummaryStyle.intro_font_size;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -103,7 +111,7 @@ class _ReadIntroSummarySectionState extends State<ReadIntroSummarySection> {
           widget.intro_text,
           style: TextStyle(
             color: text_color,
-            fontSize: IntroSummaryStyle.intro_font_size,
+            fontSize: font_size,
             height: IntroSummaryStyle.intro_line_height,
           ),
         ),

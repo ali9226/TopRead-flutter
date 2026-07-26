@@ -1,6 +1,9 @@
+import 'dart:math';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
+import 'package:app/config/color_config.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/api/bookshelf.dart';
 import 'package:app/pages/read/logic.dart';
 import './style.dart';
@@ -74,6 +77,10 @@ class _ReadAuthorSectionState extends State<ReadAuthorSection> {
 
   /// 构建关注标签。
   Widget _build_follow_tag() {
+    // 夜间模式使用主题色，日间模式使用品牌蓝色。
+    final Color accent_color =
+        widget.is_dark ? ColorConstants.themeColor : AuthorStyle.brand_color;
+
     return GestureDetector(
       onTap: _is_loading ? null : _handle_focus_toggle,
       child: TweenAnimationBuilder<double>(
@@ -95,12 +102,12 @@ class _ReadAuthorSectionState extends State<ReadAuthorSection> {
           decoration: BoxDecoration(
             color: _is_focused
                 ? Colors.transparent
-                : AuthorStyle.brand_color.withValues(
+                : accent_color.withValues(
                     alpha: AuthorStyle.follow_tag_background_alpha,
                   ),
             border: _is_focused
                 ? Border.all(
-                    color: AuthorStyle.brand_color.withValues(alpha: 0.5),
+                    color: accent_color.withValues(alpha: 0.5),
                     width: 1,
                   )
                 : null,
@@ -110,8 +117,8 @@ class _ReadAuthorSectionState extends State<ReadAuthorSection> {
             _is_focused ? easy.tr('read.followed') : easy.tr('read.follow'),
             style: TextStyle(
               color: _is_focused
-                  ? AuthorStyle.brand_color.withValues(alpha: 0.7)
-                  : AuthorStyle.brand_color,
+                  ? accent_color.withValues(alpha: 0.7)
+                  : accent_color,
               fontSize: AuthorStyle.follow_tag_font_size,
               fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
             ),
@@ -159,7 +166,7 @@ class _ReadAuthorSectionState extends State<ReadAuthorSection> {
 }
 
 /// 作者头像组件。
-class _ReaderAuthorAvatar extends StatelessWidget {
+class _ReaderAuthorAvatar extends StatefulWidget {
   /// 当前是否为夜间主题。
   final bool is_dark;
 
@@ -169,39 +176,42 @@ class _ReaderAuthorAvatar extends StatelessWidget {
   const _ReaderAuthorAvatar({required this.is_dark, required this.detail});
 
   @override
+  State<_ReaderAuthorAvatar> createState() => _ReaderAuthorAvatarState();
+}
+
+class _ReaderAuthorAvatarState extends State<_ReaderAuthorAvatar> {
+  /// 随机选择的默认头像索引（0-9）。
+  late final int _random_avatar_index;
+
+  @override
+  void initState() {
+    super.initState();
+    _random_avatar_index = Random().nextInt(10);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ClipOval(
-      child: Image.network(
-        detail.author_avatar_url,
-        width: AuthorStyle.author_avatar_size,
-        height: AuthorStyle.author_avatar_size,
-        fit: BoxFit.cover,
-        errorBuilder:
-            (BuildContext context, Object error, StackTrace? stack_trace) {
-              // 头像加载失败时展示作者名首字，保证视觉完整性与可识别性。
-              final String fallback_text = detail.author_name.isNotEmpty
-                  ? detail.author_name.characters.first
-                  : '?';
-              return Container(
-                width: AuthorStyle.author_avatar_size,
-                height: AuthorStyle.author_avatar_size,
-                color: AuthorStyle.brand_color.withValues(
-                  alpha: AuthorStyle.author_avatar_fallback_background_alpha,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  fallback_text,
-                  style: TextStyle(
-                    color: is_dark
-                        ? AuthorStyle.author_name_color_dark
-                        : AuthorStyle.author_name_color_light,
-                    fontSize: AuthorStyle.author_name_font_size,
-                    fontWeight: FontConfig.adjustedWeight(FontWeight.w700),
-                  ),
-                ),
-              );
-            },
-      ),
+      child: widget.detail.author_avatar_url.isNotEmpty
+          ? Image.network(
+              widget.detail.author_avatar_url,
+              width: AuthorStyle.author_avatar_size,
+              height: AuthorStyle.author_avatar_size,
+              fit: BoxFit.cover,
+              errorBuilder:
+                  (BuildContext context, Object error, StackTrace? stack_trace) {
+                    return SvgPicture.asset(
+                      'assets/svg/avatar_${_random_avatar_index.toString().padLeft(2, '0')}.svg',
+                      width: AuthorStyle.author_avatar_size,
+                      height: AuthorStyle.author_avatar_size,
+                    );
+                  },
+            )
+          : SvgPicture.asset(
+              'assets/svg/avatar_${_random_avatar_index.toString().padLeft(2, '0')}.svg',
+              width: AuthorStyle.author_avatar_size,
+              height: AuthorStyle.author_avatar_size,
+            ),
     );
   }
 }

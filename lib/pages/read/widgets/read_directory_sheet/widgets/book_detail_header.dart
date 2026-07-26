@@ -1,7 +1,10 @@
+import 'dart:math';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/api/bookshelf.dart';
 import 'package:app/components/login_required_dialog/index.dart';
+import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/read/logic.dart';
 import 'package:app/pages/read/widgets/read_directory_sheet/style.dart';
@@ -37,10 +40,14 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
   /// 是否正在请求中。
   bool _is_loading = false;
 
+  /// 随机选择的默认头像索引（0-9）。
+  late final int _random_avatar_index;
+
   @override
   void initState() {
     super.initState();
     _is_focused = widget.detail.focus_on;
+    _random_avatar_index = Random().nextInt(10);
   }
 
   @override
@@ -162,10 +169,10 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
                         ),
                       )
                     else
-                      Icon(
-                        Icons.account_circle,
-                        size: ReadDirectorySheetStyle.author_avatar_radius * 2,
-                        color: sub_text_color,
+                      SvgPicture.asset(
+                        'assets/svg/avatar_${_random_avatar_index.toString().padLeft(2, '0')}.svg',
+                        width: ReadDirectorySheetStyle.author_avatar_radius * 2,
+                        height: ReadDirectorySheetStyle.author_avatar_radius * 2,
                       ),
                     const SizedBox(width: 6),
                     if (widget.detail.author_name.trim().isNotEmpty)
@@ -197,7 +204,9 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
 
   /// 构建作者关注按钮，文案遵循当前语种。
   Widget _buildFollowButton({required bool is_cjk}) {
-    final Color brand_color = const Color(0xFF3D7DFF);
+    // 夜间模式使用主题色，日间模式使用品牌蓝色。
+    final Color accent_color =
+        widget.is_dark ? ColorConstants.themeColor : const Color(0xFF3D7DFF);
     final String follow_text = _is_focused
         ? tr('read.followed')
         : tr('read.follow');
@@ -223,9 +232,9 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
           decoration: BoxDecoration(
             color: _is_focused
                 ? Colors.transparent
-                : brand_color.withValues(alpha: 0.16),
+                : accent_color.withValues(alpha: 0.16),
             border: _is_focused
-                ? Border.all(color: brand_color.withValues(alpha: 0.4), width: 1)
+                ? Border.all(color: accent_color.withValues(alpha: 0.4), width: 1)
                 : null,
             borderRadius: BorderRadius.circular(
               ReadDirectorySheetStyle.follow_button_radius,
@@ -237,8 +246,8 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: _is_focused
-                  ? brand_color.withValues(alpha: 0.7)
-                  : brand_color,
+                  ? accent_color.withValues(alpha: 0.7)
+                  : accent_color,
               fontSize: follow_font_size,
               height: 1,
               fontWeight: FontConfig.adjustedWeight(FontWeight.w400),

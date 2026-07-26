@@ -110,6 +110,7 @@ class _BookshelfBookCardState extends State<BookshelfBookCard> {
       onTap: widget.on_tap,
       behavior: HitTestBehavior.opaque,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           // 封面图
