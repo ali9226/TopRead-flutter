@@ -126,6 +126,12 @@ class ReadDirectorySheetStyle {
   /// 当前章节滚动到可视区域时在视口中的相对位置。
   static const double current_chapter_reveal_alignment = 0.18;
 
+  /// 判断章节已舒适落入视口时保留的上下边距。
+  static const double chapter_visibility_margin = 12.0;
+
+  /// 远距离定位时按比例与实测高度迭代逼近的最大次数。
+  static const int position_max_refine_attempts = 4;
+
   /// 章节列表项水平内边距。
   static const double chapter_item_horizontal_padding = 20.0;
 

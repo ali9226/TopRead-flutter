@@ -555,6 +555,7 @@
     "add_to_bookshelf": "加入书架",
     "prev_chapter": "上一章",
     "next_chapter": "下一章",
+    "chapter_label": "第 {} 章",
     "catalog": "目录",
     "detail": "详情",
     "notes": "笔记",

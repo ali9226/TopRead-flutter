@@ -9,6 +9,24 @@ class Style {
   static const int page_scroll_animation_duration_ms = 320;
   static const double page_scroll_step_offset = 100;
   static const double scroll_offset_epsilon = 1;
+  static const double progress_update_epsilon = 0.01;
+
+  /// 正文三段式点击区域配置。
+  static const double reading_tap_block_count = 3;
+  static const double reading_tap_middle_block_factor = 2;
+  static const double reading_tap_bottom_reserved_height = 96;
+
+  /// 第一章简介区域内判定“尚未开始阅读”的顶部距离。
+  static const double reading_start_near_top_threshold = 300;
+
+  /// 章节标题越过该阅读基准线后，才将其识别为当前章节。
+  static const double current_chapter_detection_top_offset = 24;
+
+  /// 导航栏显隐的同方向累计滚动距离。
+  static const double navigation_visibility_scroll_threshold = 8;
+
+  /// 小说介绍顶部范围内强制隐藏阅读导航栏。
+  static const double navigation_force_hidden_top_threshold = 300;
 
   /// 第一章标题距离可视区域底部达到该距离时，隐藏"上滑开始阅读"胶囊。
   static const double first_chapter_title_bottom_trigger_distance = 20;
@@ -21,9 +39,6 @@ class Style {
 
   /// 等待阅读内容完成布局的最大尝试次数。
   static const int restore_layout_max_attempts = 100;
-
-  /// 等待阅读内容完成布局时每次重试的间隔。
-  static const int restore_layout_retry_delay_ms = 50;
 
   /// 下拉刷新指示器最终停留位置。
   static const double refresh_indicator_displacement = 54;

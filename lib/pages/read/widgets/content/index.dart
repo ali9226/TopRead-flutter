@@ -25,20 +25,8 @@ class ReadContent extends StatelessWidget {
   /// 正文区块的锚点 key，用于点击底部胶囊后快速定位到正文。
   final GlobalKey? reading_section_key;
 
-  /// 正文区块是否已经进入阅读状态，用于决定是否允许点击翻页。
-  final bool is_reading_section_at_top;
-
-  /// 上翻一屏回调。
-  final VoidCallback on_page_up;
-
-  /// 下翻一屏回调。
-  final VoidCallback on_page_down;
-
-  /// 中间区域点击回调。
-  final VoidCallback on_middle_tap;
-
-  /// 是否显示导航栏（顶部和底部）。
-  final bool show_navigation;
+  /// 正文点击回调，由页面读取最新滚动状态并决定翻页或显示导航栏。
+  final GestureTapDownCallback on_reading_tap_down;
 
   /// 关注状态变更回调。
   final ValueChanged<bool>? on_focus_changed;
@@ -49,11 +37,7 @@ class ReadContent extends StatelessWidget {
     required this.is_dark,
     required this.detail,
     required this.reading_items,
-    required this.is_reading_section_at_top,
-    required this.on_page_up,
-    required this.on_page_down,
-    required this.on_middle_tap,
-    required this.show_navigation,
+    required this.on_reading_tap_down,
     this.reading_section_key,
     this.on_focus_changed,
   });
@@ -80,36 +64,7 @@ class ReadContent extends StatelessWidget {
         // 正文容器：作为"开始阅读"定位锚点，并承载全文段落。
         GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTapDown: (TapDownDetails details) {
-            if (!is_reading_section_at_top) return;
-
-            if (show_navigation) {
-              on_middle_tap();
-              return;
-            }
-
-            final double screen_height = MediaQuery.sizeOf(context).height;
-            final double bottom_reserved_height =
-                MediaQuery.viewPaddingOf(context).bottom +
-                ContentStyle.reading_mask_height;
-            final double effective_height =
-                (screen_height - bottom_reserved_height).clamp(
-                  0.0,
-                  screen_height,
-                );
-            final Offset screen_position = details.globalPosition;
-            final double block_height =
-                effective_height / ContentStyle.reading_tap_block_count;
-
-            if (screen_position.dy <= block_height) {
-              on_page_up();
-            } else if (screen_position.dy >=
-                block_height * ContentStyle.reading_tap_middle_block_factor) {
-              on_page_down();
-            } else {
-              on_middle_tap();
-            }
-          },
+          onTapDown: on_reading_tap_down,
           child: Container(
             key: reading_section_key,
             width: double.infinity,
@@ -153,11 +108,6 @@ class ReadContent extends StatelessWidget {
                                   ? ContentStyle.reading_title_color_dark
                                   : ContentStyle.reading_title_color_light)
                             : reading_text_color,
-                        is_reading_section_at_top: is_reading_section_at_top,
-                        on_page_up: on_page_up,
-                        on_page_down: on_page_down,
-                        on_middle_tap: on_middle_tap,
-                        show_navigation: show_navigation,
                       ),
                     );
                   });
@@ -171,7 +121,7 @@ class ReadContent extends StatelessWidget {
   }
 }
 
-/// 阅读页单段正文组件，负责处理点击分区翻页逻辑。
+/// 阅读页单段正文组件。
 class _ReaderParagraphItem extends StatelessWidget {
   /// 当前段落文本内容。
   final String text;
@@ -185,95 +135,26 @@ class _ReaderParagraphItem extends StatelessWidget {
   /// 段落文字颜色。
   final Color text_color;
 
-  /// 正文是否已经贴顶，未贴顶时禁用点击翻页逻辑。
-  final bool is_reading_section_at_top;
-
-  /// 上翻一屏回调。
-  final VoidCallback on_page_up;
-
-  /// 下翻一屏回调。
-  final VoidCallback on_page_down;
-
-  /// 中间区域点击回调。
-  final VoidCallback on_middle_tap;
-
-  /// 是否显示导航栏（顶部和底部）。
-  final bool show_navigation;
-
   /// 构造函数，注入段落渲染与交互依赖。
   const _ReaderParagraphItem({
     required this.text,
     this.is_title = false,
     required this.body_font_size,
     required this.text_color,
-    required this.is_reading_section_at_top,
-    required this.on_page_up,
-    required this.on_page_down,
-    required this.on_middle_tap,
-    required this.show_navigation,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (TapDownDetails details) {
-        // 正文未贴顶时忽略点击，避免封面区域误触触发翻页。
-        if (!is_reading_section_at_top) {
-          return;
-        }
-
-        // 当出现上下导航栏时，如果点击小说内容区域，直接隐藏导航栏，不触发上一页/下一页。
-        if (show_navigation) {
-          on_middle_tap();
-          return;
-        }
-        // 获取当前屏幕总高度，用于后续三段分区计算。
-        final double screen_height = MediaQuery.sizeOf(context).height;
-        // 底部保留区 = 安全区 + 阅读遮罩高度，点击分区要排除这部分。
-        final double bottom_reserved_height =
-            MediaQuery.viewPaddingOf(context).bottom +
-            ContentStyle.reading_mask_height;
-        // 实际可用于点击分区的高度，限制在 0 到屏幕高度之间。
-        final double effective_height = (screen_height - bottom_reserved_height)
-            .clamp(0.0, screen_height);
-        // 读取本次点击在全局坐标中的位置。
-        final Offset screen_position = details.globalPosition;
-        // 将可点击区域等分成三段，上中下分别对应不同交互。
-        final double block_height =
-            effective_height / ContentStyle.reading_tap_block_count;
-
-        // 点击上 1/3 区域时执行上翻。
-        if (screen_position.dy <= block_height) {
-          on_page_up();
-          return;
-        }
-
-        // 点击中 1/3 区域预留给未来菜单能力，当前只打印日志。
-        if (screen_position.dy > block_height &&
-            screen_position.dy <
-                (block_height * ContentStyle.reading_tap_middle_block_factor)) {
-          on_middle_tap();
-          return;
-        }
-
-        // 点击下 1/3 区域时执行下翻。
-        if (screen_position.dy >=
-            block_height * ContentStyle.reading_tap_middle_block_factor) {
-          on_page_down();
-        }
-      },
-      child: Text(
-        text,
-        style: TextStyle(
-          color: text_color,
-          fontSize: is_title
-              ? ContentStyle.reading_title_font_size
-              : body_font_size,
-          height: ContentStyle.reading_paragraph_height,
-          fontWeight: FontConfig.adjustedWeight(
-            is_title ? FontWeight.w500 : FontWeight.w400,
-          ),
+    return Text(
+      text,
+      style: TextStyle(
+        color: text_color,
+        fontSize: is_title
+            ? ContentStyle.reading_title_font_size
+            : body_font_size,
+        height: ContentStyle.reading_paragraph_height,
+        fontWeight: FontConfig.adjustedWeight(
+          is_title ? FontWeight.w500 : FontWeight.w400,
         ),
       ),
     );

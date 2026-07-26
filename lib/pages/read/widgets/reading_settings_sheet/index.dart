@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -96,7 +98,11 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
   }
 
   /// 显示主题切换遮罩层。
-  void _show_theme_overlay(bool to_dark) {
+  Future<void> _show_theme_overlay(bool to_dark) async {
+    if (_overlay_entry != null || _theme_overlay_controller.isAnimating) {
+      return;
+    }
+
     bool theme_changed = false;
     final OverlayState overlay_state = Overlay.of(context, rootOverlay: true);
 
@@ -137,26 +143,24 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
     );
 
     overlay_state.insert(_overlay_entry!);
-    _theme_overlay_controller.forward(from: 0);
-
-    late VoidCallback listener;
-    listener = () {
+    void animation_listener() {
       if (_theme_overlay_controller.value >= 0.5 && !theme_changed) {
         theme_changed = true;
         final DeviceInfo device_info = Get.find<DeviceInfo>();
         device_info.changeTheme(to_dark ? ThemeMode.dark : ThemeMode.light);
       }
-    };
+    }
 
-    _theme_overlay_controller.addListener(listener);
-
-    _theme_overlay_controller.addStatusListener((AnimationStatus status) {
-      if (status == AnimationStatus.completed) {
-        _overlay_entry?.remove();
-        _overlay_entry = null;
-        _theme_overlay_controller.removeListener(listener);
-      }
-    });
+    _theme_overlay_controller.addListener(animation_listener);
+    try {
+      await _theme_overlay_controller.forward(from: 0).orCancel;
+    } on TickerCanceled {
+      // 弹窗关闭时动画会取消，由 finally 统一清理 Overlay。
+    } finally {
+      _theme_overlay_controller.removeListener(animation_listener);
+      _overlay_entry?.remove();
+      _overlay_entry = null;
+    }
   }
 
   @override
@@ -396,7 +400,7 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
             border_color: !is_dark ? ColorConstants.dangerColor : null,
             onTap: () {
               if (is_dark) {
-                _show_theme_overlay(false);
+                unawaited(_show_theme_overlay(false));
               }
             },
           ),
@@ -412,7 +416,7 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
             border_color: is_dark ? ColorConstants.dangerColor : null,
             onTap: () {
               if (!is_dark) {
-                _show_theme_overlay(true);
+                unawaited(_show_theme_overlay(true));
               }
             },
           ),

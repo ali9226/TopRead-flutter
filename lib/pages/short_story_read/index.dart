@@ -27,6 +27,7 @@ import 'package:app/pages/short_story_read/widgets/full_appbar.dart';
 import 'package:app/pages/short_story_read/widgets/bottom_comment_bar.dart';
 import 'package:app/pages/short_story_read/widgets/tag_list.dart';
 import 'package:app/pages/short_story_read/widgets/story_content.dart';
+import 'package:app/pages/short_story_read/widgets/initialization_overlay.dart';
 import 'package:app/pages/ranking_full_list/widgets/starfield_decoration.dart';
 import 'package:app/components/page_top_gradient_overlay/index.dart';
 import 'package:app/pages/short_story_read/widgets/skeleton_screen.dart';
@@ -1851,22 +1852,20 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
           is_dark: is_dark,
           status_bar_height: status_bar_height,
         );
-        page_body = _is_initialization_complete
-            ? content
-            : Stack(
-                children: <Widget>[
-                  content,
-                  Positioned.fill(
-                    child: ColoredBox(
-                      color: bg_color,
-                      child: _buildSkeleton(
-                        is_dark: is_dark,
-                        status_bar_height: status_bar_height,
-                      ),
-                    ),
-                  ),
-                ],
-              );
+        // 初始化前后保持同一棵组件树。恢复进度时正文已经在骨架层下完成
+        // jumpTo；如果撤下骨架时把正文从 Stack 子节点移到 Scaffold.body，
+        // Flutter 会重新挂载 ScrollPosition 并把视觉位置重置到顶部。
+        page_body = ShortStoryInitializationOverlay(
+          content: content,
+          show_overlay: !_is_initialization_complete,
+          overlay: ColoredBox(
+            color: bg_color,
+            child: _buildSkeleton(
+              is_dark: is_dark,
+              status_bar_height: status_bar_height,
+            ),
+          ),
+        );
       }
 
       return Scaffold(

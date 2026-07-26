@@ -13,6 +13,7 @@ import 'package:app/models/short_story_item.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/short_story_catalog_store.dart';
 import 'package:app/pages/short_story_read/style.dart';
+import 'package:app/pages/short_story_read/widgets/catalog/catalog_positioning_motion.dart';
 import 'package:app/pages/short_story_read/widgets/catalog/catalog_header.dart';
 import 'package:app/pages/short_story_read/widgets/catalog/catalog_item.dart';
 import 'package:app/pages/home/widgets/tab_contents/short_story_tab/style.dart';
@@ -142,7 +143,11 @@ class _CatalogSheetState extends State<CatalogSheet> {
 
     _is_locating_current = true;
     try {
-      for (int attempt = 0; attempt < 6; attempt++) {
+      for (
+        int attempt = 0;
+        attempt < ShortStoryReadStyle.catalog_position_max_attempts;
+        attempt++
+      ) {
         await WidgetsBinding.instance.endOfFrame;
         if (!mounted || !_scroll_controller.hasClients) return false;
 
@@ -152,8 +157,8 @@ class _CatalogSheetState extends State<CatalogSheet> {
         if (current_context != null) {
           await Scrollable.ensureVisible(
             current_context,
-            alignment: 0.28,
-            duration: const Duration(milliseconds: 360),
+            alignment: ShortStoryReadStyle.catalog_current_item_alignment,
+            duration: ShortStoryReadStyle.catalog_precise_position_duration,
             curve: Curves.easeOutCubic,
           );
           if (!mounted) return false;
@@ -172,7 +177,14 @@ class _CatalogSheetState extends State<CatalogSheet> {
           position.maxScrollExtent,
         );
         if ((clamped_offset - position.pixels).abs() < 0.5) break;
-        _scroll_controller.jumpTo(clamped_offset);
+        await animate_catalog_position(
+          controller: _scroll_controller,
+          target_offset: clamped_offset,
+          duration: attempt == 0
+              ? ShortStoryReadStyle.catalog_coarse_position_duration
+              : ShortStoryReadStyle.catalog_refine_position_duration,
+          curve: attempt == 0 ? Curves.easeInOutCubic : Curves.easeOutCubic,
+        );
       }
       _check_current_visibility();
       return false;
@@ -281,7 +293,8 @@ class _CatalogSheetState extends State<CatalogSheet> {
     final double position = _scroll_controller.position.pixels;
     final double max_extent = _scroll_controller.position.maxScrollExtent;
 
-    if (position >= max_extent - _load_more_trigger_distance) {
+    if (!_is_locating_current &&
+        position >= max_extent - _load_more_trigger_distance) {
       _load_more_data();
     }
 
@@ -323,7 +336,10 @@ class _CatalogSheetState extends State<CatalogSheet> {
         render_object.localToGlobal(Offset.zero) & render_object.size;
     final Rect viewport_rect =
         viewport_object.localToGlobal(Offset.zero) & viewport_object.size;
-    final bool is_visible = item_rect.overlaps(viewport_rect);
+    final double margin = ShortStoryReadStyle.catalog_item_visibility_margin;
+    final bool is_visible =
+        item_rect.top >= viewport_rect.top + margin &&
+        item_rect.bottom <= viewport_rect.bottom - margin;
 
     if (_is_current_visible != is_visible) {
       setState(() {

@@ -68,6 +68,7 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
   final Map<int, double> _chapter_item_heights = <int, double>{};
   bool _show_position_button = false;
   bool _did_initial_scroll = false;
+  int _reveal_attempt_count = 0;
 
   @override
   void initState() {
@@ -87,10 +88,16 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
   /// 首帧构建完成后尝试滚动到当前章节。
   void _try_initial_scroll() {
     if (_did_initial_scroll) return;
+    if (!_scroll_controller.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _try_initial_scroll();
+      });
+      return;
+    }
     _did_initial_scroll = true;
 
     final int current_index = widget.logic.current_chapter_index.value;
-    if (current_index > 0 && _scroll_controller.hasClients) {
+    if (current_index > 0) {
       _scroll_to_current_chapter(animate: false);
     }
 
@@ -149,8 +156,10 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
     final double viewport_top = viewport_top_left.dy;
     final double viewport_bottom =
         viewport_top + viewport_render_object.size.height;
+    final double margin = ReadDirectorySheetStyle.chapter_visibility_margin;
 
-    return item_top < viewport_bottom && item_bottom > viewport_top;
+    return item_top >= viewport_top + margin &&
+        item_bottom <= viewport_bottom - margin;
   }
 
   /// 滚动到当前章节。
@@ -160,6 +169,7 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
   /// 粗略 jump/animate 到附近，下一帧章节被构建后再执行精确 reveal。
   void _scroll_to_current_chapter({bool animate = true}) {
     if (!_scroll_controller.hasClients) return;
+    _reveal_attempt_count = 0;
 
     final int current_index = widget.logic.current_chapter_index.value;
     final BuildContext? item_context =
@@ -194,7 +204,15 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
   void _schedule_reveal_current_chapter() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _reveal_current_chapter(animate: true);
+      final bool revealed = _reveal_current_chapter(animate: true);
+      if (!revealed &&
+          _reveal_attempt_count <
+              ReadDirectorySheetStyle.position_max_refine_attempts) {
+        _reveal_attempt_count++;
+        _refine_current_chapter_offset();
+        _schedule_reveal_current_chapter();
+        return;
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _update_position_button();
@@ -203,14 +221,14 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
     });
   }
 
-  void _reveal_current_chapter({required bool animate}) {
+  bool _reveal_current_chapter({required bool animate}) {
     final int current_index = widget.logic.current_chapter_index.value;
     final BuildContext? item_context =
         _chapter_item_keys[current_index]?.currentContext;
 
     if (item_context == null) {
       _update_position_button();
-      return;
+      return false;
     }
 
     Scrollable.ensureVisible(
@@ -228,6 +246,24 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
         _update_position_button();
       }
     });
+    return true;
+  }
+
+  /// 目标项尚未构建时，按目录整体比例继续逼近目标区域。
+  void _refine_current_chapter_offset() {
+    if (!_scroll_controller.hasClients ||
+        widget.logic.chapter_list.length <= 1) {
+      return;
+    }
+
+    final int current_index = widget.logic.current_chapter_index.value;
+    final double ratio = current_index / (widget.logic.chapter_list.length - 1);
+    final ScrollPosition position = _scroll_controller.position;
+    final double proportional_offset = ratio * position.maxScrollExtent;
+    final double measured_offset = _estimate_current_chapter_offset();
+    final double target_offset = ((proportional_offset + measured_offset) / 2)
+        .clamp(position.minScrollExtent, position.maxScrollExtent);
+    position.jumpTo(target_offset);
   }
 
   double _estimate_current_chapter_offset() {

@@ -554,6 +554,7 @@
     "add_to_bookshelf": "Save",
     "prev_chapter": "Prev",
     "next_chapter": "Next",
+    "chapter_label": "Chapter {}",
     "catalog": "Chapters",
     "detail": "Details",
     "notes": "Notes",

@@ -30,20 +30,8 @@ class ReadMainList extends StatelessWidget {
   /// 正文锚点 key，用于点击“上滑开始阅读”时定位到正文。
   final GlobalKey reading_section_key;
 
-  /// 正文是否已经到达顶部，用于控制翻页点击区域是否生效。
-  final bool is_reading_section_at_top;
-
-  /// 点击正文上方区域时的翻页回调。
-  final VoidCallback on_page_up;
-
-  /// 点击正文下方区域时的翻页回调.
-  final VoidCallback on_page_down;
-
-  /// 中间区域点击回调。
-  final VoidCallback on_middle_tap;
-
-  /// 是否显示导航栏（顶部和底部）。
-  final bool show_navigation;
+  /// 正文点击回调。
+  final GestureTapDownCallback on_reading_tap_down;
 
   const ReadMainList({
     super.key,
@@ -54,11 +42,7 @@ class ReadMainList extends StatelessWidget {
     required this.detail,
     required this.reading_items,
     required this.reading_section_key,
-    required this.is_reading_section_at_top,
-    required this.on_page_up,
-    required this.on_page_down,
-    required this.on_middle_tap,
-    required this.show_navigation,
+    required this.on_reading_tap_down,
   });
 
   @override
@@ -89,11 +73,7 @@ class ReadMainList extends StatelessWidget {
               detail: detail,
               reading_items: reading_items,
               reading_section_key: reading_section_key,
-              is_reading_section_at_top: is_reading_section_at_top,
-              on_page_up: on_page_up,
-              on_page_down: on_page_down,
-              on_middle_tap: on_middle_tap,
-              show_navigation: show_navigation,
+              on_reading_tap_down: on_reading_tap_down,
             ),
           ],
         ),

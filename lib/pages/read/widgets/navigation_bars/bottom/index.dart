@@ -26,6 +26,9 @@ class ReadBottomBar extends StatefulWidget {
   /// 进度变化完成回调（松开进度条时触发）。
   final ValueChanged<double> on_progress_changed_end;
 
+  /// 将全书进度比例换算为目录索引。
+  final int Function(double progress_ratio) chapter_index_for_progress;
+
   /// 上一章按钮回调。
   final VoidCallback on_prev_chapter;
 
@@ -69,6 +72,7 @@ class ReadBottomBar extends StatefulWidget {
     required this.progress,
     required this.chapter_list,
     required this.on_progress_changed_end,
+    required this.chapter_index_for_progress,
     required this.on_prev_chapter,
     required this.on_next_chapter,
     required this.is_first_chapter,
@@ -294,6 +298,7 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
       onPointerDown: _on_pointer_down,
       onPointerMove: _on_pointer_move,
       onPointerUp: _on_pointer_up,
+      onPointerCancel: _on_pointer_cancel,
       behavior: HitTestBehavior.opaque,
       child: AbsorbPointer(
         absorbing: _is_dragging,
@@ -370,6 +375,7 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
     const double thumb_size = 18.0;
     const double thumb_radius = 9.0;
     final double track_width = render_box.size.width - thumb_size;
+    if (track_width <= 0) return;
     final double new_progress =
         ((event.localPosition.dx - thumb_radius) / track_width).clamp(0.0, 1.0);
 
@@ -390,6 +396,7 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
     const double thumb_size = 18.0;
     const double thumb_radius = 9.0;
     final double track_width = render_box.size.width - thumb_size;
+    if (track_width <= 0) return;
     final double new_progress =
         ((event.localPosition.dx - thumb_radius) / track_width).clamp(0.0, 1.0);
 
@@ -404,6 +411,15 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
     widget.on_progress_changed_end(_drag_progress);
     setState(() {
       _is_dragging = false;
+    });
+  }
+
+  /// 系统手势或父级滚动抢占指针时恢复滑块状态。
+  void _on_pointer_cancel(PointerCancelEvent event) {
+    if (!_is_dragging || !mounted) return;
+    setState(() {
+      _is_dragging = false;
+      _drag_progress = widget.progress;
     });
   }
 
@@ -427,11 +443,14 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
     /// 显示当前章节信息。
     String chapter_text = '';
     if (widget.chapter_list.isNotEmpty) {
-      final int index = (_drag_progress * (widget.chapter_list.length - 1))
-          .round()
+      final int index = widget
+          .chapter_index_for_progress(_drag_progress)
           .clamp(0, widget.chapter_list.length - 1);
       final NovelChapterInfo chapter = widget.chapter_list[index];
-      chapter_text = '第 ${chapter.chapter_no} 章';
+      chapter_text = tr(
+        'read.chapter_label',
+        args: <String>[chapter.chapter_no.toString()],
+      );
     }
 
     return Positioned(
@@ -519,10 +538,7 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
           TweenAnimationBuilder<double>(
             duration: const Duration(milliseconds: 560),
             curve: Curves.elasticOut,
-            tween: Tween<double>(
-              begin: 0.6,
-              end: widget.is_liked ? 1.0 : 1.0,
-            ),
+            tween: Tween<double>(begin: 0.6, end: widget.is_liked ? 1.0 : 1.0),
             builder: (context, scale, child) {
               return Transform.scale(scale: scale, child: child);
             },

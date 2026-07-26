@@ -224,8 +224,9 @@ class ShortStoryReadStyle {
   // ==================== 加载状态 ====================
 
   /// 骨架屏动画时长（呼吸灯一个周期）。
-  static const Duration skeleton_animation_duration =
-      Duration(milliseconds: 1500);
+  static const Duration skeleton_animation_duration = Duration(
+    milliseconds: 1500,
+  );
 
   /// 骨架屏底色（日间模式）。
   static const Color skeleton_light_base = Color(0xFFEEEEEE);
@@ -246,6 +247,30 @@ class ShortStoryReadStyle {
 
   /// 导航栏/底部栏显示/隐藏动画曲线。
   static const Curve bar_animation_curve = Curves.easeInOut;
+
+  /// 目录远距离粗定位动画时长。
+  static const Duration catalog_coarse_position_duration = Duration(
+    milliseconds: 560,
+  );
+
+  /// 目录估算位置二次校准动画时长。
+  static const Duration catalog_refine_position_duration = Duration(
+    milliseconds: 280,
+  );
+
+  /// 目录当前项精确对齐动画时长。
+  static const Duration catalog_precise_position_duration = Duration(
+    milliseconds: 320,
+  );
+
+  /// 目录定位的最大估算校准次数。
+  static const int catalog_position_max_attempts = 4;
+
+  /// 当前目录项完整进入视口时保留的上下安全距离。
+  static const double catalog_item_visibility_margin = 12;
+
+  /// 当前目录项精确定位后的视口对齐比例。
+  static const double catalog_current_item_alignment = 0.28;
 
   // ==================== 阅读进度条 ====================
 
