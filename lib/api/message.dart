@@ -106,6 +106,19 @@ Future<bool> read_all_messages() async {
     return results.status;
 }
 
+/// 标记所有在线客服消息为已读接口。
+///
+/// 返回是否成功，失败时返回 false。
+Future<bool> read_all_chat_messages() async {
+    final ResultsType<Map<String, dynamic>> results = await postRequest<Map<String, dynamic>>(
+        path: 'customer_service_chat/read_all',
+        showTips: false,
+        fromJson: (json) => json,
+    );
+
+    return results.status;
+}
+
 /// 删除单条消息接口。
 ///
 /// [id] 消息ID（必传）。

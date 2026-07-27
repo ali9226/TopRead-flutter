@@ -105,7 +105,7 @@ class FcmRegisterToken {
       final deviceInfo = await _getDeviceInfo();
 
       final result = await postRequest<Map<String, dynamic>>(
-        path: 'push/register_token',
+        path: 'fcm_token/register_token',
         parameter: {
           'token': token,
           'platform': platform,

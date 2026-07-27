@@ -409,7 +409,6 @@ class _UserInfoTopState extends State<UserInfoTop>
                                 fadeInDuration: const Duration(milliseconds: 180),
                                 fadeOutDuration: const Duration(milliseconds: 120),
                                 memCacheWidth: ((Style.avatarSize - 4) * MediaQuery.of(context).devicePixelRatio).toInt(),
-                                memCacheHeight: ((Style.avatarSize - 4) * MediaQuery.of(context).devicePixelRatio).toInt(),
                                 placeholder: (context, url) => const SizedBox.shrink(),
                                 errorWidget: (context, url, error) {
                                   return isLoggedIn

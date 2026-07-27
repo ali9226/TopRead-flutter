@@ -20,7 +20,7 @@ class FcmBindUser {
       }
 
       final result = await postRequest<Map<String, dynamic>>(
-        path: 'push/bind_user',
+        path: 'fcm_token/bind_user',
         parameter: {
           'token': token,
           'user_id': user_id,

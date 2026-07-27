@@ -569,11 +569,6 @@ class _CommentSheetState extends State<CommentSheet>
 
       // TODO 用接口返回的真实数据更新UI
       _update_comment_like_state(comment.id, result.like, result.like_count);
-
-      // TODO 提示点赞/取消点赞成功
-      showBottomTip(
-        tr(result.like ? 'like_tip.add_success' : 'like_tip.remove_success'),
-      );
     } finally {
       _like_loading_ids.remove(comment.id);
     }
@@ -721,7 +716,6 @@ class _CommentSheetState extends State<CommentSheet>
     _has_new_comments = true;
     _reply_target_context = null;
     _set_reply_target(null);
-    showBottomTip(tr('comment.send_success'));
     return true;
   }
 

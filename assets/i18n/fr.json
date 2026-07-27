@@ -712,6 +712,12 @@
     "upgrade_later": "Plus tard",
     "already_latest": "Déjà la dernière version"
   },
+  "debug": {
+    "title": "Débogage",
+    "fcm_token": "Obtenir le token FCM",
+    "fcm_token_success": "Token copié dans le presse-papiers",
+    "fcm_token_error": "Échec de l'obtention du token"
+  },
   "chat": {
     "no_more_messages": "Plus de messages"
   }

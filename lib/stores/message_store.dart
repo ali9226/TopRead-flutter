@@ -316,11 +316,22 @@ class MessageStore extends GetxController {
     }
   }
 
-  /// 删除单条消息（从所有桶中移除）。
-  Future<void> delete_message(int message_id) async {
-    final bool success = await message_api.delete_message(id: message_id);
-    if (!success) return;
+  /// 标记所有客服消息为已读，并拉取最新未读数据同步本地状态。
+  Future<void> _sync_chat_messages_read() async {
+    try {
+      await message_api.read_all_chat_messages();
+      await fetch_statistics();
+    } catch (e) {
+      debugPrint('TODO MessageStore _sync_chat_messages_read error: $e');
+    }
+  }
 
+  /// 删除单条消息（从所有桶中移除）。
+  ///
+  /// 客服消息：从列表移除 + 标记所有客服消息为已读（不删除数据）。
+  /// 其他消息：从列表移除 + 调用删除 API。
+  Future<void> delete_message(int message_id) async {
+    // 先从列表移除，确保 Dismissible 在同一帧内从树中消失。
     MessageData? deleted_message;
     for (final bucket in _buckets.values) {
       final index = bucket.list.indexWhere((m) => m.id == message_id);
@@ -332,9 +343,29 @@ class MessageStore extends GetxController {
       }
     }
 
-    if (deleted_message?.is_unread ?? false) {
-      _update_type_unread(deleted_message!.type, -1);
+    if (deleted_message == null) return;
+
+    // 客服消息：移除栏目 + 标记全部已读，不删除数据
+    if (deleted_message.type == MessageType.chat_reply) {
+      for (final bucket in _buckets.values) {
+        bucket.list.value = bucket.list
+            .where((m) => m.type != MessageType.chat_reply)
+            .toList();
+      }
+      chat_unread.value = 0;
       _recompute_unread_total();
+      unawaited(_sync_chat_messages_read());
+      return;
+    }
+
+    // 其他消息：更新未读数 + 调用删除 API
+    if (deleted_message.is_unread) {
+      _update_type_unread(deleted_message.type, -1);
+      _recompute_unread_total();
+    }
+    final bool success = await message_api.delete_message(id: message_id);
+    if (!success) {
+      debugPrint('TODO MessageStore delete_message API failed for id: $message_id');
     }
   }
 

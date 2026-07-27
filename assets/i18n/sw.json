@@ -654,6 +654,12 @@
     "upgrade_later": "Baadaye",
     "already_latest": "Tayari ni toleo la hivi karibuni"
   },
+  "debug": {
+    "title": "Utatuzi",
+    "fcm_token": "Pata FCM Token",
+    "fcm_token_success": "Tokeni imekiliwa kwenye ubao wa kunakili",
+    "fcm_token_error": "Imeshindwa kupata tokeni"
+  },
   "chat": {
     "no_more_messages": "Hakuna ujumbe zaidi"
   }

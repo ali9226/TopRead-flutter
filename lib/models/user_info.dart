@@ -23,6 +23,9 @@ class UserInfo {
   /// TODO 获赞数量。
   final int likesCount;
 
+  /// 调试标识：1=普通用户，2=开发者。
+  final int debug;
+
   UserInfo({
     required this.id,
     required this.account,
@@ -40,6 +43,7 @@ class UserInfo {
     required this.followCount,
     required this.fansCount,
     required this.likesCount,
+    this.debug = 1,
   });
 
   /// 安全解析 double 类型字段
@@ -90,6 +94,9 @@ class UserInfo {
       likesCount: json['likes_count'] is int
           ? json['likes_count']
           : int.tryParse(json['likes_count']?.toString() ?? '0') ?? 0,
+      debug: json['debug'] is int
+          ? json['debug']
+          : int.tryParse(json['debug']?.toString() ?? '1') ?? 1,
     );
   }
 
@@ -111,6 +118,7 @@ class UserInfo {
       'follow_count': followCount,
       'fans_count': fansCount,
       'likes_count': likesCount,
+      'debug': debug,
     };
   }
 }

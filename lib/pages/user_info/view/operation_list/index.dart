@@ -220,12 +220,38 @@ class _OperationListState extends State<OperationList> {
           ),
         );
       }
+      // 判断是否显示调试操作（debug=2 表示开发者）。
+      final showDebug = isLoggedIn && userInformation.userInfo.value?.debug == 2;
+
+      // 关于 - 始终显示。
+      group3Children.add(
+        OperationLi(
+          icon: "upgrade_02",
+          title: easy.tr('UserInfo.about_top_read'),
+          type: 1,
+          showDivider: true,
+          trailing: Text(
+            'V${Constant.appVersion}',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: deviceInfo.dark.value
+                  ? Colors.white.withValues(alpha: 0.38)
+                  : ColorConstants.lightTextColor.withValues(alpha: 0.45),
+            ),
+          ),
+          onTap: () => _checkUpdate(),
+        ),
+      );
+
+      // 退出登录
       if (isLoggedIn) {
         group3Children.add(
           OperationLi(
             icon: "quit",
             title: easy.tr('UserInfo.sign_out'),
             type: 1,
+            showDivider: showDebug,
             onTap: () {
               showMessage(
                 message: easy.tr('UserInfo.tips_01'),
@@ -241,26 +267,21 @@ class _OperationListState extends State<OperationList> {
           ),
         );
       }
-      // 关于 - 始终显示。
-      group3Children.add(
-        OperationLi(
-          icon: "upgrade_02",
-          title: easy.tr('UserInfo.about_top_read'),
-          type: 1,
-          showDivider: false,
-          trailing: Text(
-            'V${Constant.appVersion}',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: deviceInfo.dark.value
-                  ? Colors.white.withValues(alpha: 0.38)
-                  : ColorConstants.lightTextColor.withValues(alpha: 0.45),
-            ),
+
+      // 调试 - 仅特定用户显示。
+      if (showDebug) {
+        group3Children.add(
+          OperationLi(
+            icon: "bug",
+            title: easy.tr('debug.title'),
+            type: 1,
+            showDivider: false,
+            onTap: () {
+              routerUtil(path: '/debug');
+            },
           ),
-          onTap: () => _checkUpdate(),
-        ),
-      );
+        );
+      }
 
       return Column(
         children: [

@@ -678,6 +678,12 @@
     "upgrade_later": "以后再说",
     "already_latest": "已是最新版本"
   },
+  "debug": {
+    "title": "调试",
+    "fcm_token": "获取FCM Token",
+    "fcm_token_success": "Token已复制到剪贴板",
+    "fcm_token_error": "获取Token失败"
+  },
   "chat": {
     "no_more_messages": "没有更多消息了"
   }

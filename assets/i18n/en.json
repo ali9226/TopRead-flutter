@@ -677,6 +677,12 @@
     "upgrade_later": "Later",
     "already_latest": "Already the latest version"
   },
+  "debug": {
+    "title": "Debug",
+    "fcm_token": "Get FCM Token",
+    "fcm_token_success": "Token copied to clipboard",
+    "fcm_token_error": "Failed to get token"
+  },
   "chat": {
     "no_more_messages": "No more messages"
   }

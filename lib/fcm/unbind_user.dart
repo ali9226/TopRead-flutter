@@ -18,7 +18,7 @@ class FcmUnbindUser {
       }
 
       final result = await postRequest<Map<String, dynamic>>(
-        path: 'push/unbind_user',
+        path: 'fcm_token/unbind_user',
         parameter: {
           'token': token,
         },

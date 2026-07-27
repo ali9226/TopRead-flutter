@@ -18,6 +18,7 @@ import 'package:app/pages/web_view/index.dart';
 import 'package:app/pages/interest_preference/index.dart';
 import 'package:app/pages/short_story_read/index.dart';
 import 'package:app/pages/customer_service_chat/index.dart';
+import 'package:app/pages/debug/index.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/pages/login/index.dart' as login_page;
 
@@ -223,6 +224,12 @@ class RouteConfig {
               child: CustomerServiceChatPage(is_dark: is_dark),
             );
           },
+        ),
+        GoRoute(
+          path: '/debug',
+          name: 'debug',
+          pageBuilder: (context, state) =>
+              buildRoutePage(state: state, child: const DebugPage()),
         ),
       ],
     );
