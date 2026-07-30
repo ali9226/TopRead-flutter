@@ -268,6 +268,43 @@ class _OperationListState extends State<OperationList> {
         );
       }
 
+      // 删除账户
+      if (isLoggedIn) {
+        group3Children.add(
+          OperationLi(
+            icon: "delete_02",
+            title: easy.tr('UserInfo.delete_account'),
+            type: 1,
+            showDivider: showDebug,
+            onTap: () {
+              showMessage(
+                message: '${easy.tr('UserInfo.delete_account_confirm_title')}\n\n${easy.tr('UserInfo.delete_account_confirm_message')}',
+                leftButtonText: easy.tr('UserInfo.delete_account_cancel_button'),
+                rightButtonText: easy.tr('UserInfo.delete_account_confirm_button'),
+                rightButtonColor: ColorConstants.dangerColor,
+                iconColor: ColorConstants.dangerColor,
+                onRightPressed: () async {
+                  final bool success = await logic.deleteAccount();
+                  if (!success) return;
+
+                  /// 删除成功，弹出提示弹窗。
+                  if (!mounted) return;
+                  showMessage(
+                    message: easy.tr('UserInfo.delete_account_success_message'),
+                    rightButtonText: easy.tr('UserInfo.yes'),
+                    allowMaskDismiss: false,
+                    onRightPressed: () async {
+                      /// 跳转到首页。
+                      routerUtil(path: '/', type: 'replace');
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        );
+      }
+
       // 调试 - 仅特定用户显示。
       if (showDebug) {
         group3Children.add(

@@ -19,13 +19,39 @@ class InterestPreferenceStyle {
   /// 顶部导航栏高度（含安全区）。
   static const double topBarHeight = 56.0;
 
+  /// 顶部栏保存与跳过按钮之间的间距。
+  static const double topBarActionSpacing = 4.0;
+
+  /// 顶部栏保存按钮高度。
+  static const double topBarButtonHeight = 32.0;
+
+  /// 保存按钮水平内边距。
+  static const double saveButtonHorizontalPadding = 16.0;
+
+  /// 顶部操作按钮 CJK 字号。
+  static const double topBarActionFontSizeCjk = 14.0;
+
+  /// 顶部操作按钮非 CJK 字号。
+  static const double topBarActionFontSizeAlphabetic = 13.0;
+
+  /// 跳过按钮最小宽度。
+  static const double skipButtonMinWidth = 44.0;
+
+  /// 跳过按钮最小高度。
+  static const double skipButtonMinHeight = 44.0;
+
+  /// 跳过按钮水平内边距。
+  static const double skipButtonHorizontalPadding = 8.0;
+
   // ==================== 页面标题区 ========================
 
   /// 页面主标题字号。
   static const double titleFontSize = 24.0;
 
   /// 页面主标题字重。
-  static final FontWeight titleFontWeight = FontConfig.adjustedWeight(FontWeight.w500);
+  static final FontWeight titleFontWeight = FontConfig.adjustedWeight(
+    FontWeight.w500,
+  );
 
   /// 页面主标题底部间距。
   static const double titleBottomSpacing = 6.0;
@@ -34,7 +60,9 @@ class InterestPreferenceStyle {
   static const double subtitleFontSize = 13.0;
 
   /// 页面副标题字重。
-  static final FontWeight subtitleFontWeight = FontConfig.adjustedWeight(FontWeight.w400);
+  static final FontWeight subtitleFontWeight = FontConfig.adjustedWeight(
+    FontWeight.w400,
+  );
 
   // ==================== 分组区 ========================
 
@@ -42,7 +70,9 @@ class InterestPreferenceStyle {
   static const double sectionTitleSize = 16.0;
 
   /// 分组标题字重。
-  static final FontWeight sectionTitleWeight = FontConfig.adjustedWeight(FontWeight.w500);
+  static final FontWeight sectionTitleWeight = FontConfig.adjustedWeight(
+    FontWeight.w500,
+  );
 
   /// 分组标题右侧提示字号。
   static const double sectionHintSize = 12.0;
@@ -153,5 +183,4 @@ class InterestPreferenceStyle {
   static Color topBarIconColor({required bool isDark}) {
     return isDark ? Colors.white : const Color(0xFF1A1A1A);
   }
-
 }

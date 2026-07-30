@@ -32,7 +32,7 @@ class RankingSectionSkeleton extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
           child: tab_bar ?? _build_tab_bar_skeleton(),
         ),
-        _build_content_skeleton(),
+        _build_content_skeleton(context),
         _build_view_more_skeleton(),
         const SizedBox(height: RankingSectionStyle.ranking_bottom_spacing),
       ],
@@ -83,8 +83,14 @@ class RankingSectionSkeleton extends StatelessWidget {
   }
 
   /// 构建双列四行榜单内容骨架。
-  Widget _build_content_skeleton() {
+  Widget _build_content_skeleton(BuildContext context) {
     final Color skeleton_color = _get_skeleton_color();
+    final TextScaler text_scaler = MediaQuery.textScalerOf(context);
+    final double item_content_height =
+        RankingSectionStyle.resolve_item_content_height(text_scaler);
+    final double item_height = RankingSectionStyle.resolve_item_height(
+      text_scaler,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -95,17 +101,14 @@ class RankingSectionSkeleton extends StatelessWidget {
           int row_index,
         ) {
           return Padding(
-            padding: const EdgeInsets.only(
-              bottom:
-                  RankingSectionStyle.item_height -
-                  RankingSectionStyle.cover_height,
-            ),
+            padding: EdgeInsets.only(bottom: item_height - item_content_height),
             child: Row(
               children: <Widget>[
                 Expanded(
                   child: _build_single_skeleton_item(
                     skeleton_color: skeleton_color,
                     index: row_index * 2,
+                    item_content_height: item_content_height,
                   ),
                 ),
                 const SizedBox(width: RankingSectionStyle.column_gap),
@@ -113,6 +116,7 @@ class RankingSectionSkeleton extends StatelessWidget {
                   child: _build_single_skeleton_item(
                     skeleton_color: skeleton_color,
                     index: row_index * 2 + 1,
+                    item_content_height: item_content_height,
                   ),
                 ),
               ],
@@ -153,6 +157,7 @@ class RankingSectionSkeleton extends StatelessWidget {
   Widget _build_single_skeleton_item({
     required Color skeleton_color,
     required int index,
+    required double item_content_height,
   }) {
     final double title_width =
         RankingSectionStyle.skeleton_title_base_width +
@@ -163,46 +168,54 @@ class RankingSectionSkeleton extends StatelessWidget {
         (index % RankingSectionStyle.skeleton_metadata_width_variants) *
             RankingSectionStyle.skeleton_metadata_width_step;
 
-    return Row(
-      children: <Widget>[
-        Container(
-          width: RankingSectionStyle.cover_width,
-          height: RankingSectionStyle.cover_height,
-          decoration: BoxDecoration(
-            color: skeleton_color,
-            borderRadius: BorderRadius.circular(
-              RankingSectionStyle.cover_border_radius,
+    return SizedBox(
+      height: item_content_height,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: RankingSectionStyle.cover_width,
+            height: RankingSectionStyle.cover_height,
+            decoration: BoxDecoration(
+              color: skeleton_color,
+              borderRadius: BorderRadius.circular(
+                RankingSectionStyle.cover_border_radius,
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: RankingSectionStyle.cover_to_rank_gap),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Container(
-                width: title_width,
-                height: RankingSectionStyle.skeleton_title_height,
-                decoration: BoxDecoration(
-                  color: skeleton_color,
-                  borderRadius: BorderRadius.circular(LayoutConfig.tag_radius),
+          const SizedBox(width: RankingSectionStyle.cover_to_rank_gap),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Container(
+                  width: title_width,
+                  height: RankingSectionStyle.skeleton_title_height,
+                  decoration: BoxDecoration(
+                    color: skeleton_color,
+                    borderRadius: BorderRadius.circular(
+                      LayoutConfig.tag_radius,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(
-                height: RankingSectionStyle.skeleton_text_line_spacing,
-              ),
-              Container(
-                width: metadata_width,
-                height: RankingSectionStyle.skeleton_metadata_height,
-                decoration: BoxDecoration(
-                  color: skeleton_color,
-                  borderRadius: BorderRadius.circular(LayoutConfig.tag_radius),
+                const SizedBox(
+                  height: RankingSectionStyle.skeleton_text_line_spacing,
                 ),
-              ),
-            ],
+                Container(
+                  width: metadata_width,
+                  height: RankingSectionStyle.skeleton_metadata_height,
+                  decoration: BoxDecoration(
+                    color: skeleton_color,
+                    borderRadius: BorderRadius.circular(
+                      LayoutConfig.tag_radius,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

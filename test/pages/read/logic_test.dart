@@ -102,12 +102,62 @@ void main() {
       expect(total_progress, closeTo(50, 0.01));
     });
   });
+
+  test('跳转到中间章节时上一章首次失败会重试并进入阅读窗口', () async {
+    final NovelReadingStore reading_store = NovelReadingStore();
+    final String cache_namespace =
+        'read-window-${DateTime.now().microsecondsSinceEpoch}';
+    final Map<String, int> request_counts = <String, int>{};
+    final Logic logic = Logic(
+      story_id: 1,
+      story_title: '测试小说',
+      reading_store: reading_store,
+      initial_body_font_size: 18,
+      initial_auto_read_speed: 0.2,
+      chapter_content_loader: (String url) async {
+        final int count = (request_counts[url] ?? 0) + 1;
+        request_counts[url] = count;
+        if (url.endsWith('/84') && count == 1) {
+          return '';
+        }
+        return '第 $url 章正文';
+      },
+    );
+    addTearDown(logic.onClose);
+
+    reading_store.set_chapter_list(
+      List<NovelChapterInfo>.generate(
+        100,
+        (int index) => _chapter(
+          id: '${index + 1}',
+          chapter_no: index + 1,
+          word_count: 100,
+          content_url: '$cache_namespace/$index',
+        ),
+      ),
+    );
+    reading_store.cache_chapter_content(83, '第 84 章正文');
+    reading_store.cache_chapter_content(87, '第 88 章正文');
+
+    final int? generation = await logic.jump_to_chapter(85);
+    expect(generation, isNotNull);
+
+    final Set<int> rendered_chapters = reading_store.reading_items
+        .map((ReadingContentItem item) => item.chapter_index)
+        .toSet();
+    expect(rendered_chapters, containsAll(<int>[84, 85, 86]));
+    expect(logic.min_loaded_chapter_index, 84);
+    expect(request_counts['$cache_namespace/84'], 2);
+
+    logic.complete_chapter_jump(generation!);
+  });
 }
 
 NovelChapterInfo _chapter({
   required String id,
   required int chapter_no,
   required int word_count,
+  String content_url = '',
 }) {
   return NovelChapterInfo(
     id: id,
@@ -115,7 +165,7 @@ NovelChapterInfo _chapter({
     chapter_no: chapter_no,
     title: '第 $chapter_no 章',
     sorting: chapter_no,
-    content_url: '',
+    content_url: content_url,
     word_count: word_count,
     is_vip: 0,
     create_time: '',

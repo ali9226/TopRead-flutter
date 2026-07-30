@@ -14,6 +14,9 @@ import 'package:app/util/device/save_body_font_size.dart';
 
 import 'style.dart';
 
+/// 章节正文加载器。
+typedef ChapterContentLoader = Future<String> Function(String url);
+
 /// 阅读页详情数据模型。
 class ReadDetail {
   /// 书籍 id。
@@ -397,6 +400,9 @@ class Logic extends GetxController {
   /// 小说阅读仓库。
   final NovelReadingStore _store;
 
+  /// 章节正文加载器。
+  final ChapterContentLoader _chapter_content_loader;
+
   /// 书籍总字数。
   int _total_word_count = 0;
 
@@ -429,9 +435,11 @@ class Logic extends GetxController {
     required this.story_id,
     required this.story_title,
     NovelReadingStore? reading_store,
+    ChapterContentLoader chapter_content_loader = get_chapter_content,
     double? initial_body_font_size,
     double? initial_auto_read_speed,
-  }) : _store = reading_store ?? NovelReadingStore() {
+  }) : _store = reading_store ?? NovelReadingStore(),
+       _chapter_content_loader = chapter_content_loader {
     scroll_controller = ScrollController();
     // 初始化字号。
     body_font_size =
@@ -1071,16 +1079,37 @@ class Logic extends GetxController {
       )
         chapter_index,
     ];
-    final List<String> contents = await Future.wait<String>(
-      chapter_indexes.map((int chapter_index) async {
+    final List<String> contents = <String>[];
+    for (final int chapter_index in chapter_indexes) {
+      try {
+        contents.add(await _fetch_chapter_content(chapter_index));
+      } catch (error) {
+        debugPrint('加载跳转窗口章节 $chapter_index 失败: $error');
+        contents.add('');
+      }
+      if (generation != _chapter_window_generation) {
+        return false;
+      }
+    }
+
+    // 中间章节跳转必须优先保证紧邻的上一章存在。并发拉取三个远端正文时，
+    // 任一邻章可能因瞬时失败返回空字符串；若直接完成跳转，列表顶部就会被
+    // 锁在目标章。上一章首次为空时，在其他窗口内容完成后再独立重试一次。
+    if (index > 0) {
+      final int previous_content_index = index - 1 - start_index;
+      if (previous_content_index >= 0 &&
+          previous_content_index < contents.length &&
+          contents[previous_content_index].isEmpty) {
         try {
-          return await _fetch_chapter_content(chapter_index);
+          contents[previous_content_index] = await _fetch_chapter_content(
+            index - 1,
+            force: true,
+          );
         } catch (error) {
-          debugPrint('加载跳转窗口章节 $chapter_index 失败: $error');
-          return '';
+          debugPrint('重试加载上一章 ${index - 1} 失败: $error');
         }
-      }),
-    );
+      }
+    }
     if (generation != _chapter_window_generation) {
       return false;
     }
@@ -1187,7 +1216,7 @@ class Logic extends GetxController {
     }
 
     // 缓存未命中，发起网络请求。
-    final String content = await get_chapter_content(chapter.content_url);
+    final String content = await _chapter_content_loader(chapter.content_url);
     if (content.isNotEmpty) {
       _store.cache_chapter_content(index, content);
       await _write_chapter_content_to_disk_cache(content_url, content);

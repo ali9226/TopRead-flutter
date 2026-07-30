@@ -1,4 +1,4 @@
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'dart:convert';
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -88,6 +88,24 @@ class MessageData {
     this.novel_cover = '',
   });
 
+  /// 复制消息并覆盖指定字段。
+  MessageData copy_with({int? notify_status}) {
+    return MessageData(
+      id: id,
+      user_id: user_id,
+      title: title,
+      introduction: introduction,
+      content: content,
+      type: type,
+      send_user: send_user,
+      send_time: send_time,
+      notify_status: notify_status ?? this.notify_status,
+      sender_name: sender_name,
+      sender_avatar: sender_avatar,
+      novel_cover: novel_cover,
+    );
+  }
+
   /// 从后端接口返回的 JSON 数据解析。
   factory MessageData.from_json(Map<String, dynamic> json) {
     return MessageData(
@@ -151,6 +169,10 @@ class MessageData {
   /// 获取父评论ID（回复时有值）。
   int get parent_id => _parse_int(content_map['parent_id']);
 
+  /// 获取消息业务场景，用于区分顶层评论和评论回复。
+  String get notification_scene =>
+      content_map['notification_scene']?.toString() ?? '';
+
   /// 获取消息类型的 i18n key。
   String get type_key {
     switch (type) {
@@ -181,6 +203,10 @@ class MessageData {
     if (type == MessageType.chat_reply) {
       return easy.tr('message.card_title.chat_reply');
     }
+    if (type == MessageType.comment_reply &&
+        notification_scene == 'novel_comment') {
+      return easy.tr('message.card_title.novel_comment');
+    }
     // TODO 其他类型从 i18n 推导
     return easy.tr('message.card_title.$type_key');
   }
@@ -198,7 +224,12 @@ class MessageData {
 
     // TODO 根据类型和是否自己操作，选择对应的 i18n 模板
     final String suffix = is_self_record ? 'self' : 'other';
-    final String i18n_key = 'message.card_subtitle.${type_key}_$suffix';
+    final String subtitle_type =
+        type == MessageType.comment_reply &&
+            notification_scene == 'novel_comment'
+        ? 'novel_comment'
+        : type_key;
+    final String i18n_key = 'message.card_subtitle.${subtitle_type}_$suffix';
 
     // TODO 获取模板后手动替换占位符
     final String template = easy.tr(i18n_key);
@@ -316,6 +347,9 @@ class MessageUnreadCount {
   /// 客服聊天未读数。
   final int chat_unread;
 
+  /// 系统通知未读数。
+  final int system_unread;
+
   const MessageUnreadCount({
     required this.total,
     required this.comment_unread,
@@ -325,19 +359,32 @@ class MessageUnreadCount {
     required this.favorite_unread,
     required this.favorite_total,
     required this.chat_unread,
+    required this.system_unread,
   });
 
   /// 从后端接口返回的 JSON 数据解析。
   factory MessageUnreadCount.from_json(Map<String, dynamic> json) {
+    final int total = _parse_int(json['total']);
+    final int comment_unread = _parse_int(json['comment_unread']);
+    final int like_unread = _parse_int(json['like_unread']);
+    final int favorite_unread = _parse_int(json['favorite_unread']);
+    final int chat_unread = _parse_int(json['chat_unread']);
+    final int known_unread =
+        comment_unread + like_unread + favorite_unread + chat_unread;
+
     return MessageUnreadCount(
-      total: _parse_int(json['total']),
-      comment_unread: _parse_int(json['comment_unread']),
+      total: total,
+      comment_unread: comment_unread,
       comment_total: _parse_int(json['comment_total']),
-      like_unread: _parse_int(json['like_unread']),
+      like_unread: like_unread,
       like_total: _parse_int(json['like_total']),
-      favorite_unread: _parse_int(json['favorite_unread']),
+      favorite_unread: favorite_unread,
       favorite_total: _parse_int(json['favorite_total']),
-      chat_unread: _parse_int(json['chat_unread']),
+      chat_unread: chat_unread,
+      // TODO 兼容旧后端：缺少 system_unread 时由权威总数反推未知类型未读数。
+      system_unread: json.containsKey('system_unread')
+          ? _parse_int(json['system_unread'])
+          : (total - known_unread).clamp(0, 9999),
     );
   }
 

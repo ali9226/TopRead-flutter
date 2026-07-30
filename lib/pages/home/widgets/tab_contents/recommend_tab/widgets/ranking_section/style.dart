@@ -88,7 +88,10 @@ class RankingSectionStyle {
   static const double cover_border_radius = LayoutConfig.tag_radius;
 
   /// 单个书籍项的高度（封面 + 底部间距）。
-  static const double item_height = cover_height + 11;
+  static const double item_bottom_spacing = 11;
+
+  /// 默认文字缩放比例下的单个书籍项高度。
+  static const double item_height = cover_height + item_bottom_spacing;
 
   /// 榜单内容区域为了对齐真实列表保留的额外高度。
   static const double content_height_adjustment = 5;
@@ -138,6 +141,12 @@ class RankingSectionStyle {
   /// 分类/热度字号。
   static const double category_font_size = 11;
 
+  /// 分类/热度行高。
+  static const double category_line_height = 1.35;
+
+  /// 文字布局安全余量，避免不同平台的像素取整裁剪字形底部。
+  static const double text_layout_safety_padding = 2;
+
   /// 分隔点尺寸。
   static const double separator_dot_size = 3;
 
@@ -166,6 +175,44 @@ class RankingSectionStyle {
 
   /// 前三名排名序号对应的主题色索引映射。
   static const int top_rank_count = 3;
+
+  /// 根据当前系统文字缩放比例计算书籍项内容高度。
+  ///
+  /// 两种布局都按最坏情况计算：
+  /// - 双行标题 + 单行分类信息；
+  /// - 单行标题 + 双行分类信息。
+  static double resolve_item_content_height(TextScaler text_scaler) {
+    final double title_line_extent =
+        text_scaler.scale(title_font_size) * title_line_height;
+    final double category_line_extent =
+        text_scaler.scale(category_font_size) * category_line_height;
+    final double multi_line_title_extent =
+        title_line_extent * 2 + category_line_extent;
+    final double single_line_title_extent =
+        title_line_extent + category_line_extent * 2;
+    final double required_text_extent =
+        (multi_line_title_extent > single_line_title_extent
+            ? multi_line_title_extent
+            : single_line_title_extent) +
+        text_layout_safety_padding;
+
+    return required_text_extent > cover_height
+        ? required_text_extent.ceilToDouble()
+        : cover_height;
+  }
+
+  /// 根据当前系统文字缩放比例计算单个书籍项高度。
+  static double resolve_item_height(TextScaler text_scaler) {
+    return resolve_item_content_height(text_scaler) + item_bottom_spacing;
+  }
+
+  /// 根据当前系统文字缩放比例计算榜单内容区域高度。
+  static double resolve_content_height(TextScaler text_scaler) {
+    final double resolved_item_height = resolve_item_height(text_scaler);
+    return rows_per_column * resolved_item_height +
+        (rows_per_column - 1) * row_gap +
+        content_height_adjustment;
+  }
 
   // ---- 查看更多按钮样式 ----
 

@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 
@@ -5,6 +7,7 @@ import 'package:app/config/color_config.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/interest_preference/style.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/util/language_util/index.dart';
 
 /// 兴趣偏好页面顶部导航栏组件。
 ///
@@ -34,6 +37,14 @@ class TopBar extends StatelessWidget {
   /// 返回按钮点击回调，由页面层统一控制返回逻辑（弹窗拦截等）。
   final VoidCallback onBack;
 
+  /// 跳过按钮点击回调。
+  ///
+  /// 仅注册完成专用页面传入，普通兴趣偏好页面保持 null。
+  final VoidCallback? onSkip;
+
+  /// 跳过按钮是否可点击。
+  final bool isSkipEnabled;
+
   const TopBar({
     super.key,
     required this.isDark,
@@ -43,6 +54,8 @@ class TopBar extends StatelessWidget {
     required this.canSave,
     required this.onSave,
     required this.onBack,
+    this.onSkip,
+    this.isSkipEnabled = true,
   });
 
   @override
@@ -64,11 +77,25 @@ class TopBar extends StatelessWidget {
             /// 左侧返回按钮。
             _build_back_button(),
 
-            /// 右侧保存按钮。
-            _build_save_button(),
+            /// 右侧操作区：普通页面仅保存，注册专用页面为保存 + 跳过。
+            _build_action_buttons(context),
           ],
         ),
       ),
+    );
+  }
+
+  /// 构建右侧操作按钮组。
+  Widget _build_action_buttons(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        _build_save_button(context),
+        if (onSkip != null) ...<Widget>[
+          const SizedBox(width: InterestPreferenceStyle.topBarActionSpacing),
+          _build_skip_button(context),
+        ],
+      ],
     );
   }
 
@@ -87,8 +114,8 @@ class TopBar extends StatelessWidget {
           shape: BoxShape.circle,
           color: scrolled
               ? (isDark
-                  ? Colors.white.withValues(alpha: 0.12)
-                  : Colors.black.withValues(alpha: 0.08))
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : Colors.black.withValues(alpha: 0.08))
               : Colors.transparent,
         ),
         child: Transform.rotate(
@@ -112,7 +139,7 @@ class TopBar extends StatelessWidget {
   /// - 置灰不可点击：40% 透明度背景 + 40% 透明度文字
   /// - 提交中 loading：40% 透明度背景 + 转圈动画
   /// 背景颜色和文字颜色切换均带有 300ms easeInOut 过渡动画。
-  Widget _build_save_button() {
+  Widget _build_save_button(BuildContext context) {
     /// 按钮是否处于禁用状态（loading 或无变化）。
     final bool disabled = isLoading || !canSave;
 
@@ -123,14 +150,18 @@ class TopBar extends StatelessWidget {
         /// 背景颜色过渡动画。
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        height: InterestPreferenceStyle.topBarButtonHeight,
+        padding: const EdgeInsets.symmetric(
+          horizontal: InterestPreferenceStyle.saveButtonHorizontalPadding,
+        ),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: disabled
               ? ColorConstants.themeColor.withValues(alpha: 0.4)
               : ColorConstants.themeColor,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(
+            InterestPreferenceStyle.topBarButtonHeight / 2,
+          ),
         ),
         child: isLoading
             ? const SizedBox(
@@ -146,7 +177,7 @@ class TopBar extends StatelessWidget {
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: _resolve_action_font_size(context),
                   fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                   color: canSave
                       ? Colors.black
@@ -156,5 +187,45 @@ class TopBar extends StatelessWidget {
               ),
       ),
     );
+  }
+
+  /// 构建注册流程专用的跳过按钮。
+  ///
+  /// 使用轻量文字按钮与高强调保存按钮形成清晰层级，最小点击区域满足移动端
+  /// 触控尺寸，同时根据 CJK/非 CJK 语种调整字号。
+  Widget _build_skip_button(BuildContext context) {
+    return TextButton(
+      onPressed: isSkipEnabled ? onSkip : null,
+      style: TextButton.styleFrom(
+        minimumSize: const Size(
+          InterestPreferenceStyle.skipButtonMinWidth,
+          InterestPreferenceStyle.skipButtonMinHeight,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: InterestPreferenceStyle.skipButtonHorizontalPadding,
+        ),
+        foregroundColor: InterestPreferenceStyle.topBarIconColor(
+          isDark: isDark,
+        ),
+        disabledForegroundColor: InterestPreferenceStyle.topBarIconColor(
+          isDark: isDark,
+        ).withValues(alpha: 0.35),
+        textStyle: TextStyle(
+          fontSize: _resolve_action_font_size(context),
+          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+        ),
+      ),
+      child: Text(easy.tr('interest_preference.skip')),
+    );
+  }
+
+  /// 根据当前语种返回顶部操作按钮字号。
+  double _resolve_action_font_size(BuildContext context) {
+    final bool is_cjk = LanguageUtil.is_cjk_language(
+      context.locale.languageCode,
+    );
+    return is_cjk
+        ? InterestPreferenceStyle.topBarActionFontSizeCjk
+        : InterestPreferenceStyle.topBarActionFontSizeAlphabetic;
   }
 }

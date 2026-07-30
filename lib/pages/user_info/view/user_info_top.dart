@@ -540,10 +540,11 @@ class _UserInfoTopState extends State<UserInfoTop>
         );
       },
       child: GestureDetector(
-        onTap: () {
-          /// 点击福袋后进入文图详情页，并固定传递 type=59。
-          routerUtil(path: '/image_text?type=59');
-        },
+        // TODO 福袋点击事件暂时取消，后续恢复时取消注释即可。
+        // onTap: () {
+        //   /// 点击福袋后进入文图详情页，并固定传递 type=59。
+        //   routerUtil(path: '/image_text?type=59');
+        // },
         child: SvgIcon(
           name: "gold",
           width: Style.luckyBagSize,

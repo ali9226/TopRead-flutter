@@ -348,6 +348,13 @@ class _ReadPageState extends State<ReadPage>
         _is_chapter_transaction_active = false;
         logic.is_switching_chapter.value = false;
         _try_restore_pending_viewport_change();
+        // 若跳章窗口中的上一章曾短暂加载失败，结束事务后立即检查并补齐
+        // 顶部缺口，不要求用户先在列表顶端反复触发无位移的过度滚动。
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _handle_scroll();
+          }
+        });
       }
     }
   }

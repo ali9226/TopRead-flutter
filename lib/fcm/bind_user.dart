@@ -1,5 +1,7 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
+// ignore_for_file: non_constant_identifier_names
+
 import 'package:app/api/post_request.dart';
+import 'package:app/fcm/get_fcm_token.dart';
 import 'package:app/util/log_util.dart';
 
 /// 绑定用户 ID 到 FCM Token。
@@ -12,8 +14,7 @@ class FcmBindUser {
   /// [user_id] 用户 ID。
   static Future<void> execute(int user_id) async {
     try {
-      final messaging = FirebaseMessaging.instance;
-      final String? token = await messaging.getToken();
+      final String? token = await get_fcm_token();
       if (token == null) {
         logUtil(msg: 'FCM: 绑定用户失败，无法获取 Token', type: 'e');
         return;
@@ -21,10 +22,7 @@ class FcmBindUser {
 
       final result = await postRequest<Map<String, dynamic>>(
         path: 'fcm_token/bind_user',
-        parameter: {
-          'token': token,
-          'user_id': user_id,
-        },
+        parameter: {'token': token, 'user_id': user_id},
         showTips: false,
         fromJson: (json) => json,
       );

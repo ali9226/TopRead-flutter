@@ -135,6 +135,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
           widget.items,
           grid_count,
           column_width,
+          MediaQuery.textScalerOf(context),
         );
 
         final double total_height = _calculate_total_height(positions);
@@ -235,8 +236,12 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
     List<BookshelfBookItem> items,
     int grid_count,
     double column_width,
+    TextScaler text_scaler,
   ) {
-    final double default_height = _calculate_item_height(column_width);
+    final double default_height = _calculate_item_height(
+      column_width,
+      text_scaler,
+    );
     final Map<String, Rect> original_positions =
         _calculate_ordered_grid_positions(
           items,
@@ -318,13 +323,9 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
   }
 
   /// 计算单个卡片高度（未测量时的兜底值，取最大情况避免首帧溢出）。
-  double _calculate_item_height(double item_width) {
+  double _calculate_item_height(double item_width, TextScaler text_scaler) {
     final double cover_height = item_width / Style.cover_aspect_ratio;
-    return cover_height +
-        Style.book_title_top_spacing +
-        Style.book_title_line_height * 2 +
-        Style.book_meta_top_spacing +
-        Style.book_max_meta_height;
+    return cover_height + Style.resolve_book_content_area_height(text_scaler);
   }
 
   /// 按骨架卡片的真实内容计算高度，避免行间出现预估高度产生的空白。

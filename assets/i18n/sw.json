@@ -17,6 +17,7 @@
     "title": "Chagua Maslahi Yako",
     "subtitle": "Kamilisha wasifu wako kwa mapendekezo bora",
     "save": "Hifadhi",
+    "skip": "Ruka",
     "loading": "Inapakia...",
     "login_required": "Ingia ili kuhifadhi maslahi yako kwa mapendekezo bora zaidi",
     "content_preference": "Mapendeleo ya Maudhui",
@@ -219,7 +220,13 @@
     "confirm_update": "Sasisha",
     "interest_preference": "Maslahi",
     "online_customer_service": "Huduma Mtandaoni",
-    "about_top_read": "Kuhusu TopRead"
+    "about_top_read": "Kuhusu TopRead",
+    "delete_account": "Futa Akaunti",
+    "delete_account_confirm_title": "Thibitisha Kufuta Akaunti",
+    "delete_account_confirm_message": "Uko karibu kufuta akaunti yako. Kitendo hiki kitaondoa kabisa akaunti yako na data yote inayohusiana, ikiwa ni pamoja na:\n\n• Wasifu na mipangilio\n• Historia ya usomaji na rafu ya vitabu\n• Salio la akaunti na sarafu\n• Data yote ya kihistoria\n\nKitendo hiki hakiwezi kubatilishwa na hakiwezi kutenduliwa.\n\nTafadhali endelea kwa tahadhari na hakikisha umehifadhi muhimu.",
+    "delete_account_confirm_button": "Futa Akaunti",
+    "delete_account_cancel_button": "Ghairi",
+    "delete_account_success_message": "Tunaomba msamaha kwa usumbufu. Akaunti yako imefutwa. Tunathamini maoni yako na tutajitahidi kuboresha!"
   },
 
   "customer_service_sheet": {
@@ -227,6 +234,8 @@
     "description": "Ukihitaji msaada wowote wakati wa kutumia programu, tafadhali wasiliana na msaada wetu mtandaoni. Tunafuraha kukusaidia.",
     "contact_button": "Wasiliana na Msaada",
     "empty_hint": "Tuma ujumbe kuanza mazungumzo",
+    "input_hint": "Andika ujumbe…",
+    "send": "Tuma",
     "photo_permission_hint": "Ruhusa ya picha inahitajika kutuma picha. Tafadhali iwashe kwenye Mipangilio."
   },
 
@@ -257,6 +266,7 @@
     },
     "card_title": {
       "system": "Taarifa za Mfumo",
+      "novel_comment": "Maoni Mapya",
       "comment_reply": "Jibu la Maoni",
       "comment_like": "Like Maoni",
       "novel_like": "Like Riwaya",
@@ -266,6 +276,8 @@
     "card_subtitle": {
       "system_self": "{0}",
       "system_other": "{0}",
+      "novel_comment_self": "Ulitoa maoni kwenye \"{0}\"",
+      "novel_comment_other": "Mtu alitoa maoni kwenye riwaya yako \"{0}\"",
       "comment_reply_self": "Ulijibu maoni katika \"{0}\"",
       "comment_reply_other": "Mtu alijibu maoni yako katika \"{0}\"",
       "comment_like_self": "Ulikuja like maoni katika \"{0}\"",

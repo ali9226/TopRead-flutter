@@ -45,10 +45,17 @@ class ChatLogic {
   /// TODO 上次已处理的管理员实时消息序号。
   late int _received_message_revision;
 
+  /// TODO 滚动请求序号，用于合并同一帧内的重复跟随请求。
+  int _scroll_request_revision = 0;
+
+  /// TODO 页面逻辑是否已经释放。
+  bool _is_disposed = false;
+
   ChatLogic(this.on_update) {
     _received_message_revision = _history_store.received_message_revision;
     _history_store.addListener(_handle_store_update);
     scroll_controller.addListener(_handle_scroll);
+    focus_node.addListener(_handle_focus_change);
     unawaited(_history_store.open_conversation());
   }
 
@@ -78,8 +85,6 @@ class ChatLogic {
     }
 
     _received_message_revision = latest_revision;
-    on_update();
-
     if (!received_new_message) return;
     AudioUtil.play_message_ringtone();
 
@@ -88,6 +93,13 @@ class ChatLogic {
     } else {
       _preserve_viewport_after_bottom_insert(old_offset, old_max_extent);
     }
+  }
+
+  /// TODO 输入框获得焦点时关闭表情面板，并保持最新消息可见。
+  void _handle_focus_change() {
+    if (!focus_node.hasFocus) return;
+    close_emoji_panel();
+    scroll_to_bottom();
   }
 
   /// TODO 只在接近历史顶部时触发下一页，避免频繁请求。
@@ -275,14 +287,20 @@ class ChatLogic {
 
   /// TODO 平滑跟随到最新消息；反向列表的底部为最小 offset。
   void scroll_to_bottom() {
+    final int request_revision = ++_scroll_request_revision;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!scroll_controller.hasClients ||
+      if (_is_disposed ||
+          request_revision != _scroll_request_revision ||
+          !scroll_controller.hasClients ||
           !scroll_controller.position.hasContentDimensions) {
         return;
       }
 
+      final double target_offset = scroll_controller.position.minScrollExtent;
+      if ((scroll_controller.offset - target_offset).abs() < 0.5) return;
+
       scroll_controller.animateTo(
-        scroll_controller.position.minScrollExtent,
+        target_offset,
         duration: CustomerServiceChatStyle.scroll_animation_duration,
         curve: Curves.easeOutCubic,
       );
@@ -291,8 +309,11 @@ class ChatLogic {
 
   /// TODO 释放页面资源，但不清空全局聊天历史。
   void dispose() {
+    _is_disposed = true;
+    _scroll_request_revision++;
     _history_store.removeListener(_handle_store_update);
     _history_store.close_conversation();
+    focus_node.removeListener(_handle_focus_change);
     scroll_controller.removeListener(_handle_scroll);
     scroll_controller.dispose();
     text_controller.dispose();

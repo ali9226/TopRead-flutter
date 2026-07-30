@@ -53,7 +53,7 @@ class Constant {
     // }
     return "https://www.read.top";
     // return "http://192.168.31.120:5006";
-    return "http://0.0.0.0:5006";
+    // return "http://192.168.31.120:5006";
   }
 
   // TODO 网络请求的前缀

@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
@@ -16,6 +18,7 @@ import 'package:app/pages/selection_language/index.dart';
 import 'package:app/pages/search/index.dart';
 import 'package:app/pages/web_view/index.dart';
 import 'package:app/pages/interest_preference/index.dart';
+import 'package:app/pages/registration_interest_preference/index.dart';
 import 'package:app/pages/short_story_read/index.dart';
 import 'package:app/pages/customer_service_chat/index.dart';
 import 'package:app/pages/debug/index.dart';
@@ -129,7 +132,8 @@ class RouteConfig {
             final String? id_str = state.uri.queryParameters['id'];
             final int? story_id = int.tryParse(id_str ?? '');
             final int comment_id =
-                int.tryParse(state.uri.queryParameters['comment_id'] ?? '') ?? 0;
+                int.tryParse(state.uri.queryParameters['comment_id'] ?? '') ??
+                0;
             if (story_id == null || story_id <= 0) {
               return buildRoutePage(
                 state: state,
@@ -152,7 +156,8 @@ class RouteConfig {
             final int initial_tab_id =
                 int.tryParse(state.uri.queryParameters['id'] ?? '') ?? 0;
             final int initial_category_id =
-                int.tryParse(state.uri.queryParameters['category_id'] ?? '') ?? 0;
+                int.tryParse(state.uri.queryParameters['category_id'] ?? '') ??
+                0;
             return buildRoutePage(
               state: state,
               child: RankingFullListPage(
@@ -170,7 +175,8 @@ class RouteConfig {
                 int.tryParse(state.uri.queryParameters['id'] ?? '') ?? 0;
             final String story_title = state.uri.queryParameters['title'] ?? '';
             final int comment_id =
-                int.tryParse(state.uri.queryParameters['comment_id'] ?? '') ?? 0;
+                int.tryParse(state.uri.queryParameters['comment_id'] ?? '') ??
+                0;
             return buildRoutePage(
               state: state,
               child: ReadPage(
@@ -206,13 +212,18 @@ class RouteConfig {
         GoRoute(
           path: '/interest_preference',
           name: 'interest_preference',
-          pageBuilder: (context, state) {
-            final bool fromRegistration = state.extra == true;
-            return buildRoutePage(
-              state: state,
-              child: InterestPreferencePage(fromRegistration: fromRegistration),
-            );
-          },
+          pageBuilder: (context, state) => buildRoutePage(
+            state: state,
+            child: const InterestPreferencePage(),
+          ),
+        ),
+        GoRoute(
+          path: '/registration_interest_preference',
+          name: 'registration_interest_preference',
+          pageBuilder: (context, state) => buildRoutePage(
+            state: state,
+            child: const RegistrationInterestPreferencePage(),
+          ),
         ),
         GoRoute(
           path: '/customer_service_chat',

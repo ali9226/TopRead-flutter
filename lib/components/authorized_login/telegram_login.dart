@@ -3,6 +3,7 @@
 import 'package:app/api/post_request.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/config/constant.dart';
+import 'package:app/fcm/fcm_auth.dart';
 import 'package:app/models/login.dart';
 import 'package:app/stores/authorized_login_store.dart';
 import 'package:app/stores/user_information.dart';
@@ -150,6 +151,9 @@ Future<void> _request_telegram_backend_auth({
 
   final UserInformation user_controller = Get.put(UserInformation());
   user_controller.saveUserInfo(results.content!.userInfo);
+
+  // 绑定 FCM Token 到用户。
+  FcmAuth.onLoginSuccess();
 
   routerUtil(path: '/', type: 'replace');
 }

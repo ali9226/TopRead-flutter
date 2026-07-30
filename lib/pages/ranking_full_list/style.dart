@@ -194,6 +194,42 @@ class Style {
   /// 进度字号。
   static const double book_meta_font_size = 12;
 
+  /// 分类和阅读数的行高。
+  static const double book_meta_line_height = 1.4;
+
+  /// 单行标题布局中两行底部信息之间的间距。
+  static const double book_single_line_meta_gap = 2;
+
+  /// 分类与阅读数分隔点两侧的间距。
+  static const double book_meta_separator_gap = 4;
+
+  /// 文字布局安全余量，避免不同平台的像素取整裁剪字形底部。
+  static const double book_text_layout_safety_padding = 2;
+
+  /// 根据当前系统文字缩放比例计算书籍卡片文字区域高度。
+  ///
+  /// 两种布局都按最坏情况计算：
+  /// - 双行标题 + 单行分类信息；
+  /// - 单行标题 + 双行分类信息。
+  static double resolve_book_content_area_height(TextScaler text_scaler) {
+    final double title_line_extent =
+        text_scaler.scale(book_title_font_size) * book_title_height;
+    final double meta_line_extent =
+        text_scaler.scale(book_meta_font_size) * book_meta_line_height;
+    final double multi_line_title_extent =
+        title_line_extent * 2 + meta_line_extent;
+    final double single_line_title_extent =
+        title_line_extent + meta_line_extent * 2 + book_single_line_meta_gap;
+    final double text_extent =
+        (multi_line_title_extent > single_line_title_extent
+            ? multi_line_title_extent
+            : single_line_title_extent) +
+        book_text_layout_safety_padding;
+
+    return (book_title_top_spacing + book_meta_top_spacing + text_extent)
+        .ceilToDouble();
+  }
+
   /// 详情三点的点直径。
   static const double book_meta_dot_size = 2.4;
 

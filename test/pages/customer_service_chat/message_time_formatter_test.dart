@@ -7,6 +7,11 @@ import 'package:app/pages/customer_service_chat/widgets/message_bubble.dart';
 import 'package:app/util/utc_time_util.dart';
 
 void main() {
+  test('消息气泡在手机和宽屏设备上都保持可读宽度', () {
+    expect(MessageBubble.calc_max_width(400), 288);
+    expect(MessageBubble.calc_max_width(1200), 460);
+  });
+
   test('无时区后缀的后端时间始终按 UTC 解析', () {
     final DateTime? local_time = parse_utc_time_to_local('2026-07-19 00:30:00');
 

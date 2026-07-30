@@ -262,7 +262,13 @@ class CustomerServiceChatHistoryStore extends GetxController {
       Get.find<MessageStore>().update_chat_unread(0);
     }
     if (_session_id > 0) {
-      WebSocketService().mark_chat_read(session_id: _session_id);
+      final bool sent = WebSocketService().mark_chat_read(
+        session_id: _session_id,
+      );
+      if (!sent) {
+        // TODO 本次历史 HTTP 请求已经完成已读落库；重连事件会再次同步最新历史。
+        logUtil(msg: '客服已读 WebSocket 暂未发送，等待重连后校准', type: 'w');
+      }
     }
   }
 
@@ -293,10 +299,6 @@ class CustomerServiceChatHistoryStore extends GetxController {
 
       _apply_response_metadata(result);
       final List<ChatMessageItem> parsed = _parse_messages(result['list']);
-      // DEBUG: 打印从服务端收到的消息顺序
-      for (int i = 0; i < parsed.length; i++) {
-        logUtil(msg: '[历史] [$i] time=${parsed[i].create_time} type=${parsed[i].sender_type} content=${parsed[i].content.substring(0, parsed[i].content.length > 20 ? 20 : parsed[i].content.length)}');
-      }
       _merge_server_messages(parsed);
       _has_loaded = true;
       update();
@@ -634,7 +636,13 @@ class CustomerServiceChatHistoryStore extends GetxController {
         scheduleMicrotask(() => Get.find<MessageStore>().update_chat_unread(0));
       }
       if (_session_id > 0) {
-        WebSocketService().mark_chat_read(session_id: _session_id);
+        final bool sent = WebSocketService().mark_chat_read(
+          session_id: _session_id,
+        );
+        if (!sent) {
+          // TODO 能收到实时消息说明连接刚刚可用；若发送阶段恰好断线，重连会补做 HTTP 已读。
+          logUtil(msg: '实时客服已读回执暂未发送，等待重连后校准', type: 'w');
+        }
       }
     }
   }

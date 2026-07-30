@@ -161,18 +161,19 @@ class _RankingContentState extends State<RankingContent> {
 
   @override
   Widget build(BuildContext context) {
+    /// 使用当前设备真实文字缩放比例计算内容高度，避免平板或辅助字号裁剪标题。
+    final TextScaler text_scaler = MediaQuery.textScalerOf(context);
+    final double content_height = RankingSectionStyle.resolve_content_height(
+      text_scaler,
+    );
+
     /// 总列数（向上取整）。
     final int total_columns =
         (widget.books.length / RankingSectionStyle.rows_per_column).ceil();
 
     if (total_columns == 0) {
       return SizedBox(
-        height:
-            RankingSectionStyle.rows_per_column *
-                RankingSectionStyle.item_height +
-            (RankingSectionStyle.rows_per_column - 1) *
-                RankingSectionStyle.row_gap +
-            RankingSectionStyle.content_height_adjustment,
+        height: content_height,
         child: EmptyState(is_dark: widget.is_dark, on_reload: widget.on_reload),
       );
     }
@@ -189,12 +190,7 @@ class _RankingContentState extends State<RankingContent> {
         );
 
         return SizedBox(
-          height:
-              RankingSectionStyle.rows_per_column *
-                  RankingSectionStyle.item_height +
-              (RankingSectionStyle.rows_per_column - 1) *
-                  RankingSectionStyle.row_gap +
-              RankingSectionStyle.content_height_adjustment,
+          height: content_height,
           child: Stack(
             clipBehavior: Clip.hardEdge,
             children: <Widget>[

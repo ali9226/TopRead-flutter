@@ -52,6 +52,34 @@ void main() {
     expect(user_information.isLoggedIn.value, isTrue);
     expect(user_information.userInfo.value?.id, new_user.id);
   });
+
+  test('认证身份变化时隔离用户中心滚动状态，同一用户资料刷新时保持状态', () {
+    final UserInformation user_information = Get.find<UserInformation>();
+    final UserInfo first_user = _build_user_info(id: 1, name: 'first');
+    final UserInfo refreshed_first_user = _build_user_info(
+      id: 1,
+      name: 'refreshed',
+    );
+
+    final int initial_guest_revision = user_information.auth_identity_revision;
+
+    user_information.saveUserInfo(first_user);
+    final int first_login_revision = user_information.auth_identity_revision;
+
+    user_information.saveUserInfo(refreshed_first_user);
+    final int refreshed_user_revision = user_information.auth_identity_revision;
+
+    user_information.begin_logout();
+    final int logged_out_revision = user_information.auth_identity_revision;
+
+    user_information.saveUserInfo(first_user);
+    final int second_login_revision = user_information.auth_identity_revision;
+
+    expect(first_login_revision, initial_guest_revision + 1);
+    expect(refreshed_user_revision, first_login_revision);
+    expect(logged_out_revision, first_login_revision + 1);
+    expect(second_login_revision, logged_out_revision + 1);
+  });
 }
 
 UserInfo _build_user_info({required int id, required String name}) {

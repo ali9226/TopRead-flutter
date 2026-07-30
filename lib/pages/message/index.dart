@@ -26,6 +26,7 @@ import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/stores/message_store.dart';
 import 'package:app/stores/shell_tab_info.dart';
+import 'package:app/util/utc_time_util.dart';
 
 /// 消息页面。
 ///
@@ -249,29 +250,27 @@ class _MessagePageState extends State<MessagePage> {
   /// TODO 格式化相对时间。
   String _format_time(String time_str) {
     if (time_str.isEmpty) return '';
-    try {
-      final DateTime message_time = DateTime.parse(time_str);
-      final Duration diff = DateTime.now().difference(message_time);
-      if (diff.inMinutes < 1) return easy.tr('message.time.just_now');
-      if (diff.inMinutes < 60) {
-        return easy
-            .tr('message.time.minutes_ago')
-            .replaceAll('{0}', '${diff.inMinutes}');
-      }
-      if (diff.inHours < 24) {
-        return easy
-            .tr('message.time.hours_ago')
-            .replaceAll('{0}', '${diff.inHours}');
-      }
-      if (diff.inDays < 7) {
-        return easy
-            .tr('message.time.days_ago')
-            .replaceAll('{0}', '${diff.inDays}');
-      }
-      return '${message_time.month}/${message_time.day}';
-    } catch (e) {
-      return time_str;
+    final DateTime? message_time = parse_utc_time_to_local(time_str);
+    if (message_time == null) return time_str;
+
+    final Duration diff = DateTime.now().difference(message_time);
+    if (diff.inMinutes < 1) return easy.tr('message.time.just_now');
+    if (diff.inMinutes < 60) {
+      return easy
+          .tr('message.time.minutes_ago')
+          .replaceAll('{0}', '${diff.inMinutes}');
     }
+    if (diff.inHours < 24) {
+      return easy
+          .tr('message.time.hours_ago')
+          .replaceAll('{0}', '${diff.inHours}');
+    }
+    if (diff.inDays < 7) {
+      return easy
+          .tr('message.time.days_ago')
+          .replaceAll('{0}', '${diff.inDays}');
+    }
+    return '${message_time.month}/${message_time.day}';
   }
 
   @override

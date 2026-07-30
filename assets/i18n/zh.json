@@ -17,6 +17,7 @@
     "title": "选择你的兴趣偏好",
     "subtitle": "完善信息，为你推荐更优质内容",
     "save": "保存",
+    "skip": "跳过",
     "loading": "加载中...",
     "login_required": "登录后即可保存兴趣偏好，为你推荐更符合口味的内容",
     "content_preference": "内容偏好",
@@ -233,7 +234,13 @@
     "confirm_update": "确认更新",
     "interest_preference": "兴趣爱好",
     "online_customer_service": "在线客服",
-    "about_top_read": "关于TopRead"
+    "about_top_read": "关于TopRead",
+    "delete_account": "删除账户",
+    "delete_account_confirm_title": "确认删除账户",
+    "delete_account_confirm_message": "您正在进行账户删除操作。此操作将彻底删除您的账户及所有相关数据，包括但不限于：\n\n• 个人资料和设置\n• 阅读记录和书架\n• 账户余额和金币\n• 所有历史数据\n\n删除后将永久不可恢复，且无法找回任何数据。\n\n请谨慎操作，确认您已备份重要信息。",
+    "delete_account_confirm_button": "确认删除",
+    "delete_account_cancel_button": "取消",
+    "delete_account_success_message": "很遗憾给您带来不好的体验，我们已经清除了您的账户。希望您能指出我们的不足，我们将努力做出改变！"
   },
 
   "customer_service_sheet": {
@@ -241,6 +248,8 @@
     "description": "如果您在使用过程中遇到任何问题，请联系我们的在线客服，我们将竭诚为您服务。",
     "contact_button": "联系客服",
     "empty_hint": "发送消息开始对话",
+    "input_hint": "输入消息…",
+    "send": "发送",
     "photo_permission_hint": "需要相册权限才能发送图片，请在设置中开启"
   },
 
@@ -271,6 +280,7 @@
     },
     "card_title": {
       "system": "系统通知",
+      "novel_comment": "新评论",
       "comment_reply": "评论回复",
       "comment_like": "点赞评论",
       "novel_like": "喜欢小说",
@@ -280,6 +290,8 @@
     "card_subtitle": {
       "system_self": "{0}",
       "system_other": "{0}",
+      "novel_comment_self": "你评论了《{0}》",
+      "novel_comment_other": "有人评论了你的作品《{0}》",
       "comment_reply_self": "你回复了《{0}》中的一条评论",
       "comment_reply_other": "有人回复了你在《{0}》中的评论",
       "comment_like_self": "你赞了《{0}》中的一条评论",

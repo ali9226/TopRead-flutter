@@ -17,6 +17,7 @@
     "title": "Choisissez vos centres d'intérêt",
     "subtitle": "Complétez votre profil pour de meilleures recommandations",
     "save": "Enregistrer",
+    "skip": "Passer",
     "loading": "Chargement...",
     "login_required": "Connectez-vous pour enregistrer vos centres d'intérêt et recevoir de meilleures recommandations",
     "content_preference": "Préférences de contenu",
@@ -278,7 +279,13 @@
     "confirm_update": "Confirmer la mise à jour",
     "interest_preference": "Centres d'intérêt",
     "online_customer_service": "Service en ligne",
-    "about_top_read": "À propos de TopRead"
+    "about_top_read": "À propos de TopRead",
+    "delete_account": "Supprimer le compte",
+    "delete_account_confirm_title": "Confirmer la suppression du compte",
+    "delete_account_confirm_message": "Vous êtes sur le point de supprimer votre compte. Cette action supprimera définitivement votre compte et toutes les données associées, y compris :\n\n• Profil et paramètres\n• Historique de lecture et bibliothèque\n• Solde du compte et pièces\n• Toutes les données historiques\n\nCette action est irréversible et ne peut pas être annulée.\n\nVeuillez procéder avec prudence et vous assurer d'avoir sauvegardé les informations importantes.",
+    "delete_account_confirm_button": "Supprimer le compte",
+    "delete_account_cancel_button": "Annuler",
+    "delete_account_success_message": "Nous sommes désolés pour ce désagrément. Votre compte a été supprimé. Nous apprécions vos retours et nous efforcerons de nous améliorer !"
   },
 
   "customer_service_sheet": {
@@ -286,6 +293,8 @@
     "description": "Si vous rencontrez des problèmes lors de l'utilisation de l'application, veuillez contacter notre support en ligne. Nous sommes heureux de vous aider.",
     "contact_button": "Contacter le support",
     "empty_hint": "Envoyez un message pour commencer",
+    "input_hint": "Écrivez un message…",
+    "send": "Envoyer",
     "photo_permission_hint": "L'accès aux photos est nécessaire pour envoyer des images. Veuillez l'activer dans les paramètres."
   },
 
@@ -316,6 +325,7 @@
     },
     "card_title": {
       "system": "Notification système",
+      "novel_comment": "Nouveau commentaire",
       "comment_reply": "Réponse au commentaire",
       "comment_like": "Commentaire aimé",
       "novel_like": "Roman aimé",
@@ -325,6 +335,8 @@
     "card_subtitle": {
       "system_self": "{0}",
       "system_other": "{0}",
+      "novel_comment_self": "Vous avez commenté « {0} »",
+      "novel_comment_other": "Quelqu’un a commenté votre roman « {0} »",
       "comment_reply_self": "Vous avez répondu à un commentaire dans « {0} »",
       "comment_reply_other": "Quelqu'un a répondu à votre commentaire dans « {0} »",
       "comment_like_self": "Vous avez aimé un commentaire dans « {0} »",

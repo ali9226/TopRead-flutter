@@ -21,6 +21,6 @@ class RecommendBookCardLogic {
 
     return candidates
         .where((BookListItem item) => existing_ids.add(item.id))
-        .toList(growable: false);
+        .toList();
   }
 }

@@ -1,8 +1,7 @@
 import 'package:app/api/post_request.dart';
 import 'package:app/config/constant.dart';
-import 'package:app/fcm/fcm_auth.dart';
-import 'package:app/message/message_service.dart';
 import 'package:app/models/login.dart';
+import 'package:app/services/post_login_sync_service.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/dialog/aes_encryption.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
@@ -11,7 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/util/storage_util/index.dart';
 import 'package:app/util/string/to_string.dart';
-import 'package:app/websocket/websocket_auth.dart';
 import 'package:get/get.dart';
 
 const String accountKey = 'account';
@@ -156,12 +154,8 @@ class Logic {
       await StorageUtil.removeData(passwordKey);
     }
 
-    // 登录成功，切换 WebSocket 连接（断开访客连接，用 token 重新连接）。
-    await WebSocketAuth.onLoginSuccess();
-    // 清空访客数据，获取已登录用户的未读消息。
-    await MessageService.fetchUnreadAfterLogin();
-    // 绑定 FCM Token 到用户。
-    await FcmAuth.onLoginSuccess();
+    // 登录后同步属于后台可恢复任务，不阻塞页面完成登录。
+    PostLoginSyncService.start();
 
     showBottomTip(easy.tr('login.success_01'));
     return true;
@@ -202,12 +196,8 @@ class Logic {
       userController.saveUserInfo(results.content!.userInfo);
     }
 
-    // 注册成功，切换 WebSocket 连接（断开访客连接，用 token 重新连接）。
-    await WebSocketAuth.onLoginSuccess();
-    // 清空访客数据，获取已登录用户的未读消息。
-    await MessageService.fetchUnreadAfterLogin();
-    // 绑定 FCM Token 到用户。
-    await FcmAuth.onLoginSuccess();
+    // 注册后同步属于后台可恢复任务，不阻塞页面完成注册。
+    PostLoginSyncService.start();
 
     showBottomTip(easy.tr('register.success_01'));
     return true;

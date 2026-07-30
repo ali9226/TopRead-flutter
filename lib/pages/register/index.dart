@@ -1,18 +1,13 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'package:app/stores/authorized_login_store.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:app/components/auth_page/index.dart';
 import 'package:app/components/auth_page/style.dart';
 import 'package:app/components/auth_form_widgets/index.dart';
-import 'package:app/components/authorized_login/index.dart';
-import 'package:app/util/log_util.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/util/router/web_history.dart';
-import 'package:get/get.dart';
 
 import 'logic.dart';
 import 'style.dart';
@@ -137,7 +132,10 @@ class _RegisterState extends State<Register> {
         const SizedBox(height: Style.sectionSpacing),
 
         /// 密码输入区。
-        AuthFieldLabel(iconName: 'password', title: context.tr('login.password')),
+        AuthFieldLabel(
+          iconName: 'password',
+          title: context.tr('login.password'),
+        ),
         AuthTextField(
           controller: passwordController,
           focusNode: passwordFocusNode,
@@ -182,8 +180,9 @@ class _RegisterState extends State<Register> {
           onTap: isRegisterMode ? _goToLogin : _switchToRegisterMode,
         ),
         const SizedBox(height: Style.supportSpacing),
-        const AuthorizedLoginView(),
-        const SizedBox(height: 30),
+        // TODO 第三方登录暂时隐藏，后续恢复时取消注释即可。
+        // const AuthorizedLoginView(),
+        // const SizedBox(height: 30),
       ],
     );
   }
@@ -214,8 +213,8 @@ class _RegisterState extends State<Register> {
     /// 注册失败时逻辑层内部已提示。
     if (!registerStatus) return;
 
-    /// 注册成功后跳转到兴趣偏好设置页面，传递从注册页来的标记。
-    GoRouter.of(context).push('/interest_preference', extra: true);
+    /// 注册成功后进入独立的兴趣偏好引导，并清理注册页路由历史。
+    routerUtil(path: '/registration_interest_preference', type: 'go');
   }
 
   /// 提交登录请求（账号已注册时使用）。

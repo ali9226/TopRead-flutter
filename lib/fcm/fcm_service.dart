@@ -24,7 +24,9 @@ class FcmService {
   FcmService._();
 
   /// Firebase Messaging 实例。
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  ///
+  /// 延迟获取，避免仅注册前台回调时提前访问尚未初始化的 Firebase。
+  FirebaseMessaging get _messaging => FirebaseMessaging.instance;
 
   /// 本地通知插件。
   final FlutterLocalNotificationsPlugin _local_notifications =
@@ -46,6 +48,9 @@ class FcmService {
 
   /// 消息回调（外部可注册，处理点击推送后的页面跳转等逻辑）。
   void Function(Map<String, dynamic> data)? on_message_tap;
+
+  /// 前台收到推送时的数据回调，用于补拉数据库权威未读数。
+  void Function(Map<String, dynamic> data)? on_foreground_data;
 
   /// 初始化推送服务。
   ///
@@ -178,6 +183,7 @@ class FcmService {
   /// iOS 使用 Firebase 的系统前台展示能力，Android 使用本地通知展示。
   Future<void> _on_foreground_message(RemoteMessage message) async {
     logUtil(msg: 'FCM: 前台收到推送: ${message.messageId}');
+    on_foreground_data?.call(message.data);
 
     // Web 不使用移动端本地通知插件。
     if (kIsWeb) {
@@ -304,12 +310,11 @@ class FcmService {
 
     final int normalized_count = count < 0 ? 0 : count;
     try {
-      if (Platform.isIOS) {
+      if (Platform.isIOS || Platform.isAndroid) {
         await _badge_channel.invokeMethod<void>('setBadgeCount', <String, int>{
           'count': normalized_count,
         });
-        logUtil(msg: 'FCM: iOS 角标已更新为 $normalized_count');
-        return;
+        logUtil(msg: 'FCM: App 图标角标已更新为 $normalized_count');
       }
       if (Platform.isAndroid && normalized_count == 0) {
         await _local_notifications.cancelAll();

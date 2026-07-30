@@ -165,22 +165,20 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
                 (grid_count - 1) * Style.grid_cross_spacing) /
             grid_count;
 
-        /// 内容区域最大高度（3行内容 + 1px安全余量）。
+        /// 使用当前设备真实文字缩放比例计算内容高度，避免标题或分类信息被裁剪。
         final double content_area_height =
-            Style.book_title_font_size * Style.book_title_height * 2 +
-            Style.book_meta_font_size * 1.4 +
-            Style.book_title_top_spacing +
-            Style.book_meta_top_spacing +
-            1;
+            Style.resolve_book_content_area_height(
+              MediaQuery.textScalerOf(context),
+            );
 
         final double item_height =
-            item_width / Style.cover_aspect_ratio +
-            content_area_height;
+            item_width / Style.cover_aspect_ratio + content_area_height;
 
         return Column(
           children: <Widget>[
             CategoryFilter(
-              initial_category_id: _selected_category_id ?? widget.initial_category_id,
+              initial_category_id:
+                  _selected_category_id ?? widget.initial_category_id,
               on_category_changed: _handle_category_changed,
             ),
             Expanded(

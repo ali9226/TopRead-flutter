@@ -1,5 +1,5 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:app/api/post_request.dart';
+import 'package:app/fcm/get_fcm_token.dart';
 import 'package:app/util/log_util.dart';
 
 /// 解绑 FCM Token 与用户关联。
@@ -10,8 +10,7 @@ class FcmUnbindUser {
   /// 解绑当前设备的 FCM Token 与用户关联。
   static Future<void> execute() async {
     try {
-      final messaging = FirebaseMessaging.instance;
-      final String? token = await messaging.getToken();
+      final String? token = await get_fcm_token();
       if (token == null) {
         logUtil(msg: 'FCM: 解绑用户失败，无法获取 Token', type: 'e');
         return;
@@ -19,9 +18,7 @@ class FcmUnbindUser {
 
       final result = await postRequest<Map<String, dynamic>>(
         path: 'fcm_token/unbind_user',
-        parameter: {
-          'token': token,
-        },
+        parameter: {'token': token},
         showTips: false,
         fromJson: (json) => json,
       );

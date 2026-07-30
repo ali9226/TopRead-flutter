@@ -184,86 +184,98 @@ class _TopUserInfoState extends State<TopUserInfo> {
           ),
 
           const SizedBox(height: Style.nicknameBottomSpacing),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.only(left: Style.balanceLeftPadding),
-            alignment: Alignment.centerLeft,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+          // TODO 金币和余额区域暂时隐藏，后续恢复时取消注释即可。
+          // Container(
+          //   width: double.infinity,
+          //   padding: const EdgeInsets.only(left: Style.balanceLeftPadding),
+          //   alignment: Alignment.centerLeft,
+          //   child: Row(
+          //     crossAxisAlignment: CrossAxisAlignment.end,
+          //     children: [
+          //       Expanded(
+          //         child: Column(
+          //           crossAxisAlignment: CrossAxisAlignment.start,
+          //           children: [
+          //             Row(
+          //               mainAxisSize: MainAxisSize.min,
+          //               children: [
+          //                 Text(
+          //                   /// "金币" 标题。
+          //                   easy.tr('UserInfo.balance'),
+          //                   style: TextStyle(
+          //                     fontSize: 12,
+          //                     fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+          //                     letterSpacing: 1.2,
+          //                     color: ColorConstants.nightHighlightColor
+          //                         .withValues(alpha: 0.64),
+          //                   ),
+          //                 ),
+          //                 const SizedBox(width: 4),
+          //                 GestureDetector(
+          //                   onTap: loading ? null : _refreshBalance,
+          //                   child: loading
+          //                       ? SizedBox(
+          //                           /// 刷新余额时显示小尺寸 loading。
+          //                           width: 14,
+          //                           height: 14,
+          //                           child: CircularProgressIndicator(
+          //                             strokeWidth: 2,
+          //                             valueColor: AlwaysStoppedAnimation<Color>(
+          //                               ColorConstants.nightHighlightColor,
+          //                             ),
+          //                           ),
+          //                         )
+          //                       : SvgIcon(
+          //                           /// 非 loading 时显示刷新图标。
+          //                           name: "refresh",
+          //                           width: 12,
+          //                           height: 12,
+          //                           color: ColorConstants.nightHighlightColor
+          //                               .withValues(alpha: 0.78),
+          //                         ),
+          //                 ),
+          //               ],
+          //             ),
+          //             const SizedBox(height: 8),
+          //             GestureDetector(
+          //               onTap: loading ? null : _refreshBalance,
+          //               child: RichText(
+          //                 text: TextSpan(
+          //                   style: TextStyle(
+          //                     color: ColorConstants.nightHighlightColor,
+          //                   ),
+          //                   children: [
+          //                     /// 把余额按整数和小数拆分成富文本显示。
+          //                     _buildBalanceTextSpan(
+          //                       userInformation.userInfo.value?.balance ?? 0.0,
+          //                     ),
+          //                   ],
+          //                 ),
+          //               ),
+          //             ),
+          //           ],
+          //         ),
+          //       ),
+          //       if (widget.balanceTrailing != null)
+          //         Padding(
+          //           /// 可选的右侧扩展区域，例如充值按钮。
+          //           padding: const EdgeInsets.only(right: 10, bottom: 6),
+          //           child: widget.balanceTrailing!,
+          //         ),
+          //     ],
+          //   ),
+          // ),
+          // TODO 福袋入口单独显示，后续恢复金币余额时需移除此处。
+          if (widget.balanceTrailing != null)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            /// "金币" 标题。
-                            easy.tr('UserInfo.balance'),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                              letterSpacing: 1.2,
-                              color: ColorConstants.nightHighlightColor
-                                  .withValues(alpha: 0.64),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          GestureDetector(
-                            onTap: loading ? null : _refreshBalance,
-                            child: loading
-                                ? SizedBox(
-                                    /// 刷新余额时显示小尺寸 loading。
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        ColorConstants.nightHighlightColor,
-                                      ),
-                                    ),
-                                  )
-                                : SvgIcon(
-                                    /// 非 loading 时显示刷新图标。
-                                    name: "refresh",
-                                    width: 12,
-                                    height: 12,
-                                    color: ColorConstants.nightHighlightColor
-                                        .withValues(alpha: 0.78),
-                                  ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      GestureDetector(
-                        onTap: loading ? null : _refreshBalance,
-                        child: RichText(
-                          text: TextSpan(
-                            style: TextStyle(
-                              color: ColorConstants.nightHighlightColor,
-                            ),
-                            children: [
-                              /// 把余额按整数和小数拆分成富文本显示。
-                              _buildBalanceTextSpan(
-                                userInformation.userInfo.value?.balance ?? 0.0,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 10, bottom: 6),
+                  child: widget.balanceTrailing!,
                 ),
-                if (widget.balanceTrailing != null)
-                  Padding(
-                    /// 可选的右侧扩展区域，例如充值按钮。
-                    padding: const EdgeInsets.only(right: 10, bottom: 6),
-                    child: widget.balanceTrailing!,
-                  ),
               ],
             ),
-          ),
         ],
       );
     });

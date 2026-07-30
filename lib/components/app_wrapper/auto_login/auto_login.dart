@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/api/post_request.dart';
 import 'package:app/config/constant.dart';
+import 'package:app/fcm/fcm_auth.dart';
 import 'package:app/message/message_service.dart';
 import 'package:app/models/login.dart' as login_model;
 import 'package:app/stores/user_information.dart';
@@ -69,6 +70,8 @@ Future<void> autoLogin() async {
 
   // 异步获取已登录用户的未读消息（角标会响应式更新）。
   MessageService.fetchUnreadAfterLogin();
+  // 绑定 FCM Token 到用户。
+  FcmAuth.onLoginSuccess();
 
   showBottomTip(easy.tr('login.success_01'));
 }

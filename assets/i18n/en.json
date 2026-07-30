@@ -17,6 +17,7 @@
     "title": "Pick Interests",
     "subtitle": "Get better story picks",
     "save": "Save",
+    "skip": "Skip",
     "loading": "Loading...",
     "login_required": "Log in to save your interests for better recommendations",
     "content_preference": "Content",
@@ -232,7 +233,13 @@
     "confirm_update": "Update",
     "interest_preference": "Interests",
     "online_customer_service": "Online Service",
-    "about_top_read": "About TopRead"
+    "about_top_read": "About TopRead",
+    "delete_account": "Delete Account",
+    "delete_account_confirm_title": "Confirm Account Deletion",
+    "delete_account_confirm_message": "You are about to delete your account. This action will permanently remove your account and all associated data, including but not limited to:\n\n• Profile and settings\n• Reading history and bookshelf\n• Account balance and coins\n• All historical data\n\nThis action is irreversible and cannot be undone.\n\nPlease proceed with caution and ensure you have backed up any important information.",
+    "delete_account_confirm_button": "Delete Account",
+    "delete_account_cancel_button": "Cancel",
+    "delete_account_success_message": "We're sorry for the inconvenience. Your account has been deleted. We value your feedback and will strive to improve!"
   },
 
   "customer_service_sheet": {
@@ -240,6 +247,8 @@
     "description": "If you encounter any issues while using the app, please contact our online support. We are happy to help.",
     "contact_button": "Contact Support",
     "empty_hint": "Send a message to start chatting",
+    "input_hint": "Message…",
+    "send": "Send",
     "photo_permission_hint": "Photo permission is required to send images. Please enable it in Settings."
   },
 
@@ -270,6 +279,7 @@
     },
     "card_title": {
       "system": "System Notice",
+      "novel_comment": "New Comment",
       "comment_reply": "Comment Reply",
       "comment_like": "Liked Comment",
       "novel_like": "Liked Novel",
@@ -279,6 +289,8 @@
     "card_subtitle": {
       "system_self": "{0}",
       "system_other": "{0}",
+      "novel_comment_self": "You commented on \"{0}\"",
+      "novel_comment_other": "Someone commented on your novel \"{0}\"",
       "comment_reply_self": "You replied to a comment in \"{0}\"",
       "comment_reply_other": "Someone replied to your comment in \"{0}\"",
       "comment_like_self": "You liked a comment in \"{0}\"",

@@ -12,6 +12,9 @@ import 'package:app/stores/device_info.dart';
 import 'logic.dart';
 import 'style.dart';
 
+/// 用户中心滚动状态在 PageStorage 中使用的 key 前缀。
+const String _user_info_scroll_storage_key_prefix = 'user_info_scroll_session';
+
 /// 用户中心首页。
 ///
 /// 这个页面主要充当容器页，
@@ -122,6 +125,11 @@ class _UserInfoState extends State<UserInfo> {
         /// 当前主题模式。
         final isDark = deviceInfo.dark.value;
         final isLoggedIn = userInformation.isLoggedIn.value;
+        final int auth_identity_revision =
+            userInformation.auth_identity_revision;
+        final String user_info_scroll_storage_key =
+            '${_user_info_scroll_storage_key_prefix}_'
+            '$auth_identity_revision';
 
         return AnimatedContainer(
           duration: Duration(milliseconds: ThemeConstants.animationTime),
@@ -137,7 +145,9 @@ class _UserInfoState extends State<UserInfo> {
                 is_dark: isDark,
                 is_logged_in: isLoggedIn,
                 child: SingleChildScrollView(
-                  key: const PageStorageKey<String>('user_info_scroll'),
+                  /// 不同认证会话使用不同的滚动状态，避免登录后恢复访客态的旧位置。
+                  key: PageStorageKey<String>(user_info_scroll_storage_key),
+
                   /// 已登录时保持始终可下拉刷新；
                   /// 未登录时改为普通滚动，这样横屏内容超出视口时仍可上下滑动。
                   physics: isLoggedIn

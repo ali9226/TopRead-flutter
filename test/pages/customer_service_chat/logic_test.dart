@@ -36,6 +36,19 @@ void main() {
     expect(store.load_more_count, 0);
     logic.dispose();
   });
+
+  test('聊天数据变化只刷新消息区域，不触发页面级重建', () {
+    final _FakeCustomerServiceChatHistoryStore store =
+        _FakeCustomerServiceChatHistoryStore();
+    Get.put<CustomerServiceChatHistoryStore>(store);
+    int page_update_count = 0;
+    final ChatLogic logic = ChatLogic(() => page_update_count++);
+
+    store.add_local_message(message_type: 1, content: '测试消息');
+
+    expect(page_update_count, 0);
+    logic.dispose();
+  });
 }
 
 FixedScrollMetrics _metrics({required double pixels}) {

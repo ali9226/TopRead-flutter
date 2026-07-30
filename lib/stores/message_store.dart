@@ -1,4 +1,4 @@
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
@@ -17,6 +17,7 @@ class _MessageBucket {
   final list = <MessageData>[].obs;
   bool has_loaded = false;
   bool has_more = true;
+  bool refresh_pending = false;
   int current_page = 1;
   final is_loading = false.obs;
 }
@@ -26,14 +27,29 @@ class _MessageBucket {
 /// 消息列表按类型分桶存储（全部/评论/点赞/收藏），切换筛选时直接展示对应桶的数据，
 /// 不会出现竞态问题。未读数统计、角标等全局状态仍统一管理。
 class MessageStore extends GetxController {
+  MessageStore({
+    Future<MessageUnreadCount?> Function()? fetch_unread_count,
+    Future<message_api.MessageReadAllResult> Function()? read_all_messages,
+  }) : _fetch_unread_count = fetch_unread_count ?? message_api.get_unread_count,
+       _read_all_messages = read_all_messages ?? message_api.read_all_messages;
+
   /// 单例实例。
   static MessageStore get to => Get.find<MessageStore>();
+
+  /// 未读统计请求实现，测试时可注入可控异步结果。
+  final Future<MessageUnreadCount?> Function() _fetch_unread_count;
+
+  /// 全部已读请求实现，测试时可注入可控异步结果。
+  final Future<message_api.MessageReadAllResult> Function() _read_all_messages;
 
   /// 未读消息总数（用于底部导航角标）。
   final unread_total = 0.obs;
 
   /// 在线客服未读消息数。
   final chat_unread = 0.obs;
+
+  /// 系统通知及后端未来扩展类型的未读数。
+  final system_unread = 0.obs;
 
   /// 评论相关未读数（评论回复）。
   final comment_unread = 0.obs;
@@ -56,8 +72,50 @@ class MessageStore extends GetxController {
   /// 角标更新防抖定时器。
   Timer? _badge_update_timer;
 
+  /// FCM 前台消息触发权威统计补拉的防抖定时器。
+  Timer? _foreground_refresh_timer;
+
+  /// 任意已应用未读状态的版本，用于丢弃并发请求的旧响应。
+  int _unread_state_revision = 0;
+
+  /// 本地已读操作版本，用于阻止操作前的列表响应恢复旧状态。
+  int _local_unread_mutation_revision = 0;
+
+  /// 最近一次未读统计请求序号。
+  int _latest_statistics_request = 0;
+
+  /// 是否正在向后端同步全部已读。
+  bool _is_marking_all_read = false;
+
+  /// 全部已读期间是否收到需要再次校准未读数的信号。
+  bool _unread_reconcile_pending = false;
+
+  /// 全部已读期间是否收到需要刷新当前消息列表的信号。
+  bool _list_refresh_pending = false;
+
   /// WebSocket 消息订阅。
   StreamSubscription? _ws_subscription;
+
+  /// 是否已向 FCM 服务注册前台补拉回调。
+  bool _foreground_callback_registered = false;
+
+  /// 已处理的客服实时消息 ID，用于防止重连或重复推送造成角标重复累加。
+  final Set<int> _processed_chat_message_ids = <int>{};
+
+  /// 已处理的普通实时消息 ID，用于防止 Redis 重试或重连补发造成重复累加。
+  final Set<int> _processed_message_ids = <int>{};
+
+  /// 客服消息去重窗口大小。
+  static const int _processed_chat_message_limit = 200;
+
+  /// 普通消息去重窗口大小。
+  static const int _processed_message_limit = 500;
+
+  /// 最近处理的客服消息 ID，用于抵御乱序事件覆盖较新的权威未读数。
+  int _latest_chat_message_id = 0;
+
+  /// 最近处理的服务端消息状态版本，用于丢弃队列中迟到的旧事件。
+  int _latest_server_state_version = 0;
 
   // ==================== 分桶存储 ====================
 
@@ -96,6 +154,8 @@ class MessageStore extends GetxController {
   void onInit() {
     super.onInit();
     _listen_websocket();
+    FcmService().on_foreground_data = handle_foreground_notification;
+    _foreground_callback_registered = true;
   }
 
   // ==================== 筛选切换 ====================
@@ -134,24 +194,31 @@ class MessageStore extends GetxController {
 
   /// 获取统计数据（总数和未读数）。
   Future<void> fetch_statistics() async {
+    if (_is_marking_all_read) {
+      _unread_reconcile_pending = true;
+      return;
+    }
+
     final UserInformation user_information = Get.find<UserInformation>();
     if (!user_information.isLoggedIn.value) return;
     final int request_revision = user_information.auth_revision;
+    final int unread_revision = _unread_state_revision;
+    final int mutation_revision = _local_unread_mutation_revision;
+    final int statistics_request = ++_latest_statistics_request;
 
-    final MessageUnreadCount? result = await message_api.get_unread_count();
+    final MessageUnreadCount? result = await _fetch_unread_count();
     if (result == null) return;
     if (!user_information.can_apply_authenticated_response(request_revision)) {
       return;
     }
+    if (_is_marking_all_read ||
+        unread_revision != _unread_state_revision ||
+        mutation_revision != _local_unread_mutation_revision ||
+        statistics_request != _latest_statistics_request) {
+      return;
+    }
 
-    comment_unread.value = result.comment_unread;
-    comment_total.value = result.comment_total;
-    like_unread.value = result.like_unread;
-    like_total.value = result.like_total;
-    favorite_unread.value = result.favorite_unread;
-    favorite_total.value = result.favorite_total;
-    chat_unread.value = result.chat_unread;
-    _recompute_unread_total(force_badge_sync: true);
+    _apply_unread_count(result);
   }
 
   /// 获取消息列表（加载到当前激活的桶）。
@@ -160,13 +227,24 @@ class MessageStore extends GetxController {
     bool is_refresh = false,
     bool silent = false,
   }) async {
+    if (_is_marking_all_read) {
+      _unread_reconcile_pending = true;
+      _list_refresh_pending = true;
+      return;
+    }
+
     final UserInformation user_information = Get.find<UserInformation>();
     if (!user_information.isLoggedIn.value) return;
     final int request_revision = user_information.auth_revision;
+    final int unread_revision = _unread_state_revision;
+    final int mutation_revision = _local_unread_mutation_revision;
 
     final int? requested_type = _active_type.value;
     final bucket = _active_bucket;
-    if (bucket.is_loading.value) return;
+    if (bucket.is_loading.value) {
+      if (is_refresh) bucket.refresh_pending = true;
+      return;
+    }
     bucket.is_loading.value = true;
 
     try {
@@ -184,9 +262,18 @@ class MessageStore extends GetxController {
       )) {
         return;
       }
+      if (_is_marking_all_read ||
+          mutation_revision != _local_unread_mutation_revision) {
+        return;
+      }
 
-      // 更新客服聊天未读数
-      chat_unread.value = result.chat_unread;
+      final bool can_apply_unread = unread_revision == _unread_state_revision;
+      final MessageData? current_chat_message = requested_type == null
+          ? _latest_chat_summary(bucket)
+          : null;
+      if (can_apply_unread) {
+        chat_unread.value = result.chat_unread;
+      }
 
       if (is_refresh) {
         bucket.list.value = merge_unique_message_list(
@@ -204,24 +291,44 @@ class MessageStore extends GetxController {
         bucket.current_page = page;
       }
 
-      // 仅全部桶插入客服消息
-      if (requested_type == null && result.chat_message != null) {
+      // TODO 仅全部桶展示客服摘要；实时状态已更新时保留较新的本地摘要。
+      if (requested_type == null) {
         final filtered = bucket.list
             .where((m) => m.type != MessageType.chat_reply)
             .toList();
-        bucket.list.value = merge_unique_message_list(
-          current_messages: <MessageData>[result.chat_message!],
-          incoming_messages: filtered,
-        );
+        final MessageData? chat_message = can_apply_unread
+            ? result.chat_message
+            : current_chat_message;
+        bucket.list.value = chat_message == null
+            ? filtered
+            : merge_unique_message_list(
+                current_messages: <MessageData>[chat_message],
+                incoming_messages: filtered,
+              );
+        if (chat_message != null) {
+          _remember_loaded_chat_summary(chat_message);
+        }
       }
 
-      _recompute_unread_total();
+      if (can_apply_unread) {
+        _recompute_unread_total();
+      }
       bucket.has_more = result.list.length >= 20;
       bucket.has_loaded = true;
     } catch (e) {
       debugPrint('TODO MessageStore fetch_message_list error: $e');
     } finally {
       bucket.is_loading.value = false;
+      if (bucket.refresh_pending) {
+        bucket.refresh_pending = false;
+        if (_active_type.value == requested_type) {
+          unawaited(
+            fetch_message_list(page: 1, is_refresh: true, silent: true),
+          );
+        } else {
+          bucket.has_loaded = false;
+        }
+      }
     }
   }
 
@@ -245,51 +352,35 @@ class MessageStore extends GetxController {
       if (index >= 0 && bucket.list[index].is_unread) {
         final old = bucket.list[index];
         unread_message ??= old;
-        bucket.list[index] = MessageData(
-          id: old.id,
-          user_id: old.user_id,
-          title: old.title,
-          introduction: old.introduction,
-          content: old.content,
-          type: old.type,
-          send_user: old.send_user,
-          send_time: old.send_time,
-          notify_status: NotifyStatus.read,
-          sender_name: old.sender_name,
-          sender_avatar: old.sender_avatar,
-          novel_cover: old.novel_cover,
-        );
+        bucket.list[index] = old.copy_with(notify_status: NotifyStatus.read);
         bucket.list.refresh();
       }
     }
 
     if (unread_message != null) {
+      _local_unread_mutation_revision++;
+      _unread_state_revision++;
       _update_type_unread(unread_message.type, -1);
       _recompute_unread_total();
     }
   }
 
-  /// 立即在本地标记所有消息为已读，并在后台静默同步服务端。
-  void mark_all_as_read() {
+  /// 立即在本地标记所有消息为已读，并与服务端权威状态完成一次校准。
+  Future<void> mark_all_as_read() async {
+    if (_is_marking_all_read) return;
+    _is_marking_all_read = true;
+    _unread_reconcile_pending = false;
+    _list_refresh_pending = false;
+    _local_unread_mutation_revision++;
+    final int operation_revision = _local_unread_mutation_revision;
+    _unread_state_revision++;
+
     for (final bucket in _buckets.values) {
       bucket.list.value = bucket.list
           .where((m) => m.type != MessageType.chat_reply)
           .map((m) {
             if (m.is_unread) {
-              return MessageData(
-                id: m.id,
-                user_id: m.user_id,
-                title: m.title,
-                introduction: m.introduction,
-                content: m.content,
-                type: m.type,
-                send_user: m.send_user,
-                send_time: m.send_time,
-                notify_status: NotifyStatus.read,
-                sender_name: m.sender_name,
-                sender_avatar: m.sender_avatar,
-                novel_cover: m.novel_cover,
-              );
+              return m.copy_with(notify_status: NotifyStatus.read);
             }
             return m;
           })
@@ -300,19 +391,46 @@ class MessageStore extends GetxController {
     comment_unread.value = 0;
     like_unread.value = 0;
     favorite_unread.value = 0;
+    system_unread.value = 0;
     _recompute_unread_total();
-    unawaited(_sync_all_messages_read());
-  }
 
-  /// 将全部已读状态静默同步到服务端。
-  Future<void> _sync_all_messages_read() async {
+    bool should_recover = false;
+    bool needs_authoritative_fetch = false;
     try {
-      final bool success = await message_api.read_all_messages();
-      if (!success) {
+      final message_api.MessageReadAllResult result =
+          await _read_all_messages();
+      if (operation_revision != _local_unread_mutation_revision) return;
+      if (!result.success) {
         debugPrint('TODO MessageStore mark_all_as_read sync failed');
+        should_recover = true;
+      } else if (result.unread_count != null) {
+        if (result.state_version > _latest_server_state_version) {
+          _latest_server_state_version = result.state_version;
+        }
+        _apply_unread_count(result.unread_count!);
+      } else {
+        // TODO 兼容尚未返回权威快照的旧版后端。
+        needs_authoritative_fetch = true;
       }
     } catch (e) {
       debugPrint('TODO MessageStore mark_all_as_read sync error: $e');
+      should_recover = true;
+    } finally {
+      _is_marking_all_read = false;
+    }
+
+    if (should_recover) {
+      await _recover_after_mutation_failure();
+      return;
+    }
+
+    if (_list_refresh_pending) {
+      _list_refresh_pending = false;
+      _unread_reconcile_pending = false;
+      await silent_refresh();
+    } else if (_unread_reconcile_pending || needs_authoritative_fetch) {
+      _unread_reconcile_pending = false;
+      await fetch_statistics();
     }
   }
 
@@ -360,17 +478,35 @@ class MessageStore extends GetxController {
 
     // 其他消息：更新未读数 + 调用删除 API
     if (deleted_message.is_unread) {
+      _local_unread_mutation_revision++;
+      _unread_state_revision++;
       _update_type_unread(deleted_message.type, -1);
       _recompute_unread_total();
     }
     final bool success = await message_api.delete_message(id: message_id);
     if (!success) {
-      debugPrint('TODO MessageStore delete_message API failed for id: $message_id');
+      debugPrint(
+        'TODO MessageStore delete_message API failed for id: $message_id',
+      );
+      await _recover_after_mutation_failure();
     }
+  }
+
+  /// 乐观更新失败后，使未读统计和当前可见列表恢复到数据库权威状态。
+  Future<void> _recover_after_mutation_failure() async {
+    for (final bucket in _buckets.values) {
+      bucket.has_loaded = false;
+    }
+    await Future.wait(<Future<void>>[
+      fetch_statistics(),
+      fetch_message_list(page: 1, is_refresh: true, silent: true),
+    ]);
   }
 
   /// 更新在线客服未读数。
   void update_chat_unread(int count) {
+    _local_unread_mutation_revision++;
+    _unread_state_revision++;
     chat_unread.value = count;
     if (count == 0) {
       for (final bucket in _buckets.values) {
@@ -396,6 +532,7 @@ class MessageStore extends GetxController {
     like_total.value = 0;
     favorite_unread.value = 0;
     favorite_total.value = 0;
+    system_unread.value = 0;
     for (final bucket in _buckets.values) {
       bucket.list.clear();
     }
@@ -422,26 +559,68 @@ class MessageStore extends GetxController {
 
   /// 清空所有数据（登出时调用）。
   void clear() {
+    _local_unread_mutation_revision++;
+    _unread_state_revision++;
+    _latest_statistics_request++;
+    _is_marking_all_read = false;
+    _unread_reconcile_pending = false;
+    _list_refresh_pending = false;
     for (final bucket in _buckets.values) {
       bucket.list.clear();
       bucket.has_loaded = false;
       bucket.has_more = true;
+      bucket.refresh_pending = false;
       bucket.current_page = 1;
       bucket.is_loading.value = false;
     }
     _active_type.value = null;
     unread_total.value = 0;
     chat_unread.value = 0;
+    system_unread.value = 0;
     comment_unread.value = 0;
     comment_total.value = 0;
     like_unread.value = 0;
     like_total.value = 0;
     favorite_unread.value = 0;
     favorite_total.value = 0;
+    _processed_message_ids.clear();
+    _processed_chat_message_ids.clear();
+    _latest_chat_message_id = 0;
+    _latest_server_state_version = 0;
     _recompute_unread_total(force_badge_sync: true);
   }
 
   // ==================== 内部方法 ====================
+
+  /// 应用后端返回的权威未读统计。
+  void _apply_unread_count(MessageUnreadCount result) {
+    comment_unread.value = result.comment_unread;
+    comment_total.value = result.comment_total;
+    like_unread.value = result.like_unread;
+    like_total.value = result.like_total;
+    favorite_unread.value = result.favorite_unread;
+    favorite_total.value = result.favorite_total;
+    chat_unread.value = result.chat_unread;
+    system_unread.value = result.system_unread;
+    _recompute_unread_total(force_badge_sync: true);
+  }
+
+  /// 获取消息桶中现有的客服摘要。
+  MessageData? _latest_chat_summary(_MessageBucket bucket) {
+    for (final MessageData message in bucket.list) {
+      if (message.type == MessageType.chat_reply) return message;
+    }
+    return null;
+  }
+
+  /// 记录接口加载到的客服摘要，防止稍后到达的重复实时事件再次处理。
+  void _remember_loaded_chat_summary(MessageData message) {
+    if (message.id <= 0) return;
+    if (message.id > _latest_chat_message_id) {
+      _latest_chat_message_id = message.id;
+    }
+    _remember_chat_message(message.id);
+  }
 
   /// 重新计算未读总数并更新角标。
   void _recompute_unread_total({bool force_badge_sync = false}) {
@@ -449,6 +628,7 @@ class MessageStore extends GetxController {
         comment_unread.value +
         like_unread.value +
         favorite_unread.value +
+        system_unread.value +
         chat_unread.value;
     if (!force_badge_sync && new_total == unread_total.value) return;
     unread_total.value = new_total;
@@ -467,110 +647,414 @@ class MessageStore extends GetxController {
       like_unread.value = (like_unread.value + delta).clamp(0, 9999);
     } else if (type == MessageType.novel_favorite) {
       favorite_unread.value = (favorite_unread.value + delta).clamp(0, 9999);
+    } else if (type == MessageType.system) {
+      system_unread.value = (system_unread.value + delta).clamp(0, 9999);
     }
   }
 
   /// 从 WebSocket 数据更新未读数。
   void _update_unread_from_ws(Map<String, dynamic> data) {
-    comment_unread.value = _parse_int(data['comment_unread']);
+    final int comment = _parse_int(data['comment_unread']);
+    final int like = _parse_int(data['like_unread']);
+    final int favorite = _parse_int(data['favorite_unread']);
+    final int chat = data.containsKey('chat_unread')
+        ? _parse_int(data['chat_unread'])
+        : chat_unread.value;
+
+    comment_unread.value = comment;
     comment_total.value = _parse_int(data['comment_total']);
-    like_unread.value = _parse_int(data['like_unread']);
+    like_unread.value = like;
     like_total.value = _parse_int(data['like_total']);
-    favorite_unread.value = _parse_int(data['favorite_unread']);
+    favorite_unread.value = favorite;
     favorite_total.value = _parse_int(data['favorite_total']);
-    _recompute_unread_total();
+    if (data.containsKey('chat_unread')) {
+      chat_unread.value = chat;
+    }
+
+    if (data.containsKey('system_unread')) {
+      system_unread.value = _parse_int(data['system_unread']);
+    } else if (data.containsKey('total')) {
+      final int known_unread = comment + like + favorite + chat;
+      system_unread.value = (_parse_int(data['total']) - known_unread).clamp(
+        0,
+        9999,
+      );
+    }
+    _recompute_unread_total(force_badge_sync: true);
+  }
+
+  /// 全部已读同步期间只记录刷新需求，不允许旧实时快照恢复角标。
+  bool _defer_realtime_unread_update() {
+    if (!_is_marking_all_read) return false;
+    _unread_reconcile_pending = true;
+    return true;
+  }
+
+  /// 应用实时权威快照，并使更早发出的 HTTP 请求失效。
+  void _apply_realtime_unread(Map<String, dynamic> data) {
+    if (_defer_realtime_unread_update()) return;
+    _update_unread_from_ws(data);
+    _unread_state_revision++;
   }
 
   /// 监听 WebSocket 推送。
   void _listen_websocket() {
     final ws = WebSocketService();
-    _ws_subscription = ws.message_stream.listen((data) {
-      final String type = data['type'] ?? '';
-      final dynamic payload = data['data'];
+    _ws_subscription = ws.message_stream.listen(handle_websocket_event);
+  }
 
-      switch (type) {
-        case 'new_message':
-          if (payload is Map) {
-            final Map<String, dynamic> payload_map = Map<String, dynamic>.from(
-              payload,
+  /// 处理 WebSocket 推送，并同步消息列表与全局未读角标。
+  ///
+  /// 公开该入口便于对实时推送协议编写无网络依赖的回归测试。
+  void handle_websocket_event(Map<String, dynamic> data) {
+    final String type = data['type']?.toString() ?? '';
+    final dynamic payload = data['data'];
+    bool suppress_unread_update = false;
+    if (payload is Map) {
+      final int state_version = _parse_int(payload['state_version']);
+      if (state_version > 0) {
+        final bool is_reconnect_snapshot = type == 'unread_count';
+        if (state_version < _latest_server_state_version ||
+            (state_version == _latest_server_state_version &&
+                !is_reconnect_snapshot)) {
+          // TODO 旧消息事件仍可补入列表，但绝不能覆盖更新版本的未读状态。
+          if (type == 'new_message' ||
+              type == 'chat_receive' ||
+              type == 'chat_message') {
+            suppress_unread_update = true;
+          } else {
+            return;
+          }
+        } else {
+          _latest_server_state_version = state_version;
+        }
+      }
+    }
+
+    switch (type) {
+      case 'new_message':
+        if (payload is Map) {
+          final Map<String, dynamic> payload_map = Map<String, dynamic>.from(
+            payload,
+          );
+
+          final Map<String, dynamic>? unread_data =
+              payload_map['unread_count'] is Map
+              ? Map<String, dynamic>.from(payload_map['unread_count'])
+              : null;
+          final dynamic message_data = payload_map['message'];
+          if (message_data is Map) {
+            final Map<String, dynamic> msg = Map<String, dynamic>.from(
+              message_data,
             );
-
-            final Map<String, dynamic>? unread_data =
-                payload_map['unread_count'] is Map
-                ? Map<String, dynamic>.from(payload_map['unread_count'])
-                : null;
-            if (unread_data != null) {
-              _update_unread_from_ws(unread_data);
+            MessageData new_message = MessageData.from_json(msg);
+            if (suppress_unread_update) {
+              new_message = _message_with_current_unread_status(new_message);
             }
+            final bool is_new_event = _remember_message(new_message.id);
+            final bool is_cached = _is_message_cached(new_message);
 
-            final dynamic message_data = payload_map['message'];
-            if (message_data is Map) {
-              final Map<String, dynamic> msg = Map<String, dynamic>.from(
-                message_data,
-              );
-              final int msg_type = _parse_int(msg['type']);
-
-              if (msg_type == MessageType.comment_reply) {
-                comment_unread.value++;
-              } else if (msg_type == MessageType.comment_like ||
-                  msg_type == MessageType.novel_like) {
-                like_unread.value++;
-              } else if (msg_type == MessageType.novel_favorite) {
-                favorite_unread.value++;
-              }
+            // TODO 权威快照已经包含当前消息，存在快照时绝不能再次本地加一。
+            if (suppress_unread_update) {
+              // TODO 更高版本的状态已经生效，此事件只用于补齐列表内容。
+            } else if (unread_data != null) {
+              _apply_realtime_unread(unread_data);
+            } else if (is_new_event &&
+                !is_cached &&
+                new_message.is_unread &&
+                !_defer_realtime_unread_update()) {
+              _update_type_unread(new_message.type, 1);
               _recompute_unread_total();
-
-              final new_message = MessageData.from_json(msg);
-              _insert_message_to_buckets(new_message);
+              _unread_state_revision++;
             }
-          }
-          break;
 
-        case 'unread_count':
-          if (payload is Map) {
-            _update_unread_from_ws(Map<String, dynamic>.from(payload));
+            _insert_message_to_buckets(new_message);
+          } else if (unread_data != null) {
+            _apply_realtime_unread(unread_data);
           }
-          break;
+        }
+        break;
 
-        case 'chat_unread':
-          if (payload is Map) {
-            final Map<String, dynamic> chat_data = Map<String, dynamic>.from(
-              payload,
+      case 'unread_count':
+        if (payload is Map) {
+          _apply_realtime_unread(Map<String, dynamic>.from(payload));
+        }
+        break;
+
+      case 'chat_unread':
+        if (payload is Map) {
+          if (_defer_realtime_unread_update()) break;
+          final Map<String, dynamic> chat_data = Map<String, dynamic>.from(
+            payload,
+          );
+          final int unread = _parse_int(chat_data['unread']);
+          chat_unread.value = unread;
+          _recompute_unread_total();
+          _unread_state_revision++;
+        }
+        break;
+
+      case 'message_state_changed':
+        if (payload is Map) {
+          _handle_message_state_changed(Map<String, dynamic>.from(payload));
+        }
+        break;
+
+      case 'chat_receive':
+        _handle_received_chat_message(
+          payload,
+          suppress_unread_update: suppress_unread_update,
+        );
+        break;
+
+      case 'chat_message':
+        if (payload is Map) {
+          final Map<String, dynamic> chat_data = Map<String, dynamic>.from(
+            payload,
+          );
+          final dynamic message_data = chat_data['message'];
+          if (message_data is Map &&
+              (!suppress_unread_update || chat_unread.value > 0)) {
+            final Map<String, dynamic> msg = Map<String, dynamic>.from(
+              message_data,
             );
-            final int unread = _parse_int(chat_data['unread']);
-            chat_unread.value = unread;
-            _recompute_unread_total();
+            final new_message = MessageData.from_json(msg);
+
+            // 移除已有的客服消息后插入到全部桶
+            final all_bucket = _buckets[null]!;
+            final filtered = all_bucket.list
+                .where((m) => m.type != MessageType.chat_reply)
+                .toList();
+            all_bucket.list.value = [new_message, ...filtered];
           }
-          break;
+          if (suppress_unread_update) break;
+          if (_defer_realtime_unread_update()) break;
+          final int unread = _parse_int(chat_data['unread']);
+          chat_unread.value = unread;
+          _recompute_unread_total();
+          _unread_state_revision++;
+        }
+        break;
 
-        case 'chat_message':
-          if (payload is Map) {
-            final Map<String, dynamic> chat_data = Map<String, dynamic>.from(
-              payload,
-            );
-            final int unread = _parse_int(chat_data['unread']);
-            chat_unread.value = unread;
-            _recompute_unread_total();
+      default:
+        break;
+    }
+  }
 
-            final dynamic message_data = chat_data['message'];
-            if (message_data is Map) {
-              final Map<String, dynamic> msg = Map<String, dynamic>.from(
-                message_data,
-              );
-              final new_message = MessageData.from_json(msg);
+  /// 处理管理员实时回复并立即更新客服角标。
+  void _handle_received_chat_message(
+    dynamic payload, {
+    bool suppress_unread_update = false,
+  }) {
+    if (payload is! Map) return;
+    final Map<String, dynamic> chat_data = Map<String, dynamic>.from(payload);
+    if (_parse_int(chat_data['sender_type']) != 2) return;
 
-              // 移除已有的客服消息后插入到全部桶
-              final all_bucket = _buckets[null]!;
-              final filtered = all_bucket.list
-                  .where((m) => m.type != MessageType.chat_reply)
-                  .toList();
-              all_bucket.list.value = [new_message, ...filtered];
-            }
-          }
-          break;
+    final int message_id = _parse_int(chat_data['id']);
+    if (message_id > 0 && !_remember_chat_message(message_id)) return;
+    final bool is_latest_message =
+        message_id <= 0 || message_id >= _latest_chat_message_id;
+    if (message_id > _latest_chat_message_id) {
+      _latest_chat_message_id = message_id;
+    }
 
-        default:
-          break;
+    if (is_latest_message &&
+        (!suppress_unread_update || chat_unread.value > 0)) {
+      _upsert_chat_summary(chat_data);
+    }
+    if (suppress_unread_update) return;
+    if (_defer_realtime_unread_update()) return;
+
+    if (chat_data.containsKey('unread')) {
+      _apply_authoritative_chat_unread(
+        _parse_int(chat_data['unread']),
+        is_latest_message: is_latest_message,
+      );
+    } else if (chat_data.containsKey('chat_unread')) {
+      _apply_authoritative_chat_unread(
+        _parse_int(chat_data['chat_unread']),
+        is_latest_message: is_latest_message,
+      );
+    } else {
+      chat_unread.value = (chat_unread.value + 1).clamp(0, 9999);
+    }
+    _recompute_unread_total();
+    _unread_state_revision++;
+  }
+
+  /// 将管理员最新回复实时写入“全部消息”桶的客服摘要。
+  void _upsert_chat_summary(Map<String, dynamic> chat_data) {
+    final int message_id = _parse_int(chat_data['id']);
+    if (message_id <= 0) return;
+
+    final String content = chat_data['content']?.toString() ?? '';
+    final MessageData summary = MessageData(
+      id: message_id,
+      user_id: 0,
+      title: '',
+      introduction: content,
+      content: content,
+      type: MessageType.chat_reply,
+      send_user: _parse_int(chat_data['sender_id']),
+      send_time:
+          chat_data['create_time']?.toString() ??
+          chat_data['send_time']?.toString() ??
+          '',
+      notify_status: NotifyStatus.unread,
+      sender_name: chat_data['sender_name']?.toString() ?? '客服',
+      sender_avatar: chat_data['sender_avatar']?.toString() ?? '',
+    );
+    final _MessageBucket all_bucket = _buckets[null]!;
+    final List<MessageData> without_chat = all_bucket.list
+        .where((message) => message.type != MessageType.chat_reply)
+        .toList();
+    all_bucket.list.value = <MessageData>[summary, ...without_chat];
+  }
+
+  /// 旧版本实时消息仅根据当前权威分类未读数决定卡片的已读样式。
+  MessageData _message_with_current_unread_status(MessageData message) {
+    final int type_unread = switch (message.type) {
+      MessageType.comment_reply => comment_unread.value,
+      MessageType.comment_like || MessageType.novel_like => like_unread.value,
+      MessageType.novel_favorite => favorite_unread.value,
+      MessageType.system => system_unread.value,
+      _ => 0,
+    };
+    return message.copy_with(
+      notify_status: type_unread > 0 ? NotifyStatus.unread : NotifyStatus.read,
+    );
+  }
+
+  /// 应用后端权威未读数，乱序旧事件只允许抬高而不能降低当前值。
+  void _apply_authoritative_chat_unread(
+    int unread, {
+    required bool is_latest_message,
+  }) {
+    if (is_latest_message || unread > chat_unread.value) {
+      chat_unread.value = unread;
+    }
+  }
+
+  /// 记录已处理的客服消息，并限制集合大小避免长期运行时无限增长。
+  bool _remember_chat_message(int message_id) {
+    if (!_processed_chat_message_ids.add(message_id)) return false;
+    if (_processed_chat_message_ids.length > _processed_chat_message_limit) {
+      _processed_chat_message_ids.remove(_processed_chat_message_ids.first);
+    }
+    return true;
+  }
+
+  /// 记录普通消息事件，并限制集合大小。
+  bool _remember_message(int message_id) {
+    if (message_id <= 0) return true;
+    if (!_processed_message_ids.add(message_id)) return false;
+    if (_processed_message_ids.length > _processed_message_limit) {
+      _processed_message_ids.remove(_processed_message_ids.first);
+    }
+    return true;
+  }
+
+  /// 判断普通消息是否已存在于任意缓存桶。
+  bool _is_message_cached(MessageData message) {
+    return _buckets.values.any(
+      (bucket) => bucket.list.any(
+        (cached) => cached.identity_key == message.identity_key,
+      ),
+    );
+  }
+
+  /// 应用其他设备产生的已读或删除状态，并使用权威快照更新全部角标。
+  void _handle_message_state_changed(Map<String, dynamic> payload) {
+    final String action = payload['action']?.toString() ?? '';
+    final int message_id = _parse_int(payload['message_id']);
+
+    if (action == 'read' && message_id > 0) {
+      _mark_cached_message_as_read(message_id);
+    } else if (action == 'delete' && message_id > 0) {
+      _remove_cached_message(message_id);
+    } else if (action == 'read_all') {
+      _mark_all_cached_messages_as_read();
+      _remove_cached_chat_message();
+    } else if (action == 'chat_read') {
+      _remove_cached_chat_message();
+    }
+
+    final dynamic unread_data = payload['unread_count'];
+    if (unread_data is Map) {
+      _apply_realtime_unread(Map<String, dynamic>.from(unread_data));
+      return;
+    }
+
+    // TODO 兼容快照查询临时失败的后端事件，主动补拉避免跨设备状态长期不一致。
+    if (_defer_realtime_unread_update()) return;
+    unawaited(fetch_statistics());
+  }
+
+  /// 将缓存中的指定普通消息标记为已读。
+  void _mark_cached_message_as_read(int message_id) {
+    for (final bucket in _buckets.values) {
+      final int index = bucket.list.indexWhere(
+        (message) =>
+            message.type != MessageType.chat_reply && message.id == message_id,
+      );
+      if (index < 0 || !bucket.list[index].is_unread) continue;
+      bucket.list[index] = bucket.list[index].copy_with(
+        notify_status: NotifyStatus.read,
+      );
+      bucket.list.refresh();
+    }
+  }
+
+  /// 从所有缓存桶移除指定普通消息。
+  void _remove_cached_message(int message_id) {
+    for (final bucket in _buckets.values) {
+      bucket.list.value = bucket.list
+          .where(
+            (message) =>
+                message.type == MessageType.chat_reply ||
+                message.id != message_id,
+          )
+          .toList();
+    }
+  }
+
+  /// 将所有缓存普通消息标记为已读。
+  void _mark_all_cached_messages_as_read() {
+    for (final bucket in _buckets.values) {
+      bucket.list.value = bucket.list
+          .map(
+            (message) =>
+                message.type != MessageType.chat_reply && message.is_unread
+                ? message.copy_with(notify_status: NotifyStatus.read)
+                : message,
+          )
+          .toList();
+    }
+  }
+
+  /// 从消息中心缓存移除客服摘要。
+  void _remove_cached_chat_message() {
+    for (final bucket in _buckets.values) {
+      bucket.list.value = bucket.list
+          .where((message) => message.type != MessageType.chat_reply)
+          .toList();
+    }
+  }
+
+  /// FCM 前台推送兜底：WebSocket 短暂断开时也能恢复页面及 App 图标角标。
+  void handle_foreground_notification(Map<String, dynamic> data) {
+    _foreground_refresh_timer?.cancel();
+    _foreground_refresh_timer = Timer(const Duration(milliseconds: 300), () {
+      if (!Get.isRegistered<UserInformation>()) return;
+      final UserInformation user_information = Get.find<UserInformation>();
+      if (user_information.isLoggedIn.value) {
+        // TODO FCM 可能是客服消息唯一可达信号，同时刷新角标与当前消息列表摘要。
+        if (data['biz_type']?.toString() == 'customer_service') {
+          _buckets[null]!.has_loaded = false;
+        }
+        unawaited(silent_refresh());
+      } else {
+        unawaited(fetch_visitor_chat_unread());
       }
     });
   }
@@ -628,6 +1112,11 @@ class MessageStore extends GetxController {
   void onClose() {
     _ws_subscription?.cancel();
     _badge_update_timer?.cancel();
+    _foreground_refresh_timer?.cancel();
+    if (_foreground_callback_registered) {
+      FcmService().on_foreground_data = null;
+      _foreground_callback_registered = false;
+    }
     super.onClose();
   }
 }

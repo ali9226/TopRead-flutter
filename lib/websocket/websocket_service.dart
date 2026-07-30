@@ -1,4 +1,4 @@
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'dart:async';
 import 'dart:convert';
@@ -9,12 +9,16 @@ import 'package:app/websocket/config.dart';
 import 'package:app/websocket/websocket_status.dart';
 import 'package:app/websocket/websocket_heartbeat.dart';
 import 'package:app/websocket/websocket_reconnect.dart';
+import 'package:app/websocket/websocket_connection_lifecycle.dart';
 import 'package:app/util/storage_util/index.dart';
 import 'package:app/util/log_util.dart';
 import 'package:uuid/uuid.dart';
 
 /// 本地存储访客 UUID 的 key。
 const String _visitor_uuid_key = 'visitor_uuid';
+
+/// WebSocket 握手的最大等待时间。
+const Duration _connection_timeout = Duration(seconds: 12);
 
 /// WebSocket 服务。
 ///
@@ -36,13 +40,21 @@ class WebSocketService with WidgetsBindingObserver {
   final _status_controller = StreamController<WebSocketStatus>.broadcast();
 
   /// 消息流控制器。
-  final _message_controller = StreamController<Map<String, dynamic>>.broadcast();
+  final _message_controller =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   /// 心跳管理器。
   late final WebSocketHeartbeat _heartbeat;
 
   /// 重连管理器。
   late final WebSocketReconnect _reconnect;
+
+  /// 连接代次管理器。
+  final WebSocketConnectionLifecycle _connection_lifecycle =
+      WebSocketConnectionLifecycle();
+
+  /// 子模块是否已初始化。
+  bool _modules_initialized = false;
 
   /// 是否已销毁。
   bool _is_disposed = false;
@@ -69,19 +81,21 @@ class WebSocketService with WidgetsBindingObserver {
   bool get is_visitor => _is_visitor;
 
   /// 初始化子模块。
-  void _init_modules() {
-    _heartbeat = WebSocketHeartbeat(
-      onPing: () => send({'type': 'ping'}),
-    );
+  void _ensure_modules() {
+    if (_modules_initialized) return;
+    _heartbeat = WebSocketHeartbeat(onPing: () => send({'type': 'ping'}));
     _reconnect = WebSocketReconnect(
-      onReconnect: () => connect(),
+      onReconnect: () {
+        unawaited(connect());
+      },
     );
+    _modules_initialized = true;
   }
 
   /// 注册生命周期观察者。
   void _ensure_observer() {
+    _ensure_modules();
     if (!_observer_registered) {
-      _init_modules();
       WidgetsBinding.instance.addObserver(this);
       _observer_registered = true;
     }
@@ -98,7 +112,7 @@ class WebSocketService with WidgetsBindingObserver {
         if (_status == WebSocketStatus.connected) {
           _heartbeat.start();
         } else if (_status != WebSocketStatus.connecting) {
-          connect();
+          unawaited(connect());
         }
         break;
       case AppLifecycleState.paused:
@@ -132,13 +146,17 @@ class WebSocketService with WidgetsBindingObserver {
   /// 已登录用户使用 token 连接，未登录用户使用 visitor_id（UUID）连接。
   Future<void> connect() async {
     if (_is_disposed) return;
-    if (_status == WebSocketStatus.connecting || _status == WebSocketStatus.connected) {
+    if (_status == WebSocketStatus.connecting ||
+        _status == WebSocketStatus.connected) {
       return;
     }
 
     _ensure_observer();
+    _reconnect.cancel();
+    final int connection_id = _connection_lifecycle.begin();
     _update_status(WebSocketStatus.connecting);
 
+    WebSocketChannel? channel;
     try {
       final String base_url = WebsocketConfig.requestUrl;
       String ws_url;
@@ -156,17 +174,31 @@ class WebSocketService with WidgetsBindingObserver {
         logUtil(msg: 'WebSocket 以访客身份连接: $visitor_id');
       }
 
-      logUtil(msg: 'WebSocket 连接地址: $ws_url');
+      if (!_connection_lifecycle.is_active(connection_id)) {
+        return;
+      }
 
-      _channel = WebSocketChannel.connect(Uri.parse(ws_url));
+      logUtil(msg: 'WebSocket 连接地址: $base_url（认证参数已隐藏）');
 
-      _channel!.stream.listen(
+      final WebSocketChannel new_channel = WebSocketChannel.connect(
+        Uri.parse(ws_url),
+      );
+      channel = new_channel;
+      _channel = new_channel;
+      new_channel.stream.listen(
         _on_message,
-        onDone: _on_done,
-        onError: _on_error,
+        onDone: () => _on_done(new_channel, connection_id),
+        onError: (dynamic error) =>
+            _on_error(new_channel, connection_id, error),
       );
 
-      // 连接成功，重置重连状态。
+      // WebSocketChannel.connect 只创建通道，ready 完成后握手才真正成功。
+      await new_channel.ready.timeout(_connection_timeout);
+      if (!_is_current_connection(new_channel, connection_id)) {
+        return;
+      }
+
+      // 握手成功，重置重连状态。
       _reconnect.reset();
       _update_status(WebSocketStatus.connected);
 
@@ -176,30 +208,35 @@ class WebSocketService with WidgetsBindingObserver {
       }
 
       logUtil(msg: 'WebSocket 连接成功');
-    } catch (e) {
-      logUtil(msg: 'WebSocket 连接异常: $e', type: 'e');
-      _update_status(WebSocketStatus.disconnected);
-      _reconnect.schedule(isForeground: _is_foreground);
+    } catch (error) {
+      _on_connect_failed(channel, connection_id, error);
     }
   }
 
   /// 断开连接。
   void disconnect() {
+    _ensure_modules();
+    final WebSocketChannel? channel = _channel;
+    _connection_lifecycle.invalidate();
+    _channel = null;
     _heartbeat.stop();
     _reconnect.cancel();
-    _channel?.sink.close();
-    _channel = null;
     _update_status(WebSocketStatus.disconnected);
+    if (channel != null) {
+      unawaited(channel.sink.close());
+    }
     logUtil(msg: 'WebSocket 已断开');
   }
 
   /// 发送消息。
-  void send(Map<String, dynamic> data) {
-    if (!is_connected || _channel == null) return;
+  bool send(Map<String, dynamic> data) {
+    if (!is_connected || _channel == null) return false;
     try {
       _channel!.sink.add(json.encode(data));
+      return true;
     } catch (e) {
       logUtil(msg: 'WebSocket 发送失败: $e', type: 'e');
+      return false;
     }
   }
 
@@ -210,10 +247,7 @@ class WebSocketService with WidgetsBindingObserver {
   void send_chat_message({int message_type = 1, required String content}) {
     send({
       'type': 'chat_send',
-      'data': {
-        'message_type': message_type,
-        'content': content,
-      },
+      'data': {'message_type': message_type, 'content': content},
     });
   }
 
@@ -222,26 +256,24 @@ class WebSocketService with WidgetsBindingObserver {
   /// [session_id] 会话ID
   /// [page] 页码
   /// [page_size] 每页数量
-  void fetch_chat_history({required int session_id, int page = 1, int page_size = 50}) {
+  void fetch_chat_history({
+    required int session_id,
+    int page = 1,
+    int page_size = 50,
+  }) {
     send({
       'type': 'chat_history',
-      'data': {
-        'session_id': session_id,
-        'page': page,
-        'page_size': page_size,
-      },
+      'data': {'session_id': session_id, 'page': page, 'page_size': page_size},
     });
   }
 
   /// 标记聊天消息为已读。
   ///
   /// [session_id] 会话ID
-  void mark_chat_read({required int session_id}) {
-    send({
+  bool mark_chat_read({required int session_id}) {
+    return send({
       'type': 'mark_read',
-      'data': {
-        'session_id': session_id,
-      },
+      'data': {'session_id': session_id},
     });
   }
 
@@ -266,29 +298,77 @@ class WebSocketService with WidgetsBindingObserver {
   }
 
   /// 连接关闭处理。
-  void _on_done() {
-    final closeCode = _channel?.closeCode;
-    final closeReason = _channel?.closeReason;
+  void _on_done(WebSocketChannel channel, int connection_id) {
+    final int? closeCode = channel.closeCode;
+    final String? closeReason = channel.closeReason;
     logUtil(msg: 'WebSocket 连接关闭 code=$closeCode reason=$closeReason');
+    if (!_finish_current_connection(channel, connection_id)) {
+      logUtil(msg: 'WebSocket 忽略已被替换连接的关闭回调');
+      return;
+    }
+
     _heartbeat.stop();
-    _channel = null;
     _update_status(WebSocketStatus.disconnected);
     _reconnect.schedule(isForeground: _is_foreground);
   }
 
   /// 连接错误处理。
-  void _on_error(dynamic error) {
+  void _on_error(WebSocketChannel channel, int connection_id, dynamic error) {
+    if (!_finish_current_connection(channel, connection_id)) {
+      logUtil(msg: 'WebSocket 忽略已被替换连接的错误回调');
+      return;
+    }
+
     logUtil(msg: 'WebSocket 错误: $error', type: 'e');
     _heartbeat.stop();
-    _channel = null;
     _update_status(WebSocketStatus.disconnected);
     _reconnect.schedule(isForeground: _is_foreground);
+  }
+
+  /// 处理连接创建或握手失败。
+  void _on_connect_failed(
+    WebSocketChannel? channel,
+    int connection_id,
+    Object error,
+  ) {
+    if (!_connection_lifecycle.finish(connection_id)) {
+      return;
+    }
+
+    if (channel != null && identical(channel, _channel)) {
+      _channel = null;
+      unawaited(channel.sink.close());
+    }
+    logUtil(msg: 'WebSocket 连接异常: $error', type: 'e');
+    _heartbeat.stop();
+    _update_status(WebSocketStatus.disconnected);
+    _reconnect.schedule(isForeground: _is_foreground);
+  }
+
+  /// 判断指定通道和代次是否仍属于当前连接。
+  bool _is_current_connection(WebSocketChannel channel, int connection_id) {
+    return identical(channel, _channel) &&
+        _connection_lifecycle.is_active(connection_id);
+  }
+
+  /// 仅结束当前通道，旧通道的迟到回调不会修改全局连接状态。
+  bool _finish_current_connection(WebSocketChannel channel, int connection_id) {
+    if (!identical(channel, _channel)) {
+      return false;
+    }
+    if (!_connection_lifecycle.finish(connection_id)) {
+      return false;
+    }
+    _channel = null;
+    return true;
   }
 
   /// 更新状态。
   void _update_status(WebSocketStatus new_status) {
     _status = new_status;
-    _status_controller.add(new_status);
+    if (!_status_controller.isClosed) {
+      _status_controller.add(new_status);
+    }
   }
 
   /// 销毁服务。
