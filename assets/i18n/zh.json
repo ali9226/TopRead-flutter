@@ -707,5 +707,11 @@
   },
   "chat": {
     "no_more_messages": "没有更多消息了"
+  },
+  "AboutTopRead": {
+    "rate_us": "去评分",
+    "user_agreement": "用户协议",
+    "privacy_policy": "隐私政策",
+    "version_update": "版本更新"
   }
 }

@@ -1,15 +1,12 @@
 import 'package:easy_localization/easy_localization.dart' as easy;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
-import 'package:app/api/post_request.dart';
-import 'package:app/config/constant.dart';
 import 'package:app/config/color_config.dart';
+import 'package:app/config/constant.dart';
 import 'package:app/config/theme.dart';
-import 'package:app/models/app_config_inquire.dart';
 import 'package:app/models/language_info.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/stores/device_info.dart';
@@ -18,11 +15,9 @@ import 'package:app/stores/message_store.dart';
 import 'package:app/util/clipboard/clipboard.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/dialog/show_message.dart';
-import 'package:app/util/dialog/show_upgrade_dialog.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/router/router_util.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'operation_li.dart';
 import 'logic.dart';
 import 'style.dart';
@@ -220,16 +215,13 @@ class _OperationListState extends State<OperationList> {
           ),
         );
       }
-      // 判断是否显示调试操作（debug=2 表示开发者）。
-      final showDebug = isLoggedIn && userInformation.userInfo.value?.debug == 2;
-
       // 关于 - 始终显示。
       group3Children.add(
         OperationLi(
           icon: "upgrade_02",
           title: easy.tr('UserInfo.about_top_read'),
           type: 1,
-          showDivider: true,
+          showDivider: isLoggedIn,
           trailing: Text(
             'V${Constant.appVersion}',
             style: TextStyle(
@@ -240,7 +232,7 @@ class _OperationListState extends State<OperationList> {
                   : ColorConstants.lightTextColor.withValues(alpha: 0.45),
             ),
           ),
-          onTap: () => _checkUpdate(),
+          onTap: () => routerUtil(path: '/about_topread'),
         ),
       );
 
@@ -251,7 +243,7 @@ class _OperationListState extends State<OperationList> {
             icon: "quit",
             title: easy.tr('UserInfo.sign_out'),
             type: 1,
-            showDivider: showDebug,
+            showDivider: false,
             onTap: () {
               showMessage(
                 message: easy.tr('UserInfo.tips_01'),
@@ -263,58 +255,6 @@ class _OperationListState extends State<OperationList> {
                   await logic.logout();
                 },
               );
-            },
-          ),
-        );
-      }
-
-      // 删除账户
-      if (isLoggedIn) {
-        group3Children.add(
-          OperationLi(
-            icon: "delete_02",
-            title: easy.tr('UserInfo.delete_account'),
-            type: 1,
-            showDivider: showDebug,
-            onTap: () {
-              showMessage(
-                message: '${easy.tr('UserInfo.delete_account_confirm_title')}\n\n${easy.tr('UserInfo.delete_account_confirm_message')}',
-                leftButtonText: easy.tr('UserInfo.delete_account_cancel_button'),
-                rightButtonText: easy.tr('UserInfo.delete_account_confirm_button'),
-                rightButtonColor: ColorConstants.dangerColor,
-                iconColor: ColorConstants.dangerColor,
-                onRightPressed: () async {
-                  final bool success = await logic.deleteAccount();
-                  if (!success) return;
-
-                  /// 删除成功，弹出提示弹窗。
-                  if (!mounted) return;
-                  showMessage(
-                    message: easy.tr('UserInfo.delete_account_success_message'),
-                    rightButtonText: easy.tr('UserInfo.yes'),
-                    allowMaskDismiss: false,
-                    onRightPressed: () async {
-                      /// 跳转到首页。
-                      routerUtil(path: '/', type: 'replace');
-                    },
-                  );
-                },
-              );
-            },
-          ),
-        );
-      }
-
-      // 调试 - 仅特定用户显示。
-      if (showDebug) {
-        group3Children.add(
-          OperationLi(
-            icon: "bug",
-            title: easy.tr('debug.title'),
-            type: 1,
-            showDivider: false,
-            onTap: () {
-              routerUtil(path: '/debug');
             },
           ),
         );
@@ -348,112 +288,6 @@ class _OperationListState extends State<OperationList> {
     });
   }
 
-  /// 检查应用更新。
-  ///
-  /// 请求 app_config/inquire 接口对比版本号：
-  /// - 已是最新版：吐司提示
-  /// - 有可升级版本：弹出升级弹窗
-  Future<void> _checkUpdate() async {
-    // 浏览器环境跳过。
-    if (kIsWeb) return;
-
-    try {
-      final results = await postRequest<AppConfigInquire>(
-        path: 'app_config/inquire',
-        showTips: false,
-        fromJson: (Map<String, dynamic> json) =>
-            AppConfigInquire.fromJson(json),
-      );
-
-      if (!mounted) return;
-
-      if (!results.status || results.content == null) {
-        showBottomTip(easy.tr('app_update.already_latest'));
-        return;
-      }
-
-      final AppConfigInquire config = results.content!;
-
-      // 根据平台选择对应的版本号和升级地址。
-      final bool is_ios = defaultTargetPlatform == TargetPlatform.iOS;
-      final String max_version = is_ios
-          ? config.max_ios_version
-          : config.max_android_version;
-      final String upgrade_url = is_ios
-          ? config.ios_update_address
-          : config.update_address;
-
-      // 版本号为空则提示已是最新。
-      if (max_version.isEmpty) {
-        showBottomTip(easy.tr('app_update.already_latest'));
-        return;
-      }
-
-      // 对比版本号。
-      final int compare = _compare_version(Constant.appVersion, max_version);
-
-      if (compare < 0) {
-        // 当前版本 < 最新版本，弹出升级弹窗。
-        final String message = config.update_content.isNotEmpty
-            ? config.update_content
-            : easy.tr('app_update.optional_update_message');
-
-        showUpgradeDialog(
-          currentVersion: Constant.appVersion,
-          latestVersion: max_version,
-          updateContent: message,
-          leftButtonText: easy.tr('app_update.upgrade_later'),
-          rightButtonText: easy.tr('app_update.upgrade_now'),
-          allowMaskDismiss: true,
-          onRightPressed: () async {
-            if (upgrade_url.isNotEmpty) {
-              final Uri uri = Uri.parse(upgrade_url);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-            }
-          },
-        );
-      } else {
-        // 已是最新版本。
-        showBottomTip(easy.tr('app_update.already_latest'));
-      }
-    } catch (error) {
-      logUtil(msg: 'app_version: 检查更新异常 $error', type: 'e');
-      if (mounted) {
-        showBottomTip(easy.tr('app_update.already_latest'));
-      }
-    }
-  }
-
-  /// 比较两个版本号的大小。
-  static int _compare_version(String v1, String v2) {
-    final List<int> parts1 = _parse_version_parts(v1);
-    final List<int> parts2 = _parse_version_parts(v2);
-
-    final int max_len = parts1.length > parts2.length
-        ? parts1.length
-        : parts2.length;
-
-    for (int i = 0; i < max_len; i++) {
-      final int p1 = i < parts1.length ? parts1[i] : 0;
-      final int p2 = i < parts2.length ? parts2[i] : 0;
-      if (p1 > p2) return 1;
-      if (p1 < p2) return -1;
-    }
-    return 0;
-  }
-
-  /// 把版本号字符串拆成整数列表。
-  /// 支持格式：1.0.0 或 1.0.0+2（忽略 + 后面的 build number）。
-  static List<int> _parse_version_parts(String version) {
-    // 移除 + 及后面的 build number，只保留版本名部分
-    final String versionName = version.split('+').first;
-    return versionName
-        .split('.')
-        .map((String part) => int.tryParse(part) ?? 0)
-        .toList();
-  }
 }
 
 /// 操作列表分组容器。

@@ -36,6 +36,7 @@ class AuthTopBar extends StatelessWidget {
             right: 0,
             child: LanguageSelection(
               showLeftIcon: true,
+              showRightLanguageEntry: false,
               darkBackground: isDark,
               useSafeAreaTop: true,
               topOffset: 10,

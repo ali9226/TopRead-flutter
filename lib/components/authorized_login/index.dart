@@ -190,10 +190,15 @@ class _AuthorizedLoginViewState extends State<AuthorizedLoginView> {
       );
     }
 
+    final String svgName = logic.get_authorized_login_svg_name(item);
+
     return SvgIcon(
-      name: logic.get_authorized_login_svg_name(item),
+      name: svgName,
       width: AuthorizedLoginStyle.icon_size,
       height: AuthorizedLoginStyle.icon_size,
+      color: (device_info.dark.value && svgName == 'apple')
+          ? Colors.white
+          : null,
     );
   }
 }

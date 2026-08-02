@@ -753,5 +753,11 @@
   },
   "chat": {
     "no_more_messages": "Plus de messages"
+  },
+  "AboutTopRead": {
+    "rate_us": "Évaluer",
+    "user_agreement": "Conditions d'utilisation",
+    "privacy_policy": "Politique de confidentialité",
+    "version_update": "Mise à jour"
   }
 }

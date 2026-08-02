@@ -695,5 +695,11 @@
   },
   "chat": {
     "no_more_messages": "Hakuna ujumbe zaidi"
+  },
+  "AboutTopRead": {
+    "rate_us": "Tathimini",
+    "user_agreement": "Masharti ya Mtumiaji",
+    "privacy_policy": "Sera ya Faragha",
+    "version_update": "Sasisha Toleo"
   }
 }
