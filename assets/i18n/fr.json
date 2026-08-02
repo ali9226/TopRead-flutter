@@ -747,7 +747,9 @@
     "apple_auth_invalid_response": "Réponse de connexion Apple invalide",
     "apple_auth_not_handled": "Demande de connexion Apple non traitée",
     "apple_auth_unknown": "Erreur inconnue de connexion Apple",
-    "apple_auth_ongoing": "Connexion Apple en cours"
+    "apple_auth_ongoing": "Connexion Apple en cours",
+    "google_auth_failed": "Échec de la connexion Google",
+    "google_auth_canceled": "Vous avez annulé la connexion Google"
   },
   "chat": {
     "no_more_messages": "Plus de messages"

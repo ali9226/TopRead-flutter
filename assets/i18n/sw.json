@@ -689,7 +689,9 @@
     "apple_auth_invalid_response": "Jibu la Apple login si sahihi",
     "apple_auth_not_handled": "Ombi la Apple login halijashughulikiwa",
     "apple_auth_unknown": "Hitilafu isiyojulikana ya Apple login",
-    "apple_auth_ongoing": "Apple login inaendelea"
+    "apple_auth_ongoing": "Apple login inaendelea",
+    "google_auth_failed": "Google login imeshindikana",
+    "google_auth_canceled": "Ulibatilisha Google login"
   },
   "chat": {
     "no_more_messages": "Hakuna ujumbe zaidi"

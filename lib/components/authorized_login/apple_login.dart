@@ -3,13 +3,43 @@
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/log_util.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
-/// 执行 Apple 授权登录逻辑。
+/// Apple 登录结果数据。
+class AppleLoginResult {
+  /// Firebase 用户信息。
+  final User user;
+
+  /// Firebase ID Token（用于后端验证）。
+  final String firebaseIdToken;
+
+  /// Apple 授权的 authorizationCode。
+  final String authorizationCode;
+
+  /// Apple 用户的 givenName（仅首次授权时返回）。
+  final String? givenName;
+
+  /// Apple 用户的 familyName（仅首次授权时返回）。
+  final String? familyName;
+
+  AppleLoginResult({
+    required this.user,
+    required this.firebaseIdToken,
+    required this.authorizationCode,
+    this.givenName,
+    this.familyName,
+  });
+}
+
+/// 执行 Apple 授权登录逻辑（通过 Firebase）。
 ///
-/// 调用 Apple 授权接口获取用户信息，并打印所有返回字段供调试。
-/// 返回授权凭证，若用户取消或失败则返回 null。
-Future<AuthorizationCredentialAppleID?> apple_login() async {
+/// 流程：
+/// 1. 调用 sign_in_with_apple 获取 Apple 授权凭证
+/// 2. 使用 OAuthProvider 创建 Firebase 凭证
+/// 3. 调用 FirebaseAuth 进行登录
+/// 返回登录结果，若用户取消或失败则返回 null。
+Future<AppleLoginResult?> apple_login() async {
   try {
     logUtil(msg: "开始 Apple 授权登录");
 
@@ -26,7 +56,7 @@ Future<AuthorizationCredentialAppleID?> apple_login() async {
     /// scopes 参数指定需要获取的用户信息范围：
     /// - fullName: 用户姓名
     /// - email: 用户邮箱
-    final AuthorizationCredentialAppleID credential =
+    final AuthorizationCredentialAppleID apple_credential =
         await SignInWithApple.getAppleIDCredential(
       scopes: [
         AppleIDAuthorizationScopes.email,
@@ -34,18 +64,43 @@ Future<AuthorizationCredentialAppleID?> apple_login() async {
       ],
     );
 
-    /// 打印 Apple 返回的所有字段，用于调试和对接后端。
-    logUtil(msg: "===== Apple 登录返回信息 =====");
-    logUtil(msg: "identityToken: ${credential.identityToken}");
-    logUtil(msg: "authorizationCode: ${credential.authorizationCode}");
-    logUtil(msg: "userIdentifier: ${credential.userIdentifier}");
-    logUtil(msg: "givenName: ${credential.givenName}");
-    logUtil(msg: "familyName: ${credential.familyName}");
-    logUtil(msg: "email: ${credential.email}");
-    logUtil(msg: "state: ${credential.state}");
-    logUtil(msg: "===== Apple 登录返回信息结束 =====");
 
-    return credential;
+    /// 创建 Firebase Apple 凭证。
+    final OAuthCredential firebase_credential = OAuthProvider('apple.com').credential(
+      idToken: apple_credential.identityToken,
+      accessToken: apple_credential.authorizationCode,
+    );
+
+    /// 使用 Firebase 进行登录。
+    logUtil(msg: "开始 Firebase Apple 登录");
+    final UserCredential user_credential =
+        await FirebaseAuth.instance.signInWithCredential(firebase_credential);
+
+    /// 打印 Firebase 返回的用户信息。
+    final User? user = user_credential.user;
+    if (user == null) {
+      logUtil(msg: "Firebase 登录失败，未获取到用户信息", type: 'e');
+      showBottomTip(tr('AuthorizedLogin.apple_auth_failed'));
+      return null;
+    }
+
+
+    /// 获取 Firebase ID Token，用于后端验证。
+    final String? firebase_id_token = await user.getIdToken();
+
+    if (firebase_id_token == null || firebase_id_token.isEmpty) {
+      logUtil(msg: "获取 Firebase ID Token 失败", type: 'e');
+      showBottomTip(tr('AuthorizedLogin.apple_auth_failed'));
+      return null;
+    }
+
+    return AppleLoginResult(
+      user: user,
+      firebaseIdToken: firebase_id_token,
+      authorizationCode: apple_credential.authorizationCode,
+      givenName: apple_credential.givenName,
+      familyName: apple_credential.familyName,
+    );
   } on SignInWithAppleAuthorizationException catch (error) {
     /// 处理 Apple 授权特有的异常。
     switch (error.code) {
@@ -86,6 +141,11 @@ Future<AuthorizationCredentialAppleID?> apple_login() async {
         showBottomTip(tr('AuthorizedLogin.apple_auth_failed'));
         break;
     }
+    return null;
+  } on FirebaseAuthException catch (error) {
+    /// 处理 Firebase 认证异常。
+    logUtil(msg: "Firebase Apple 登录失败: ${error.code} - ${error.message}", type: 'e');
+    showBottomTip(tr('AuthorizedLogin.apple_auth_failed'));
     return null;
   } catch (error) {
     /// 处理其他未预期的异常。

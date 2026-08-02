@@ -29,6 +29,7 @@ import 'package:app/util/router/web_url_strategy.dart';
 import 'package:app/util/device/get_theme_mode.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:app/firebase_options.dart';
 import 'package:app/fcm/fcm_service.dart';
 import 'package:app/util/language_util/language_change_handler.dart';
@@ -40,6 +41,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await EasyLocalization.ensureInitialized();
+
+  // TODO 初始化 Google Sign In
+  await GoogleSignIn.instance.initialize();
 
   // TODO 初始化 GetStorage（必须在 runApp 之前）
   await GetStorage.init();

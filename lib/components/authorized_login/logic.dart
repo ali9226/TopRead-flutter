@@ -18,7 +18,6 @@ import 'package:app/util/storage_util/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import 'google_login.dart';
 
@@ -31,66 +30,156 @@ class Logic {
 
   /// 处理授权登录项点击事件。
   Future<void> handle_authorized_login_tap(Rotation item) async {
+    /// 获取全局授权登录状态管理。
+    final AuthorizedLoginStore authorized_login_store =
+        Get.find<AuthorizedLoginStore>();
+
+    /// 如果有其他授权登录正在进行中，直接返回。
+    if (authorized_login_store.loading.value) {
+      return;
+    }
+
     if (item.title.trim().toLowerCase() == 'google') {
-      await google_login();
+      await _handle_google_login(authorized_login_store);
       return;
     }
 
     if (item.title.trim().toLowerCase() == 'telegram') {
-      await telegram_login(context);
+      await _handle_telegram_login(authorized_login_store);
       return;
     }
 
     if (item.title.trim().toLowerCase() == 'apple') {
-      await _handle_apple_login();
+      await _handle_apple_login(authorized_login_store);
       return;
     }
 
     await open_rotation_jump(item);
   }
 
+  /// 处理 Google 登录完整流程。
+  ///
+  /// 通过 Firebase 进行 Google 授权，成功后请求后端接口完成登录。
+  Future<void> _handle_google_login(AuthorizedLoginStore authorized_login_store) async {
+    /// 设置加载状态，防止重复点击。
+    authorized_login_store.loading.value = true;
+    authorized_login_store.loading_platform.value = 'google';
+
+    try {
+      /// 通过 Firebase 获取 Google 授权信息。
+      final GoogleLoginResult? result = await google_login();
+
+      /// 授权失败或用户取消，直接返回。
+      if (result == null) {
+        return;
+      }
+
+      /// 构建请求参数。
+      final Map<String, dynamic> parameter = {
+        'firebase_uid': result.user.uid,
+        'identity_token': result.firebaseIdToken,
+        'email': result.user.email ?? '',
+        'given_name': result.user.displayName ?? '',
+        'uuid_type': 4,
+        'note': 'firebase Google授权登录',
+      };
+
+      /// 打印请求参数，方便调试后端逻辑。
+      logUtil(msg: "===== Google 登录请求参数 =====");
+      logUtil(msg: "请求路径: user/firebase_login");
+      parameter.forEach((key, value) {
+        logUtil(msg: "$key: $value");
+      });
+      logUtil(msg: "===== Google 登录请求参数结束 =====");
+
+      /// 请求后端 Firebase 登录接口。
+      final ResultsType<Login> results = await postRequest<Login>(
+        path: 'user/firebase_login',
+        parameter: parameter,
+        fromJson: (Map<String, dynamic> json) => Login.fromJson(json),
+      );
+
+      if (!results.status || results.content == null) {
+        return;
+      }
+
+      /// 获取 token。
+      final String token = results.content?.token.toString() ?? '';
+      if (token.isEmpty) {
+        showBottomTip(tr('AuthorizedLogin.google_auth_failed'));
+        return;
+      }
+
+      /// 保存 token。
+      await StorageUtil.saveData(Constant.tokenKey, token);
+
+      /// 保存用户信息。
+      final UserInformation user_controller = Get.put(UserInformation());
+      user_controller.saveUserInfo(results.content!.userInfo);
+
+      /// 绑定 FCM Token 到用户。
+      FcmAuth.onLoginSuccess();
+
+      /// 跳转首页。
+      routerUtil(path: '/', type: 'replace');
+    } catch (error) {
+      logUtil(msg: "Google 登录后端请求失败: $error", type: 'e');
+      showBottomTip(tr('AuthorizedLogin.google_auth_failed'));
+    } finally {
+      /// 重置加载状态。
+      authorized_login_store.loading.value = false;
+      authorized_login_store.loading_platform.value = '';
+    }
+  }
+
+  /// 处理 Telegram 登录完整流程。
+  Future<void> _handle_telegram_login(AuthorizedLoginStore authorized_login_store) async {
+    /// 设置加载状态，防止重复点击。
+    authorized_login_store.loading.value = true;
+    authorized_login_store.loading_platform.value = 'telegram';
+
+    try {
+      await telegram_login(context);
+    } finally {
+      /// 重置加载状态。
+      authorized_login_store.loading.value = false;
+      authorized_login_store.loading_platform.value = '';
+    }
+  }
+
   /// 处理 Apple 登录完整流程。
   ///
-  /// 先获取授权信息，成功后请求后端接口完成登录。
-  Future<void> _handle_apple_login() async {
-    /// 获取全局授权登录状态管理。
-    final AuthorizedLoginStore authorized_login_store =
-        Get.find<AuthorizedLoginStore>();
-
-    /// 获取 Apple 授权信息。
-    final AuthorizationCredentialAppleID? credential = await apple_login();
-
-    /// 授权失败或用户取消，直接返回。
-    if (credential == null) {
-      return;
-    }
-
-    /// 设置加载状态，标记当前平台为 apple，显示转圈效果。
+  /// 通过 Firebase 进行 Apple 授权，成功后请求后端接口完成登录。
+  Future<void> _handle_apple_login(AuthorizedLoginStore authorized_login_store) async {
+    /// 设置加载状态，防止重复点击。
     authorized_login_store.loading.value = true;
     authorized_login_store.loading_platform.value = 'apple';
 
     try {
+      /// 通过 Firebase 获取 Apple 授权信息。
+      final AppleLoginResult? result = await apple_login();
+
+      /// 授权失败或用户取消，直接返回。
+      if (result == null) {
+        return;
+      }
+
       /// 构建请求参数。
       final Map<String, dynamic> parameter = {
-        'identity_token': credential.identityToken,
-        'authorization_code': credential.authorizationCode,
-        'user_identifier': credential.userIdentifier,
-        'given_name': credential.givenName ?? '',
-        'family_name': credential.familyName ?? '',
-        'email': credential.email ?? '',
+        'firebase_uid': result.user.uid,
+        'identity_token': result.firebaseIdToken,
+        'authorization_code': result.authorizationCode,
+        'email': result.user.email ?? '',
+        'given_name': result.givenName ?? '',
+        'family_name': result.familyName ?? '',
+        'uuid_type': 3,
+        'note': 'firebase Apple授权登录',
       };
 
-      /// 打印请求参数，方便调试后端逻辑。
-      logUtil(msg: "===== Apple 登录请求参数 =====");
-      logUtil(msg: "请求路径: user/apple_login");
-      parameter.forEach((key, value) {
-        logUtil(msg: "$key: $value");
-      });
-      logUtil(msg: "===== Apple 登录请求参数结束 =====");
 
       /// 请求后端 Apple 登录接口。
       final ResultsType<Login> results = await postRequest<Login>(
-        path: 'user/apple_login',
+        path: 'user/firebase_login',
         parameter: parameter,
         fromJson: (Map<String, dynamic> json) => Login.fromJson(json),
       );

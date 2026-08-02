@@ -138,7 +138,9 @@
     "apple_auth_invalid_response": "Invalid Apple login response",
     "apple_auth_not_handled": "Apple login request not handled",
     "apple_auth_unknown": "Unknown Apple login error",
-    "apple_auth_ongoing": "Apple login in progress"
+    "apple_auth_ongoing": "Apple login in progress",
+    "google_auth_failed": "Google login failed",
+    "google_auth_canceled": "You canceled Google login"
   },
   "register": {
     "invitation_code": "Invite Code",
