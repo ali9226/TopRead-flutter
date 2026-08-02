@@ -730,6 +730,25 @@
     "fcm_token_success": "Token copié dans le presse-papiers",
     "fcm_token_error": "Échec de l'obtention du token"
   },
+  "AuthorizedLogin": {
+    "title": "Connexion rapide",
+    "telegram_title": "Connexion Telegram",
+    "telegram_phone_hint": "Téléphone avec indicatif, ex. +255",
+    "telegram_phone_required": "Entrez le numéro de téléphone",
+    "telegram_phone_code_required": "Ajoutez l'indicatif pays, ex. +255",
+    "telegram_auth_timeout": "Connexion Telegram expirée",
+    "telegram_auth_failed": "Échec de la connexion Telegram",
+    "telegram_auth_url_invalid": "URL d'authentification Telegram invalide",
+    "telegram_auth_ongoing": "Connexion Telegram en cours",
+    "authorize_login": "Autoriser",
+    "apple_auth_unavailable": "La connexion Apple n'est pas disponible sur cet appareil",
+    "apple_auth_canceled": "Vous avez annulé la connexion Apple",
+    "apple_auth_failed": "Échec de la connexion Apple",
+    "apple_auth_invalid_response": "Réponse de connexion Apple invalide",
+    "apple_auth_not_handled": "Demande de connexion Apple non traitée",
+    "apple_auth_unknown": "Erreur inconnue de connexion Apple",
+    "apple_auth_ongoing": "Connexion Apple en cours"
+  },
   "chat": {
     "no_more_messages": "Plus de messages"
   }

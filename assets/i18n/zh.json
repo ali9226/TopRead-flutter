@@ -132,7 +132,14 @@
     "telegram_auth_failed": "Telegram 授权失败",
     "telegram_auth_url_invalid": "Telegram 后端鉴权地址无效",
     "telegram_auth_ongoing": "Telegram 授权登录正在进行中，请勿重复操作",
-    "authorize_login": "授权登录"
+    "authorize_login": "授权登录",
+    "apple_auth_unavailable": "当前设备不支持 Apple 登录",
+    "apple_auth_canceled": "您取消了 Apple 登录",
+    "apple_auth_failed": "Apple 登录授权失败",
+    "apple_auth_invalid_response": "Apple 登录响应无效",
+    "apple_auth_not_handled": "Apple 登录请求未处理",
+    "apple_auth_unknown": "Apple 登录发生未知错误",
+    "apple_auth_ongoing": "Apple 登录正在进行中，请勿重复操作"
   },
   "register": {
     "invitation_code": "邀请码",

@@ -131,7 +131,14 @@
     "telegram_auth_failed": "Telegram login failed",
     "telegram_auth_url_invalid": "Invalid Telegram auth URL",
     "telegram_auth_ongoing": "Telegram login in progress",
-    "authorize_login": "Authorize"
+    "authorize_login": "Authorize",
+    "apple_auth_unavailable": "Apple login is not available on this device",
+    "apple_auth_canceled": "You canceled Apple login",
+    "apple_auth_failed": "Apple login failed",
+    "apple_auth_invalid_response": "Invalid Apple login response",
+    "apple_auth_not_handled": "Apple login request not handled",
+    "apple_auth_unknown": "Unknown Apple login error",
+    "apple_auth_ongoing": "Apple login in progress"
   },
   "register": {
     "invitation_code": "Invite Code",

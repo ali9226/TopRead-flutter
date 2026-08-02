@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:app/components/auth_page/index.dart';
 import 'package:app/components/auth_page/style.dart';
 import 'package:app/components/auth_form_widgets/index.dart';
+import 'package:app/components/authorized_login/index.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/util/router/web_history.dart';
 
@@ -180,9 +181,8 @@ class _RegisterState extends State<Register> {
           onTap: isRegisterMode ? _goToLogin : _switchToRegisterMode,
         ),
         const SizedBox(height: Style.supportSpacing),
-        // TODO 第三方登录暂时隐藏，后续恢复时取消注释即可。
-        // const AuthorizedLoginView(),
-        // const SizedBox(height: 30),
+        AuthorizedLoginView(),
+        const SizedBox(height: 30),
       ],
     );
   }

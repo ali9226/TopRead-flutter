@@ -672,6 +672,25 @@
     "fcm_token_success": "Tokeni imekiliwa kwenye ubao wa kunakili",
     "fcm_token_error": "Imeshindwa kupata tokeni"
   },
+  "AuthorizedLogin": {
+    "title": "Ingia Haraka",
+    "telegram_title": "Telegram Login",
+    "telegram_phone_hint": "Nambari ya simu na msimbo, mfano +255",
+    "telegram_phone_required": "Weka nambari ya simu",
+    "telegram_phone_code_required": "Ongeza msimbo wa nchi, mfano +255",
+    "telegram_auth_timeout": "Muda wa Telegram login umekwisha",
+    "telegram_auth_failed": "Telegram login imeshindikana",
+    "telegram_auth_url_invalid": "URL ya Telegram si sahihi",
+    "telegram_auth_ongoing": "Telegram login inaendelea",
+    "authorize_login": "Ruhusu",
+    "apple_auth_unavailable": "Apple login haipatikani kwenye kifaa hiki",
+    "apple_auth_canceled": "Ulibatilisha Apple login",
+    "apple_auth_failed": "Apple login imeshindikana",
+    "apple_auth_invalid_response": "Jibu la Apple login si sahihi",
+    "apple_auth_not_handled": "Ombi la Apple login halijashughulikiwa",
+    "apple_auth_unknown": "Hitilafu isiyojulikana ya Apple login",
+    "apple_auth_ongoing": "Apple login inaendelea"
+  },
   "chat": {
     "no_more_messages": "Hakuna ujumbe zaidi"
   }

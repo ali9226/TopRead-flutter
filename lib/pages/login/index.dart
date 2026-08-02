@@ -191,9 +191,8 @@ class _LoginState extends State<Login> {
           onTap: isLoginMode ? _goToRegister : _switchToLoginMode,
         ),
         const SizedBox(height: Style.supportSpacing),
-        // TODO 第三方登录暂时隐藏，后续恢复时取消注释即可。
-        // const AuthorizedLoginView(),
-        // const SizedBox(height: 30),
+        AuthorizedLoginView(),
+        const SizedBox(height: 30),
       ],
     );
   }
