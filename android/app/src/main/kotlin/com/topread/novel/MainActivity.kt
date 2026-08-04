@@ -11,8 +11,15 @@ class MainActivity : FlutterActivity() {
         private const val SET_BADGE_COUNT_METHOD = "setBadgeCount"
     }
 
+    private var advertisingInfoChannel: AdvertisingInfoChannel? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        advertisingInfoChannel = AdvertisingInfoChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            applicationContext,
+        )
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -49,5 +56,11 @@ class MainActivity : FlutterActivity() {
                 )
             }
         }
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        advertisingInfoChannel?.dispose()
+        advertisingInfoChannel = null
+        super.cleanUpFlutterEngine(flutterEngine)
     }
 }

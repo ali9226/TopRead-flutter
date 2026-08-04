@@ -22,6 +22,9 @@
 # 开启日志
     adb logcat -s flutter
 
+# ios运行卡顿，查看卡住日志
+    cd ./ios && pod install --verbose
+
 # 运行web端并且关闭校验
     flutter run -d chrome --web-browser-flag "--disable-web-security" --web-browser-flag "--user-data-dir=/tmp/chrome_dev"
 

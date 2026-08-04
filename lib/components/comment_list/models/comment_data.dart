@@ -77,7 +77,7 @@ class CommentData {
       content: json['comment_content']?.toString() ?? '',
       time: json['create_time']?.toString() ?? '',
       like_count: _parse_int(json['like_count']),
-      is_liked: json['is_liked'] == true || json['is_liked'] == 1,
+      is_liked: _parse_bool(json['like'] ?? json['is_liked']),
       replies: replies,
       reply_to_nickname: json['reply_to_nickname']?.toString(),
       parent_id: _parse_int(json['parent_id']),
@@ -90,6 +90,15 @@ class CommentData {
     if (value == null) return 0;
     if (value is int) return value;
     return int.tryParse(value.toString()) ?? 0;
+  }
+
+  /// 解析布尔值，兼容接口返回的 bool、数字和字符串格式。
+  static bool _parse_bool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final String normalized_value =
+        value?.toString().trim().toLowerCase() ?? '';
+    return normalized_value == 'true' || normalized_value == '1';
   }
 
   /// 复制当前评论对象并修改部分字段。

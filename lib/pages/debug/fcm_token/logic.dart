@@ -1,19 +1,21 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:app/util/log_util.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
-/// 调试页面逻辑层。
-class Logic {
-  /// Firebase Messaging 实例。
+/// FCM Token 调试逻辑。
+class FcmTokenLogic {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
-  /// 获取 FCM Token。
-  ///
-  /// 返回 FCM Token 字符串，获取失败返回 null。
-  Future<String?> getFcmToken() async {
+  /// 获取 FCM Token，失败返回 null。
+  Future<String?> getToken() async {
     try {
       final String? token = await _messaging.getToken();
       if (token != null) {
-        logUtil(msg: 'Debug: FCM Token 获取成功: ${token.substring(0, 20)}...');
+        final int previewLength = token.length < 20 ? token.length : 20;
+        logUtil(
+          msg:
+              'Debug: FCM Token 获取成功: '
+              '${token.substring(0, previewLength)}...',
+        );
       } else {
         logUtil(msg: 'Debug: FCM Token 获取失败', type: 'w');
       }

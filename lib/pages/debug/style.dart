@@ -18,6 +18,9 @@ class Style {
   /// 操作项垂直内边距。
   static const double itemVerticalPadding = 16;
 
+  /// 操作项之间的间距。
+  static const double itemSpacing = 12;
+
   /// 图标容器尺寸。
   static const double iconContainerSize = 42;
 

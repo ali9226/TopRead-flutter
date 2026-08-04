@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:app/components/comment_list/models/comment_data.dart';
+import 'package:app/components/comment_list/style.dart';
 import 'package:app/components/comment_list/widgets/comment_input.dart';
 
 void main() {
@@ -173,6 +174,60 @@ void main() {
     editor = tester.widget<TextField>(find.byType(TextField));
     expect(editor.controller?.text, isEmpty);
     expect(send_count, 2);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('夜间表情面板与弹窗同色且可流畅切回键盘', (WidgetTester tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 640);
+
+    await tester.pumpWidget(
+      EasyLocalization(
+        supportedLocales: const <Locale>[Locale('zh')],
+        path: 'assets/i18n',
+        assetLoader: const _CommentTestAssetLoader(),
+        startLocale: const Locale('zh'),
+        fallbackLocale: const Locale('zh'),
+        child: MaterialApp(
+          home: Material(
+            color: CommentListStyle.sheet_dark_bg,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: CommentInput(is_dark: true, on_send: (_) async => true),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('comment_emoji_button_preview')),
+    );
+    await tester.pumpAndSettle();
+
+    final Finder emoji_panel = find.byKey(
+      const ValueKey<String>('comment_emoji_panel'),
+    );
+    expect(emoji_panel, findsOneWidget);
+    final Material emoji_panel_material = tester.widget<Material>(emoji_panel);
+    expect(emoji_panel_material.color, CommentListStyle.sheet_dark_bg);
+
+    final IgnorePointer fixed_composer_gate = tester.widget<IgnorePointer>(
+      find.byKey(const ValueKey<String>('comment_fixed_composer_gate')),
+    );
+    expect(fixed_composer_gate.ignoring, isTrue);
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('comment_emoji_button_editor')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(emoji_panel, findsNothing);
+    final TextField editor = tester.widget<TextField>(find.byType(TextField));
+    expect(editor.focusNode?.hasFocus, isTrue);
     expect(tester.takeException(), isNull);
   });
 }

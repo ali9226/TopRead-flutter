@@ -31,6 +31,9 @@ dependencies:
   # TODO 苹果授权登陆
   sign_in_with_apple: 8.1.0
 
+  # TODO 谷歌广告
+  google_mobile_ads: 9.0.0
+
   # TODO  飞机授权登录
   telegram_login_flutter: ^1.0.1
 
@@ -137,7 +140,6 @@ dependencies:
   audioplayers: ^6.1.0
 
 
-  # TODO 相册图片多选（聊天发送图片）
 dependency_overrides:
 
 dev_dependencies:

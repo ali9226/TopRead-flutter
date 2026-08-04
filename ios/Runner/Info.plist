@@ -4,6 +4,11 @@
 <dict>
 	<key>GIDClientID</key>
 	<string>327330284001-9lka51couarj3d2a8f6hjgeehkho0glu.apps.googleusercontent.com</string>
+
+	<key>GADApplicationIdentifier</key>
+	<!-- 待提供 TopRead iOS AdMob 应用 ID 后替换 -->
+	<string>ca-app-pub-3940256099942544~1458002511</string>
+
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

@@ -97,6 +97,65 @@ void main() {
     expect(replied_comment_id, isNull);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('点赞与取消点赞都会播放爱心缩放动画', (WidgetTester tester) async {
+    Widget build_comment({required bool is_liked}) {
+      return EasyLocalization(
+        supportedLocales: const <Locale>[Locale('zh')],
+        path: 'assets/i18n',
+        assetLoader: const _CommentItemTestAssetLoader(),
+        startLocale: const Locale('zh'),
+        fallbackLocale: const Locale('zh'),
+        child: MaterialApp(
+          home: Material(
+            child: SizedBox(
+              width: 400,
+              child: CommentItem(
+                comment: CommentData(
+                  id: 3,
+                  user_id: 3,
+                  avatar: '',
+                  nickname: '动画测试用户',
+                  content: '动画测试内容',
+                  time: '',
+                  like_count: is_liked ? 1 : 0,
+                  is_liked: is_liked,
+                ),
+                is_dark: false,
+                on_reply: (_, _) {},
+                on_like: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final Finder like_button = find.byKey(
+      const ValueKey<String>('comment_like_3'),
+    );
+
+    await tester.pumpWidget(build_comment(is_liked: false));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(build_comment(is_liked: true));
+    await tester.pump(const Duration(milliseconds: 40));
+    ScaleTransition scale_transition = tester.widget<ScaleTransition>(
+      find.descendant(of: like_button, matching: find.byType(ScaleTransition)),
+    );
+    expect(scale_transition.scale.value, lessThan(1));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(build_comment(is_liked: false));
+    await tester.pump(const Duration(milliseconds: 40));
+    scale_transition = tester.widget<ScaleTransition>(
+      find.descendant(of: like_button, matching: find.byType(ScaleTransition)),
+    );
+    expect(scale_transition.scale.value, lessThan(1));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _CommentItemTestAssetLoader extends AssetLoader {

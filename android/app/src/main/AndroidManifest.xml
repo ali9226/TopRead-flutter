@@ -29,6 +29,11 @@
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher">
 
+        <!-- TopRead Android AdMob 应用 ID -->
+        <meta-data
+                android:name="com.google.android.gms.ads.APPLICATION_ID"
+                android:value="ca-app-pub-5028475830567696~4038291237"/>
+
         <!-- TODO 选择照片文件权限 -->
         <provider
                 android:name="androidx.core.content.FileProvider"

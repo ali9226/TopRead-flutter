@@ -162,8 +162,10 @@ class _CommentInputState extends State<CommentInput>
 
   /// 固定输入栏只读取 viewPadding，它在键盘显示和隐藏期间保持恒定。
   ///
-  /// 焦点获取时透明度为 0（键盘打开，编辑层在上方显示）；
-  /// 焦点失去时透明度为 1（键盘关闭，固定层显示）。
+  /// 编辑层可见时固定层透明度为 0，其余时间为 1。
+  ///
+  /// 这里不能只根据焦点判断：表情面板打开时 TextField 会主动失焦，
+  /// 但编辑层仍需保持显示。使用 [_is_editor_visible] 可避免两套输入栏重叠。
   @override
   Widget build(BuildContext context) {
     final double stable_bottom_padding = MediaQuery.viewPaddingOf(
@@ -171,21 +173,31 @@ class _CommentInputState extends State<CommentInput>
     ).bottom;
 
     return RepaintBoundary(
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 100),
-        opacity: _focus_node.hasFocus ? 0.0 : 1.0,
-        child: CommentComposerSurface(
-          is_dark: widget.is_dark,
-          is_editor: false,
-          has_text: _has_text && !_is_sending,
-          show_emoji_panel: _show_emoji_panel,
-          bottom_padding: stable_bottom_padding,
-          controller: _controller,
-          focus_node: _focus_node,
-          reply_target: widget.reply_target,
-          on_activate: _show_editor,
-          on_send: _handle_send,
-          on_toggle_emoji: _toggle_emoji,
+      child: IgnorePointer(
+        key: const ValueKey<String>('comment_fixed_composer_gate'),
+        ignoring: _is_editor_visible,
+        child: ExcludeSemantics(
+          excluding: _is_editor_visible,
+          child: AnimatedOpacity(
+            duration: const Duration(
+              milliseconds: CommentListStyle.input_state_animation_duration_ms,
+            ),
+            curve: Curves.easeOutCubic,
+            opacity: _is_editor_visible ? 0.0 : 1.0,
+            child: CommentComposerSurface(
+              is_dark: widget.is_dark,
+              is_editor: false,
+              has_text: _has_text && !_is_sending,
+              show_emoji_panel: _show_emoji_panel,
+              bottom_padding: stable_bottom_padding,
+              controller: _controller,
+              focus_node: _focus_node,
+              reply_target: widget.reply_target,
+              on_activate: _show_editor,
+              on_send: _handle_send,
+              on_toggle_emoji: _toggle_emoji,
+            ),
+          ),
         ),
       ),
     );
@@ -256,27 +268,24 @@ class _CommentInputState extends State<CommentInput>
   }
 
   void _toggle_emoji() {
-    final bool show = !_show_emoji_panel;
-
-    // 先设置表情面板状态，再处理键盘，确保 _on_focus_changed 能正确判断。
-    setState(() {
-      _show_emoji_panel = show;
-    });
-
-    if (show) {
-      // 显示表情面板时，确保编辑层可见。
+    if (!_show_emoji_panel) {
+      // 先记录表情模式，再释放焦点。焦点回调因此不会把编辑层
+      // 误判为已关闭；键盘下降期间表情网格延迟绘制，减少重布局。
+      setState(() => _show_emoji_panel = true);
       if (!_is_editor_visible) {
         _set_editor_visibility(true);
       }
-      // 如果键盘已弹出，收起键盘（_on_focus_changed 会因 _show_emoji_panel=true 保持编辑层可见）。
       if (_focus_node.hasFocus) {
         _focus_node.unfocus();
       }
     } else {
-      // 隐藏表情面板时，关闭编辑层。
-      if (_is_editor_visible) {
-        _set_editor_visibility(false);
+      // 键盘图标的语义是“切回键盘”，因此收起表情网格后继续保留
+      // 编辑层并请求焦点，不让输入框瞬间回落到假输入栏。
+      setState(() => _show_emoji_panel = false);
+      if (!_is_editor_visible) {
+        _set_editor_visibility(true);
       }
+      _focus_node.requestFocus();
     }
     _mark_overlay_needs_build();
   }
@@ -394,6 +403,9 @@ class _CommentEditorOverlay extends StatelessWidget {
     final double stable_bottom_padding = MediaQuery.viewPaddingOf(
       context,
     ).bottom;
+    final bool can_paint_emoji_panel =
+        show_emoji_panel &&
+        keyboard_height <= CommentListStyle.keyboard_close_hide_threshold;
 
     return IgnorePointer(
       ignoring: !is_visible,
@@ -413,10 +425,13 @@ class _CommentEditorOverlay extends StatelessWidget {
                   children: <Widget>[
                     /// 表情面板区域（AnimatedSize 实现展开/收起过渡）。
                     AnimatedSize(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeInOut,
+                      duration: const Duration(
+                        milliseconds:
+                            CommentListStyle.emoji_panel_animation_duration_ms,
+                      ),
+                      curve: Curves.easeOutCubic,
                       alignment: Alignment.bottomCenter,
-                      child: show_emoji_panel
+                      child: can_paint_emoji_panel
                           ? CommentEmojiPanel(
                               is_dark: is_dark,
                               on_emoji_selected: on_emoji_selected,

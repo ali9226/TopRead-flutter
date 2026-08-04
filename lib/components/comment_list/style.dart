@@ -85,40 +85,37 @@ class CommentListStyle {
   static const int scroll_to_top_animation_duration_ms = 300;
 
   /// 评论项顶部内边距。
-  static const double item_top_padding = 14;
+  static const double item_top_padding = 16;
 
   /// 评论项底部内边距。
-  static const double item_bottom_padding = 12;
-
-  /// 评论项间距。
-  static const double item_spacing = 16;
+  static const double item_bottom_padding = 14;
 
   /// 头像尺寸。
-  static const double avatar_size = 36;
+  static const double avatar_size = 38;
 
   /// 头像圆角半径。
   static const double avatar_radius = avatar_size / 2;
 
   /// 头像与内容区间距。
-  static const double avatar_content_gap = 10;
+  static const double avatar_content_gap = 12;
 
   /// 昵称字号（CJK 语系）。
-  static const double nickname_font_size_cjk = 13;
+  static const double nickname_font_size_cjk = 14;
 
   /// 昵称字号（字母语系）。
-  static const double nickname_font_size_alphabetic = 12.5;
+  static const double nickname_font_size_alphabetic = 13;
 
   /// 评论内容字号（CJK 语系）。
-  static const double content_font_size_cjk = 15;
+  static const double content_font_size_cjk = 16;
 
   /// 评论内容字号（字母语系）。
-  static const double content_font_size_alphabetic = 14.5;
+  static const double content_font_size_alphabetic = 15;
 
   /// 评论内容行高（CJK 语系）。
-  static const double content_line_height_cjk = 1.45;
+  static const double content_line_height_cjk = 1.5;
 
   /// 评论内容行高（字母语系）。
-  static const double content_line_height_alphabetic = 1.52;
+  static const double content_line_height_alphabetic = 1.55;
 
   /// 评论内容顶部间距。
   static const double content_top_spacing = 5;
@@ -127,43 +124,55 @@ class CommentListStyle {
   static const double metadata_top_spacing = 8;
 
   /// 时间文字字号。
-  static const double time_font_size = 11;
+  static const double time_font_size = 12;
 
   /// 操作按钮字号（CJK 语系）。
-  static const double action_font_size_cjk = 12;
+  static const double action_font_size_cjk = 12.5;
 
   /// 操作按钮字号（字母语系）。
-  static const double action_font_size_alphabetic = 11.5;
+  static const double action_font_size_alphabetic = 12;
 
   /// 操作按钮间距。
-  static const double action_spacing = 14;
+  static const double action_spacing = 10;
 
-  /// 点赞按钮点击区域宽度。
+  /// 点赞按钮最小点击区域宽度。
   static const double like_touch_width = 44;
 
+  /// 点赞按钮最小点击区域高度。
+  static const double like_touch_height = 32;
+
+  /// 点赞按钮左侧留白，扩大触控区且不挤压图标。
+  static const double like_left_padding = 10;
+
   /// 点赞图标尺寸。
-  static const double like_icon_size = 18;
+  static const double like_icon_size = 20;
 
   /// 点赞数字字号。
-  static const double like_count_font_size = 11;
-
-  /// 点赞主区域顶部内边距。
-  static const double like_main_top_padding = 18;
-
-  /// 紧凑模式点赞左侧内边距。
-  static const double like_compact_left_padding = 8;
-
-  /// 紧凑模式点赞点击区域最小宽度。
-  static const double like_compact_touch_width = 44;
-
-  /// 紧凑模式点赞点击区域最小高度。
-  static const double like_compact_touch_height = 36;
+  static const double like_count_font_size = 12;
 
   /// 紧凑模式点赞图标尺寸。
-  static const double like_compact_icon_size = 14;
+  static const double like_compact_icon_size = 18;
 
   /// 点赞图标与数字间距。
   static const double like_icon_count_spacing = 3;
+
+  /// 点赞状态切换缩放动画时长（毫秒）。
+  static const int like_animation_duration_ms = 300;
+
+  /// 点赞动画收缩阶段的最小缩放比例。
+  static const double like_scale_shrink = 0.82;
+
+  /// 点赞动画回弹阶段的最大缩放比例。
+  static const double like_scale_overshoot = 1.12;
+
+  /// 点赞动画收缩阶段所占权重。
+  static const double like_scale_shrink_weight = 28;
+
+  /// 点赞动画回弹阶段所占权重。
+  static const double like_scale_overshoot_weight = 38;
+
+  /// 点赞动画复位阶段所占权重。
+  static const double like_scale_settle_weight = 34;
 
   /// 分割线缩进（头像尺寸 + 内容区间距）。
   static const double divider_indent = avatar_size + avatar_content_gap;
@@ -204,58 +213,70 @@ class CommentListStyle {
   /// 回复区域缩进（与分割线缩进一致）。
   static const double reply_indent = divider_indent;
 
-  /// 回复区域内边距。
-  static const double reply_area_padding = 10;
-
-  /// 回复区域圆角。
-  static const double reply_area_radius = 6;
+  /// 子回复列表底部留白。
+  static const double reply_section_bottom_padding = 16;
 
   /// 回复项间距。
-  static const double reply_item_spacing = 9;
+  static const double reply_item_spacing = 16;
+
+  /// 子回复头像尺寸。
+  static const double reply_avatar_size = 26;
+
+  /// 子回复头像与内容区间距。
+  static const double reply_avatar_gap = 9;
+
+  /// 子回复昵称字号（CJK 语系）。
+  static const double reply_nickname_font_size_cjk = 13.5;
+
+  /// 子回复昵称字号（字母语系）。
+  static const double reply_nickname_font_size_alphabetic = 12.5;
 
   /// 回复文字字号（CJK 语系）。
-  static const double reply_text_font_size_cjk = 14;
+  static const double reply_text_font_size_cjk = 15;
 
   /// 回复文字字号（字母语系）。
-  static const double reply_text_font_size_alphabetic = 13.5;
+  static const double reply_text_font_size_alphabetic = 14;
 
   /// 回复文字行高（CJK 语系）。
-  static const double reply_line_height_cjk = 1.45;
+  static const double reply_line_height_cjk = 1.5;
 
   /// 回复文字行高（字母语系）。
-  static const double reply_line_height_alphabetic = 1.5;
+  static const double reply_line_height_alphabetic = 1.55;
+
+  /// 子回复正文顶部间距。
+  static const double reply_content_top_spacing = 4;
 
   /// 回复元数据顶部间距。
-  static const double reply_metadata_top_spacing = 4;
+  static const double reply_metadata_top_spacing = 7;
 
-  /// 回复指示器尺寸。
-  static const double reply_indicator_size = 12;
+  /// 评论定位高亮动画时长（毫秒）。
+  static const int highlight_animation_duration_ms = 1500;
 
-  // ==================== 底部输入栏（引用 InputBarStyle） ====================
+  // ==================== 底部输入栏 ====================
   //
-  // 以下常量统一从 InputBarStyle 获取，确保评论弹窗与在线客服页面样式一致。
-  // 如需调整输入栏外观，请修改 app/lib/config/input_bar_style.dart。
+  // 评论弹窗的输入栏需要与弹窗窄边距、键盘 Overlay 切换节奏匹配，
+  // 因此在通用 InputBarStyle 基础上保留评论区专用的胶囊尺寸和色彩。
 
   /// 输入栏水平内边距。
-  static const double input_horizontal_padding = InputBarStyle.padding_h;
+  static const double input_horizontal_padding = 12;
 
   /// 输入栏顶部内边距。
-  static const double input_top_padding = InputBarStyle.padding_v;
+  static const double input_top_padding = 10;
 
   /// 输入栏底部内边距。
-  static const double input_bottom_padding = InputBarStyle.padding_v;
+  static const double input_bottom_padding = 9;
 
   /// 输入框高度。
-  static const double input_height = InputBarStyle.field_height;
+  static const double input_height = 42;
 
   /// 输入框最大高度（多行展开）。
   static const double input_max_height = InputBarStyle.field_max_height;
 
   /// 输入框圆角。
-  static const double input_radius = InputBarStyle.field_radius;
+  static const double input_radius = input_height / 2;
 
   /// 输入框内水平内边距。
-  static const double input_inner_padding = InputBarStyle.inner_padding;
+  static const double input_inner_padding = 14;
 
   /// 输入框内垂直内边距。
   static const double input_content_vertical_padding =
@@ -281,31 +302,37 @@ class CommentListStyle {
   static const double input_area_height = 56;
 
   /// 输入框与按钮间距。
-  static const double input_action_spacing = InputBarStyle.action_spacing;
+  static const double input_action_spacing = 10;
 
   /// 表情按钮点击区域尺寸。
-  static const double emoji_button_size = InputBarStyle.tool_button_size;
+  static const double emoji_button_size = 36;
 
   /// 表情图标显示尺寸。
-  static const double emoji_icon_size = InputBarStyle.tool_icon_size;
+  static const double emoji_icon_size = 22;
+
+  /// 表情按钮与输入框右边界的留白。
+  static const double emoji_button_right_padding = 3;
+
+  /// 表情按钮内部视觉高亮的圆角。
+  static const double emoji_button_radius = 18;
 
   /// 发送按钮高度。
-  static const double send_button_height = InputBarStyle.send_height;
+  static const double send_button_height = input_height;
 
   /// 发送按钮最小宽度（CJK 语系）。
-  static const double send_button_min_width_cjk =
-      InputBarStyle.send_min_width_cjk;
+  static const double send_button_min_width_cjk = 54;
 
   /// 发送按钮最小宽度（字母语系）。
-  static const double send_button_min_width_alphabetic =
-      InputBarStyle.send_min_width_alphabetic;
+  static const double send_button_min_width_alphabetic = 68;
 
   /// 发送按钮圆角。
-  static const double send_button_radius = InputBarStyle.send_radius;
+  static const double send_button_radius = input_height / 2;
 
   /// 发送按钮水平内边距。
-  static const double send_button_horizontal_padding =
-      InputBarStyle.send_padding_h;
+  static const double send_button_horizontal_padding = 14;
+
+  /// 输入状态切换的轻量动画时长。
+  static const int input_state_animation_duration_ms = 140;
 
   /// 发送按钮字号（CJK 语系）。
   static const double send_button_font_size_cjk =
@@ -350,9 +377,6 @@ class CommentListStyle {
 
   /// 骨架行间距。
   static const double skeleton_line_spacing = 7;
-
-  /// 骨架点赞宽度。
-  static const double skeleton_like_width = 28;
 
   /// 骨架动画时长（毫秒）。
   static const int skeleton_animation_duration_ms = 1400;
@@ -416,17 +440,32 @@ class CommentListStyle {
   /// 分割线颜色（日间模式）。
   static const Color divider_light_color = Color(0xFFEDEDED);
 
-  /// 输入框背景色（日间模式），引用 InputBarStyle。
-  static const Color input_light_bg = InputBarStyle.field_bg_light;
+  /// 输入框背景色（日间模式）。
+  static const Color input_light_bg = Color(0xFFF6F6F7);
 
-  /// 回复区域背景色（日间模式）。
-  static const Color reply_area_light_bg = Color(0xFFF7F7F7);
+  /// 输入框边框色（日间模式）。
+  static const Color input_border_light_color = Color(0xFFECECED);
+
+  /// 表情按钮激活背景色（日间模式）。
+  static const Color emoji_active_light_bg = Color(0x1FF8D02D);
 
   /// 昵称文字色（日间模式）。
-  static const Color nickname_light_color = Color(0xFF576B95);
+  static const Color nickname_light_color = Color(0xFF9A9A9A);
+
+  /// 评论正文颜色（日间模式）。
+  static const Color content_light_color = Color(0xFF3D3D3D);
+
+  /// 时间等弱元数据颜色（日间模式）。
+  static const Color metadata_light_color = Color(0xFFB5B5B5);
+
+  /// 回复操作文字颜色（日间模式）。
+  static const Color action_light_color = Color(0xFF8F8F8F);
 
   /// 点赞图标色（日间模式）。
-  static const Color like_light_color = Color(0xFF8C8C8C);
+  static const Color like_light_color = Color(0xFF929292);
+
+  /// 评论定位高亮色（日间模式）。
+  static const Color highlight_light_color = Color(0x24F8D02D);
 
   // ==================== 夜间颜色 ====================
 
@@ -451,31 +490,88 @@ class CommentListStyle {
   /// 分割线颜色（夜间模式）。
   static const Color divider_dark_color = Color(0xFF2C2C2C);
 
-  /// 输入框背景色（夜间模式），引用 InputBarStyle。
-  static const Color input_dark_bg = InputBarStyle.field_bg_dark;
+  /// 输入框背景色（夜间模式）。
+  static const Color input_dark_bg = Color(0xFF242424);
 
-  /// 回复区域背景色（夜间模式）。
-  static const Color reply_area_dark_bg = Color(0xFF232323);
+  /// 输入框边框色（夜间模式）。
+  static const Color input_border_dark_color = Color(0xFF343434);
+
+  /// 表情按钮激活背景色（夜间模式）。
+  static const Color emoji_active_dark_bg = Color(0x29F8D02D);
 
   /// 昵称文字色（夜间模式）。
-  static const Color nickname_dark_color = Color(0xFF8EA3C8);
+  static const Color nickname_dark_color = Color(0xFF929292);
+
+  /// 评论正文颜色（夜间模式）。
+  static const Color content_dark_color = Color(0xFFE3E3E3);
+
+  /// 时间等弱元数据颜色（夜间模式）。
+  static const Color metadata_dark_color = Color(0xFF737373);
+
+  /// 回复操作文字颜色（夜间模式）。
+  static const Color action_dark_color = Color(0xFF9A9A9A);
 
   /// 点赞图标色（夜间模式）。
   static const Color like_dark_color = Color(0xFF8C8C8C);
 
+  /// 评论定位高亮色（夜间模式）。
+  static const Color highlight_dark_color = Color(0x24FFFFFF);
+
   /// 微信式点赞激活红色。
   static const Color like_active_color = Color(0xFFFA5151);
 
-  // ==================== 表情面板（引用 InputBarStyle） ====================
+  // ==================== 表情面板 ====================
 
   /// 表情面板每行数量。
   static const int emoji_columns = InputBarStyle.emoji_columns;
 
-  /// 表情面板背景色（日间模式）。
-  static const Color emoji_panel_light_bg = InputBarStyle.emoji_panel_bg_light;
+  /// 表情面板背景色（日间模式），与评论弹窗保持一致。
+  static const Color emoji_panel_light_bg = sheet_light_bg;
 
-  /// 表情面板背景色（夜间模式）。
-  static const Color emoji_panel_dark_bg = InputBarStyle.emoji_panel_bg_dark;
+  /// 表情面板背景色（夜间模式），与评论弹窗保持一致。
+  static const Color emoji_panel_dark_bg = sheet_dark_bg;
+
+  /// 表情面板顶部分隔线颜色（日间模式）。
+  static const Color emoji_panel_divider_light_color = Color(0xFFEFEFF0);
+
+  /// 表情面板顶部分隔线颜色（夜间模式）。
+  static const Color emoji_panel_divider_dark_color = Color(0xFF2B2B2B);
+
+  /// 表情面板顶部分隔线粗细。
+  static const double emoji_panel_divider_thickness = 0.5;
+
+  /// 表情网格的最大内容宽度，避免桌面浏览器上单个按钮过宽。
+  static const double emoji_panel_max_width = 420;
+
+  /// 表情网格水平内边距。
+  static const double emoji_panel_horizontal_padding = 14;
+
+  /// 表情网格垂直内边距。
+  static const double emoji_panel_vertical_padding = 12;
+
+  /// 表情单元的水平间距。
+  static const double emoji_item_horizontal_spacing = 6;
+
+  /// 表情单元的垂直间距。
+  static const double emoji_item_vertical_spacing = 8;
+
+  /// 表情单元高度。
+  static const double emoji_item_height = 40;
+
+  /// 表情单元触控反馈圆角。
+  static const double emoji_item_radius = 12;
+
+  /// 表情单元触控反馈色（日间模式）。
+  static const Color emoji_item_feedback_light_color = Color(0x14000000);
+
+  /// 表情单元触控反馈色（夜间模式）。
+  static const Color emoji_item_feedback_dark_color = Color(0x1FFFFFFF);
+
+  /// 表情字号。
+  static const double emoji_font_size = 25;
+
+  /// 表情面板展开、收起动画时长。
+  static const int emoji_panel_animation_duration_ms = 180;
 
   /// 预置表情列表。
   static const List<String> emoji_list = InputBarStyle.emoji_list;

@@ -77,10 +77,7 @@ class _CommentSkeletonState extends State<CommentSkeleton>
                 CommentListStyle.shimmer_gradient_start + dx,
                 0.0,
               ),
-              end: Alignment(
-                CommentListStyle.shimmer_gradient_end + dx,
-                0.0,
-              ),
+              end: Alignment(CommentListStyle.shimmer_gradient_end + dx, 0.0),
             ).createShader(bounds);
           },
           child: ListView.builder(
@@ -101,12 +98,12 @@ class _CommentSkeletonState extends State<CommentSkeleton>
   /// 构建单条骨架屏评论项。
   ///
   /// 布局与真实 CommentItem 保持一致：
-  /// - 头像（36×36 圆形）
+  /// - 头像（38×38 圆形）
   /// - 昵称行（76px 宽色块）
   /// - 正文第一行（满宽色块）
   /// - 正文第二行（190px 宽色块）
   /// - 时间行（50px 宽色块）
-  /// - 右侧点赞按钮区域
+  /// - 元数据行右侧点赞按钮
   Widget _build_item() {
     /// 骨架色块的基础颜色，与输入框背景色一致。
     final Color base_color = widget.is_dark
@@ -175,41 +172,26 @@ class _CommentSkeletonState extends State<CommentSkeleton>
                         height: CommentListStyle.metadata_top_spacing,
                       ),
 
-                      /// 时间行占位色块。
-                      _block(
-                        width: CommentListStyle.skeleton_time_width,
-                        height: CommentListStyle.skeleton_text_height,
-                        radius: CommentListStyle.skeleton_block_radius,
-                        color: base_color,
+                      /// 元数据与点赞按钮处于同一行。
+                      Row(
+                        children: <Widget>[
+                          _block(
+                            width: CommentListStyle.skeleton_time_width,
+                            height: CommentListStyle.skeleton_text_height,
+                            radius: CommentListStyle.skeleton_block_radius,
+                            color: base_color,
+                          ),
+                          const Spacer(),
+                          _block(
+                            width: CommentListStyle.like_icon_size,
+                            height: CommentListStyle.like_icon_size,
+                            radius: CommentListStyle.skeleton_block_radius,
+                            color: base_color,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ),
-
-                const SizedBox(width: CommentListStyle.input_action_spacing),
-
-                /// 点赞按钮占位区域。
-                Column(
-                  children: <Widget>[
-                    const SizedBox(
-                      height: CommentListStyle.like_main_top_padding,
-                    ),
-                    _block(
-                      width: CommentListStyle.like_icon_size,
-                      height: CommentListStyle.like_icon_size,
-                      radius: CommentListStyle.skeleton_block_radius,
-                      color: base_color,
-                    ),
-                    const SizedBox(
-                      height: CommentListStyle.like_icon_count_spacing,
-                    ),
-                    _block(
-                      width: CommentListStyle.skeleton_like_width,
-                      height: CommentListStyle.skeleton_text_height,
-                      radius: CommentListStyle.skeleton_block_radius,
-                      color: base_color,
-                    ),
-                  ],
                 ),
               ],
             ),
