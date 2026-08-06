@@ -82,7 +82,7 @@ class RankingSectionSkeleton extends StatelessWidget {
     );
   }
 
-  /// 构建双列四行榜单内容骨架。
+  /// 构建四行五列榜单内容骨架。
   Widget _build_content_skeleton(BuildContext context) {
     final Color skeleton_color = _get_skeleton_color();
     final TextScaler text_scaler = MediaQuery.textScalerOf(context);
@@ -92,37 +92,48 @@ class RankingSectionSkeleton extends StatelessWidget {
       text_scaler,
     );
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: RankingSectionStyle.content_padding_horizontal,
-      ),
-      child: Column(
-        children: List<Widget>.generate(RankingSectionStyle.rows_per_column, (
-          int row_index,
-        ) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: item_height - item_content_height),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: _build_single_skeleton_item(
-                    skeleton_color: skeleton_color,
-                    index: row_index * 2,
-                    item_content_height: item_content_height,
+    return SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: RankingSectionStyle.content_padding_horizontal,
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: List<Widget>.generate(5, (int col_index) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  right: col_index < 4 ? RankingSectionStyle.column_gap : 0,
+                ),
+                child: SizedBox(
+                  width: RankingSectionStyle.column_content_width,
+                  child: Column(
+                    children: List<Widget>.generate(
+                      RankingSectionStyle.rows_per_column,
+                      (int row_index) {
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            bottom: row_index < RankingSectionStyle.rows_per_column - 1
+                                ? item_height - item_content_height
+                                : 0,
+                          ),
+                          child: _build_single_skeleton_item(
+                            skeleton_color: skeleton_color,
+                            index: row_index * 5 + col_index,
+                            item_content_height: item_content_height,
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
-                const SizedBox(width: RankingSectionStyle.column_gap),
-                Expanded(
-                  child: _build_single_skeleton_item(
-                    skeleton_color: skeleton_color,
-                    index: row_index * 2 + 1,
-                    item_content_height: item_content_height,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
+              );
+            }),
+          ),
+        ),
       ),
     );
   }

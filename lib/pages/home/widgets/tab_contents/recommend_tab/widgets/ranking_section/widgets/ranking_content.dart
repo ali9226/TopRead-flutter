@@ -134,8 +134,7 @@ class _RankingContentState extends State<RankingContent> {
   }
 
   bool _handle_scroll_notification(ScrollNotification notification) {
-    if (notification is ScrollEndNotification ||
-        notification is UserScrollNotification) {
+    if (notification is ScrollEndNotification) {
       if (_page_controller?.hasClients == true) {
         final double? current_page = _page_controller!.page;
         if (current_page != null && current_page.isFinite) {
@@ -153,10 +152,46 @@ class _RankingContentState extends State<RankingContent> {
               .toInt();
           _set_current_column_index(new_column_index);
         }
+
+        // 检查是否超出边界，如果超出则强制回弹。
+        final double current_pixels = _page_controller!.offset;
+        final double max_allowed = _calculate_max_allowed_pixels();
+        if (current_pixels > max_allowed) {
+          _page_controller!.animateTo(
+            max_allowed,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          );
+        }
       }
     }
 
     return false;
+  }
+
+  /// 计算最大允许的滚动位置。
+  double _calculate_max_allowed_pixels() {
+    if (_page_controller == null || !_page_controller!.hasClients) {
+      return 0;
+    }
+
+    final int total_columns =
+        (widget.books.length / RankingSectionStyle.rows_per_column).ceil();
+    if (total_columns <= 1) {
+      return 0;
+    }
+
+    final double column_extent = RankingSectionStyle.column_content_width +
+        RankingSectionStyle.column_gap;
+    final double viewport_width = _page_controller!.position.viewportDimension;
+    final int visible_columns = (viewport_width / column_extent).floor();
+
+    if (visible_columns >= total_columns) {
+      return 0;
+    }
+
+    return column_extent * (total_columns - visible_columns) +
+        RankingSectionStyle.content_padding_horizontal;
   }
 
   @override
@@ -185,9 +220,23 @@ class _RankingContentState extends State<RankingContent> {
           viewport_width: constraints.maxWidth,
         );
 
-        final int placeholder_columns = _calculate_placeholder_columns(
-          viewport_width: constraints.maxWidth,
-        );
+        /// 计算总内容宽度：列宽 * 列数 + 列间距 * (列数 - 1) + 左右内边距。
+        final double total_content_width =
+            RankingSectionStyle.column_content_width * total_columns +
+            RankingSectionStyle.column_gap * (total_columns - 1) +
+            RankingSectionStyle.content_padding_horizontal * 2;
+
+        /// 屏幕宽度是否足够完整展示所有列。
+        final bool can_show_all_columns =
+            constraints.maxWidth >= total_content_width;
+
+        /// 动态列宽：屏幕宽度足够时平分屏幕，否则使用固定列宽。
+        final double dynamic_column_width = can_show_all_columns
+            ? (constraints.maxWidth -
+                    RankingSectionStyle.content_padding_horizontal * 2 -
+                    RankingSectionStyle.column_gap * (total_columns - 1)) /
+                total_columns
+            : RankingSectionStyle.column_content_width;
 
         return SizedBox(
           height: content_height,
@@ -198,60 +247,64 @@ class _RankingContentState extends State<RankingContent> {
                 onNotification: _handle_scroll_notification,
                 child: PageView.builder(
                   key: ValueKey<String>(
-                    '${(_viewport_fraction ?? 1.0).toStringAsFixed(6)}_${(_page_extent ?? 0).toStringAsFixed(1)}_$placeholder_columns',
+                    '${(_viewport_fraction ?? 1.0).toStringAsFixed(6)}_${(_page_extent ?? 0).toStringAsFixed(1)}_$can_show_all_columns',
                   ),
                   controller: _page_controller,
                   padEnds: false,
+                  // 屏幕宽度足够时禁用滚动，否则使用自定义物理限制过度滚动。
+                  physics: can_show_all_columns
+                      ? const NeverScrollableScrollPhysics()
+                      : _LastColumnClampPagePhysics(
+                          viewport_fraction: _viewport_fraction ?? 1.0,
+                          last_page_index: total_columns - 1,
+                        ),
                   // 关闭 PageView 默认分页物理，完全交给下面的自定义 physics。
                   // 否则宽屏/横屏下默认 PageScrollPhysics 的惯性吸附可能越过我们限制的最大位置。
                   pageSnapping: false,
                   // PageView 的可视区域必须占满整个内容区域，而不是放在 Padding 里面。
                   // 每一列通过 Transform 保留视觉内边距；滑动时内容可以穿过这个内边距，
                   // 并在真正的屏幕/父容器边缘被裁剪消失。
-                  physics: _LastColumnClampPagePhysics(
-                    viewport_fraction: _viewport_fraction ?? 1.0,
-                    last_page_index: total_columns - 1,
-                  ),
-                  itemCount: total_columns + placeholder_columns,
+                  itemCount: total_columns,
                   itemBuilder: (BuildContext context, int column_index) {
-                    if (column_index >= total_columns) {
-                      return const SizedBox.shrink();
-                    }
-
                     return Transform.translate(
                       offset: const Offset(
                         RankingSectionStyle.content_padding_horizontal,
                         0,
                       ),
-                      child: _build_column(column_index),
+                      child: _build_column(
+                        column_index,
+                        column_width: dynamic_column_width,
+                      ),
                     );
                   },
                 ),
               ),
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: RankingSectionStyle.content_gradient_mask_width,
-                child: IgnorePointer(
-                  child: _build_gradient_mask(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
+              if (!can_show_all_columns)
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: RankingSectionStyle.content_gradient_mask_width,
+                  child: IgnorePointer(
+                    child: _build_gradient_mask(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
                   ),
                 ),
-              ),
-              Positioned(
-                right: 0,
-                top: 0,
-                bottom: 0,
-                width: RankingSectionStyle.content_gradient_mask_width,
-                child: IgnorePointer(
-                  child: _build_gradient_mask(
-                    begin: Alignment.centerRight,
-                    end: Alignment.centerLeft,
+              if (!can_show_all_columns)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: RankingSectionStyle.content_gradient_mask_width,
+                  child: IgnorePointer(
+                    child: _build_gradient_mask(
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         );
@@ -259,25 +312,12 @@ class _RankingContentState extends State<RankingContent> {
     );
   }
 
-  int _calculate_placeholder_columns({required double viewport_width}) {
-    final double safe_viewport_width = viewport_width <= 0 ? 1 : viewport_width;
-    final double page_extent =
-        _page_extent ??
-        RankingSectionStyle.column_content_width +
-            RankingSectionStyle.column_gap;
 
-    if (page_extent <= 0) {
-      return 1;
-    }
 
-    // PageView 的真实 maxScrollExtent = 总页宽 - 可视宽度。
-    // 宽屏下一屏可能显示 3 列以上，如果只补 1 个空白页，
-    // maxScrollExtent 不够，后面的列就无法继续贴左吸附。
-    // 因此按当前可视宽度动态补足尾部空间。
-    return (safe_viewport_width / page_extent).ceil().clamp(1, 100).toInt();
-  }
-
-  Widget _build_column(int column_index) {
+  Widget _build_column(
+    int column_index, {
+    double column_width = RankingSectionStyle.column_content_width,
+  }) {
     final int start_index = column_index * RankingSectionStyle.rows_per_column;
 
     final List<StoryItem> column_books = widget.books
@@ -288,7 +328,7 @@ class _RankingContentState extends State<RankingContent> {
     return Padding(
       padding: const EdgeInsets.only(right: RankingSectionStyle.column_gap),
       child: SizedBox(
-        width: RankingSectionStyle.column_content_width,
+        width: column_width,
         child: Column(
           children: List.generate(column_books.length, (int row_index) {
             final int book_index = start_index + row_index;
@@ -366,13 +406,26 @@ class _LastColumnClampPagePhysics extends PageScrollPhysics {
       return position.minScrollExtent;
     }
 
-    final double max_by_last_column = _page_size(position) * last_page_index;
+    /// 每列占用宽度：列宽 + 列间距。
+    final double column_extent = RankingSectionStyle.column_content_width +
+        RankingSectionStyle.column_gap;
 
-    // 宽屏/横屏下，实际 maxScrollExtent 可能会因为 viewport 很宽而变化。
-    // 最大值取二者较小值，避免越过真实可滚动边界。
-    return max_by_last_column
-        .clamp(position.minScrollExtent, position.maxScrollExtent)
-        .toDouble();
+    /// 屏幕能完整显示的列数。
+    final int visible_columns =
+        (position.viewportDimension / column_extent).floor();
+
+    /// 总列数。
+    final int total_columns = last_page_index + 1;
+
+    /// 如果屏幕能完整显示所有列，不需要滑动。
+    if (visible_columns >= total_columns) {
+      return position.minScrollExtent;
+    }
+
+    /// 最大滑动距离：让最后 visible_columns 列完整显示。
+    /// 第 (total_columns - visible_columns) 列左边缘对齐屏幕左边缘。
+    return column_extent * (total_columns - visible_columns) +
+        RankingSectionStyle.content_padding_horizontal;
   }
 
   double _get_page(ScrollMetrics position) {
@@ -412,26 +465,7 @@ class _LastColumnClampPagePhysics extends PageScrollPhysics {
 
   @override
   double applyBoundaryConditions(ScrollMetrics position, double value) {
-    final double max_allowed_pixels = _max_allowed_pixels(position);
-
-    if (value < position.minScrollExtent &&
-        position.pixels <= position.minScrollExtent) {
-      return value - position.pixels;
-    }
-
-    if (value < position.minScrollExtent &&
-        position.pixels > position.minScrollExtent) {
-      return value - position.minScrollExtent;
-    }
-
-    if (value > position.pixels && position.pixels >= max_allowed_pixels) {
-      return value - position.pixels;
-    }
-
-    if (value > max_allowed_pixels && position.pixels < max_allowed_pixels) {
-      return value - max_allowed_pixels;
-    }
-
+    // 允许过度拖动，松手后会回弹。
     return 0.0;
   }
 
@@ -440,7 +474,31 @@ class _LastColumnClampPagePhysics extends PageScrollPhysics {
     ScrollMetrics position,
     double velocity,
   ) {
+    final double max_allowed_pixels = _max_allowed_pixels(position);
     final Tolerance tolerance = toleranceFor(position);
+
+    // 如果当前位置超出最大允许范围，直接回弹到最大位置。
+    if (position.pixels > max_allowed_pixels) {
+      return ScrollSpringSimulation(
+        spring,
+        position.pixels,
+        max_allowed_pixels,
+        velocity,
+        tolerance: tolerance,
+      );
+    }
+
+    // 如果当前位置小于最小范围，直接回弹到最小位置。
+    if (position.pixels < position.minScrollExtent) {
+      return ScrollSpringSimulation(
+        spring,
+        position.pixels,
+        position.minScrollExtent,
+        velocity,
+        tolerance: tolerance,
+      );
+    }
+
     final double target_pixels = _get_target_pixels(
       position,
       tolerance,
