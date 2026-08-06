@@ -88,6 +88,9 @@ class _BookshelfPageState extends State<BookshelfPage>
       /// 页面顶部内边距。
       final double page_top_padding = is_logged_in ? 0 : Style.page_top_spacing;
 
+      final bool is_landscape =
+          MediaQuery.of(context).orientation == Orientation.landscape;
+
       return Scaffold(
         backgroundColor: background_color,
         body: Stack(
@@ -95,37 +98,41 @@ class _BookshelfPageState extends State<BookshelfPage>
             PageBackgroundDecor(is_dark: is_dark),
             SafeArea(
               bottom: false,
+              left: !(is_logged_in && is_landscape),
+              right: !(is_logged_in && is_landscape),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   if (!is_logged_in)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        Style.page_horizontal_padding,
-                        0,
-                        Style.page_horizontal_padding,
-                        0,
-                      ).copyWith(top: page_top_padding),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            easy.tr('bookshelf.title'),
-                            style: TextStyle(
-                              color: title_color,
-                              fontSize: Style.title_font_size,
-                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(
+                          Style.page_horizontal_padding,
+                          0,
+                          Style.page_horizontal_padding,
+                          0,
+                        ).copyWith(top: page_top_padding),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              easy.tr('bookshelf.title'),
+                              style: TextStyle(
+                                color: title_color,
+                                fontSize: Style.title_font_size,
+                                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: Style.no_login_top_spacing),
-                          LoginRequiredContent(
-                            title: easy.tr('bookshelf.no_login.title'),
-                            subtitle: easy.tr('bookshelf.no_login.desc'),
-                            primary_text_color: title_color,
-                            secondary_text_color: subtitle_color,
-                            action_key: 'bookshelf_no_login_to_login',
-                          ),
-                        ],
+                            const SizedBox(height: Style.no_login_top_spacing),
+                            LoginRequiredContent(
+                              title: easy.tr('bookshelf.no_login.title'),
+                              subtitle: easy.tr('bookshelf.no_login.desc'),
+                              primary_text_color: title_color,
+                              secondary_text_color: subtitle_color,
+                              action_key: 'bookshelf_no_login_to_login',
+                            ),
+                          ],
+                        ),
                       ),
                     )
                   else ...<Widget>[
@@ -197,6 +204,9 @@ class _BookshelfPageState extends State<BookshelfPage>
                     ),
                     Expanded(
                       child: TabBarView(
+                        key: ValueKey<String>(
+                          'bookshelf_tab_bar_view_$is_landscape',
+                        ),
                         controller: _tab_controller,
                         children: <Widget>[
                           _BookshelfTabPage(

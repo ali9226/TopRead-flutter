@@ -41,70 +41,160 @@ class LoginRequiredContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool is_landscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Padding(
       padding: LoginRequiredContentStyle.content_padding,
-      child: Column(
-        children: <Widget>[
-          /// 未登录插图。
-          Center(
-            child: SvgPicture.asset(
-              'assets/svg/no_login.svg',
-              width: LoginRequiredContentStyle.icon_size,
-              height: LoginRequiredContentStyle.icon_size,
+      child: is_landscape ? _buildLandscapeLayout() : _buildPortraitLayout(),
+    );
+  }
+
+  /// 竖屏布局：图标在上，文字和按钮在下。
+  Widget _buildPortraitLayout() {
+    return Column(
+      children: <Widget>[
+        /// 未登录插图。
+        Center(
+          child: SvgPicture.asset(
+            'assets/svg/no_login.svg',
+            width: LoginRequiredContentStyle.icon_size,
+            height: LoginRequiredContentStyle.icon_size,
+          ),
+        ),
+        const SizedBox(height: LoginRequiredContentStyle.icon_bottom_spacing),
+
+        /// 未登录主标题。
+        Center(
+          child: Text(
+            title,
+            style: TextStyle(
+              color: primary_text_color,
+              fontSize: LoginRequiredContentStyle.title_font_size,
+              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
             ),
           ),
-          const SizedBox(height: LoginRequiredContentStyle.icon_bottom_spacing),
+        ),
+        const SizedBox(
+          height: LoginRequiredContentStyle.title_bottom_spacing,
+        ),
 
-          /// 未登录主标题。
-          Center(
-            child: Text(
-              title,
-              style: TextStyle(
-                color: primary_text_color,
-                fontSize: LoginRequiredContentStyle.title_font_size,
-                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+        /// 未登录描述文案。
+        Center(
+          child: Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: secondary_text_color,
+              fontSize: LoginRequiredContentStyle.desc_font_size,
+              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+            ),
+          ),
+        ),
+        const SizedBox(height: LoginRequiredContentStyle.desc_bottom_spacing),
+
+        /// 登录按钮。
+        SubmitButton(
+          title: easy.tr('message.no_login.go_login'),
+          margin: 20,
+          onTap: () {
+            run_navigation_action_once(
+              actionKey: action_key,
+              action: () async {
+                routerUtil(path: '/login');
+              },
+            );
+          },
+        ),
+        const SizedBox(
+          height: LoginRequiredContentStyle.customer_service_top_spacing,
+        ),
+
+        /// 客服模块。
+        const CustomerServiceView(),
+      ],
+    );
+  }
+
+  /// 横屏布局：图标在左，标题和副标题在图标下方，登录按钮和客服在右。
+  Widget _buildLandscapeLayout() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        /// 左侧：图标、标题和副标题。
+        Expanded(
+          flex: 2,
+          child: Column(
+            children: <Widget>[
+              /// 未登录插图。
+              Center(
+                child: SvgPicture.asset(
+                  'assets/svg/no_login.svg',
+                  width: LoginRequiredContentStyle.icon_size * 0.8,
+                  height: LoginRequiredContentStyle.icon_size * 0.8,
+                ),
               ),
-            ),
-          ),
-          const SizedBox(
-            height: LoginRequiredContentStyle.title_bottom_spacing,
-          ),
-
-          /// 未登录描述文案。
-          Center(
-            child: Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: secondary_text_color,
-                fontSize: LoginRequiredContentStyle.desc_font_size,
-                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+              const SizedBox(
+                height: LoginRequiredContentStyle.icon_bottom_spacing,
               ),
-            ),
-          ),
-          const SizedBox(height: LoginRequiredContentStyle.desc_bottom_spacing),
 
-          /// 登录按钮。
-          SubmitButton(
-            title: easy.tr('message.no_login.go_login'),
-            margin: 20,
-            onTap: () {
-              run_navigation_action_once(
-                actionKey: action_key,
-                action: () async {
-                  routerUtil(path: '/login');
+              /// 未登录主标题。
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: primary_text_color,
+                  fontSize: LoginRequiredContentStyle.title_font_size,
+                  fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                ),
+              ),
+              const SizedBox(
+                height: LoginRequiredContentStyle.title_bottom_spacing,
+              ),
+
+              /// 未登录描述文案。
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: secondary_text_color,
+                  fontSize: LoginRequiredContentStyle.desc_font_size,
+                  fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        /// 右侧：登录按钮和客服模块。
+        Expanded(
+          flex: 3,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              /// 登录按钮（与图标顶部对齐）。
+              SubmitButton(
+                title: easy.tr('message.no_login.go_login'),
+                margin: 0,
+                onTap: () {
+                  run_navigation_action_once(
+                    actionKey: action_key,
+                    action: () async {
+                      routerUtil(path: '/login');
+                    },
+                  );
                 },
-              );
-            },
-          ),
-          const SizedBox(
-            height: LoginRequiredContentStyle.customer_service_top_spacing,
-          ),
+              ),
+              const SizedBox(
+                height: LoginRequiredContentStyle.customer_service_top_spacing,
+              ),
 
-          /// 客服模块。
-          const CustomerServiceView(),
-        ],
-      ),
+              /// 客服模块。
+              const CustomerServiceView(),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

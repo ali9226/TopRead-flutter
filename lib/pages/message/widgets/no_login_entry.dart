@@ -34,39 +34,41 @@ class NoLoginEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      color: ColorConstants.themeColor,
-      onRefresh: () async {
-        await Future<void>.delayed(const Duration(milliseconds: 260));
-      },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        padding: MessageStyle.page_padding.copyWith(
-          top: status_bar_height + MessageStyle.page_top_padding,
-        ),
-        children: <Widget>[
-          /// 页面标题。
-          Text(
-            easy.tr('message.title'),
-            style: TextStyle(
-              color: primary_text_color,
-              fontSize: MessageStyle.title_size,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+    return SafeArea(
+      child: RefreshIndicator(
+        color: ColorConstants.themeColor,
+        onRefresh: () async {
+          await Future<void>.delayed(const Duration(milliseconds: 260));
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          padding: MessageStyle.page_padding.copyWith(
+            top: MessageStyle.page_top_padding,
+          ),
+          children: <Widget>[
+            /// 页面标题。
+            Text(
+              easy.tr('message.title'),
+              style: TextStyle(
+                color: primary_text_color,
+                fontSize: MessageStyle.title_size,
+                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+              ),
             ),
-          ),
-          const SizedBox(height: MessageStyle.no_login_top_spacing),
+            const SizedBox(height: MessageStyle.no_login_top_spacing),
 
-          /// 公用未登录占位内容。
-          LoginRequiredContent(
-            title: easy.tr('message.no_login.title'),
-            subtitle: easy.tr('message.no_login.desc'),
-            primary_text_color: primary_text_color,
-            secondary_text_color: secondary_text_color,
-            action_key: 'message_no_login_entry_to_login',
-          ),
-        ],
+            /// 公用未登录占位内容。
+            LoginRequiredContent(
+              title: easy.tr('message.no_login.title'),
+              subtitle: easy.tr('message.no_login.desc'),
+              primary_text_color: primary_text_color,
+              secondary_text_color: secondary_text_color,
+              action_key: 'message_no_login_entry_to_login',
+            ),
+          ],
+        ),
       ),
     );
   }
