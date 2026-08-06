@@ -87,14 +87,12 @@ class _RankingContentState extends State<RankingContent> {
   void _ensure_page_controller({
     required int total_columns,
     required double viewport_width,
+    required double column_width,
   }) {
     final double safe_viewport_width = viewport_width <= 0 ? 1 : viewport_width;
 
-    // 固定“一列内容宽度 + 列间距”，不要再按屏幕宽度计算一屏两列。
-    // 这样横屏/平板/折叠屏会自然展示更多列，列与列之间仍保持固定间距。
-    final double new_page_extent =
-        RankingSectionStyle.column_content_width +
-        RankingSectionStyle.column_gap;
+    // 使用动态列宽计算页面宽度。
+    final double new_page_extent = column_width + RankingSectionStyle.column_gap;
     final double new_fraction = new_page_extent / safe_viewport_width;
     final int max_column_index = total_columns <= 0 ? 0 : total_columns - 1;
 
@@ -215,11 +213,6 @@ class _RankingContentState extends State<RankingContent> {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        _ensure_page_controller(
-          total_columns: total_columns,
-          viewport_width: constraints.maxWidth,
-        );
-
         /// 计算总内容宽度：列宽 * 列数 + 列间距 * (列数 - 1) + 左右内边距。
         final double total_content_width =
             RankingSectionStyle.column_content_width * total_columns +
@@ -230,13 +223,19 @@ class _RankingContentState extends State<RankingContent> {
         final bool can_show_all_columns =
             constraints.maxWidth >= total_content_width;
 
-        /// 动态列宽：屏幕宽度足够时平分屏幕，否则使用固定列宽。
+        /// 动态列宽：屏幕宽度足够时平分屏幕（减去左右内边距），否则使用固定列宽。
         final double dynamic_column_width = can_show_all_columns
             ? (constraints.maxWidth -
                     RankingSectionStyle.content_padding_horizontal * 2 -
                     RankingSectionStyle.column_gap * (total_columns - 1)) /
                 total_columns
             : RankingSectionStyle.column_content_width;
+
+        _ensure_page_controller(
+          total_columns: total_columns,
+          viewport_width: constraints.maxWidth,
+          column_width: dynamic_column_width,
+        );
 
         return SizedBox(
           height: content_height,

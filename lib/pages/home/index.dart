@@ -127,6 +127,8 @@ class _HomeState extends State<Home>
     return SafeArea(
       top: false,
       bottom: false,
+      left: false,
+      right: false,
       child: Container(
         color: bg_color,
         child: Stack(
