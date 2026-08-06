@@ -477,12 +477,15 @@ class _LastColumnClampPagePhysics extends PageScrollPhysics {
     final double max_allowed_pixels = _max_allowed_pixels(position);
     final Tolerance tolerance = toleranceFor(position);
 
-    // 如果当前位置超出最大允许范围，直接回弹到最大位置。
+    // 如果当前位置超出最大允许范围，回弹到最近的页面位置。
     if (position.pixels > max_allowed_pixels) {
+      final double page_size = _page_size(position);
+      final double target_page = (max_allowed_pixels / page_size).floorToDouble();
+      final double target_pixels = target_page * page_size;
       return ScrollSpringSimulation(
         spring,
         position.pixels,
-        max_allowed_pixels,
+        target_pixels,
         velocity,
         tolerance: tolerance,
       );
