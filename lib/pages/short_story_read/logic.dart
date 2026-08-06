@@ -71,6 +71,9 @@ class ShortStoryReadLogic {
   /// 是否正在加载正文内容。
   final RxBool is_content_loading = true.obs;
 
+  /// 当前短篇小说是否已通过激励视频广告解锁。
+  late final RxBool is_story_unlocked;
+
   // ==================== UI 控制状态 ====================
 
   /// 顶部导航栏是否可见。
@@ -134,6 +137,8 @@ class ShortStoryReadLogic {
 
     final double? saved_speed = load_auto_read_speed();
     auto_read_speed = (saved_speed ?? 0.2).obs;
+
+    is_story_unlocked = _unlocked_story_ids.contains(story_id).obs;
   }
 
   /// 增加正文字号（步长 2，最大 36），并持久化。
@@ -209,6 +214,11 @@ class ShortStoryReadLogic {
   /// 正在进行的正文加载任务，避免预加载与页面加载重复下载同一文件。
   static final Map<String, Future<String>> _content_load_futures =
       <String, Future<String>>{};
+
+  /// 当前应用会话中已解锁的短篇 ID。
+  ///
+  /// 切换上下篇或重新进入页面时保留解锁状态，应用重启后重置。
+  static final Set<int> _unlocked_story_ids = <int>{};
 
   /// 正文磁盘缓存有效期。
   static const Duration _content_disk_cache_ttl = Duration(days: 7);
@@ -767,6 +777,12 @@ class ShortStoryReadLogic {
     _last_scroll_direction_down = null;
   }
 
+  /// 解锁当前短篇小说的全部正文。
+  void unlock_current_story() {
+    _unlocked_story_ids.add(story_id);
+    is_story_unlocked.value = true;
+  }
+
   /// 处理滚动事件。
   ///
   /// 向下滚动超过阈值时自动隐藏导航栏和评论栏。
@@ -824,17 +840,27 @@ class ShortStoryReadLogic {
   /// 参数：
   /// - [scroll_offset] 当前滚动偏移量。
   /// - [max_scroll_extent] 最大滚动距离（内容总高度 - 可视区域高度）。
-  void update_reading_progress(double scroll_offset, double max_scroll_extent) {
+  /// - [max_progress] 当前可见内容在完整正文中的最大进度。
+  void update_reading_progress(
+    double scroll_offset,
+    double max_scroll_extent, {
+    double max_progress = 1.0,
+  }) {
     if (max_scroll_extent <= 0) {
       reading_progress.value = 0.0;
       return;
     }
-    final double progress = (scroll_offset / max_scroll_extent).clamp(0.0, 1.0);
-    // 接近 1.0 时直接设为 1.0，避免 99%↔100% 抖动。
-    if (progress > 0.98) {
-      reading_progress.value = 1.0;
+    final double safe_max_progress = max_progress.clamp(0.0, 1.0);
+    final double visible_progress = (scroll_offset / max_scroll_extent).clamp(
+      0.0,
+      1.0,
+    );
+    // 接近当前可见区域末尾时直接设为它对应的完整正文进度，
+    // 避免进度数字在边界附近抖动。
+    if (visible_progress > 0.98) {
+      reading_progress.value = safe_max_progress;
     } else {
-      reading_progress.value = progress;
+      reading_progress.value = visible_progress * safe_max_progress;
     }
   }
 

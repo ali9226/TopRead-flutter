@@ -98,29 +98,43 @@ import UserNotifications
     _ call: FlutterMethodCall,
     result: @escaping FlutterResult
   ) {
-    switch ATTrackingManager.trackingAuthorizationStatus {
+    let status = ATTrackingManager.trackingAuthorizationStatus
+    NSLog("Debug: ATT trackingAuthorizationStatus: \(status.rawValue)")
+    
+    switch status {
     case .authorized:
-      result(nonZeroAdvertisingIdentifier())
+      let id = nonZeroAdvertisingIdentifier()
+      NSLog("Debug: ATT authorized, advertisingId: \(id ?? "nil")")
+      result(id)
     case .notDetermined:
       let arguments = call.arguments as? [String: Any]
       let shouldRequestAuthorization =
         arguments?["requestTrackingAuthorization"] as? Bool ?? false
+      NSLog("Debug: ATT notDetermined, requestTrackingAuthorization: \(shouldRequestAuthorization)")
       guard shouldRequestAuthorization else {
         result(nil)
         return
       }
       ATTrackingManager.requestTrackingAuthorization { [weak self] status in
         DispatchQueue.main.async {
+          NSLog("Debug: ATT requestTrackingAuthorization result: \(status.rawValue)")
           guard status == .authorized else {
             result(nil)
             return
           }
-          result(self?.nonZeroAdvertisingIdentifier())
+          let id = self?.nonZeroAdvertisingIdentifier()
+          NSLog("Debug: ATT authorized after request, advertisingId: \(id ?? "nil")")
+          result(id)
         }
       }
-    case .denied, .restricted:
+    case .denied:
+      NSLog("Debug: ATT denied")
+      result(nil)
+    case .restricted:
+      NSLog("Debug: ATT restricted")
       result(nil)
     @unknown default:
+      NSLog("Debug: ATT unknown status: \(status.rawValue)")
       result(nil)
     }
   }

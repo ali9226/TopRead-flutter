@@ -84,6 +84,183 @@ class ShortStoryReadStyle {
   /// 段落间距。
   static const double paragraph_spacing = 16.0;
 
+  // ==================== 下一篇预览区域 ====================
+
+  /// CJK 语系的下一篇简介默认可见行数。
+  static const int next_preview_visible_line_count_cjk = 4;
+
+  /// 字母语系的下一篇简介默认可见行数。
+  static const int next_preview_visible_line_count_alphabetic = 4;
+
+  /// 计算预览最大行数时增加的渐隐缓冲行。
+  static const int next_preview_overflow_buffer_line_count = 1;
+
+  // ==================== 目录点赞动画 ====================
+
+  /// 目录点赞图标缩放动画总时长。
+  static const Duration catalog_like_animation_duration = Duration(
+    milliseconds: 320,
+  );
+
+  /// 目录点赞图标按下时的缩小比例。
+  static const double catalog_like_scale_shrink = 0.82;
+
+  /// 目录点赞图标回弹时的放大比例。
+  static const double catalog_like_scale_overshoot = 1.24;
+
+  /// 目录点赞图标缩小阶段所占的动画权重。
+  static const double catalog_like_scale_shrink_weight = 24;
+
+  /// 目录点赞图标放大回弹阶段所占的动画权重。
+  static const double catalog_like_scale_overshoot_weight = 42;
+
+  /// 目录点赞图标恢复原尺寸阶段所占的动画权重。
+  static const double catalog_like_scale_settle_weight = 34;
+
+  // ==================== 正文解锁区域 ====================
+
+  /// 解锁前可以阅读的正文比例。
+  static const double locked_content_preview_ratio = 1 / 3;
+
+  /// CJK 语系解锁区域高度。
+  static const double unlock_gate_height_cjk = 212.0;
+
+  /// 字母语系解锁区域高度，为更长文案预留空间。
+  static const double unlock_gate_height_alphabetic = 236.0;
+
+  /// CJK 语系继续渲染到渐变遮罩下方的字符数。
+  static const int unlock_fade_tail_count_cjk = 96;
+
+  /// 字母语系继续渲染到渐变遮罩下方的单词数。
+  static const int unlock_fade_tail_count_alphabetic = 48;
+
+  /// CJK 语系渐变向上覆盖正文的高度。
+  static const double unlock_gradient_overlap_height_cjk = 210.0;
+
+  /// 字母语系渐变向上覆盖正文的高度。
+  static const double unlock_gradient_overlap_height_alphabetic = 250.0;
+
+  /// 解锁卡片的最大宽度。
+  static const double unlock_card_max_width = 520.0;
+
+  /// 解锁卡片距屏幕左右的最小距离。
+  static const double unlock_card_outer_horizontal_padding = 20.0;
+
+  /// 解锁卡片底部间距。
+  static const double unlock_card_bottom_padding = 10.0;
+
+  /// CJK 语系解锁卡片水平内边距。
+  static const double unlock_card_horizontal_padding_cjk = 18.0;
+
+  /// 字母语系解锁卡片水平内边距。
+  static const double unlock_card_horizontal_padding_alphabetic = 16.0;
+
+  /// CJK 语系解锁卡片垂直内边距。
+  static const double unlock_card_vertical_padding_cjk = 18.0;
+
+  /// 字母语系解锁卡片垂直内边距。
+  static const double unlock_card_vertical_padding_alphabetic = 20.0;
+
+  /// 解锁卡片圆角。
+  static const double unlock_card_radius = 22.0;
+
+  /// 解锁卡片阴影模糊半径。
+  static const double unlock_shadow_blur_radius = 30.0;
+
+  /// 解锁卡片阴影 Y 轴偏移。
+  static const double unlock_shadow_offset_y = 12.0;
+
+  /// 解锁卡片日间阴影透明度。
+  static const double unlock_shadow_alpha_light = 0.08;
+
+  /// 解锁卡片夜间阴影透明度。
+  static const double unlock_shadow_alpha_dark = 0.32;
+
+  /// CJK 语系剩余内容文案字号。
+  static const double unlock_message_font_size_cjk = 14.0;
+
+  /// 字母语系剩余内容文案字号。
+  static const double unlock_message_font_size_alphabetic = 13.0;
+
+  /// CJK 语系剩余内容文案行高。
+  static const double unlock_message_height_cjk = 1.45;
+
+  /// 字母语系剩余内容文案行高。
+  static const double unlock_message_height_alphabetic = 1.55;
+
+  /// 剩余内容文案在装饰线中间占用的弹性比例。
+  static const int unlock_message_flex = 5;
+
+  /// CJK 语系文案与装饰线间距。
+  static const double unlock_line_spacing_cjk = 10.0;
+
+  /// 字母语系文案与装饰线间距。
+  static const double unlock_line_spacing_alphabetic = 8.0;
+
+  /// 装饰渐变线高度。
+  static const double unlock_line_height = 1.0;
+
+  /// CJK 语系解锁按钮顶部间距。
+  static const double unlock_button_top_spacing_cjk = 16.0;
+
+  /// 字母语系解锁按钮顶部间距。
+  static const double unlock_button_top_spacing_alphabetic = 18.0;
+
+  /// CJK 语系解锁按钮高度。
+  static const double unlock_button_height_cjk = 48.0;
+
+  /// 字母语系解锁按钮高度。
+  static const double unlock_button_height_alphabetic = 50.0;
+
+  /// 解锁按钮圆角。
+  static const double unlock_button_radius = 15.0;
+
+  /// CJK 语系解锁按钮字号。
+  static const double unlock_button_font_size_cjk = 15.0;
+
+  /// 字母语系解锁按钮字号。
+  static const double unlock_button_font_size_alphabetic = 14.0;
+
+  /// 解锁按钮图标大小。
+  static const double unlock_button_icon_size = 20.0;
+
+  /// 解锁按钮图标与文案间距。
+  static const double unlock_button_icon_spacing = 7.0;
+
+  /// 广告加载指示器大小。
+  static const double unlock_loading_indicator_size = 20.0;
+
+  /// 广告加载指示器线宽。
+  static const double unlock_loading_stroke_width = 2.0;
+
+  /// 按钮文案和加载指示器切换时长。
+  static const Duration unlock_button_switch_duration = Duration(
+    milliseconds: 180,
+  );
+
+  /// 折叠遮罩的渐变节点。
+  static const List<double> unlock_gradient_stops = <double>[
+    0.0,
+    0.3,
+    0.65,
+    1.0,
+  ];
+
+  /// 解锁卡片日间背景色。
+  static const Color unlock_card_light_color = Color(0xFFFDFDFE);
+
+  /// 解锁卡片夜间背景色。
+  static const Color unlock_card_dark_color = Color(0xFF181E27);
+
+  /// 解锁卡片日间边框色。
+  static const Color unlock_border_light_color = Color(0xFFE6E9EF);
+
+  /// 解锁卡片夜间边框色。
+  static const Color unlock_border_dark_color = Color(0xFF2A3340);
+
+  /// 解锁按钮文字和图标颜色。
+  static const Color unlock_button_text_color = Color(0xFF24210E);
+
   // ==================== 底部评论栏 ====================
 
   /// 底部评论栏高度（不含安全区域）。

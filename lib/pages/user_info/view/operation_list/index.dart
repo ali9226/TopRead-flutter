@@ -143,6 +143,19 @@ class _OperationListState extends State<OperationList> {
       if (isLoggedIn) {
         group1Children.add(
           OperationLi(
+            icon: "signature",
+            title: easy.tr('UserInfo.author_center'),
+            type: 1,
+            showDivider: true,
+            onTap: () {
+              routerUtil(path: '/installation');
+            },
+          ),
+        );
+      }
+      if (isLoggedIn) {
+        group1Children.add(
+          OperationLi(
             icon: "love_03",
             title: easy.tr('UserInfo.interest_preference'),
             type: 1,

@@ -26,7 +26,7 @@ import 'package:app/config/color_config.dart';
 import 'package:app/pages/short_story_read/widgets/full_appbar.dart';
 import 'package:app/pages/short_story_read/widgets/bottom_comment_bar.dart';
 import 'package:app/pages/short_story_read/widgets/tag_list.dart';
-import 'package:app/pages/short_story_read/widgets/story_content.dart';
+import 'package:app/pages/short_story_read/widgets/story_unlock_gate.dart';
 import 'package:app/pages/short_story_read/widgets/initialization_overlay.dart';
 import 'package:app/pages/ranking_full_list/widgets/starfield_decoration.dart';
 import 'package:app/components/page_top_gradient_overlay/index.dart';
@@ -39,9 +39,11 @@ import 'package:app/components/no_internet/index.dart';
 import 'package:app/components/share_sheet/index.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/language_util/index.dart';
+import 'package:app/pages/short_story_read/utils/resolve_next_story_preview_content.dart';
 import 'package:app/pages/short_story_read/widgets/previous_pull_header.dart';
 import 'package:app/pages/short_story_read/widgets/auto_read_settings_button.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/util/rewarded_ad_util.dart';
 
 /// 短篇小说阅读页面。
 ///
@@ -203,6 +205,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 当前是否正在恢复服务器阅读位置。
   bool _is_restoring_position = false;
+
+  /// 当前短篇的激励视频广告是否正在加载或展示。
+  bool _is_rewarded_ad_loading = false;
 
   /// 正在保存进度的小说 ID；不同小说允许并行，同一小说按顺序提交。
   final Set<int> _progress_save_in_flight_ids = <int>{};
@@ -386,6 +391,15 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         _logic_generation == generation;
   }
 
+  /// 当前可见正文对应的完整阅读进度上限。
+  ///
+  /// 未解锁时只显示约三分之一正文，因此滚动到折叠处不能记为全文完成。
+  double get _visible_story_progress_limit {
+    return _logic.is_story_unlocked.value
+        ? 1.0
+        : ShortStoryReadStyle.locked_content_preview_ratio;
+  }
+
   bool _is_current_initialization(
     ShortStoryReadLogic logic,
     int generation,
@@ -566,10 +580,12 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
     // 优先使用百分比恢复，像素偏移在屏幕尺寸或字号变化后会失效。
     if (record.read_progress > 0) {
-      target_offset = (record.read_progress / 100 * max_extent).clamp(
-        0.0,
-        max_extent,
-      );
+      final double visible_progress =
+          (record.read_progress / 100 / _visible_story_progress_limit).clamp(
+            0.0,
+            1.0,
+          );
+      target_offset = (visible_progress * max_extent).clamp(0.0, max_extent);
     } else if (record.chapter_offset > 0) {
       target_offset = record.chapter_offset
           .clamp(0, max_extent.toInt())
@@ -579,7 +595,11 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     if (target_offset > 0) {
       _is_restoring_position = true;
       _scroll_controller.jumpTo(target_offset);
-      _logic.update_reading_progress(target_offset, max_extent);
+      _logic.update_reading_progress(
+        target_offset,
+        max_extent,
+        max_progress: _visible_story_progress_limit,
+      );
       _is_restoring_position = false;
     }
   }
@@ -620,6 +640,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       _logic.update_reading_progress(
         _scroll_controller.offset,
         max_scroll_extent,
+        max_progress: _visible_story_progress_limit,
       );
     }
 
@@ -787,12 +808,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     // 记录乐观更新前的状态，用于失败时回退。
     final bool previous_catalog_status =
         action_logic.catalog_list[catalog_index].is_liked;
-    final int previous_catalog_count =
-        action_logic.catalog_list[catalog_index].like_count;
     final bool optimistic_status = !previous_catalog_status;
-    final int optimistic_count = optimistic_status
-        ? previous_catalog_count + 1
-        : (previous_catalog_count > 0 ? previous_catalog_count - 1 : 0);
 
     // 乐观更新：立即切换目录列表状态。
     action_logic.sync_like_to_catalog(
@@ -804,7 +820,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     // 如果点赞的是当前阅读的小说，同步乐观更新正文页面数据。
     bool previous_detail_status = false;
     int previous_detail_count = 0;
-    final bool is_current_story = story_id == action_logic.story_id &&
+    final bool is_current_story =
+        story_id == action_logic.story_id &&
         action_logic.story_data.value != null;
     if (is_current_story) {
       previous_detail_status = action_logic.story_data.value!.is_liked;
@@ -840,11 +857,11 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         );
         // 回退正文页面数据。
         if (is_current_story) {
-          action_logic.story_data.value =
-              action_logic.story_data.value!.copyWith(
-            is_liked: previous_detail_status,
-            like_count: previous_detail_count,
-          );
+          action_logic.story_data.value = action_logic.story_data.value!
+              .copyWith(
+                is_liked: previous_detail_status,
+                like_count: previous_detail_count,
+              );
           action_logic.sync_current_story_cache();
         }
         return;
@@ -860,11 +877,11 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
           revert_delta,
         );
         if (is_current_story) {
-          action_logic.story_data.value =
-              action_logic.story_data.value!.copyWith(
-            is_liked: server_status,
-            like_count: previous_detail_count,
-          );
+          action_logic.story_data.value = action_logic.story_data.value!
+              .copyWith(
+                is_liked: server_status,
+                like_count: previous_detail_count,
+              );
           action_logic.sync_current_story_cache();
         }
       }
@@ -877,8 +894,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       );
       // 回退正文页面数据。
       if (is_current_story) {
-        action_logic.story_data.value =
-            action_logic.story_data.value!.copyWith(
+        action_logic.story_data.value = action_logic.story_data.value!.copyWith(
           is_liked: previous_detail_status,
           like_count: previous_detail_count,
         );
@@ -952,6 +968,74 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     _start_auto_read();
   }
 
+  /// 观看激励视频广告并解锁当前短篇的全部正文。
+  Future<void> _on_unlock_story_tap() async {
+    if (_is_rewarded_ad_loading || _logic.is_story_unlocked.value) return;
+
+    _stop_auto_read();
+    final ShortStoryReadLogic action_logic = _logic;
+    final int action_generation = _logic_generation;
+    final int user_id = user_information.userInfo.value?.id ?? 0;
+    final String ad_attempt_id =
+        'short_story_${action_logic.story_id}_'
+        '${DateTime.now().microsecondsSinceEpoch}';
+
+    setState(() => _is_rewarded_ad_loading = true);
+    try {
+      final GoogleRewardedAdResult result = await GoogleRewardedAdUtil.instance
+          .show_rewarded_ad(
+            user_id: user_id > 0 ? user_id.toString() : 'visitor',
+            custom_data: ad_attempt_id,
+            can_show: () => _is_current_logic(action_logic, action_generation),
+          );
+      if (!_is_current_logic(action_logic, action_generation)) return;
+
+      switch (result) {
+        case GoogleRewardedAdResult.rewarded:
+          action_logic.unlock_current_story();
+          _has_user_engaged = true;
+          _reading_progress_max_extent = null;
+          _next_story_overlay_opacity = 0;
+          setState(() {});
+          await WidgetsBinding.instance.endOfFrame;
+          await WidgetsBinding.instance.endOfFrame;
+          if (!_is_current_logic(action_logic, action_generation) ||
+              !_scroll_controller.hasClients) {
+            return;
+          }
+          final double full_extent = _calculate_current_story_extent();
+          _reading_progress_max_extent = full_extent;
+          action_logic.update_reading_progress(
+            _scroll_controller.offset,
+            full_extent,
+          );
+          showBottomTip(easy.tr('short_story_read.content_unlocked'));
+          break;
+        case GoogleRewardedAdResult.dismissed:
+          showBottomTip(easy.tr('short_story_read.ad_not_completed'));
+          break;
+        case GoogleRewardedAdResult.load_failed:
+          showBottomTip(easy.tr('short_story_read.ad_load_failed'));
+          break;
+        case GoogleRewardedAdResult.show_failed:
+          showBottomTip(easy.tr('short_story_read.ad_show_failed'));
+          break;
+        case GoogleRewardedAdResult.unsupported:
+          showBottomTip(easy.tr('short_story_read.ad_unsupported'));
+          break;
+        case GoogleRewardedAdResult.busy:
+          showBottomTip(easy.tr('short_story_read.ad_in_progress'));
+          break;
+        case GoogleRewardedAdResult.cancelled:
+          break;
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _is_rewarded_ad_loading = false);
+      }
+    }
+  }
+
   /// 修改字号后按修改前的阅读百分比恢复位置，避免正文突然跳段。
   void _change_body_font_size(VoidCallback change_font_size) {
     if (!_scroll_controller.hasClients) {
@@ -992,7 +1076,11 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     );
     _is_restoring_position = true;
     _scroll_controller.jumpTo(target_offset);
-    _logic.update_reading_progress(target_offset, new_extent);
+    _logic.update_reading_progress(
+      target_offset,
+      new_extent,
+      max_progress: _visible_story_progress_limit,
+    );
     _is_restoring_position = false;
   }
 
@@ -1168,6 +1256,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       _reading_progress_max_extent = null;
       _is_initialization_complete = false;
       _has_user_engaged = false;
+      _is_rewarded_ad_loading = false;
       _logic = next_logic;
       _logic_generation++;
     });
@@ -1211,7 +1300,11 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     final double max_scroll_extent =
         _reading_progress_max_extent ??
         _scroll_controller.position.maxScrollExtent;
-    final double target_offset = max_scroll_extent * progress;
+    final double accessible_progress =
+        (progress.clamp(0.0, _visible_story_progress_limit) /
+                _visible_story_progress_limit)
+            .clamp(0.0, 1.0);
+    final double target_offset = max_scroll_extent * accessible_progress;
 
     _scroll_controller
         .animateTo(
@@ -1975,19 +2068,37 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         .clamp(0.0, 1.0);
     final bool next_pull_ready =
         _next_pull_offset >= _next_pull_trigger_distance;
-    final String next_story_content = _logic.next_story_content.value.trim();
 
-    // 下一篇正文预览不能用固定行数。
-    // 默认只露出一点正文；一旦用户上拉，它的可见高度就按真实上拉距离增长。
+    /// 下一篇的预览文字。
+    ///
+    /// 优先使用目录数据中已有的简介，避免正文预加载未完成或失败时
+    /// 只显示下一篇标题而预览区域为空。
+    final String next_story_preview_content =
+        resolve_next_story_preview_content(
+          description: _logic.next_story_item?.description ?? '',
+          preloaded_content: _logic.next_story_content.value,
+        );
+
+    // 下一篇简介预览不能用固定高度。
+    // 默认稳定展示数行简介；一旦用户上拉，它的可见高度就按真实上拉距离增长。
+    final double next_preview_line_height = is_cjk
+        ? ShortStoryReadStyle.body_height_cjk
+        : ShortStoryReadStyle.body_height_alphabetic;
+    final int next_preview_visible_line_count = is_cjk
+        ? ShortStoryReadStyle.next_preview_visible_line_count_cjk
+        : ShortStoryReadStyle.next_preview_visible_line_count_alphabetic;
     final double next_preview_body_height =
-        72.0 + bottom_padding + _next_pull_offset;
-    final double next_preview_line_height = is_cjk ? 1.8 : 1.7;
+        (_logic.body_font_size.value *
+            next_preview_line_height *
+            next_preview_visible_line_count) +
+        bottom_padding +
+        _next_pull_offset;
     final int next_preview_max_lines = math.max(
-      3,
+      next_preview_visible_line_count,
       (next_preview_body_height /
                   (_logic.body_font_size.value * next_preview_line_height))
               .ceil() +
-          1,
+          ShortStoryReadStyle.next_preview_overflow_buffer_line_count,
     );
 
     final bool show_next_bottom_overlay =
@@ -2083,11 +2194,14 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                     ],
 
                     /// 正文内容。
-                    StoryContent(
+                    StoryUnlockGate(
                       content: _logic.content.value,
                       is_dark: is_dark,
                       is_loading: _logic.is_content_loading.value,
+                      is_unlocked: _logic.is_story_unlocked.value,
+                      is_unlocking: _is_rewarded_ad_loading,
                       font_size: _logic.body_font_size.value,
+                      on_unlock: _on_unlock_story_tap,
                     ),
 
                     /// 当前篇正文结束位置，用于准确计算进度和恢复位置。
@@ -2132,26 +2246,28 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                               ),
                             ],
                             const SizedBox(height: 18),
-                            // 下一篇正文开头。
+                            // 下一篇简介。
                             //
-                            // 当前篇正文加载完成后，后台会静默预加载下一篇正文。
-                            // 底部默认只露出一点正文，让用户知道下面就是下一篇内容；
-                            // 继续上拉时高度增加，自动切换后也能更快看到下一篇正文。
+                            // 目录接口的简介会立即展示；简介缺失时，
+                            // 再使用后台预加载的下一篇正文开头兜底。
                             SizedBox(
                               width: double.infinity,
                               // 预览高度跟真实上拉距离走，不再用固定行数裁剪。
-                              // 手指上拉越高，下一篇正文就露出越多；底部只保留渐变条做阅读过渡。
+                              // 手指上拉越高，下一篇预览就露出越多；底部只保留渐变条做阅读过渡。
                               height: next_preview_body_height,
                               child: ClipRect(
                                 child: Align(
                                   alignment: Alignment.topLeft,
                                   child: Text(
-                                    next_story_content,
+                                    next_story_preview_content,
                                     softWrap: true,
                                     maxLines: next_preview_max_lines,
                                     overflow: TextOverflow.fade,
                                     style: TextStyle(
                                       fontSize: _logic.body_font_size.value,
+                                      fontWeight: FontConfig.adjustedWeight(
+                                        FontWeight.w400,
+                                      ),
                                       color: is_dark
                                           ? ShortStoryReadStyle.body_dark_color
                                           : ShortStoryReadStyle

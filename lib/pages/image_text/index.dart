@@ -11,6 +11,7 @@ import 'package:app/models/image_text_detail.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/util/layout/page_header_spacing.dart';
 import 'package:app/util/router/router_util.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'logic.dart';
 import 'style.dart';
@@ -329,6 +330,13 @@ class _ImageTextState extends State<ImageText> {
                         padding: Style.article_content_padding,
                         child: flutter_html.Html(
                           data: detail?.content ?? '',
+                          onLinkTap: (String? url, _, __) async {
+                            if (url == null || url.isEmpty) return;
+                            final Uri uri = Uri.parse(url);
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri);
+                            }
+                          },
                           style: <String, flutter_html.Style>{
                             'html': flutter_html.Style(
                               fontSize: flutter_html.FontSize(

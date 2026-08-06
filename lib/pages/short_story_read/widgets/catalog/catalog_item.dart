@@ -8,6 +8,7 @@ import 'package:app/config/color_config.dart';
 import 'package:app/config/layout_config.dart';
 import 'package:app/components/novel_cover/index.dart';
 import 'package:app/models/short_story_item.dart';
+import 'package:app/pages/short_story_read/style.dart';
 import 'package:app/pages/home/widgets/tab_contents/short_story_tab/style.dart';
 import 'package:app/util/number_format_util.dart';
 import 'package:app/util/language_util/index.dart';
@@ -59,12 +60,23 @@ class CatalogItem extends StatefulWidget {
 }
 
 class _CatalogItemState extends State<CatalogItem>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   /// 缩放动画控制器。
   late AnimationController _scale_controller;
 
   /// 缩放动画：1.0 → 0.95。
   late Animation<double> _scale_animation;
+
+  /// 点赞图标缩小、放大并回到原尺寸的动画控制器。
+  late final AnimationController _like_scale_controller;
+
+  /// 点赞图标的分段缩放动画。
+  late final Animation<double> _like_scale_animation;
+
+  /// 指针是否在点赞区域按下。
+  ///
+  /// 用于阻止点赞时同时触发整张目录卡片的缩放动画。
+  bool _is_like_area_down = false;
 
   @override
   void initState() {
@@ -86,16 +98,46 @@ class _CatalogItemState extends State<CatalogItem>
             curve: Curves.easeOutCubic,
           ),
         );
+
+    _like_scale_controller = AnimationController(
+      vsync: this,
+      duration: ShortStoryReadStyle.catalog_like_animation_duration,
+    );
+    _like_scale_animation = TweenSequence<double>(<TweenSequenceItem<double>>[
+      TweenSequenceItem<double>(
+        tween: Tween<double>(
+          begin: 1,
+          end: ShortStoryReadStyle.catalog_like_scale_shrink,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: ShortStoryReadStyle.catalog_like_scale_shrink_weight,
+      ),
+      TweenSequenceItem<double>(
+        tween: Tween<double>(
+          begin: ShortStoryReadStyle.catalog_like_scale_shrink,
+          end: ShortStoryReadStyle.catalog_like_scale_overshoot,
+        ).chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: ShortStoryReadStyle.catalog_like_scale_overshoot_weight,
+      ),
+      TweenSequenceItem<double>(
+        tween: Tween<double>(
+          begin: ShortStoryReadStyle.catalog_like_scale_overshoot,
+          end: 1,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: ShortStoryReadStyle.catalog_like_scale_settle_weight,
+      ),
+    ]).animate(_like_scale_controller);
   }
 
   @override
   void dispose() {
     _scale_controller.dispose();
+    _like_scale_controller.dispose();
     super.dispose();
   }
 
   /// 手指按下：启动缩放动画。
   void _on_pointer_down(PointerDownEvent event) {
+    if (_is_like_area_down) return;
     _scale_controller.forward();
   }
 
@@ -107,6 +149,23 @@ class _CatalogItemState extends State<CatalogItem>
   /// 手指取消：恢复缩放。
   void _on_pointer_cancel(PointerCancelEvent event) {
     _scale_controller.reverse();
+  }
+
+  /// 播放点赞图标的缩放回弹动画，然后执行点赞回调。
+  void _on_like_tap() {
+    if (widget.on_like_tap == null) return;
+    _like_scale_controller.forward(from: 0);
+    widget.on_like_tap!();
+  }
+
+  /// 记录指针已在点赞区域按下。
+  void _on_like_pointer_down(PointerDownEvent event) {
+    _is_like_area_down = true;
+  }
+
+  /// 指针离开点赞区域后恢复卡片的普通交互状态。
+  void _on_like_pointer_end(PointerEvent event) {
+    _is_like_area_down = false;
   }
 
   /// 是否有封面图片。
@@ -480,31 +539,46 @@ class _CatalogItemState extends State<CatalogItem>
         const SizedBox(width: 8),
 
         /// 点赞数（图标 + 数字，乐观更新，无加载态）。
-        GestureDetector(
-          onTap: widget.on_like_tap,
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                SvgPicture.asset(
-                  widget.item.is_liked
-                      ? 'assets/svg/love_02.svg'
-                      : 'assets/svg/love.svg',
-                  width: ShortStoryTabStyle.card_like_icon_size,
-                  height: ShortStoryTabStyle.card_like_icon_size,
-                  colorFilter: ColorFilter.mode(like_color, BlendMode.srcIn),
-                ),
-                SizedBox(width: ShortStoryTabStyle.card_like_gap),
-                Text(
-                  NumberFormatUtil.format_count(widget.item.like_count),
-                  style: TextStyle(
-                    fontSize: ShortStoryTabStyle.card_like_font_size,
-                    color: like_color,
+        Listener(
+          onPointerDown: widget.on_like_tap == null
+              ? null
+              : _on_like_pointer_down,
+          onPointerUp: widget.on_like_tap == null ? null : _on_like_pointer_end,
+          onPointerCancel: widget.on_like_tap == null
+              ? null
+              : _on_like_pointer_end,
+          child: GestureDetector(
+            onTap: widget.on_like_tap == null ? null : _on_like_tap,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  ScaleTransition(
+                    scale: _like_scale_animation,
+                    child: SvgPicture.asset(
+                      widget.item.is_liked
+                          ? 'assets/svg/love_02.svg'
+                          : 'assets/svg/love.svg',
+                      width: ShortStoryTabStyle.card_like_icon_size,
+                      height: ShortStoryTabStyle.card_like_icon_size,
+                      colorFilter: ColorFilter.mode(
+                        like_color,
+                        BlendMode.srcIn,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  SizedBox(width: ShortStoryTabStyle.card_like_gap),
+                  Text(
+                    NumberFormatUtil.format_count(widget.item.like_count),
+                    style: TextStyle(
+                      fontSize: ShortStoryTabStyle.card_like_font_size,
+                      color: like_color,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

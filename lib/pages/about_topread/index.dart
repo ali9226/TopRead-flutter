@@ -150,7 +150,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
                     dividerColor: dividerColor,
                     showDivider: false,
                     onTap: () {
-                      routerUtil(path: '/web_view?url=https://www.read.top/agreement');
+                      routerUtil(path: '/image_text?type=60');
                     },
                   ),
                   _buildListItem(
@@ -160,7 +160,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
                     dividerColor: dividerColor,
                     showDivider: true,
                     onTap: () {
-                      routerUtil(path: '/web_view?url=https://www.read.top/privacy');
+                      routerUtil(path: '/image_text?type=61');
                     },
                   ),
                   _buildListItem(

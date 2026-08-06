@@ -37,6 +37,8 @@ class _AdvertisingIdDebugItemState extends State<AdvertisingIdDebugItem> {
 
       final bool copied = await copyToClipboard(advertisingId);
       showBottomTip(copied ? '设备广告 ID 已复制到粘贴板' : '复制设备广告 ID 失败');
+    } catch (e) {
+      showBottomTip('获取设备广告 ID 异常: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

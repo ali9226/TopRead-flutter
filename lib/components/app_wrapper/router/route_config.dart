@@ -23,6 +23,7 @@ import 'package:app/pages/short_story_read/index.dart';
 import 'package:app/pages/customer_service_chat/index.dart';
 import 'package:app/pages/about_topread/index.dart';
 import 'package:app/pages/debug/index.dart';
+import 'package:app/pages/installation/index.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/pages/login/index.dart' as login_page;
 
@@ -248,6 +249,12 @@ class RouteConfig {
           name: 'about_topread',
           pageBuilder: (context, state) =>
               buildRoutePage(state: state, child: const AboutTopRead()),
+        ),
+        GoRoute(
+          path: '/installation',
+          name: 'installation',
+          pageBuilder: (context, state) =>
+              buildRoutePage(state: state, child: const InstallationPage()),
         ),
       ],
     );
