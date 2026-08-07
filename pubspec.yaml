@@ -2,7 +2,7 @@ name: app
 description: "TopRead"
 
 
-version: 1.1.2+1
+version: 1.1.2+5
 
 environment:
     sdk: ^3.11.5
@@ -131,7 +131,7 @@ dependencies:
   flutter_staggered_grid_view: ^0.7.0
 
   # TODO 相册图片多选（聊天发送图片，微信风格网格选择器）
-  wechat_assets_picker: ^9.4.0
+  wechat_assets_picker: ^10.1.3
 
   # TODO 生成 UUID（访客匿名聊天标识）
   uuid: ^4.5.1
