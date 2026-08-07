@@ -66,6 +66,12 @@ class _InterestPreferenceContentState extends State<InterestPreferenceContent> {
   /// 页面初始加载状态（true 时显示加载指示器）。
   bool _loading = true;
 
+  /// 接口数据是否已回显完成。
+  ///
+  /// 在 [_load_user_preferences] 成功返回后置为 true，
+  /// 用于保证保存按钮在数据回显前始终不可点击。
+  bool _data_loaded = false;
+
   /// 各偏好分类的选中项。
   ///
   /// key 为偏好类别 id，value 为该类别下已选中的选项 id 集合。
@@ -81,13 +87,11 @@ class _InterestPreferenceContentState extends State<InterestPreferenceContent> {
   /// 判断保存按钮是否可点击。
   ///
   /// 条件（必须全部满足）：
-  /// 1. 不在加载中（_loading 为 false）
+  /// 1. 接口数据已回显完成（_data_loaded 为 true）
   /// 2. 不在提交中（_saving 为 false）
-  /// 3. 有选中内容（_current_ids 不为空）
-  /// 4. 与初始状态不同（用户做过修改）
+  /// 3. 与初始状态不同（用户做过修改）
   bool get _can_save {
-    if (_loading || _saving) return false;
-    if (_current_ids.isEmpty) return false;
+    if (!_data_loaded || _saving) return false;
     return !_set_equals(_current_ids, _initial_ids);
   }
 
@@ -211,10 +215,9 @@ class _InterestPreferenceContentState extends State<InterestPreferenceContent> {
     /// 组件可能在异步等待期间被销毁，需提前返回。
     if (!mounted) return;
 
-    /// 将 id 列表转为 Set，便于后续 O(1) 复杂度的包含判断。
-    _initial_ids = Set<int>.from(ids);
-
     /// 遍历所有偏好分类，将 id 分配到对应的分类中。
+    /// 只有在分类数据中存在的 id 才算有效选择，
+    /// 避免接口返回的孤儿 id 导致初始状态与当前状态不一致。
     final List<Preference> list = _logic.preference_list;
     for (final Preference pref in list) {
       final Set<int> matched = <int>{};
@@ -228,8 +231,13 @@ class _InterestPreferenceContentState extends State<InterestPreferenceContent> {
       }
     }
 
+    /// 初始 id 只保留实际存在于分类数据中的项，
+    /// 保证与 _current_ids 的计算口径一致。
+    _initial_ids = _current_ids;
+
     setState(() {
       _loading = false;
+      _data_loaded = true;
     });
   }
 

@@ -31,7 +31,7 @@ class SelectionChipStyle {
   /// 标签字号。
   static const double fontSize = 13.0;
 
-  /// 标签固定高度（兴趣偏好页面和筛选弹窗统一使用）。
+  /// 标签固定高度（筛选弹窗使用，单行场景）。
   static const double chipHeight = 38.0;
 
   /// 标签之间水平间距（Wrap spacing）。

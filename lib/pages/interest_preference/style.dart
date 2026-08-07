@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/config/layout_config.dart';
 
 /// 兴趣偏好页面样式常量。
 ///
@@ -10,8 +11,8 @@ class InterestPreferenceStyle {
 
   // ==================== 页面布局 ========================
 
-  /// 页面水平内边距。
-  static const double pageHorizontalPadding = 20.0;
+  /// 页面水平内边距，与首页、user_info 等页面保持一致。
+  static const double pageHorizontalPadding = LayoutConfig.page_horizontal_padding;
 
   /// 页面底部安全区内边距。
   static const double pageBottomPadding = 32.0;

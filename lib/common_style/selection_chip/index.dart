@@ -46,9 +46,13 @@ class SelectionChip extends StatelessWidget {
   /// 固定高度，为 null 时根据字号和内边距自适应。
   final double? fixedHeight;
 
-  /// 文字最小缩放字号，仅在 fixedWidth 不为 null 时生效。
+  /// 文字最小缩放字号，仅在 fixedWidth 不为 null 且 maxLines 为 null 时生效。
   /// 文字超长时自动缩小至此字号，为 null 时不缩放。
   final double? minFontSize;
+
+  /// 文字最大行数，为 null 时使用 FittedBox 缩放（兼容旧逻辑）。
+  /// 设置后文字超长自动换行，最多显示 [maxLines] 行，超出截断。
+  final int? maxLines;
 
   const SelectionChip({
     super.key,
@@ -62,7 +66,43 @@ class SelectionChip extends StatelessWidget {
     this.fixedWidth,
     this.fixedHeight,
     this.minFontSize,
+    this.maxLines,
   });
+
+  /// 构建标签文字组件。
+  ///
+  /// 优先使用 [maxLines] 换行模式（兴趣偏好页面），
+  /// 其次使用 [minFontSize] 缩放模式（筛选弹窗），
+  /// 默认单行不缩放。
+  Widget _buildLabel(double fSize, bool isDark) {
+    final TextStyle style = TextStyle(
+      fontSize: fSize,
+      fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+      height: 1.3,
+      color: selected
+          ? SelectionChipStyle.selectedText(isDark: isDark)
+          : SelectionChipStyle.unselectedText(isDark: isDark),
+    );
+
+    if (maxLines != null) {
+      return Text(
+        label,
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+        style: style,
+      );
+    }
+
+    if (minFontSize != null) {
+      return FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(label, style: style),
+      );
+    }
+
+    return Text(label, style: style);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,30 +134,7 @@ class SelectionChip extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: minFontSize != null
-          ? FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: fSize,
-                  fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                  color: selected
-                      ? SelectionChipStyle.selectedText(isDark: isDark)
-                      : SelectionChipStyle.unselectedText(isDark: isDark),
-                ),
-              ),
-            )
-          : Text(
-              label,
-              style: TextStyle(
-                fontSize: fSize,
-                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                color: selected
-                    ? SelectionChipStyle.selectedText(isDark: isDark)
-                    : SelectionChipStyle.unselectedText(isDark: isDark),
-              ),
-            ),
+      child: _buildLabel(fSize, isDark),
     );
 
     /// 有固定宽度时（弹窗场景），直接渲染；
