@@ -531,24 +531,29 @@ class _UserInfoTopState extends State<UserInfoTop>
 
   // TODO 保留原福袋入口实现，当前通过 Offstage 隐藏，方便后续恢复。
   Widget _buildLuckyBagEntry() {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, Style.luckyBagOffsetY + _animation.value),
-          child: child,
-        );
-      },
-      child: GestureDetector(
-        // TODO 福袋点击事件暂时取消，后续恢复时取消注释即可。
-        // onTap: () {
-        //   /// 点击福袋后进入文图详情页，并固定传递 type=59。
-        //   routerUtil(path: '/image_text?type=59');
-        // },
-        child: SvgIcon(
-          name: "gold",
-          width: Style.luckyBagSize,
-          height: Style.luckyBagSize,
+    return Padding(
+      /// 基础下移量，参与布局计算，保证 CrossAxisAlignment.end 对齐视觉位置。
+      padding: const EdgeInsets.only(top: Style.luckyBagOffsetY),
+      child: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, child) {
+          return Transform.translate(
+            /// 仅动画偏移，基础偏移已由 Padding 承担。
+            offset: Offset(0, _animation.value),
+            child: child,
+          );
+        },
+        child: GestureDetector(
+          // TODO 福袋点击事件暂时取消，后续恢复时取消注释即可。
+          // onTap: () {
+          //   /// 点击福袋后进入文图详情页，并固定传递 type=59。
+          //   routerUtil(path: '/image_text?type=59');
+          // },
+          child: SvgIcon(
+            name: "gold",
+            width: Style.luckyBagSize,
+            height: Style.luckyBagSize,
+          ),
         ),
       ),
     );

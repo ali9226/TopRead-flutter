@@ -276,11 +276,14 @@ class _TopUserInfoState extends State<TopUserInfo> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
-                  child: AuthSlogan(alignLeft: true),
+                  child: Transform.translate(
+                    offset: const Offset(0, 15),
+                    child: AuthSlogan(alignLeft: true),
+                  ),
                 ),
                 if (widget.balanceTrailing != null)
                   Padding(
-                    padding: const EdgeInsets.only(right: 10, bottom: 6),
+                    padding: const EdgeInsets.only(right: 10),
                     child: widget.balanceTrailing!,
                   ),
               ],
