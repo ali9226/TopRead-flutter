@@ -46,6 +46,9 @@ class ReadDirectorySheet extends StatefulWidget {
       enableDrag: true,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width,
+      ),
       builder: (context) => ReadDirectorySheet(
         logic: logic,
         is_dark: is_dark,

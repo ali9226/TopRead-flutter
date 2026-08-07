@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:app/pages/read/logic.dart';
 import 'package:app/pages/read/widgets/content/index.dart';
@@ -65,7 +66,10 @@ class ReadMainList extends StatelessWidget {
           children: <Widget>[
             // 顶部加一段间距，让封面与状态栏保持视觉呼吸感。
             SizedBox(
-              height: status_bar_height + MainListStyle.cover_top_spacing,
+              height: math.max(
+                0,
+                status_bar_height + MainListStyle.cover_top_spacing,
+              ),
             ),
             ReadContent(
               logic: logic,

@@ -1233,6 +1233,9 @@ class _ReadPageState extends State<ReadPage>
       enableDrag: true,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width,
+      ),
       builder: (BuildContext sheet_context) {
         return ReadSettingsSheet(
           body_font_size: logic.body_font_size,
@@ -1376,6 +1379,9 @@ class _ReadPageState extends State<ReadPage>
       enableDrag: true,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width,
+      ),
       builder: (BuildContext sheet_context) {
         return AutoReadSettingsSheet(
           auto_read_speed: logic.auto_read_speed,

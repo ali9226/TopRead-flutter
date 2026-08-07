@@ -916,6 +916,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       enableDrag: true,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width,
+      ),
       builder: (BuildContext sheet_context) {
         return CatalogSheet(
           current_story_id: sheet_logic.story_id,
@@ -947,6 +950,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       enableDrag: true,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width,
+      ),
       builder: (BuildContext sheet_context) {
         return ReadingSettingsSheet(
           logic: _logic,
@@ -1162,6 +1168,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       enableDrag: true,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width,
+      ),
       builder: (BuildContext sheet_context) {
         return AutoReadSettingsSheet(
           logic: _logic,

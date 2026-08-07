@@ -88,6 +88,9 @@ Future<int?> showCommentSheet({
     requestFocus: false,
     backgroundColor: Colors.transparent,
     clipBehavior: Clip.none,
+    constraints: BoxConstraints(
+      maxWidth: MediaQuery.of(context).size.width,
+    ),
     barrierColor: Colors.black.withValues(
       alpha: CommentListStyle.sheet_barrier_alpha,
     ),

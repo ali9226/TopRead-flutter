@@ -44,7 +44,10 @@ class AuthBrandSection extends StatelessWidget {
 
 /// 认证页口号。
 class AuthSlogan extends StatelessWidget {
-  const AuthSlogan({super.key});
+  /// 是否靠左对齐。
+  final bool alignLeft;
+
+  const AuthSlogan({super.key, this.alignLeft = false});
 
   @override
   Widget build(BuildContext context) {
@@ -67,22 +70,23 @@ class AuthSlogan extends StatelessWidget {
       return SizedBox(
         height: 50,
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: alignLeft ? MainAxisAlignment.start : MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              width: AuthPageStyle.sloganWidth,
-              height: AuthPageStyle.sloganHeight,
-              decoration: AuthPageStyle.sloganGradientBar(
-                isDark: isDark,
-                reverse: false,
+            if (!alignLeft)
+              Container(
+                width: AuthPageStyle.sloganWidth,
+                height: AuthPageStyle.sloganHeight,
+                decoration: AuthPageStyle.sloganGradientBar(
+                  isDark: isDark,
+                  reverse: false,
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
+            if (!alignLeft) const SizedBox(width: 10),
             Flexible(
               child: Text(
                 sloganText,
-                textAlign: TextAlign.center,
+                textAlign: alignLeft ? TextAlign.left : TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -92,15 +96,16 @@ class AuthSlogan extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 10),
-            Container(
-              width: AuthPageStyle.sloganWidth,
-              height: AuthPageStyle.sloganHeight,
-              decoration: AuthPageStyle.sloganGradientBar(
-                isDark: isDark,
-                reverse: true,
+            if (!alignLeft) const SizedBox(width: 10),
+            if (!alignLeft)
+              Container(
+                width: AuthPageStyle.sloganWidth,
+                height: AuthPageStyle.sloganHeight,
+                decoration: AuthPageStyle.sloganGradientBar(
+                  isDark: isDark,
+                  reverse: true,
+                ),
               ),
-            ),
           ],
         ),
       );
