@@ -23,6 +23,15 @@ class UserInfo {
   /// TODO 获赞数量。
   final int likesCount;
 
+  /// 邮箱。
+  final String mail;
+
+  /// 自我介绍。
+  final String selfIntroduction;
+
+  /// 是否是作者：1=普通用户，2=已认证作者。
+  final int author;
+
   /// 调试标识：1=普通用户，2=开发者。
   final int debug;
 
@@ -43,6 +52,9 @@ class UserInfo {
     required this.followCount,
     required this.fansCount,
     required this.likesCount,
+    this.mail = '',
+    this.selfIntroduction = '',
+    this.author = 1,
     this.debug = 1,
   });
 
@@ -94,6 +106,11 @@ class UserInfo {
       likesCount: json['likes_count'] is int
           ? json['likes_count']
           : int.tryParse(json['likes_count']?.toString() ?? '0') ?? 0,
+      mail: _parseString(json['mail']),
+      selfIntroduction: _parseString(json['self_introduction']),
+      author: json['author'] is int
+          ? json['author']
+          : int.tryParse(json['author']?.toString() ?? '1') ?? 1,
       debug: json['debug'] is int
           ? json['debug']
           : int.tryParse(json['debug']?.toString() ?? '1') ?? 1,
@@ -118,6 +135,9 @@ class UserInfo {
       'follow_count': followCount,
       'fans_count': fansCount,
       'likes_count': likesCount,
+      'mail': mail,
+      'self_introduction': selfIntroduction,
+      'author': author,
       'debug': debug,
     };
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:app/api/post_request.dart';
 import 'package:app/models/login.dart';
@@ -18,7 +19,10 @@ class Logic {
     final results = await postRequest<Login>(
       path: 'subscriber/get_info',
       showTips: false,
-      fromJson: (json) => Login.fromJson(json),
+      fromJson: (json) {
+        debugPrint('TODO 用户信息原始数据: $json');
+        return Login.fromJson(json);
+      },
     );
 
     if (!results.status || results.content == null) return false;

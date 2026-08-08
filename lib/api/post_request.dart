@@ -74,10 +74,10 @@ Future<ResultsType<T>> postRequest<T>({
 
     final Map<String, dynamic> requestData = <String, dynamic>{
       ...?parameter,
-      'language_id': languageId,
-      'environment': currentEnvironment.value,
-      'timezone': '$timezone',
-      'request_time': requestTime,
+      'language_id': languageId, // TODO 语种id
+      'device_environment': currentEnvironment.value, // TODO 设备环境
+      'timezone': '$timezone', // TODO 时区
+      'request_time': requestTime, // TODO 请求时间
     };
 
     final Map<String, String> encryptedRequestData = encryptData(

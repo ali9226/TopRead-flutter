@@ -83,8 +83,8 @@ class Logic {
   /// [email] 联系邮箱。
   /// [code] 邮箱验证码。
   /// [introduction] 自我介绍（选填）。
-  /// 返回 true 表示提交成功。
-  Future<bool> submit_application({
+  /// 返回 Map：{success: bool, message: String}。
+  Future<Map<String, dynamic>> submit_application({
     required String email,
     required String code,
     String? introduction,
@@ -93,26 +93,25 @@ class Logic {
       final Map<String, dynamic> parameter = <String, dynamic>{
         'email': email.trim(),
         'code': code.trim(),
-        'introduction': introduction?.trim() ?? '',
+        'self_introduction': introduction?.trim() ?? '',
       };
 
       final results = await postRequest<dynamic>(
-        path: 'author/apply',
+        path: 'user/author_verification',
         parameter: parameter,
         showTips: false,
       );
 
-      if (results.status) {
-        showBottomTip(easy.tr('installation.submit_success'));
-        return true;
-      } else {
-        showBottomTip(easy.tr('installation.submit_failed'));
-        return false;
-      }
+      return {
+        'success': results.status,
+        'message': results.message,
+      };
     } catch (e) {
       logUtil(msg: '提交作家申请失败: $e', type: 'e');
-      showBottomTip(easy.tr('installation.submit_failed'));
-      return false;
+      return {
+        'success': false,
+        'message': easy.tr('installation.submit_failed'),
+      };
     }
   }
 }

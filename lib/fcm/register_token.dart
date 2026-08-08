@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:app/api/post_request.dart';
 import 'package:app/util/device/app_environment.dart';
 import 'package:app/util/log_util.dart';
@@ -22,7 +20,11 @@ class FcmRegisterToken {
   static Future<void> execute() async {
     try {
       final messaging = FirebaseMessaging.instance;
-      final String? token = await messaging.getToken();
+      final String? token = await messaging.getToken(
+        vapidKey: isWebBrowser
+            ? 'BNZQeUAHYOjr5AQeAbdRzwqCB4a-XQNifHD9B_Gxa9N-8NVADu3moHCF2j7u7uS8dtb0Bnp1-eMLqGQOguBwFgo'
+            : null,
+      );
       if (token == null) {
         logUtil(msg: 'FCM: 获取 Token 失败', type: 'e');
         return;
@@ -46,7 +48,7 @@ class FcmRegisterToken {
     String os_version = '';
 
     try {
-      if (currentEnvironment == AppEnvironment.browser) {
+      if (isWebBrowser) {
         final webInfo = await deviceInfo.webBrowserInfo;
         device_model = webInfo.browserName.name;
         device_name = webInfo.userAgent ?? '';
