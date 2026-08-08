@@ -1,6 +1,5 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:app/util/device/app_environment.dart';
 
 /// 字体平台适配配置。
 ///
@@ -12,16 +11,13 @@ class FontConfig {
   static const String _androidFontFamily = 'Noto Sans SC';
 
 
-  /// 是否是 Android 平台。
-  static bool get _isAndroid => !kIsWeb && Platform.isAndroid;
-
   /// 根据平台返回最优 fontFamily。
   ///
   /// - Android: 使用 Noto Sans SC（比默认 Noto Sans CJK SC 更细）
   /// - iOS/Web: 空字符串，使用平台默认字体
   static String get platformFontFamily {
-    if (kIsWeb) return '';
-    return Platform.isAndroid ? _androidFontFamily : '';
+    if (!isAndroidApp) return '';
+    return _androidFontFamily;
   }
 
   /// Android 上降低一档 FontWeight 来匹配 iOS 视觉效果。
@@ -29,7 +25,7 @@ class FontConfig {
   /// 思源黑体 Regular(400) ≈ 苹方 Medium(500)，
   /// 因此在 Android 上将字重降一档以达到同等视觉粗细。
   static FontWeight adjustedWeight(FontWeight original) {
-    if (!_isAndroid) return original;
+    if (!isAndroidApp) return original;
     if (original == FontWeight.w900) return FontWeight.w800;
     if (original == FontWeight.w800) return FontWeight.w700;
     if (original == FontWeight.w700) return FontWeight.w600;
@@ -45,7 +41,7 @@ class FontConfig {
   /// Android 上所有 Material 默认文本样式降一档字重，
   /// 使中文字体视觉粗细与 iOS 苹方保持一致。
   static TextTheme adjustedTextTheme(TextTheme base) {
-    if (!_isAndroid) return base;
+    if (!isAndroidApp) return base;
     return base.copyWith(
       displayLarge: _adjust(base.displayLarge),
       displayMedium: _adjust(base.displayMedium),

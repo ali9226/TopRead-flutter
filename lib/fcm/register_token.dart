@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app/api/post_request.dart';
+import 'package:app/util/device/app_environment.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/storage_util/index.dart';
 
@@ -46,17 +46,17 @@ class FcmRegisterToken {
     String os_version = '';
 
     try {
-      if (kIsWeb) {
+      if (currentEnvironment == AppEnvironment.browser) {
         final webInfo = await deviceInfo.webBrowserInfo;
         device_model = webInfo.browserName.name;
         device_name = webInfo.userAgent ?? '';
         os_version = webInfo.platform ?? '';
-      } else if (Platform.isIOS) {
+      } else if (currentEnvironment == AppEnvironment.ios) {
         final iosInfo = await deviceInfo.iosInfo;
         device_model = iosInfo.model ?? '';
         device_name = iosInfo.name ?? '';
         os_version = 'iOS ${iosInfo.systemVersion}';
-      } else if (Platform.isAndroid) {
+      } else if (currentEnvironment == AppEnvironment.android) {
         final androidInfo = await deviceInfo.androidInfo;
         device_model = '${androidInfo.brand} ${androidInfo.model}';
         device_name = androidInfo.device ?? '';
@@ -99,7 +99,7 @@ class FcmRegisterToken {
   /// 将 FCM Token 注册到后端（不绑定用户）。
   static Future<void> _registerToServer(String token) async {
     try {
-      final String platform = kIsWeb ? 'web' : (Platform.isIOS ? 'ios' : 'android');
+      final String platform = currentEnvironment.name;
 
       // 获取设备信息。
       final deviceInfo = await _getDeviceInfo();

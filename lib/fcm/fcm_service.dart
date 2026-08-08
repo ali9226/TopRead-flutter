@@ -1,13 +1,12 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:app/fcm/register_token.dart';
 import 'package:app/fcm/fcm_handler.dart';
+import 'package:app/util/device/app_environment.dart';
 import 'package:app/util/log_util.dart';
 
 /// 推送通知服务。
@@ -114,7 +113,7 @@ class FcmService {
     }
 
     // iOS 由系统直接展示前台通知，点击行为仍交给 Firebase 处理。
-    if (!kIsWeb && Platform.isIOS) {
+    if (isIOSApp) {
       await _messaging.setForegroundNotificationPresentationOptions(
         alert: true,
         badge: true,
@@ -158,7 +157,7 @@ class FcmService {
     );
 
     // 创建 Android 通知渠道。
-    if (!kIsWeb && Platform.isAndroid) {
+    if (isAndroidApp) {
       final AndroidFlutterLocalNotificationsPlugin? android_plugin =
           _local_notifications
               .resolvePlatformSpecificImplementation<
@@ -186,7 +185,7 @@ class FcmService {
     on_foreground_data?.call(message.data);
 
     // Web 不使用移动端本地通知插件。
-    if (kIsWeb) {
+    if (isWebBrowser) {
       return;
     }
 
@@ -199,7 +198,7 @@ class FcmService {
 
     // iOS 的 notification 消息已由系统展示，此处不再重复创建通知。
     // data-only 消息没有 notification，继续使用本地通知兜底展示。
-    if (Platform.isIOS && notification != null) {
+    if (isIOSApp && notification != null) {
       logUtil(msg: 'FCM: iOS 前台通知已交由系统展示: ${message.messageId}');
       return;
     }
@@ -220,7 +219,7 @@ class FcmService {
         title: title,
         body: body,
         notificationDetails: NotificationDetails(
-          android: Platform.isAndroid
+          android: isAndroidApp
               ? AndroidNotificationDetails(
                   _channel.id,
                   _channel.name,
@@ -231,7 +230,7 @@ class FcmService {
                   number: badge, // Android 角标数量
                 )
               : null,
-          iOS: Platform.isIOS
+          iOS: isIOSApp
               ? DarwinNotificationDetails(
                   presentAlert: true,
                   presentBadge: true,
@@ -306,17 +305,17 @@ class FcmService {
   /// [count] 未读消息数。0 表示清除角标。
   /// iOS 通过 UNUserNotificationCenter 直接同步角标。
   Future<void> update_badge(int count) async {
-    if (kIsWeb) return;
+    if (isWebBrowser) return;
 
     final int normalized_count = count < 0 ? 0 : count;
     try {
-      if (Platform.isIOS || Platform.isAndroid) {
+      if (isNativeMobileApp) {
         await _badge_channel.invokeMethod<void>('setBadgeCount', <String, int>{
           'count': normalized_count,
         });
         logUtil(msg: 'FCM: App 图标角标已更新为 $normalized_count');
       }
-      if (Platform.isAndroid && normalized_count == 0) {
+      if (isAndroidApp && normalized_count == 0) {
         await _local_notifications.cancelAll();
       }
     } catch (e) {

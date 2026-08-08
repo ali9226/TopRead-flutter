@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:app/api/results_type.dart';
 import 'package:app/config/constant.dart';
-import 'package:app/util/device/get_platform.dart';
+import 'package:app/util/device/app_environment.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/encryption/get_encryption.dart';
 import 'package:app/util/encryption/set_encryption.dart';
@@ -75,7 +75,7 @@ Future<ResultsType<T>> postRequest<T>({
     final Map<String, dynamic> requestData = <String, dynamic>{
       ...?parameter,
       'language_id': languageId,
-      'pc_mobile': isPcMobile(),
+      'environment': currentEnvironment.value,
       'timezone': '$timezone',
       'request_time': requestTime,
     };
@@ -341,7 +341,7 @@ Map<String, dynamic> _buildRequestHeaders({
 
   final Map<String, dynamic> requestHeaders = <String, dynamic>{
     'timezone': '$timezone',
-    'pc_mobile': isPcMobile(),
+    'environment': currentEnvironment.value,
     'request_time': requestTime,
     'language_id': languageId,
     'Content-Type': 'application/json;charset=UTF-8',
