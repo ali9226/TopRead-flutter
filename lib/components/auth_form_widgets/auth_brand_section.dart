@@ -47,7 +47,10 @@ class AuthSlogan extends StatelessWidget {
   /// 是否靠左对齐。
   final bool alignLeft;
 
-  const AuthSlogan({super.key, this.alignLeft = false});
+  /// 自定义文字颜色，为 null 时跟随主题色。
+  final Color? color;
+
+  const AuthSlogan({super.key, this.alignLeft = false, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +58,7 @@ class AuthSlogan extends StatelessWidget {
 
     return Obx(() {
       final bool isDark = deviceInfo.dark.value;
-      final Color textColor = AuthPageStyle.primaryTextColor(isDark);
+      final Color textColor = color ?? AuthPageStyle.primaryTextColor(isDark);
 
       final LanguageStore languageStore = Get.find<LanguageStore>();
       final LanguageInfo? currentLanguageInfo =

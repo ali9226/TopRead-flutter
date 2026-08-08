@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart' as easy;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/common_style/submit_button/index.dart';
@@ -372,9 +373,7 @@ class _InstallationPageState extends State<InstallationPage> {
                 ),
                 decoration: BoxDecoration(
                   color: canSend
-                      ? (isDark
-                          ? ColorConstants.nightTextColor
-                          : ColorConstants.lightTextColor)
+                      ? ColorConstants.themeColor
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(4),
                 ),
@@ -386,9 +385,7 @@ class _InstallationPageState extends State<InstallationPage> {
                     fontSize: Style.sendCodeFontSize,
                     fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                     color: canSend
-                        ? (isDark
-                            ? ColorConstants.lightTextColor
-                            : Colors.white)
+                        ? ColorConstants.lightTextColor
                         : AuthPageStyle.hintColor(isDark),
                   ),
                 ),
@@ -463,9 +460,15 @@ class _InstallationPageState extends State<InstallationPage> {
                 TextSpan(
                   text: easy.tr('installation.agreement_link'),
                   style: TextStyle(
-                    color: ColorConstants.themeColor,
+                    color: isDark
+                        ? ColorConstants.themeColor
+                        : ColorConstants.lightTextColor,
                     fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                   ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () {
+                      routerUtil(path: '/image_text?type=62');
+                    },
                 ),
               ],
             ),

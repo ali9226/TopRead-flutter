@@ -56,11 +56,10 @@ class Logic {
     try {
       final Map<String, dynamic> parameter = <String, dynamic>{
         'email': email.trim(),
-        'type': 'author_apply',
       };
 
       final results = await postRequest<dynamic>(
-        path: 'common/send_email_code',
+        path: 'novel_mail/author_verification',
         parameter: parameter,
         showTips: false,
       );

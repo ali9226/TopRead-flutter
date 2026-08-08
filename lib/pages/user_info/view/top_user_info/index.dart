@@ -278,7 +278,10 @@ class _TopUserInfoState extends State<TopUserInfo> {
                 Expanded(
                   child: Transform.translate(
                     offset: const Offset(0, 15),
-                    child: AuthSlogan(alignLeft: true),
+                    child: AuthSlogan(
+                    alignLeft: true,
+                    color: ColorConstants.lightTextColor,
+                  ),
                   ),
                 ),
                 if (widget.balanceTrailing != null)

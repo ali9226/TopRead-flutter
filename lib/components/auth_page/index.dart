@@ -390,6 +390,7 @@ class AuthFooterAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Get.find<DeviceInfo>().dark.value;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -408,10 +409,14 @@ class AuthFooterAction extends StatelessWidget {
             actionText,
             style: TextStyle(
               fontSize: AuthPageStyle.footerPromptFontSize,
-              color: ColorConstants.themeColor,
+              color: isDark
+                  ? ColorConstants.themeColor
+                  : ColorConstants.lightTextColor,
               fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
               decoration: TextDecoration.underline,
-              decorationColor: ColorConstants.themeColor,
+              decorationColor: isDark
+                  ? ColorConstants.themeColor
+                  : ColorConstants.lightTextColor,
             ),
           ),
         ),
