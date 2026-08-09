@@ -686,10 +686,11 @@
     "watch_ad_to_continue": "看广告继续阅读",
     "ad_load_failed": "广告加载失败，请稍后重试",
     "ad_show_failed": "广告暂时无法播放，请稍后重试",
-    "ad_not_completed": "看完广告即可解锁余下内容",
+    "ad_not_completed": "需完整观看广告才能解锁全文",
     "ad_unsupported": "当前设备暂不支持激励视频广告",
     "ad_in_progress": "激励视频广告正在播放",
-    "content_unlocked": "精彩内容已解锁"
+    "content_unlocked": "全文已解锁，开始阅读吧!",
+    "ad_not_available": "暂无可用广告，请稍后再试"
   },
   "comment": {
     "title": "评论",

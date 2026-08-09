@@ -26,7 +26,7 @@ import 'package:app/config/color_config.dart';
 import 'package:app/pages/short_story_read/widgets/full_appbar.dart';
 import 'package:app/pages/short_story_read/widgets/bottom_comment_bar.dart';
 import 'package:app/pages/short_story_read/widgets/tag_list.dart';
-import 'package:app/pages/short_story_read/widgets/story_unlock_gate.dart';
+import 'package:app/pages/short_story_read/widgets/story_unlock_gate/index.dart';
 import 'package:app/pages/short_story_read/widgets/initialization_overlay.dart';
 import 'package:app/pages/ranking_full_list/widgets/starfield_decoration.dart';
 import 'package:app/components/page_top_gradient_overlay/index.dart';
@@ -43,6 +43,8 @@ import 'package:app/pages/short_story_read/utils/resolve_next_story_preview_cont
 import 'package:app/pages/short_story_read/widgets/previous_pull_header.dart';
 import 'package:app/pages/short_story_read/widgets/auto_read_settings_button.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/models/ad_config.dart';
+import 'package:app/models/ad_verify_result.dart';
 import 'package:app/util/rewarded_ad_util.dart';
 
 /// 短篇小说阅读页面。
@@ -981,41 +983,71 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     _stop_auto_read();
     final ShortStoryReadLogic action_logic = _logic;
     final int action_generation = _logic_generation;
-    final int user_id = user_information.userInfo.value?.id ?? 0;
-    final String ad_attempt_id =
-        'short_story_${action_logic.story_id}_'
-        '${DateTime.now().microsecondsSinceEpoch}';
 
     setState(() => _is_rewarded_ad_loading = true);
     try {
+      // 从后端获取广告配置。
+      final adConfigResult = await postRequest<AdConfig>(
+        path: 'ads/short_story_read',
+        showTips: false,
+        fromJson: (json) => AdConfig.fromJson(json),
+      );
+      if (!_is_current_logic(action_logic, action_generation)) return;
+
+      if (!adConfigResult.status || adConfigResult.content == null) {
+        showBottomTip(easy.tr('short_story_read.ad_not_available'));
+        return;
+      }
+
+      final AdConfig adConfig = adConfigResult.content!;
+      if (adConfig.advertisers != 1 || adConfig.adsId.isEmpty) {
+        showBottomTip(easy.tr('short_story_read.ad_not_available'));
+        return;
+      }
+
       final GoogleRewardedAdResult result = await GoogleRewardedAdUtil.instance
           .show_rewarded_ad(
-            user_id: user_id > 0 ? user_id.toString() : 'visitor',
-            custom_data: ad_attempt_id,
+            adUnitId: adConfig.adsId,
+            custom_data: adConfig.uuid,
             can_show: () => _is_current_logic(action_logic, action_generation),
           );
       if (!_is_current_logic(action_logic, action_generation)) return;
 
       switch (result) {
         case GoogleRewardedAdResult.rewarded:
-          action_logic.unlock_current_story();
-          _has_user_engaged = true;
-          _reading_progress_max_extent = null;
-          _next_story_overlay_opacity = 0;
-          setState(() {});
-          await WidgetsBinding.instance.endOfFrame;
-          await WidgetsBinding.instance.endOfFrame;
-          if (!_is_current_logic(action_logic, action_generation) ||
-              !_scroll_controller.hasClients) {
-            return;
-          }
-          final double full_extent = _calculate_current_story_extent();
-          _reading_progress_max_extent = full_extent;
-          action_logic.update_reading_progress(
-            _scroll_controller.offset,
-            full_extent,
+          // 广告播放完成，向后端验证是否真正看完。
+          final verifyResult = await postRequest<AdVerifyResult>(
+            path: 'novel_ads/search_results',
+            showTips: false,
+            parameter: {'uuid': adConfig.uuid},
+            fromJson: (json) => AdVerifyResult.fromJson(json),
           );
-          showBottomTip(easy.tr('short_story_read.content_unlocked'));
+          if (!_is_current_logic(action_logic, action_generation)) return;
+
+          if (verifyResult.status && verifyResult.content?.status == AdVerifyResult.status_completed) {
+            // 广告已完整观看，解锁全文。
+            action_logic.unlock_current_story();
+            _has_user_engaged = true;
+            _reading_progress_max_extent = null;
+            _next_story_overlay_opacity = 0;
+            setState(() {});
+            await WidgetsBinding.instance.endOfFrame;
+            await WidgetsBinding.instance.endOfFrame;
+            if (!_is_current_logic(action_logic, action_generation) ||
+                !_scroll_controller.hasClients) {
+              return;
+            }
+            final double full_extent = _calculate_current_story_extent();
+            _reading_progress_max_extent = full_extent;
+            action_logic.update_reading_progress(
+              _scroll_controller.offset,
+              full_extent,
+            );
+            showBottomTip(easy.tr('short_story_read.content_unlocked'));
+          } else {
+            // status=1 或其他，广告未完整观看。
+            showBottomTip(easy.tr('short_story_read.ad_not_completed'));
+          }
           break;
         case GoogleRewardedAdResult.dismissed:
           showBottomTip(easy.tr('short_story_read.ad_not_completed'));

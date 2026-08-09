@@ -685,10 +685,11 @@
     "watch_ad_to_continue": "Watch an ad to continue",
     "ad_load_failed": "The ad couldn't load. Please try again shortly.",
     "ad_show_failed": "The ad can't play right now. Please try again shortly.",
-    "ad_not_completed": "Finish the ad to unlock the rest of the story.",
+    "ad_not_completed": "Watch the full ad to unlock the full story.",
     "ad_unsupported": "Rewarded ads aren't supported on this device.",
     "ad_in_progress": "A rewarded ad is already playing.",
-    "content_unlocked": "The rest of the story is now unlocked."
+    "content_unlocked": "Full story unlocked. Start reading!",
+    "ad_not_available": "No ads available right now. Please try again later."
   },
   "comment": {
     "title": "Comments",

@@ -123,10 +123,10 @@ class ShortStoryReadStyle {
   static const double locked_content_preview_ratio = 1 / 3;
 
   /// CJK 语系解锁区域高度。
-  static const double unlock_gate_height_cjk = 212.0;
+  static const double unlock_gate_height_cjk = 160.0;
 
   /// 字母语系解锁区域高度，为更长文案预留空间。
-  static const double unlock_gate_height_alphabetic = 236.0;
+  static const double unlock_gate_height_alphabetic = 160.0;
 
   /// CJK 语系继续渲染到渐变遮罩下方的字符数。
   static const int unlock_fade_tail_count_cjk = 96;
@@ -135,10 +135,10 @@ class ShortStoryReadStyle {
   static const int unlock_fade_tail_count_alphabetic = 48;
 
   /// CJK 语系渐变向上覆盖正文的高度。
-  static const double unlock_gradient_overlap_height_cjk = 210.0;
+  static const double unlock_gradient_overlap_height_cjk = 250.0;
 
   /// 字母语系渐变向上覆盖正文的高度。
-  static const double unlock_gradient_overlap_height_alphabetic = 250.0;
+  static const double unlock_gradient_overlap_height_alphabetic = 290.0;
 
   /// 解锁卡片的最大宽度。
   static const double unlock_card_max_width = 520.0;
@@ -147,7 +147,7 @@ class ShortStoryReadStyle {
   static const double unlock_card_outer_horizontal_padding = 20.0;
 
   /// 解锁卡片底部间距。
-  static const double unlock_card_bottom_padding = 10.0;
+  static const double unlock_card_bottom_padding = 4.0;
 
   /// CJK 语系解锁卡片水平内边距。
   static const double unlock_card_horizontal_padding_cjk = 18.0;
@@ -177,10 +177,16 @@ class ShortStoryReadStyle {
   static const double unlock_shadow_alpha_dark = 0.32;
 
   /// CJK 语系剩余内容文案字号。
-  static const double unlock_message_font_size_cjk = 14.0;
+  static const double unlock_message_font_size_cjk = 12.0;
 
   /// 字母语系剩余内容文案字号。
-  static const double unlock_message_font_size_alphabetic = 13.0;
+  static const double unlock_message_font_size_alphabetic = 11.0;
+
+  /// 剩余内容提示文字颜色（日间模式）。
+  static const Color unlock_hint_light_color = Color(0xFF999999);
+
+  /// 剩余内容提示文字颜色（夜间模式）。
+  static const Color unlock_hint_dark_color = Color(0xFF8B8B9E);
 
   /// CJK 语系剩余内容文案行高。
   static const double unlock_message_height_cjk = 1.45;
@@ -207,19 +213,19 @@ class ShortStoryReadStyle {
   static const double unlock_button_top_spacing_alphabetic = 18.0;
 
   /// CJK 语系解锁按钮高度。
-  static const double unlock_button_height_cjk = 48.0;
+  static const double unlock_button_height_cjk = 44.0;
 
   /// 字母语系解锁按钮高度。
-  static const double unlock_button_height_alphabetic = 50.0;
+  static const double unlock_button_height_alphabetic = 46.0;
 
   /// 解锁按钮圆角。
   static const double unlock_button_radius = 15.0;
 
   /// CJK 语系解锁按钮字号。
-  static const double unlock_button_font_size_cjk = 15.0;
+  static const double unlock_button_font_size_cjk = 14.0;
 
   /// 字母语系解锁按钮字号。
-  static const double unlock_button_font_size_alphabetic = 14.0;
+  static const double unlock_button_font_size_alphabetic = 13.0;
 
   /// 解锁按钮图标大小。
   static const double unlock_button_icon_size = 20.0;

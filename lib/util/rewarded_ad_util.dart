@@ -38,17 +38,9 @@ class GoogleRewardedAdUtil {
   /// 应用内共享的激励广告工具实例。
   static final GoogleRewardedAdUtil instance = GoogleRewardedAdUtil._();
 
-  /// Android 正式激励视频广告单元。
-  static const String _android_ad_unit_id =
-      'ca-app-pub-5028475830567696/3364483751';
-
   /// Android Debug 设备 ID，确保开发期间只请求测试广告。
   static const String _android_debug_test_device_id =
       '97ECB298D9F6E72D1D8A2C524D4FED6C';
-
-  /// iOS 尚未配置正式单元，使用谷歌官方激励广告测试单元。
-  static const String _ios_test_ad_unit_id =
-      'ca-app-pub-3940256099942544/1712485313';
 
   /// 日志前缀。
   static const String _log_prefix = '[GoogleRewardedAd]';
@@ -69,19 +61,14 @@ class GoogleRewardedAdUtil {
         defaultTargetPlatform == TargetPlatform.iOS;
   }
 
-  /// 根据当前平台返回广告单元 ID。
-  String get _ad_unit_id {
-    return defaultTargetPlatform == TargetPlatform.android
-        ? _android_ad_unit_id
-        : _ios_test_ad_unit_id;
-  }
-
   /// 加载并展示一次谷歌激励视频广告。
   ///
+  /// [adUnitId] 广告单元 ID，由后端接口返回。
   /// [user_id] 是服务器端验证使用的用户标识。
   /// [custom_data] 是服务器端验证使用的本次广告业务标识。
   /// [can_show] 在广告加载完成后执行，用于防止页面销毁后继续弹出广告。
   Future<GoogleRewardedAdResult> show_rewarded_ad({
+    required String adUnitId,
     String? user_id,
     String? custom_data,
     bool Function()? can_show,
@@ -98,7 +85,7 @@ class GoogleRewardedAdUtil {
     _is_running = true;
     RewardedAd? rewarded_ad;
     try {
-      rewarded_ad = await _load_rewarded_ad();
+      rewarded_ad = await _load_rewarded_ad(adUnitId);
       if (rewarded_ad == null) {
         return GoogleRewardedAdResult.load_failed;
       }
@@ -126,7 +113,7 @@ class GoogleRewardedAdUtil {
   }
 
   /// 初始化 SDK 并加载当前平台的激励广告。
-  Future<RewardedAd?> _load_rewarded_ad() async {
+  Future<RewardedAd?> _load_rewarded_ad(String adUnitId) async {
     try {
       await _configure_debug_test_device();
 
@@ -134,16 +121,10 @@ class GoogleRewardedAdUtil {
       final InitializationStatus status = await _initialization!;
       _log('SDK 初始化完成，适配器: ${status.adapterStatuses.keys.join(', ')}');
 
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        _log('Android 使用 TopRead 正式广告单元');
-      } else {
-        _log('iOS 未配置正式单元，使用谷歌测试广告单元', type: 'w');
-      }
-
       final Completer<RewardedAd?> completer = Completer<RewardedAd?>();
-      _log('开始加载激励广告，adUnitId=$_ad_unit_id');
+      _log('开始加载激励广告，adUnitId=$adUnitId');
       await RewardedAd.load(
-        adUnitId: _ad_unit_id,
+        adUnitId: adUnitId,
         request: const AdRequest(),
         rewardedAdLoadCallback: RewardedAdLoadCallback(
           onAdLoaded: (RewardedAd ad) {

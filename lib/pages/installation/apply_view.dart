@@ -389,9 +389,7 @@ class _ApplyViewState extends State<ApplyView> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: canSend
-                      ? ColorConstants.themeColor
-                      : Colors.transparent,
+                  color: ColorConstants.themeColor,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: _isSendingCode
@@ -410,9 +408,7 @@ class _ApplyViewState extends State<ApplyView> {
                         style: TextStyle(
                           fontSize: Style.sendCodeFontSize,
                           fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                          color: canSend
-                              ? ColorConstants.lightTextColor
-                              : AuthPageStyle.hintColor(isDark),
+                          color: ColorConstants.lightTextColor,
                         ),
                       ),
               ),

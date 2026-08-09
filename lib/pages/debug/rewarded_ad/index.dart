@@ -1,6 +1,9 @@
+import 'package:app/api/post_request.dart';
+import 'package:app/models/ad_config.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/rewarded_ad_util.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../widgets/debug_action_item.dart';
@@ -21,7 +24,7 @@ class _RewardedAdDebugItemState extends State<RewardedAdDebugItem> {
   bool _isLoading = false;
 
   Future<void> _handleTap() async {
-    _log('用户点击“播放谷歌激励视频广告”按钮');
+    _log('用户点击"播放谷歌激励视频广告"按钮');
     if (!GoogleRewardedAdUtil.instance.is_supported) {
       _log('当前平台不支持激励视频广告', type: 'w');
       showBottomTip('当前设备不是安卓或苹果设备');
@@ -36,12 +39,36 @@ class _RewardedAdDebugItemState extends State<RewardedAdDebugItem> {
     _log('进入广告加载状态');
 
     try {
-      final String ssvAttemptId =
-          'debug_${DateTime.now().microsecondsSinceEpoch}';
+      // 请求广告配置接口。
+      final results = await postRequest<AdConfig>(
+        path: 'ads/short_story_read',
+        showTips: false,
+        fromJson: (json) => AdConfig.fromJson(json),
+      );
+
+      if (!results.status || results.content == null) {
+        _log('获取广告配置失败: ${results.message}', type: 'w');
+        showBottomTip('获取广告配置失败');
+        return;
+      }
+
+      final AdConfig adConfig = results.content!;
+      _log('广告配置: advertisers=${adConfig.advertisers}, adsId=${adConfig.adsId}');
+
+      // advertisers=1 表示谷歌广告，且 ads_id 必须有值。
+      if (adConfig.advertisers != 1 || adConfig.adsId.isEmpty) {
+        _log('广告配置异常: advertisers=${adConfig.advertisers}, adsId=${adConfig.adsId}', type: 'w');
+        showBottomTip(tr('short_story_read.ad_not_available'));
+        return;
+      }
+
+      final String adUnitId = adConfig.adsId;
+      _log('使用广告单元 ID: $adUnitId, uuid=${adConfig.uuid}');
+
       final GoogleRewardedAdResult result = await GoogleRewardedAdUtil.instance
           .show_rewarded_ad(
-            user_id: 'debug_user',
-            custom_data: ssvAttemptId,
+            adUnitId: adUnitId,
+            custom_data: adConfig.uuid,
             can_show: () => mounted,
           );
       if (!mounted) return;

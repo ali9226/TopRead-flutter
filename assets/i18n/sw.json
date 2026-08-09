@@ -653,10 +653,11 @@
     "watch_ad_to_continue": "Tazama tangazo ili kuendelea",
     "ad_load_failed": "Tangazo halikuweza kupakiwa. Jaribu tena baada ya muda mfupi.",
     "ad_show_failed": "Tangazo haliwezi kuchezwa sasa. Jaribu tena baada ya muda mfupi.",
-    "ad_not_completed": "Maliza kutazama tangazo ili kufungua hadithi iliyosalia.",
+    "ad_not_completed": "Tazama tangazo hadi mwisho ili kufungua hadithi nzima.",
     "ad_unsupported": "Matangazo ya zawadi hayatumiki kwenye kifaa hiki.",
     "ad_in_progress": "Tangazo la zawadi tayari linachezwa.",
-    "content_unlocked": "Hadithi yote sasa imefunguliwa."
+    "content_unlocked": "Hadithi nzima imefunguliwa. Anza kusoma!",
+    "ad_not_available": "Hakuna matangazo yanayopatikana kwa sasa. Tafadhali jaribu tena baadaye."
   },
   "comment": {
     "title": "Maoni",

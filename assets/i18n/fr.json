@@ -107,10 +107,6 @@
         "badge": "Recommandé",
         "highlight": "Profiter de l’instant"
       }
-    },
-    "book_list_footer": {
-      "loading_more": "Chargement de plus de contenus",
-      "no_more": "Plus aucun contenu"
     }
   },
   "recharge": {
@@ -118,28 +114,9 @@
     "content": "Recharge"
   },
   "postRequest": {
-    "specific_table_title": "Rejoindre une table précise",
-    "specific_table_hint": "Veuillez saisir au moins l’ID de table ou le mot de passe",
-    "error_need_id_or_password": "Veuillez saisir l’ID de la table ou le mot de passe",
-    "table_buy_in_range": "Plage de buy-in autorisée",
-    "rebuy_title": "Acheter des jetons",
-    "error_buy_in_below": "Le buy-in ne peut pas être inférieur à {min}",
-    "error_buy_in_above": "Le buy-in ne peut pas être supérieur à {max}",
-    "table_id": "ID de table",
-    "optional": "Facultatif",
-    "enter_table_id": "Veuillez saisir l’ID de table",
-    "user_balance": "Solde utilisateur",
-    "password_title": "Mot de passe",
-    "enter_password": "Veuillez saisir le mot de passe",
-    "error_01": "ID de table manquant, veuillez revenir et réessayer",
-    "error_02": "Numéro de siège manquant, veuillez revenir et réessayer",
-    "error_03": "Le buy-in ne peut pas être inférieur à 0,3",
-    "error_04": "Paramètres invalides, veuillez revenir à l’accueil et réessayer",
-    "landscape_input_tips": "La saisie en mode paysage est moins confortable, veuillez passer en mode portrait",
-    "players": "Nombre max de joueurs",
-    "blind": "Blind",
-    "seat_no": "Numéro de siège",
-    "table_info_loading": "Chargement des informations de la table..."
+    "default_error": "Le réseau est anormal. Veuillez vérifier le réseau et réessayer",
+    "error_02": "Erreur de requête réseau, veuillez contacter l'administrateur",
+    "invalid_json": "Échec de l'analyse des données. Veuillez réessayer plus tard"
   },
   "set_blind": {
     "password": "Mot de passe",
@@ -171,11 +148,6 @@
     "error_02": "Le buy-in est inférieur au minimum requis pour ce niveau",
     "error_03": "Solde insuffisant, au moins nécessaire :",
     "error_04": "Solde insuffisant, impossible de créer. Recharger maintenant ?"
-  },
-  "postRequest": {
-    "default_error": "Le réseau est anormal. Veuillez vérifier le réseau et réessayer",
-    "error_02": "Erreur de requête réseau, veuillez contacter l'administrateur",
-    "invalid_json": "Échec de l'analyse des données. Veuillez réessayer plus tard"
   },
   "CustomerService": {
     "title": "Contacter le service client"
@@ -288,7 +260,6 @@
     "delete_account_success_message": "Nous sommes désolés pour ce désagrément. Votre compte a été supprimé. Nous apprécions vos retours et nous efforcerons de nous améliorer !",
     "author_center": "Espace auteurs"
   },
-
   "installation": {
     "title": "Devenir auteur",
     "subtitle": "Rejoignez-nous et commencez votre parcours d'écriture",
@@ -334,7 +305,6 @@
     "send_code_success": "Code envoyé, vérifiez votre e-mail",
     "send_code_failed": "Échec de l'envoi, veuillez réessayer"
   },
-
   "customer_service_sheet": {
     "title": "Support en ligne",
     "description": "Si vous rencontrez des problèmes lors de l'utilisation de l'application, veuillez contacter notre support en ligne. Nous sommes heureux de vous aider.",
@@ -344,7 +314,6 @@
     "send": "Envoyer",
     "photo_permission_hint": "L'accès aux photos est nécessaire pour envoyer des images. Veuillez l'activer dans les paramètres."
   },
-
   "message": {
     "title": "Messages",
     "subtitle": "Centre de messages",
@@ -712,10 +681,11 @@
     "watch_ad_to_continue": "Voir une pub pour continuer",
     "ad_load_failed": "Impossible de charger la publicité. Réessayez dans un instant.",
     "ad_show_failed": "Impossible de lire la publicité pour le moment. Réessayez bientôt.",
-    "ad_not_completed": "Regardez la publicité jusqu’au bout pour débloquer la suite.",
+    "ad_not_completed": "Regardez la publicité jusqu'à la fin pour débloquer l'histoire complète.",
     "ad_unsupported": "Les publicités récompensées ne sont pas prises en charge sur cet appareil.",
     "ad_in_progress": "Une publicité récompensée est déjà en cours.",
-    "content_unlocked": "La suite de l’histoire est débloquée."
+    "content_unlocked": "Histoire complète débloquée. Bonne lecture !",
+    "ad_not_available": "Aucune publicité disponible pour le moment. Veuillez réessayer plus tard."
   },
   "comment": {
     "title": "Commentaires",
