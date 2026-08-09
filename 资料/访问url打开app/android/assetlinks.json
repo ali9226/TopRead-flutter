@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.topread.novel",
+      "sha256_cert_fingerprints": [
+        "B8:AF:CE:67:35:98:EB:95:DB:C3:9C:F3:FD:62:4E:B8:6C:94:C2:E9:C6:73:10:31:49:67:31:A9:94:73:23:5B",
+        "A2:46:35:0A:96:E0:86:38:81:3D:8D:DE:D8:CF:7A:7F:4D:97:7A:AE:3D:C3:54:FC:1D:D9:DF:3D:8C:52:0A:40"
+      ]
+    }
+  }
+]

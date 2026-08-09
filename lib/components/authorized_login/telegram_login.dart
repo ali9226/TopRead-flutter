@@ -5,7 +5,6 @@ import 'package:app/api/results_type.dart';
 import 'package:app/config/constant.dart';
 import 'package:app/fcm/fcm_auth.dart';
 import 'package:app/models/login.dart';
-import 'package:app/stores/authorized_login_store.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/dialog/pop_up_input.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
@@ -23,15 +22,6 @@ import 'package:telegram_login_flutter/telegram_login_flutter.dart';
 Future<void> telegram_login(BuildContext context) async {
   const String telegramUrl = "https://novel_telegram_login.kingbet.co.tz";
   const String botId = "8776242482";
-  final AuthorizedLoginStore authorized_login_store =
-      Get.find<AuthorizedLoginStore>();
-
-  if (authorized_login_store.loading.value) {
-    logUtil(msg: "Telegram 授权登录正在进行中，请勿重复操作");
-    showBottomTip(context.tr('AuthorizedLogin.telegram_auth_ongoing'));
-    return;
-  }
-
   final Uri? telegram_auth_url = Uri.tryParse(telegramUrl);
   if (telegram_auth_url == null ||
       telegram_auth_url.scheme.isEmpty ||
@@ -56,7 +46,9 @@ Future<void> telegram_login(BuildContext context) async {
         return false;
       }
       if (!trimmed.startsWith('+')) {
-        showBottomTip(context.tr('AuthorizedLogin.telegram_phone_code_required'));
+        showBottomTip(
+          context.tr('AuthorizedLogin.telegram_phone_code_required'),
+        );
         return false;
       }
       phoneNumber = trimmed;
@@ -68,9 +60,6 @@ Future<void> telegram_login(BuildContext context) async {
   if (phoneNumber == null) {
     return;
   }
-
-  authorized_login_store.loading.value = true;
-  authorized_login_store.loading_platform.value = 'telegram';
 
   try {
     logUtil(msg: "开始 Telegram 授权登录, 手机号: $phoneNumber");
@@ -100,6 +89,10 @@ Future<void> telegram_login(BuildContext context) async {
       await Future.delayed(const Duration(seconds: 2));
     }
 
+    if (!context.mounted) {
+      return;
+    }
+
     if (telegram_user == null) {
       logUtil(msg: "Telegram 授权超时或取消");
       showBottomTip(context.tr('AuthorizedLogin.telegram_auth_timeout'));
@@ -114,10 +107,9 @@ Future<void> telegram_login(BuildContext context) async {
     );
   } catch (error) {
     logUtil(msg: "Telegram 授权登录失败: $error", type: 'e');
-    showBottomTip(context.tr('AuthorizedLogin.telegram_auth_failed'));
-  } finally {
-    authorized_login_store.loading.value = false;
-    authorized_login_store.loading_platform.value = '';
+    if (context.mounted) {
+      showBottomTip(context.tr('AuthorizedLogin.telegram_auth_failed'));
+    }
   }
 }
 
@@ -136,6 +128,10 @@ Future<void> _request_telegram_backend_auth({
     },
     fromJson: (Map<String, dynamic> json) => Login.fromJson(json),
   );
+
+  if (!context.mounted) {
+    return;
+  }
 
   if (!results.status || results.content == null) {
     return;
@@ -163,7 +159,9 @@ String _resolve_telegram_auth_base_url(Uri telegram_auth_url) {
 }
 
 String _resolve_telegram_auth_path(Uri telegram_auth_url) {
-  final String path = telegram_auth_url.path.isEmpty ? '/' : telegram_auth_url.path;
+  final String path = telegram_auth_url.path.isEmpty
+      ? '/'
+      : telegram_auth_url.path;
   if (telegram_auth_url.query.isEmpty) {
     return path;
   }

@@ -30,18 +30,23 @@ class AuthSubmitButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isAuthLoading =
-        Get.find<AuthorizedLoginStore>().loading.value;
+    final AuthorizedLoginStore authorized_login_store =
+        Get.find<AuthorizedLoginStore>();
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return CommonSubmitButton(
-      title: isLoginMode
-          ? context.tr('UserInfo.login')
-          : context.tr('login.register_now'),
-      isDark: isDark,
-      loading: loading || isAuthLoading,
-      horizontalMargin: 20,
-      onTap: onTap,
-    );
+    return Obx(() {
+      final bool is_authentication_loading =
+          authorized_login_store.loading.value;
+
+      return CommonSubmitButton(
+        title: isLoginMode
+            ? context.tr('UserInfo.login')
+            : context.tr('login.register_now'),
+        isDark: isDark,
+        loading: loading || is_authentication_loading,
+        horizontalMargin: 20,
+        onTap: is_authentication_loading ? null : onTap,
+      );
+    });
   }
 }

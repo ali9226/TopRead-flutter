@@ -19,6 +19,14 @@
 				<string>com.googleusercontent.apps.327330284001-9lka51couarj3d2a8f6hjgeehkho0glu</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>topread</string>
+			</array>
+		</dict>
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>

@@ -35,6 +35,12 @@ class AuthorizedLoginStyle {
   /// 客服项纵向间距。
   static const double item_vertical_spacing = 12;
 
+  /// 其他认证流程进行时，非当前授权入口的透明度。
+  static const double disabled_item_opacity = 0.38;
+
+  /// 授权入口启用状态切换动画时长。
+  static const Duration item_state_duration = Duration(milliseconds: 180);
+
   /// 图标和标题之间的间距。
   static const double icon_bottom_spacing = 4;
 

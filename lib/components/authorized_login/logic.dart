@@ -60,10 +60,13 @@ class Logic {
   /// 处理 Google 登录完整流程。
   ///
   /// 通过 Firebase 进行 Google 授权，成功后请求后端接口完成登录。
-  Future<void> _handle_google_login(AuthorizedLoginStore authorized_login_store) async {
-    /// 设置加载状态，防止重复点击。
-    authorized_login_store.loading.value = true;
-    authorized_login_store.loading_platform.value = 'google';
+  Future<void> _handle_google_login(
+    AuthorizedLoginStore authorized_login_store,
+  ) async {
+    /// 占用全局认证锁，防止重复点击或并发启动其他认证流程。
+    if (!authorized_login_store.try_start_authentication('google')) {
+      return;
+    }
 
     try {
       /// 通过 Firebase 获取 Google 授权信息。
@@ -127,33 +130,37 @@ class Logic {
       showBottomTip(tr('AuthorizedLogin.google_auth_failed'));
     } finally {
       /// 重置加载状态。
-      authorized_login_store.loading.value = false;
-      authorized_login_store.loading_platform.value = '';
+      authorized_login_store.finish_authentication('google');
     }
   }
 
   /// 处理 Telegram 登录完整流程。
-  Future<void> _handle_telegram_login(AuthorizedLoginStore authorized_login_store) async {
-    /// 设置加载状态，防止重复点击。
-    authorized_login_store.loading.value = true;
-    authorized_login_store.loading_platform.value = 'telegram';
+  Future<void> _handle_telegram_login(
+    AuthorizedLoginStore authorized_login_store,
+  ) async {
+    /// 占用全局认证锁，防止重复点击或并发启动其他认证流程。
+    if (!authorized_login_store.try_start_authentication('telegram')) {
+      return;
+    }
 
     try {
       await telegram_login(context);
     } finally {
       /// 重置加载状态。
-      authorized_login_store.loading.value = false;
-      authorized_login_store.loading_platform.value = '';
+      authorized_login_store.finish_authentication('telegram');
     }
   }
 
   /// 处理 Apple 登录完整流程。
   ///
   /// 通过 Firebase 进行 Apple 授权，成功后请求后端接口完成登录。
-  Future<void> _handle_apple_login(AuthorizedLoginStore authorized_login_store) async {
-    /// 设置加载状态，防止重复点击。
-    authorized_login_store.loading.value = true;
-    authorized_login_store.loading_platform.value = 'apple';
+  Future<void> _handle_apple_login(
+    AuthorizedLoginStore authorized_login_store,
+  ) async {
+    /// 占用全局认证锁，防止重复点击或并发启动其他认证流程。
+    if (!authorized_login_store.try_start_authentication('apple')) {
+      return;
+    }
 
     try {
       /// 通过 Firebase 获取 Apple 授权信息。
@@ -175,7 +182,6 @@ class Logic {
         'uuid_type': 3,
         'note': 'firebase Apple授权登录',
       };
-
 
       /// 请求后端 Apple 登录接口。
       final ResultsType<Login> results = await postRequest<Login>(
@@ -212,8 +218,7 @@ class Logic {
       showBottomTip(tr('AuthorizedLogin.apple_auth_failed'));
     } finally {
       /// 重置加载状态。
-      authorized_login_store.loading.value = false;
-      authorized_login_store.loading_platform.value = '';
+      authorized_login_store.finish_authentication('apple');
     }
   }
 

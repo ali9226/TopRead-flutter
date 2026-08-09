@@ -12,7 +12,28 @@
           "package_name": "com.topread.novel"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "327330284001-dlhs32alrjm85vjcbpk9rq9h86229obt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.topread.novel",
+            "certificate_hash": "754317f22ebe83eb08fd0e8eaba7056a40d58a30"
+          }
+        },
+        {
+          "client_id": "327330284001-o2pbiq0b6m8k5d6namnv5p147hd7vgrc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.topread.novel",
+            "certificate_hash": "7b7606f7eb9b54061d3ea2bba251b7631cec04d6"
+          }
+        },
+        {
+          "client_id": "327330284001-ct5o56bftm5a4ekakrjqoba14dpdofee.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCZdSZecWObdiRRHvFtu9_Zw1oQWy_ilps"
@@ -20,7 +41,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "327330284001-ct5o56bftm5a4ekakrjqoba14dpdofee.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "327330284001-9lka51couarj3d2a8f6hjgeehkho0glu.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.topread.novel"
+              }
+            }
+          ]
         }
       }
     }

@@ -7,8 +7,10 @@ import 'package:app/components/auth_page/index.dart';
 import 'package:app/components/auth_page/style.dart';
 import 'package:app/components/auth_form_widgets/index.dart';
 import 'package:app/components/authorized_login/index.dart';
+import 'package:app/stores/authorized_login_store.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/util/router/web_history.dart';
+import 'package:get/get.dart';
 
 import 'logic.dart';
 import 'style.dart';
@@ -27,6 +29,10 @@ class Register extends StatefulWidget {
 class _RegisterState extends State<Register> {
   /// 提交按钮 loading 状态。
   bool loading = false;
+
+  /// 登录、注册及第三方授权共用的认证互斥状态。
+  final AuthorizedLoginStore authorized_login_store =
+      Get.find<AuthorizedLoginStore>();
 
   /// 注册页逻辑层。
   late final Logic logic;
@@ -192,26 +198,31 @@ class _RegisterState extends State<Register> {
     /// 提交前收起键盘。
     FocusScope.of(context).unfocus();
 
-    /// loading 状态下不重复提交。
-    if (loading) return;
+    /// 占用全局认证锁，阻止第三方授权与账号注册并发执行。
+    if (!authorized_login_store.try_start_authentication('register')) return;
 
     setState(() {
       /// 打开 loading。
       loading = true;
     });
 
-    /// 让 loading 先渲染，再执行异步注册。
-    await Future<void>.delayed(Duration.zero);
-    final bool registerStatus = await logic.registerFun();
-
-    if (!mounted) return;
-    setState(() {
-      /// 请求结束后关闭 loading。
-      loading = false;
-    });
+    bool registerStatus = false;
+    try {
+      /// 让 loading 先渲染，再执行异步注册。
+      await Future<void>.delayed(Duration.zero);
+      registerStatus = await logic.registerFun();
+    } finally {
+      authorized_login_store.finish_authentication('register');
+      if (mounted) {
+        setState(() {
+          /// 请求结束后关闭 loading。
+          loading = false;
+        });
+      }
+    }
 
     /// 注册失败时逻辑层内部已提示。
-    if (!registerStatus) return;
+    if (!mounted || !registerStatus) return;
 
     /// 注册成功后进入独立的兴趣偏好引导，并清理注册页路由历史。
     routerUtil(path: '/registration_interest_preference', type: 'go');
@@ -222,26 +233,31 @@ class _RegisterState extends State<Register> {
     /// 提交前收起键盘。
     FocusScope.of(context).unfocus();
 
-    /// loading 状态下不重复提交。
-    if (loading) return;
+    /// 占用全局认证锁，阻止第三方授权与账号登录并发执行。
+    if (!authorized_login_store.try_start_authentication('login')) return;
 
     setState(() {
       /// 打开 loading。
       loading = true;
     });
 
-    /// 让 loading 先渲染，再执行异步登录。
-    await Future<void>.delayed(Duration.zero);
-    final bool loginStatus = await logic.login();
-
-    if (!mounted) return;
-    setState(() {
-      /// 请求结束后关闭 loading。
-      loading = false;
-    });
+    bool loginStatus = false;
+    try {
+      /// 让 loading 先渲染，再执行异步登录。
+      await Future<void>.delayed(Duration.zero);
+      loginStatus = await logic.login();
+    } finally {
+      authorized_login_store.finish_authentication('login');
+      if (mounted) {
+        setState(() {
+          /// 请求结束后关闭 loading。
+          loading = false;
+        });
+      }
+    }
 
     /// 登录失败时逻辑层内部已提示。
-    if (!loginStatus) return;
+    if (!mounted || !loginStatus) return;
 
     /// 登录成功后跳转首页。
     routerUtil(path: '/', type: 'replace');
@@ -249,6 +265,8 @@ class _RegisterState extends State<Register> {
 
   /// 注册页底部跳转回登录页。
   void _goToLogin() {
+    if (authorized_login_store.loading.value) return;
+
     if (kIsWeb) {
       /// Web 端直接替换浏览器地址。
       browserReplaceState('/login');
@@ -261,6 +279,8 @@ class _RegisterState extends State<Register> {
 
   /// 切换回注册模式（清空账号、重置状态、关闭输入法）。
   void _switchToRegisterMode() {
+    if (authorized_login_store.loading.value) return;
+
     /// 关闭输入法，取消所有输入框焦点。
     FocusScope.of(context).unfocus();
 

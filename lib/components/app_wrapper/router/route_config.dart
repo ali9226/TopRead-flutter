@@ -53,6 +53,8 @@ class RouteConfig {
   static GoRouter createRouter() {
     return GoRouter(
       initialLocation: '/',
+      // 保留平台传入的 Deep Link，由 GoRouter 作为唯一路由入口。
+      overridePlatformDefaultLocation: false,
       routes: [
         ShellRoute(
           builder: (context, state, child) {

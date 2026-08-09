@@ -63,6 +63,25 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- App Links: https://www.read.top 和 https://read.top 的链接直接打开 App -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="www.read.top"/>
+                <data
+                    android:scheme="https"
+                    android:host="read.top"/>
+            </intent-filter>
+            <!-- 自定义 Scheme: topread:// 跳转，不依赖系统验证 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="topread"/>
+            </intent-filter>
         </activity>
 
         <meta-data

@@ -111,46 +111,63 @@ class _AuthorizedLoginViewState extends State<AuthorizedLoginView> {
 
   /// 构建单个授权登录入口。
   Widget _build_authorized_login_item(Rotation item) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => logic.handle_authorized_login_tap(item),
-      child: SizedBox(
-        width: AuthorizedLoginStyle.item_width,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            _build_authorized_login_icon(item),
-            const SizedBox(height: AuthorizedLoginStyle.icon_bottom_spacing),
-            Text(
-              logic.get_authorized_login_title(item),
-              style: TextStyle(
-                color: device_info.dark.value
-                    ? ColorConstants.nightTextColor
-                    : ColorConstants.hintColor,
-                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                fontSize: AuthorizedLoginStyle.item_title_font_size,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: AuthorizedLoginStyle.item_title_max_lines,
-              overflow: TextOverflow.ellipsis,
+    final String item_title = item.title.trim().toLowerCase();
+    final bool is_authentication_loading = authorized_login_store.loading.value;
+    final bool is_current_loading_item =
+        is_authentication_loading &&
+        authorized_login_store.loading_platform.value == item_title;
+
+    return Semantics(
+      button: true,
+      enabled: !is_authentication_loading,
+      child: AnimatedOpacity(
+        duration: AuthorizedLoginStyle.item_state_duration,
+        opacity: is_authentication_loading && !is_current_loading_item
+            ? AuthorizedLoginStyle.disabled_item_opacity
+            : 1,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: is_authentication_loading
+              ? null
+              : () => logic.handle_authorized_login_tap(item),
+          child: SizedBox(
+            width: AuthorizedLoginStyle.item_width,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _build_authorized_login_icon(
+                  item,
+                  is_current_loading_item: is_current_loading_item,
+                ),
+                const SizedBox(
+                  height: AuthorizedLoginStyle.icon_bottom_spacing,
+                ),
+                Text(
+                  logic.get_authorized_login_title(item),
+                  style: TextStyle(
+                    color: device_info.dark.value
+                        ? ColorConstants.nightTextColor
+                        : ColorConstants.hintColor,
+                    fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                    fontSize: AuthorizedLoginStyle.item_title_font_size,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: AuthorizedLoginStyle.item_title_max_lines,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   /// 根据接口字段决定展示网络图还是本地 svg。
-  Widget _build_authorized_login_icon(Rotation item) {
-    final String item_title = item.title.trim().toLowerCase();
-    final String loading_platform =
-        authorized_login_store.loading_platform.value;
-    final bool is_current_loading_item =
-        authorized_login_store.loading.value &&
-        (loading_platform.isEmpty
-            ? item_title == 'google'
-            : loading_platform == item_title);
-
+  Widget _build_authorized_login_icon(
+    Rotation item, {
+    required bool is_current_loading_item,
+  }) {
     // 如果正在加载且是当前点击的项，展示转圈。
     if (is_current_loading_item) {
       return Container(

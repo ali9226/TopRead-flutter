@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:app/components/auth_form_widgets/auth_top_bar.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
+import 'package:app/stores/authorized_login_store.dart';
 import 'package:app/stores/device_info.dart';
 
 import 'style.dart';
@@ -186,7 +187,10 @@ class _AuthTextFieldState extends State<AuthTextField> {
               controller: _controller,
               focusNode: _focusNode,
               obscureText: widget.password && _obscureText,
-              style: TextStyle(fontSize: 16, fontWeight: FontConfig.adjustedWeight(FontWeight.w400)),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+              ),
               cursorColor: ColorConstants.themeColor,
               decoration: InputDecoration(
                 hintText: widget.hintText,
@@ -390,38 +394,54 @@ class AuthFooterAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = Get.find<DeviceInfo>().dark.value;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          promptText,
-          style: TextStyle(
-            fontSize: AuthPageStyle.footerPromptFontSize,
-            color: ColorConstants.hintColor,
-            fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-          ),
-        ),
-        const SizedBox(width: 8),
-        GestureDetector(
-          onTap: onTap,
-          child: Text(
-            actionText,
+    final DeviceInfo deviceInfo = Get.find<DeviceInfo>();
+    final AuthorizedLoginStore authorizedLoginStore =
+        Get.find<AuthorizedLoginStore>();
+
+    return Obx(() {
+      final bool isDark = deviceInfo.dark.value;
+      final bool enabled = !authorizedLoginStore.loading.value;
+
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            promptText,
             style: TextStyle(
               fontSize: AuthPageStyle.footerPromptFontSize,
-              color: isDark
-                  ? ColorConstants.themeColor
-                  : ColorConstants.lightTextColor,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-              decoration: TextDecoration.underline,
-              decorationColor: isDark
-                  ? ColorConstants.themeColor
-                  : ColorConstants.lightTextColor,
+              color: ColorConstants.hintColor,
+              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
             ),
           ),
-        ),
-      ],
-    );
+          const SizedBox(width: 8),
+          Semantics(
+            button: true,
+            enabled: enabled,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 180),
+              opacity: enabled ? 1 : 0.38,
+              child: GestureDetector(
+                onTap: enabled ? onTap : null,
+                child: Text(
+                  actionText,
+                  style: TextStyle(
+                    fontSize: AuthPageStyle.footerPromptFontSize,
+                    color: isDark
+                        ? ColorConstants.themeColor
+                        : ColorConstants.lightTextColor,
+                    fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                    decoration: TextDecoration.underline,
+                    decorationColor: isDark
+                        ? ColorConstants.themeColor
+                        : ColorConstants.lightTextColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    });
   }
 }
 
