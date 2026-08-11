@@ -1,0 +1,4 @@
+"NSCameraUsageDescription" = "TopRead 需要使用相机拍摄头像，或向在线客服发送照片。";
+"NSPhotoLibraryUsageDescription" = "TopRead 需要访问相册以选择头像、向在线客服发送照片，以及保存你生成的小说分享卡片。";
+"NSPhotoLibraryAddUsageDescription" = "TopRead 需要将你生成的小说分享卡片保存到系统相册。";
+"NSUserTrackingUsageDescription" = "TopRead 会使用你的设备标识符展示个性化广告并衡量广告效果。";

@@ -1,0 +1,4 @@
+"NSCameraUsageDescription" = "TopRead uses the camera to take a profile photo or send a photo to customer support.";
+"NSPhotoLibraryUsageDescription" = "TopRead accesses your photo library to choose a profile photo, send photos to customer support, and save novel sharing cards.";
+"NSPhotoLibraryAddUsageDescription" = "TopRead saves the novel sharing cards you create to your photo library.";
+"NSUserTrackingUsageDescription" = "TopRead uses your device identifier to deliver personalized ads and measure their performance.";
