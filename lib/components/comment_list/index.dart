@@ -16,6 +16,7 @@ import 'package:app/components/comment_list/widgets/comment_input.dart';
 import 'package:app/components/comment_list/widgets/comment_skeleton.dart';
 import 'package:app/components/no_internet/index.dart';
 import 'package:app/components/login_required_dialog/index.dart';
+import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/api/novel_comment.dart';
 
@@ -88,9 +89,7 @@ Future<int?> showCommentSheet({
     requestFocus: false,
     backgroundColor: Colors.transparent,
     clipBehavior: Clip.none,
-    constraints: BoxConstraints(
-      maxWidth: MediaQuery.of(context).size.width,
-    ),
+    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
     barrierColor: Colors.black.withValues(
       alpha: CommentListStyle.sheet_barrier_alpha,
     ),
@@ -719,6 +718,9 @@ class _CommentSheetState extends State<CommentSheet>
     _has_new_comments = true;
     _reply_target_context = null;
     _set_reply_target(null);
+
+    // 评论成功落库后才申请系统通知权限，便于用户接收回复。
+    unawaited(NotificationPermissionRequest.request_after_comment_published());
     return true;
   }
 

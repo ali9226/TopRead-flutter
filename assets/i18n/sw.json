@@ -652,6 +652,7 @@
     "locked_remaining_words": "Maneno {count} yamesalia — fungua hadithi yote",
     "watch_ad_to_continue": "Tazama tangazo ili kuendelea",
     "ad_load_failed": "Tangazo halikuweza kupakiwa. Jaribu tena baada ya muda mfupi.",
+    "ad_consent_unavailable": "Kamilisha chaguo zako za faragha ya matangazo, kisha ujaribu tena.",
     "ad_show_failed": "Tangazo haliwezi kuchezwa sasa. Jaribu tena baada ya muda mfupi.",
     "ad_not_completed": "Tazama tangazo hadi mwisho ili kufungua hadithi nzima.",
     "ad_unsupported": "Matangazo ya zawadi hayatumiki kwenye kifaa hiki.",
@@ -757,6 +758,8 @@
     "rate_us": "Tathimini",
     "user_agreement": "Masharti ya Mtumiaji",
     "privacy_policy": "Sera ya Faragha",
+    "ad_privacy_options": "Chaguo za Faragha ya Matangazo",
+    "ad_privacy_options_unavailable": "Chaguo za faragha ya matangazo hazipatikani kwa sasa. Jaribu tena baadaye.",
     "version_update": "Sasisha Toleo"
   }
 }

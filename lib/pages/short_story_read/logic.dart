@@ -11,6 +11,7 @@ import 'package:app/api/post_request.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/models/short_story_read_data.dart';
 import 'package:app/models/short_story_item.dart';
+import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/stores/short_story_catalog_store.dart';
 import 'package:app/util/device/save_body_font_size.dart';
 
@@ -1003,6 +1004,11 @@ class ShortStoryReadLogic {
         );
         story_data.value = server_data;
         _write_story_detail_cache(story_id, server_data);
+      }
+
+      // 只在服务端确认短篇小说已加入收藏后申请系统通知权限。
+      if (server_status) {
+        unawaited(NotificationPermissionRequest.request_after_novel_favorite());
       }
       return story_data.value?.is_favorited;
     } catch (_) {

@@ -1,8 +1,11 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/api/post_request.dart';
+import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/log_util.dart';
 
@@ -102,10 +105,14 @@ class Logic {
         showTips: false,
       );
 
-      return {
-        'success': results.status,
-        'message': results.message,
-      };
+      // 创作者申请提交成功后申请系统通知权限，用于后续审核结果通知。
+      if (results.status) {
+        unawaited(
+          NotificationPermissionRequest.request_after_creator_application(),
+        );
+      }
+
+      return {'success': results.status, 'message': results.message};
     } catch (e) {
       logUtil(msg: '提交作家申请失败: $e', type: 'e');
       return {

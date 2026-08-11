@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:app/api/post_request.dart';
 import 'package:app/config/constant.dart';
 import 'package:app/models/login.dart';
+import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/services/post_login_sync_service.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/dialog/aes_encryption.dart';
@@ -157,6 +160,9 @@ class Logic {
     // 登录后同步属于后台可恢复任务，不阻塞页面完成登录。
     PostLoginSyncService.start();
 
+    // 用户主动登录成功后，才首次请求系统通知权限。
+    unawaited(NotificationPermissionRequest.request_after_login());
+
     showBottomTip(easy.tr('login.success_01'));
     return true;
   }
@@ -198,6 +204,9 @@ class Logic {
 
     // 注册后同步属于后台可恢复任务，不阻塞页面完成注册。
     PostLoginSyncService.start();
+
+    // 注册成功后用户已进入登录状态，按登录场景请求系统通知权限。
+    unawaited(NotificationPermissionRequest.request_after_login());
 
     showBottomTip(easy.tr('register.success_01'));
     return true;

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:app/permission_request/admob_consent_permission_request.dart';
+import 'package:app/permission_request/app_tracking_transparency_permission_request.dart';
 import 'package:app/util/log_util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -14,6 +16,9 @@ enum GoogleRewardedAdResult {
 
   /// 广告加载失败。
   load_failed,
+
+  /// UMP 尚未允许请求广告，或必要的隐私同意流程未能完成。
+  consent_unavailable,
 
   /// 广告已加载，但全屏展示失败。
   show_failed,
@@ -55,6 +60,7 @@ class GoogleRewardedAdUtil {
   bool _is_running = false;
 
   /// 当前平台是否支持 Google Mobile Ads。
+  ///
   bool get is_supported {
     if (kIsWeb) return false;
     return defaultTargetPlatform == TargetPlatform.android ||
@@ -85,6 +91,16 @@ class GoogleRewardedAdUtil {
     _is_running = true;
     RewardedAd? rewarded_ad;
     try {
+      // 先完成 UMP 必要表单；未获得广告请求许可时不得初始化广告 SDK。
+      final bool can_request_ads =
+          await AdMobConsentPermissionRequest.request_before_ad();
+      if (!can_request_ads) {
+        _log('UMP 未允许请求广告，本次不初始化广告 SDK', type: 'w');
+        return GoogleRewardedAdResult.consent_unavailable;
+      }
+
+      // UMP 完成后再检查 ATT，并保证该检查仍早于广告 SDK 初始化。
+      await AppTrackingTransparencyPermissionRequest.request_before_rewarded_ad();
       rewarded_ad = await _load_rewarded_ad(adUnitId);
       if (rewarded_ad == null) {
         return GoogleRewardedAdResult.load_failed;

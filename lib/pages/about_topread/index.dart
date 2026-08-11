@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart' as easy;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
@@ -8,10 +12,12 @@ import 'package:app/config/color_config.dart';
 import 'package:app/config/constant.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/models/language_info.dart';
+import 'package:app/permission_request/admob_consent_permission_request.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/language_store.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/dialog/show_message.dart';
+import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -38,10 +44,17 @@ class _AboutTopReadState extends State<AboutTopRead> {
   /// 页面逻辑层。
   late Logic logic;
 
+  /// 当前地区法规是否要求展示可随时访问的广告隐私选项入口。
+  bool _show_ad_privacy_options = false;
+
+  /// 是否正在展示 UMP 隐私选项表单，防止用户重复点击。
+  bool _is_opening_ad_privacy_options = false;
+
   @override
   void initState() {
     super.initState();
     logic = Logic(context);
+    unawaited(_refresh_ad_privacy_options_requirement());
   }
 
   @override
@@ -49,7 +62,9 @@ class _AboutTopReadState extends State<AboutTopRead> {
     return Obx(() {
       final bool isDark = deviceInfo.dark.value;
       final bool isLoggedIn = userInformation.isLoggedIn.value;
-      final bool showDebug = isLoggedIn && userInformation.userInfo.value?.debug == 2;
+      final bool showDebug =
+          isLoggedIn && userInformation.userInfo.value?.debug == 2;
+      final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
       /// 背景色：与 user_info 页面保持一致。
       final Color bgColor = isDark
@@ -135,14 +150,15 @@ class _AboutTopReadState extends State<AboutTopRead> {
               /// 操作列表（无外框）。
               Column(
                 children: [
-                  _buildListItem(
-                    title: easy.tr('AboutTopRead.rate_us'),
-                    textColor: titleColor,
-                    subColor: subColor,
-                    dividerColor: dividerColor,
-                    showDivider: false,
-                    onTap: () => _openRateUs(),
-                  ),
+                  if (!isIOS)
+                    _buildListItem(
+                      title: easy.tr('AboutTopRead.rate_us'),
+                      textColor: titleColor,
+                      subColor: subColor,
+                      dividerColor: dividerColor,
+                      showDivider: false,
+                      onTap: () => _openRateUs(),
+                    ),
                   _buildListItem(
                     title: easy.tr('AboutTopRead.user_agreement'),
                     textColor: titleColor,
@@ -163,6 +179,17 @@ class _AboutTopReadState extends State<AboutTopRead> {
                       routerUtil(path: '/image_text?type=61');
                     },
                   ),
+                  if (_show_ad_privacy_options)
+                    _buildListItem(
+                      title: easy.tr('AboutTopRead.ad_privacy_options'),
+                      textColor: titleColor,
+                      subColor: subColor,
+                      dividerColor: dividerColor,
+                      showDivider: false,
+                      onTap: () {
+                        unawaited(_open_ad_privacy_options());
+                      },
+                    ),
                   _buildListItem(
                     title: easy.tr('AboutTopRead.version_update'),
                     textColor: titleColor,
@@ -209,16 +236,47 @@ class _AboutTopReadState extends State<AboutTopRead> {
 
   /// 打开应用商店评分页面。
   Future<void> _openRateUs() async {
-    final Uri uri = Uri.parse('https://play.google.com/store/apps/details?id=com.topread.novel');
+    final Uri uri = Uri.parse(
+      'https://play.google.com/store/apps/details?id=com.topread.novel',
+    );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  /// 刷新 UMP 对“隐私选项”入口的法规要求，并仅在需要时展示列表项。
+  Future<void> _refresh_ad_privacy_options_requirement() async {
+    final bool is_required =
+        await AdMobConsentPermissionRequest.is_privacy_options_required();
+    if (!mounted || _show_ad_privacy_options == is_required) return;
+
+    setState(() => _show_ad_privacy_options = is_required);
+  }
+
+  /// 展示 UMP 隐私选项表单，让用户修改或撤回广告隐私选择。
+  Future<void> _open_ad_privacy_options() async {
+    if (_is_opening_ad_privacy_options) return;
+
+    setState(() => _is_opening_ad_privacy_options = true);
+    try {
+      final bool success =
+          await AdMobConsentPermissionRequest.show_privacy_options_form();
+      if (!success && mounted) {
+        showBottomTip(easy.tr('AboutTopRead.ad_privacy_options_unavailable'));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _is_opening_ad_privacy_options = false);
+      }
+      unawaited(_refresh_ad_privacy_options_requirement());
     }
   }
 
   /// 处理删除账户操作。
   void _handleDeleteAccount() {
     showMessage(
-      message: '${easy.tr('UserInfo.delete_account_confirm_title')}\n\n${easy.tr('UserInfo.delete_account_confirm_message')}',
+      message:
+          '${easy.tr('UserInfo.delete_account_confirm_title')}\n\n${easy.tr('UserInfo.delete_account_confirm_message')}',
       leftButtonText: easy.tr('UserInfo.delete_account_cancel_button'),
       rightButtonText: easy.tr('UserInfo.delete_account_confirm_button'),
       rightButtonColor: ColorConstants.dangerColor,
@@ -289,11 +347,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
           ),
         ),
         if (showDivider)
-          Divider(
-            height: 0.5,
-            thickness: 0.5,
-            color: dividerColor,
-          ),
+          Divider(height: 0.5, thickness: 0.5, color: dividerColor),
       ],
     );
   }
@@ -301,11 +355,12 @@ class _AboutTopReadState extends State<AboutTopRead> {
   /// 构建口号组件（无固定高度限制）。
   Widget _buildSlogan(bool isDark, Color textColor) {
     final LanguageStore languageStore = Get.find<LanguageStore>();
-    final String localeCode = easy.EasyLocalization.of(context)?.locale.languageCode ?? 'zh';
-    final LanguageInfo? currentLanguageInfo =
-        languageStore.find_supported_language_by_code(localeCode);
-    final String sloganText = (currentLanguageInfo != null &&
-            currentLanguageInfo.remark.isNotEmpty)
+    final String localeCode =
+        easy.EasyLocalization.of(context)?.locale.languageCode ?? 'zh';
+    final LanguageInfo? currentLanguageInfo = languageStore
+        .find_supported_language_by_code(localeCode);
+    final String sloganText =
+        (currentLanguageInfo != null && currentLanguageInfo.remark.isNotEmpty)
         ? currentLanguageInfo.remark
         : easy.tr('login.slogan');
 

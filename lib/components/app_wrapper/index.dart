@@ -14,9 +14,10 @@ import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/components/app_wrapper/utils/get_app_title.dart';
 import 'package:app/components/app_wrapper/utils/route_page_warm_up.dart';
 import 'package:app/components/app_wrapper/utils/route_asset_warm_up.dart';
-import 'package:app/components/app_wrapper/utils/notification_permission.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/permission_request/admob_consent_permission_request.dart';
+import 'package:app/permission_request/ios_app_start_permission_request.dart';
 import 'package:app/stores/bottom_navigation_info.dart';
 import 'package:app/stores/device_info.dart';
 
@@ -70,7 +71,9 @@ class _AppWrapperState extends State<AppWrapper> {
     _router.routerDelegate.addListener(_handleRouterDelegateChanged);
 
     // 注册统一后退处理器。
-    AppRouter.setBackHandler(() => BackHandler.handleBack(bottomNavigationInfo));
+    AppRouter.setBackHandler(
+      () => BackHandler.handleBack(bottomNavigationInfo),
+    );
 
     // 系统返回统一走 Router 级别分发器。
     _backButtonDispatcher = AppBackButtonDispatcher(
@@ -87,6 +90,13 @@ class _AppWrapperState extends State<AppWrapper> {
     // 第一帧渲染完成后再做自动登录。
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+
+      // iOS 启动权限顺序：首次启动跳过；后续启动先通知，确认无通知弹窗后再检查 ATT。
+      unawaited(IosAppStartPermissionRequest.request_after_first_frame());
+
+      // Android/iOS 每次冷启动只刷新 UMP 同意状态；必要表单延迟到用户请求广告时展示。
+      unawaited(AdMobConsentPermissionRequest.update_on_app_start());
+
       unawaited(RouteAssetWarmUp.warmUpAfterFirstFrame(context));
       unawaited(
         Future<void>.delayed(const Duration(milliseconds: 420), () async {
@@ -95,7 +105,6 @@ class _AppWrapperState extends State<AppWrapper> {
         }),
       );
       autoLogin();
-      NotificationPermission.checkAndRequest();
     });
   }
 

@@ -11,6 +11,8 @@ import UserNotifications
   private static let advertisingInfoChannelName = "com.topread.novel/advertising_info"
   private static let getAdvertisingIdMethod = "getAdvertisingId"
   private static let isLimitAdTrackingEnabledMethod = "isLimitAdTrackingEnabled"
+  private static let getTrackingAuthorizationStatusMethod = "getTrackingAuthorizationStatus"
+  private static let requestTrackingAuthorizationMethod = "requestTrackingAuthorization"
   private var badgeChannel: FlutterMethodChannel?
   private var advertisingInfoChannel: FlutterMethodChannel?
 
@@ -89,8 +91,41 @@ import UserNotifications
       getAdvertisingId(call, result: result)
     case Self.isLimitAdTrackingEnabledMethod:
       result(isLimitAdTrackingEnabled())
+    case Self.getTrackingAuthorizationStatusMethod:
+      result(trackingAuthorizationStatusName(ATTrackingManager.trackingAuthorizationStatus))
+    case Self.requestTrackingAuthorizationMethod:
+      requestTrackingAuthorization(result: result)
     default:
       result(FlutterMethodNotImplemented)
+    }
+  }
+
+  private func requestTrackingAuthorization(result: @escaping FlutterResult) {
+    let currentStatus = ATTrackingManager.trackingAuthorizationStatus
+    guard currentStatus == .notDetermined else {
+      result(trackingAuthorizationStatusName(currentStatus))
+      return
+    }
+
+    guard UIApplication.shared.applicationState == .active else {
+      result(
+        FlutterError(
+          code: "application_not_active",
+          message: "ATT authorization can only be requested while the app is active.",
+          details: nil
+        )
+      )
+      return
+    }
+
+    ATTrackingManager.requestTrackingAuthorization { [weak self] status in
+      DispatchQueue.main.async {
+        guard let self else {
+          result("unknown")
+          return
+        }
+        result(self.trackingAuthorizationStatusName(status))
+      }
     }
   }
 
@@ -99,42 +134,30 @@ import UserNotifications
     result: @escaping FlutterResult
   ) {
     let status = ATTrackingManager.trackingAuthorizationStatus
-    NSLog("Debug: ATT trackingAuthorizationStatus: \(status.rawValue)")
-    
+
     switch status {
     case .authorized:
-      let id = nonZeroAdvertisingIdentifier()
-      NSLog("Debug: ATT authorized, advertisingId: \(id ?? "nil")")
-      result(id)
+      result(nonZeroAdvertisingIdentifier())
     case .notDetermined:
       let arguments = call.arguments as? [String: Any]
       let shouldRequestAuthorization =
         arguments?["requestTrackingAuthorization"] as? Bool ?? false
-      NSLog("Debug: ATT notDetermined, requestTrackingAuthorization: \(shouldRequestAuthorization)")
-      guard shouldRequestAuthorization else {
+      guard shouldRequestAuthorization, UIApplication.shared.applicationState == .active else {
         result(nil)
         return
       }
       ATTrackingManager.requestTrackingAuthorization { [weak self] status in
         DispatchQueue.main.async {
-          NSLog("Debug: ATT requestTrackingAuthorization result: \(status.rawValue)")
           guard status == .authorized else {
             result(nil)
             return
           }
-          let id = self?.nonZeroAdvertisingIdentifier()
-          NSLog("Debug: ATT authorized after request, advertisingId: \(id ?? "nil")")
-          result(id)
+          result(self?.nonZeroAdvertisingIdentifier())
         }
       }
-    case .denied:
-      NSLog("Debug: ATT denied")
-      result(nil)
-    case .restricted:
-      NSLog("Debug: ATT restricted")
+    case .denied, .restricted:
       result(nil)
     @unknown default:
-      NSLog("Debug: ATT unknown status: \(status.rawValue)")
       result(nil)
     }
   }
@@ -149,4 +172,22 @@ import UserNotifications
       ? nil
       : identifier.uuidString
   }
+
+  private func trackingAuthorizationStatusName(
+    _ status: ATTrackingManager.AuthorizationStatus
+  ) -> String {
+    switch status {
+    case .notDetermined:
+      return "notDetermined"
+    case .restricted:
+      return "restricted"
+    case .denied:
+      return "denied"
+    case .authorized:
+      return "authorized"
+    @unknown default:
+      return "unknown"
+    }
+  }
+
 }

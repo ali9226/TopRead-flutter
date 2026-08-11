@@ -53,11 +53,16 @@ class _RewardedAdDebugItemState extends State<RewardedAdDebugItem> {
       }
 
       final AdConfig adConfig = results.content!;
-      _log('广告配置: advertisers=${adConfig.advertisers}, adsId=${adConfig.adsId}');
+      _log(
+        '广告配置: advertisers=${adConfig.advertisers}, adsId=${adConfig.adsId}',
+      );
 
       // advertisers=1 表示谷歌广告，且 ads_id 必须有值。
       if (adConfig.advertisers != 1 || adConfig.adsId.isEmpty) {
-        _log('广告配置异常: advertisers=${adConfig.advertisers}, adsId=${adConfig.adsId}', type: 'w');
+        _log(
+          '广告配置异常: advertisers=${adConfig.advertisers}, adsId=${adConfig.adsId}',
+          type: 'w',
+        );
         showBottomTip(tr('short_story_read.ad_not_available'));
         return;
       }
@@ -82,6 +87,9 @@ class _RewardedAdDebugItemState extends State<RewardedAdDebugItem> {
           break;
         case GoogleRewardedAdResult.load_failed:
           showBottomTip('激励视频广告加载失败');
+          break;
+        case GoogleRewardedAdResult.consent_unavailable:
+          showBottomTip('UMP 隐私同意未完成，未请求广告');
           break;
         case GoogleRewardedAdResult.show_failed:
           showBottomTip('激励视频广告展示失败');

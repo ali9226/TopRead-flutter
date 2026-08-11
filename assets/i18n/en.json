@@ -684,6 +684,7 @@
     "locked_remaining_words": "{count} words remain — unlock the rest of the story",
     "watch_ad_to_continue": "Watch an ad to continue",
     "ad_load_failed": "The ad couldn't load. Please try again shortly.",
+    "ad_consent_unavailable": "Complete your ad privacy choices, then try again.",
     "ad_show_failed": "The ad can't play right now. Please try again shortly.",
     "ad_not_completed": "Watch the full ad to unlock the full story.",
     "ad_unsupported": "Rewarded ads aren't supported on this device.",
@@ -768,6 +769,8 @@
     "rate_us": "Rate Us",
     "user_agreement": "User Agreement",
     "privacy_policy": "Privacy Policy",
+    "ad_privacy_options": "Ad Privacy Choices",
+    "ad_privacy_options_unavailable": "Ad privacy choices are temporarily unavailable. Please try again later.",
     "version_update": "Version Update"
   }
 }

@@ -9,6 +9,7 @@ import 'package:app/api/post_request.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/models/novel_info.dart';
+import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/util/device/save_body_font_size.dart';
 
@@ -636,6 +637,11 @@ class Logic extends GetxController {
             ),
           );
         }
+      }
+
+      // 只在服务端确认小说已加入收藏后申请系统通知权限。
+      if (server_status) {
+        unawaited(NotificationPermissionRequest.request_after_novel_favorite());
       }
     } catch (_) {
       // 异常时回退状态。

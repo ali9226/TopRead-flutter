@@ -680,6 +680,7 @@
     "locked_remaining_words": "Encore {count} mots à débloquer pour poursuivre l’histoire",
     "watch_ad_to_continue": "Voir une pub pour continuer",
     "ad_load_failed": "Impossible de charger la publicité. Réessayez dans un instant.",
+    "ad_consent_unavailable": "Terminez vos choix de confidentialité publicitaire, puis réessayez.",
     "ad_show_failed": "Impossible de lire la publicité pour le moment. Réessayez bientôt.",
     "ad_not_completed": "Regardez la publicité jusqu'à la fin pour débloquer l'histoire complète.",
     "ad_unsupported": "Les publicités récompensées ne sont pas prises en charge sur cet appareil.",
@@ -784,6 +785,8 @@
     "rate_us": "Évaluer",
     "user_agreement": "Conditions d'utilisation",
     "privacy_policy": "Politique de confidentialité",
+    "ad_privacy_options": "Choix de confidentialité publicitaire",
+    "ad_privacy_options_unavailable": "Les choix de confidentialité publicitaire sont temporairement indisponibles. Réessayez plus tard.",
     "version_update": "Mise à jour"
   }
 }

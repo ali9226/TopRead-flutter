@@ -1,21 +1,27 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:app/fcm/register_token.dart';
 import 'package:app/fcm/fcm_handler.dart';
+import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/util/device/app_environment.dart';
 import 'package:app/util/log_util.dart';
 
 /// 推送通知服务。
 ///
 /// 负责：
-/// 1. 请求通知权限
-/// 2. 获取 FCM Token 并注册到后端（不绑定用户）
-/// 3. 处理前台/后台/终止状态的推送消息
-/// 4. 本地通知展示（前台收到推送时）
+/// 1. 获取 FCM Token 并注册到后端（不绑定用户）
+/// 2. 处理前台/后台/终止状态的推送消息
+/// 3. 本地通知展示（前台收到推送时）
+///
+/// 注意：
+/// - Android 在该服务启动时检查并按需请求系统通知权限。
+/// - iOS 的启动权限顺序和业务触发权限都由 lib/permission_request 统一处理，
+///   FCM 初始化本身不触发系统权限弹窗。
 class FcmService {
   /// 单例。
   static final FcmService _instance = FcmService._();
@@ -59,11 +65,20 @@ class FcmService {
     // 设置默认的消息点击处理回调。
     on_message_tap = FcmHandler.onMessageTap;
 
-    // 请求通知权限。
-    await _request_permission();
-
     // 初始化本地通知。
     await _init_local_notifications();
+
+    // Android 启动触发点：已授权或已永久拒绝时不弹窗，其他未授权状态发起系统请求。
+    await NotificationPermissionRequest.request_on_android_app_start();
+
+    // 配置 iOS 前台通知展示方式。该调用不会触发系统权限弹窗。
+    if (isIOSApp) {
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    }
 
     // 获取 FCM Token 并注册到后端（不绑定用户）。
     await FcmRegisterToken.execute();
@@ -92,36 +107,6 @@ class FcmService {
     logUtil(msg: 'FCM: 推送通知服务初始化完成');
   }
 
-  /// 请求通知权限。
-  Future<void> _request_permission() async {
-    final NotificationSettings settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-    );
-
-    logUtil(msg: 'FCM: 通知权限状态: ${settings.authorizationStatus}');
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      logUtil(msg: 'FCM: 用户已授权通知');
-    } else if (settings.authorizationStatus ==
-        AuthorizationStatus.provisional) {
-      logUtil(msg: 'FCM: 用户已授予临时通知权限');
-    } else {
-      logUtil(msg: 'FCM: 用户拒绝了通知权限', type: 'w');
-    }
-
-    // iOS 由系统直接展示前台通知，点击行为仍交给 Firebase 处理。
-    if (isIOSApp) {
-      await _messaging.setForegroundNotificationPresentationOptions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-    }
-  }
-
   /// 初始化本地通知插件。
   Future<void> _init_local_notifications() async {
     // Android 初始化设置。
@@ -131,7 +116,7 @@ class FcmService {
     // iOS 初始化设置。
     const DarwinInitializationSettings ios_settings =
         DarwinInitializationSettings(
-          requestAlertPermission: false, // 已通过 Firebase 请求过
+          requestAlertPermission: false, // 由业务触发点通过 Firebase 统一请求
           requestBadgePermission: false,
           requestSoundPermission: false,
         );
@@ -156,22 +141,13 @@ class FcmService {
       },
     );
 
-    // 创建 Android 通知渠道。
+    // 创建 Android 通知渠道，启动阶段不主动请求通知权限。
     if (isAndroidApp) {
       final AndroidFlutterLocalNotificationsPlugin? android_plugin =
           _local_notifications
               .resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin
               >();
-
-      // Android 13+ 的本地通知权限需要由本地通知插件显式确认。
-      final bool notifications_enabled =
-          await android_plugin?.areNotificationsEnabled() ?? false;
-      if (!notifications_enabled) {
-        final bool permission_granted =
-            await android_plugin?.requestNotificationsPermission() ?? false;
-        logUtil(msg: 'FCM: Android 本地通知权限: $permission_granted');
-      }
 
       await android_plugin?.createNotificationChannel(_channel);
     }

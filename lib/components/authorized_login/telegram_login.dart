@@ -1,10 +1,13 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:async';
+
 import 'package:app/api/post_request.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/config/constant.dart';
 import 'package:app/fcm/fcm_auth.dart';
 import 'package:app/models/login.dart';
+import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/dialog/pop_up_input.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
@@ -150,6 +153,9 @@ Future<void> _request_telegram_backend_auth({
 
   // 绑定 FCM Token 到用户。
   FcmAuth.onLoginSuccess();
+
+  // 用户主动完成 Telegram 登录后申请系统通知权限。
+  unawaited(NotificationPermissionRequest.request_after_login());
 
   routerUtil(path: '/', type: 'replace');
 }

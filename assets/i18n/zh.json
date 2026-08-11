@@ -685,6 +685,7 @@
     "locked_remaining_words": "余下 {count} 个单词的精彩内容等待解锁",
     "watch_ad_to_continue": "看广告继续阅读",
     "ad_load_failed": "广告加载失败，请稍后重试",
+    "ad_consent_unavailable": "请先完成广告隐私选择后再试",
     "ad_show_failed": "广告暂时无法播放，请稍后重试",
     "ad_not_completed": "需完整观看广告才能解锁全文",
     "ad_unsupported": "当前设备暂不支持激励视频广告",
@@ -769,6 +770,8 @@
     "rate_us": "去评分",
     "user_agreement": "用户协议",
     "privacy_policy": "隐私政策",
+    "ad_privacy_options": "广告隐私选项",
+    "ad_privacy_options_unavailable": "暂时无法打开广告隐私选项，请稍后重试",
     "version_update": "版本更新"
   }
 }

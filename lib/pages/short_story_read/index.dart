@@ -918,9 +918,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       enableDrag: true,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width,
-      ),
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
       builder: (BuildContext sheet_context) {
         return CatalogSheet(
           current_story_id: sheet_logic.story_id,
@@ -952,9 +950,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       enableDrag: true,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width,
-      ),
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
       builder: (BuildContext sheet_context) {
         return ReadingSettingsSheet(
           logic: _logic,
@@ -1024,7 +1020,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
           );
           if (!_is_current_logic(action_logic, action_generation)) return;
 
-          if (verifyResult.status && verifyResult.content?.status == AdVerifyResult.status_completed) {
+          if (verifyResult.status &&
+              verifyResult.content?.status == AdVerifyResult.status_completed) {
             // 广告已完整观看，解锁全文。
             action_logic.unlock_current_story();
             _has_user_engaged = true;
@@ -1054,6 +1051,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
           break;
         case GoogleRewardedAdResult.load_failed:
           showBottomTip(easy.tr('short_story_read.ad_load_failed'));
+          break;
+        case GoogleRewardedAdResult.consent_unavailable:
+          showBottomTip(easy.tr('short_story_read.ad_consent_unavailable'));
           break;
         case GoogleRewardedAdResult.show_failed:
           showBottomTip(easy.tr('short_story_read.ad_show_failed'));
@@ -1200,9 +1200,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       enableDrag: true,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width,
-      ),
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
       builder: (BuildContext sheet_context) {
         return AutoReadSettingsSheet(
           logic: _logic,
