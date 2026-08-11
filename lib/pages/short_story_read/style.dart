@@ -120,7 +120,7 @@ class ShortStoryReadStyle {
   // ==================== 正文解锁区域 ====================
 
   /// 解锁前可以阅读的正文比例。
-  static const double locked_content_preview_ratio = 1 / 3;
+  static const double locked_content_preview_ratio = 1 / 2;
 
   /// CJK 语系解锁区域高度。
   static const double unlock_gate_height_cjk = 160.0;

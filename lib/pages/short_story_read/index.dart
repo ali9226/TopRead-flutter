@@ -985,6 +985,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       // 从后端获取广告配置。
       final adConfigResult = await postRequest<AdConfig>(
         path: 'ads/short_story_read',
+        parameter: <String, dynamic>{'source_id': _logic.story_id},
         showTips: false,
         fromJson: (json) => AdConfig.fromJson(json),
       );
