@@ -11,7 +11,8 @@
     "login_required": "Ingia kwa mapendekezo bora"
   },
   "recommend_card": {
-    "dislike": "Ruka"
+    "dislike": "Ruka",
+    "advertisement": "Tangazo"
   },
   "interest_preference": {
     "title": "Chagua Maslahi Yako",

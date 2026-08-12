@@ -37,6 +37,53 @@ void main() {
       ]);
     });
   });
+
+  test('原生广告槽位不会被识别为小说数据', () {
+    final BookListItem ad_slot = BookListItem.ad_slot(id: 'masonry_ad_2_3');
+
+    expect(ad_slot.id, 'masonry_ad_2_3');
+    expect(ad_slot.is_ad, isTrue);
+    expect(ad_slot.is_book, isFalse);
+    expect(ad_slot.story_id, 0);
+    expect(ad_slot.has_ad_images, isFalse);
+  });
+
+  group('RecommendBookCardLogic.insert_ad_in_batch_middle', () {
+    test('首屏偶数批次把广告插入中点而不是列表底部', () {
+      final BookListItem ad_slot = BookListItem.ad_slot(id: 'ad_initial');
+      final List<BookListItem> result =
+          RecommendBookCardLogic.insert_ad_in_batch_middle(
+            batch: List<BookListItem>.generate(
+              10,
+              (int index) => _build_item('book_$index', index),
+            ),
+            ad_slot: ad_slot,
+          );
+
+      expect(result.indexOf(ad_slot), 5);
+      expect(result.last.is_book, isTrue);
+    });
+
+    test('每次加载更多按本批数据重新计算广告中点', () {
+      final BookListItem ad_slot = BookListItem.ad_slot(id: 'ad_load_more');
+      final List<BookListItem> result =
+          RecommendBookCardLogic.insert_ad_in_batch_middle(
+            batch: <BookListItem>[
+              _build_item('book_11', 11),
+              _build_item('book_12', 12),
+              _build_item('book_13', 13),
+            ],
+            ad_slot: ad_slot,
+          );
+
+      expect(result.map((BookListItem item) => item.id), <String>[
+        'book_11',
+        'book_12',
+        'ad_load_more',
+        'book_13',
+      ]);
+    });
+  });
 }
 
 BookListItem _build_item(String id, int story_id) {

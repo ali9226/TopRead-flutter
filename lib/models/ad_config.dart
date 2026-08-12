@@ -1,6 +1,8 @@
 // ignore_for_file: non_constant_identifier_names
 
-/// 广告配置（由后端接口 ads/short_story_read 返回）。
+/// 广告配置。
+///
+/// 短篇阅读和今日推荐瀑布流的广告配置接口共用该结构。
 class AdConfig {
   /// 广告配置记录 ID。
   final String id;

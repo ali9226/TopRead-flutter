@@ -3,18 +3,40 @@ package com.topread.novel
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugins.googlemobileads.GoogleMobileAdsPlugin
 import me.leolin.shortcutbadger.ShortcutBadger
 
 class MainActivity : FlutterActivity() {
     companion object {
         private const val BADGE_CHANNEL_NAME = "com.topread.app/badge"
         private const val SET_BADGE_COUNT_METHOD = "setBadgeCount"
+        private const val MASONRY_NATIVE_AD_LAYOUT_CHANNEL_NAME =
+            "com.topread.novel/masonry_native_ad_layout"
+        private const val MASONRY_NATIVE_AD_FACTORY_ID = "masonryNativeAdCard"
+        private const val SHORT_STORY_NATIVE_AD_FACTORY_ID = "shortStoryNativeAdCard"
     }
 
     private var advertisingInfoChannel: AdvertisingInfoChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        GoogleMobileAdsPlugin.registerNativeAdFactory(
+            flutterEngine,
+            MASONRY_NATIVE_AD_FACTORY_ID,
+            MasonryNativeAdFactory(
+                layoutInflater,
+                MethodChannel(
+                    flutterEngine.dartExecutor.binaryMessenger,
+                    MASONRY_NATIVE_AD_LAYOUT_CHANNEL_NAME,
+                ),
+            ),
+        )
+        GoogleMobileAdsPlugin.registerNativeAdFactory(
+            flutterEngine,
+            SHORT_STORY_NATIVE_AD_FACTORY_ID,
+            ShortStoryNativeAdFactory(layoutInflater),
+        )
 
         advertisingInfoChannel = AdvertisingInfoChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -59,6 +81,14 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        GoogleMobileAdsPlugin.unregisterNativeAdFactory(
+            flutterEngine,
+            MASONRY_NATIVE_AD_FACTORY_ID,
+        )
+        GoogleMobileAdsPlugin.unregisterNativeAdFactory(
+            flutterEngine,
+            SHORT_STORY_NATIVE_AD_FACTORY_ID,
+        )
         advertisingInfoChannel?.dispose()
         advertisingInfoChannel = null
         super.cleanUpFlutterEngine(flutterEngine)

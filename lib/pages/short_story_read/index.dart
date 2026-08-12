@@ -29,6 +29,7 @@ import 'package:app/pages/short_story_read/widgets/tag_list.dart';
 import 'package:app/pages/short_story_read/widgets/story_unlock_gate/index.dart';
 import 'package:app/pages/short_story_read/widgets/initialization_overlay.dart';
 import 'package:app/pages/ranking_full_list/widgets/starfield_decoration.dart';
+import 'package:app/components/novel_cover/index.dart';
 import 'package:app/components/page_top_gradient_overlay/index.dart';
 import 'package:app/pages/short_story_read/widgets/skeleton_screen.dart';
 import 'package:app/pages/short_story_read/widgets/catalog/catalog_sheet.dart';
@@ -551,7 +552,6 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         _native_ad_widget = NativeAdBanner(
           ad_unit_id: ad_config.adsId,
           uuid: ad_config.uuid,
-          is_dark: device_info.dark.value,
         );
       });
     } catch (e, stack_trace) {
@@ -2304,16 +2304,44 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    /// 标题。
-                    Text(
-                      _logic.title,
-                      style: TextStyle(
-                        fontSize: title_font_size,
-                        fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                        color: title_color,
-                        height: 1.4,
+                    /// 标题（有封面时左侧显示封面缩略图）。
+                    if (_logic.story_data.value?.cover_url.isNotEmpty == true)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          NovelCover(
+                            image_url: _logic.story_data.value!.cover_url,
+                            width: 48,
+                            height: 64,
+                            border_radius: 6,
+                            is_dark: is_dark,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _logic.title,
+                              style: TextStyle(
+                                fontSize: title_font_size,
+                                fontWeight: FontConfig.adjustedWeight(
+                                  FontWeight.w500,
+                                ),
+                                color: title_color,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Text(
+                        _logic.title,
+                        style: TextStyle(
+                          fontSize: title_font_size,
+                          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                          color: title_color,
+                          height: 1.4,
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 12),
 
                     /// 标签列表。
@@ -2355,21 +2383,53 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                               is_cjk: is_cjk,
                             ),
                             const SizedBox(height: 30),
-                            // 下一篇小说标题。
-                            Text(
-                              _logic.next_story_item!.title,
-                              key: _next_story_title_key,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: title_font_size,
-                                fontWeight: FontConfig.adjustedWeight(
-                                  FontWeight.w500,
+                            // 下一篇小说标题（有封面时左侧显示封面缩略图）。
+                            if (_logic.next_story_item!.cover_url.isNotEmpty)
+                              Row(
+                                key: _next_story_title_key,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  NovelCover(
+                                    image_url:
+                                        _logic.next_story_item!.cover_url,
+                                    width: 48,
+                                    height: 64,
+                                    border_radius: 6,
+                                    is_dark: is_dark,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      _logic.next_story_item!.title,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: title_font_size,
+                                        fontWeight: FontConfig.adjustedWeight(
+                                          FontWeight.w500,
+                                        ),
+                                        color: title_color,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            else
+                              Text(
+                                _logic.next_story_item!.title,
+                                key: _next_story_title_key,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: title_font_size,
+                                  fontWeight: FontConfig.adjustedWeight(
+                                    FontWeight.w500,
+                                  ),
+                                  color: title_color,
+                                  height: 1.4,
                                 ),
-                                color: title_color,
-                                height: 1.4,
                               ),
-                            ),
                             // 下一篇小说标签列表。
                             if (_logic.next_story_item!.tags.isNotEmpty) ...[
                               const SizedBox(height: 12),

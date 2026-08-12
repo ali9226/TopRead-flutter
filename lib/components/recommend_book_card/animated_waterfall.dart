@@ -11,6 +11,7 @@ import 'package:app/components/recommend_book_card/style.dart';
 import 'package:app/components/recommend_book_card/index.dart';
 import 'package:app/components/recommend_book_card/style.dart' as card_style;
 import 'package:app/components/recommend_book_card/widgets/recommend_waterfall_skeleton.dart';
+import 'package:app/components/recommend_book_card/widgets/masonry_native_ad_card.dart';
 import 'package:app/components/load_more_footer/index.dart';
 import 'package:app/models/recommend_ranking_item.dart';
 import 'package:app/stores/home_store.dart';
@@ -38,6 +39,14 @@ class AnimatedRecommendWaterfall extends StatefulWidget {
 
 class AnimatedRecommendWaterfallState
     extends State<AnimatedRecommendWaterfall> {
+  /// 为同一页面或同一首页内的多个 Tab 分配独立实例编号。
+  static int _next_waterfall_instance_id = 0;
+
+  late final int _waterfall_instance_id = ++_next_waterfall_instance_id;
+
+  /// 当前瀑布流已创建的广告槽位序号。
+  int _ad_slot_sequence = 0;
+
   /// 所有书籍数据。
   final List<BookListItem> _items = <BookListItem>[];
 
@@ -148,7 +157,9 @@ class AnimatedRecommendWaterfallState
     }
 
     setState(() {
-      _items.addAll(items);
+      if (items.isNotEmpty) {
+        _items.addAll(_insert_fresh_ad_in_batch_middle(items));
+      }
       _is_initial_loading = false;
       _has_more = items.isNotEmpty;
     });
@@ -189,10 +200,30 @@ class AnimatedRecommendWaterfallState
         );
 
     setState(() {
-      _items.addAll(unique_new_items);
+      if (unique_new_items.isNotEmpty) {
+        // 每一次成功分页都在本批数据中间创建新槽位和新 NativeAd，
+        // 不复用首屏或上一页的广告对象。
+        _items.addAll(_insert_fresh_ad_in_batch_middle(unique_new_items));
+      }
       _has_more = unique_new_items.isNotEmpty;
       _is_loading_more = false;
     });
+  }
+
+  /// 在本批小说的中间插入一个实例内唯一的原生广告槽位。
+  ///
+  /// 槽位刚创建时高度为 0，不会因等待后端配置、UMP 或 AdMob
+  /// 填充而留下空白占位。广告加载完成后由测量组件驱动重排。
+  List<BookListItem> _insert_fresh_ad_in_batch_middle(
+    List<BookListItem> batch,
+  ) {
+    final String slot_id =
+        'masonry_ad_${_waterfall_instance_id}_${++_ad_slot_sequence}';
+    _item_heights[slot_id] = 0;
+    return RecommendBookCardLogic.insert_ad_in_batch_middle(
+      batch: batch,
+      ad_slot: BookListItem.ad_slot(id: slot_id),
+    );
   }
 
   /// 请求推荐榜小说列表并映射为 BookListItem。
@@ -361,7 +392,7 @@ class AnimatedRecommendWaterfallState
         effective_height,
       );
 
-      if (!is_removing) {
+      if (!is_removing && item_height > 0) {
         column_heights[shortest_column] +=
             item_height + RecommendBookCardStyle.item_spacing;
       }
@@ -437,37 +468,42 @@ class AnimatedRecommendWaterfallState
                             });
                           }
                         },
-                        child: RecommendBookCard(
-                          item: item,
-                          is_dark: widget.is_dark,
-                          show_overlay: is_active,
-                          on_long_press: () {
-                            _show_overlay(item.id);
-                          },
-                          on_overlay_close: close_overlay,
-                          on_tap: () {
-                            // 如果点击的卡片有弹窗，只关闭弹窗，不跳转
-                            if (_active_overlay_id == item.id) {
-                              close_overlay();
-                              return;
-                            }
-                            // 如果其他卡片有弹窗，关闭弹窗并跳转
-                            if (_active_overlay_id != null) {
-                              close_overlay();
-                            }
-                            navigate_to_novel(
-                              id: item.story_id,
-                              title: item.title,
-                              publish_status: item.publish_status,
-                            );
-                          },
-                          on_dislike: () {
-                            final int index = _items.indexOf(item);
-                            if (index >= 0) {
-                              remove_at(index);
-                            }
-                          },
-                        ),
+                        child: item.is_ad
+                            ? MasonryNativeAdCard(
+                                slot_id: item.id,
+                                is_dark: widget.is_dark,
+                              )
+                            : RecommendBookCard(
+                                item: item,
+                                is_dark: widget.is_dark,
+                                show_overlay: is_active,
+                                on_long_press: () {
+                                  _show_overlay(item.id);
+                                },
+                                on_overlay_close: close_overlay,
+                                on_tap: () {
+                                  // 如果点击的卡片有弹窗，只关闭弹窗，不跳转
+                                  if (_active_overlay_id == item.id) {
+                                    close_overlay();
+                                    return;
+                                  }
+                                  // 如果其他卡片有弹窗，关闭弹窗并跳转
+                                  if (_active_overlay_id != null) {
+                                    close_overlay();
+                                  }
+                                  navigate_to_novel(
+                                    id: item.story_id,
+                                    title: item.title,
+                                    publish_status: item.publish_status,
+                                  );
+                                },
+                                on_dislike: () {
+                                  final int index = _items.indexOf(item);
+                                  if (index >= 0) {
+                                    remove_at(index);
+                                  }
+                                },
+                              ),
                       ),
                     ),
                   );

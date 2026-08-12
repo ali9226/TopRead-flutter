@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 短篇阅读页原生高级广告布局。
+     颜色由 ShortStoryNativeAdFactory.applyTheme() 在运行时动态设置，
+     与 Flutter 端 ColorConstants 保持一致。修改时需同步更新三端。 -->
+<com.google.android.gms.ads.nativead.NativeAdView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/short_story_native_ad_view"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToOutline="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- 视频/图片媒体区域 + AdChoices 标识 -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="260dp">
+
+            <com.google.android.gms.ads.nativead.MediaView
+                android:id="@+id/ad_media"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <com.google.android.gms.ads.nativead.AdChoicesView
+                android:id="@+id/ad_choices"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="10dp" />
+        </FrameLayout>
+
+        <!-- 广告信息区域：标题、广告主、Open 按钮（自适应高度） -->
+        <LinearLayout
+            android:id="@+id/ad_information_panel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingStart="14dp"
+            android:paddingTop="14dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="14dp">
+
+            <!-- 广告标题（居中，最多 2 行） -->
+            <TextView
+                android:id="@+id/ad_headline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:gravity="center"
+                android:maxLines="2"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <!-- 广告主名称（居中，单行） -->
+            <TextView
+                android:id="@+id/ad_advertiser"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:ellipsize="end"
+                android:gravity="center"
+                android:maxLines="1"
+                android:textSize="12sp" />
+
+            <!-- Open 按钮：
+                 背景色 = ColorConstants.themeColor (#F8D02D)
+                 文字色 = ColorConstants.lightTextColor (#222222)
+                 由 applyTheme() 在运行时设置。 -->
+            <TextView
+                android:id="@+id/ad_call_to_action"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:maxLines="1"
+                android:textColor="#222222"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.gms.ads.nativead.NativeAdView>

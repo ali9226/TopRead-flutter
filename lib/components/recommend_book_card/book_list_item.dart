@@ -85,6 +85,25 @@ class BookListItem {
     this.publish_status = 0,
   });
 
+  /// 创建一个不承载业务素材的原生广告槽位。
+  ///
+  /// 广告内容由槽位对应的 Google [NativeAd] 动态填充，不把后端
+  /// 广告配置或 SDK 对象混入小说数据模型。
+  factory BookListItem.ad_slot({required String id}) {
+    return BookListItem(
+      id: id,
+      story_id: 0,
+      type: BookListItemType.ad,
+      title: '',
+      description: '',
+      cover_url: '',
+      cover_badge: '',
+      cover_meta_text: '',
+      tag_list: const <BookListTagItem>[],
+      ad_image_url_list: const <String>[],
+    );
+  }
+
   /// 创建一个封面宽高比已填充的新实例。
   BookListItem withAspectRatio(double ratio) {
     return BookListItem(

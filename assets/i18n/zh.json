@@ -11,7 +11,8 @@
     "login_required": "登录后即可完善兴趣偏好，为你推荐更符合口味的内容"
   },
   "recommend_card": {
-    "dislike": "不喜欢"
+    "dislike": "不喜欢",
+    "advertisement": "广告"
   },
   "interest_preference": {
     "title": "选择你的兴趣偏好",

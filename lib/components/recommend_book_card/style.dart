@@ -229,6 +229,22 @@ class RecommendBookCardStyle {
   /// 封面最大高度限制，避免图片过高。
   static const double cover_max_height = 320.0;
 
+  // ==================== 原生广告 ====================
+
+  /// 原生广告尚未返回原生布局测量结果时使用的临时高度。
+  ///
+  /// 实际高度由广告素材宽高比和标题、简介、标签的真实内容共同决定；
+  /// 宽度始终由瀑布流当前列约束。
+  static const double native_ad_fallback_height = 300.0;
+
+  /// 原生广告媒体区域最小高度。
+  ///
+  /// Google 要求视频 MediaView 的宽、高都不能小于 120dp/pt。
+  static const double native_ad_media_min_height = 120.0;
+
+  /// 与普通小说封面一致的媒体区域最大高度。
+  static const double native_ad_media_max_height = cover_max_height;
+
   /// 骨架屏较短封面高度。
   static const double skeleton_cover_short_height = 190.0;
 

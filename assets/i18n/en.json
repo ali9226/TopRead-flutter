@@ -11,7 +11,8 @@
     "login_required": "Sign in for better recommendations"
   },
   "recommend_card": {
-    "dislike": "Skip"
+    "dislike": "Skip",
+    "advertisement": "Ad"
   },
   "interest_preference": {
     "title": "Pick Interests",

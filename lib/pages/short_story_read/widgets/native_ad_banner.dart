@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/permission_request/admob_consent_permission_request.dart';
+import 'package:app/stores/device_info.dart';
 import 'package:app/util/google_mobile_ads_util.dart';
 import 'package:app/util/log_util.dart';
 
@@ -13,6 +16,8 @@ import 'package:app/util/log_util.dart';
 /// 使用 Google AdMob 原生高级广告格式，在正文段落间内嵌展示。
 /// 加载成功后自动渲染广告视图，加载失败或未加载时返回空占位。
 /// 广告自动静音播放。
+///
+/// 夜间模式通过 [DeviceInfo.dark] 响应式读取，切换主题时容器背景色自动更新。
 class NativeAdBanner extends StatefulWidget {
   /// 广告单元 ID（由后端接口 ads/short_story_read_show_ads 返回）。
   final String ad_unit_id;
@@ -20,14 +25,10 @@ class NativeAdBanner extends StatefulWidget {
   /// 广告配置的唯一标识，用于服务器端验证。
   final String uuid;
 
-  /// 是否为夜间模式（影响广告容器背景色）。
-  final bool is_dark;
-
   const NativeAdBanner({
     super.key,
     required this.ad_unit_id,
     required this.uuid,
-    required this.is_dark,
   });
 
   @override
@@ -36,6 +37,9 @@ class NativeAdBanner extends StatefulWidget {
 
 class _NativeAdBannerState extends State<NativeAdBanner> {
   static const String _log_prefix = '[NativeAdBanner]';
+
+  /// 设备信息仓库（用于响应式读取当前主题模式）。
+  final DeviceInfo _device_info = Get.find<DeviceInfo>();
 
   /// 原生广告控制器。
   NativeAd? _native_ad;
@@ -46,8 +50,8 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
   /// 异步加载代次，防止广告 ID 变化或组件销毁后旧任务回写状态。
   int _load_generation = 0;
 
-  /// 广告视图高度（AdMob 原生广告渲染后自适应高度）。
-  static const double _ad_height = 320.0;
+  /// 广告视图高度（媒体区域 260 + 信息区域约 140，与原生布局保持一致）。
+  static const double _ad_height = 400.0;
 
   /// 广告区域顶部间距。
   static const double _spacing_top = 12.0;
@@ -136,6 +140,11 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
 
       final NativeAd native_ad = NativeAd(
         adUnitId: widget.ad_unit_id,
+        factoryId: 'shortStoryNativeAdCard',
+        customOptions: <String, Object>{
+          'isDark': _device_info.dark.value,
+          'advertisementLabel': tr('recommend_card.advertisement'),
+        },
         request: const AdRequest(),
         listener: NativeAdListener(
           onAdLoaded: (Ad ad) {
@@ -168,12 +177,10 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
           onAdClosed: (Ad ad) => _log('原生广告被关闭'),
           onAdImpression: (Ad ad) => _log('原生广告展示'),
         ),
-        nativeTemplateStyle: NativeTemplateStyle(
-          templateType: TemplateType.medium,
-          mainBackgroundColor: widget.is_dark
-              ? const Color(0xFF1E2430)
-              : const Color(0xFFF8F9FA),
-          cornerRadius: 8.0,
+        nativeAdOptions: NativeAdOptions(
+          adChoicesPlacement: AdChoicesPlacement.topRightCorner,
+          mediaAspectRatio: MediaAspectRatio.any,
+          videoOptions: VideoOptions(startMuted: true),
         ),
       );
       _native_ad = native_ad;
@@ -198,46 +205,65 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
       return const SizedBox.shrink();
     }
 
-    /// 提示文字颜色（与正文次要文字颜色一致）。
-    final Color hint_color = widget.is_dark
-        ? const Color(0xFF8B8B9E)
-        : const Color(0xFF999999);
+    // 使用 Obx 响应式读取主题状态，切换夜间模式时容器背景色自动更新。
+    return Obx(() {
+      /// 当前是否为夜间模式。
+      final bool is_dark = _device_info.dark.value;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        const SizedBox(height: _spacing_top),
-        // 原生广告容器。
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: _ad_horizontal_padding,
-          ),
-          child: Container(
-            height: _ad_height,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8.0),
-              color: widget.is_dark
-                  ? const Color(0xFF1E2430)
-                  : const Color(0xFFF8F9FA),
+      /// 提示文字颜色（夜间偏蓝灰，日间偏灰，与正文次要文字颜色一致）。
+      final Color hint_color = is_dark
+          ? const Color(0xFF8B8B9E)
+          : const Color(0xFF999999);
+
+      /// 广告容器背景色（日间使用 whiteColor，夜间使用深色背景，兼容暗色模式）。
+      /// 注意：原生端（Android/iOS）的广告内部背景色需保持一致，
+      /// 修改时需同步更新 ShortStoryNativeAdFactory。
+      final Color ad_bg_color = is_dark
+          ? const Color(0xFF1E2430)
+          : ColorConstants.whiteColor;
+
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const SizedBox(height: _spacing_top),
+          // 原生广告容器（带圆角和轻微投影）。
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: _ad_horizontal_padding,
             ),
-            clipBehavior: Clip.antiAlias,
-            child: AdWidget(ad: _native_ad!),
+            child: Container(
+              height: _ad_height,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16.0),
+                color: ad_bg_color,
+                // 轻微投影，增强卡片层次感。
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: AdWidget(ad: _native_ad!),
+            ),
           ),
-        ),
-        const SizedBox(height: _hint_spacing),
-        // 底部提示文字。
-        Text(
-          tr('short_story_read.swipe_to_continue'),
-          style: TextStyle(
-            fontSize: _hint_font_size,
-            fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-            color: hint_color,
-            height: _hint_height,
+          const SizedBox(height: _hint_spacing),
+          // 底部"继续滑动"提示文字。
+          Text(
+            tr('short_story_read.swipe_to_continue'),
+            style: TextStyle(
+              fontSize: _hint_font_size,
+              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+              color: hint_color,
+              height: _hint_height,
+            ),
           ),
-        ),
-        const SizedBox(height: _spacing_bottom),
-      ],
-    );
+          const SizedBox(height: _spacing_bottom),
+        ],
+      );
+    });
   }
 
   /// 输出广告流程日志。

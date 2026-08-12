@@ -11,7 +11,8 @@
     "login_required": "Connectez-vous pour de meilleures recommandations"
   },
   "recommend_card": {
-    "dislike": "Passer"
+    "dislike": "Passer",
+    "advertisement": "Publicité"
   },
   "interest_preference": {
     "title": "Choisissez vos centres d'intérêt",

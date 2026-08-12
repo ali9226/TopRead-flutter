@@ -4,6 +4,22 @@ import 'package:app/components/recommend_book_card/book_list_item.dart';
 
 /// 推荐书籍卡片列表逻辑。
 class RecommendBookCardLogic {
+  /// 将一个独立广告槽位插入本批小说的中间位置。
+  ///
+  /// 每一批数据（首屏或一次加载更多）单独计算中点，避免广告总是
+  /// 被追加到整个瀑布流末尾。奇数条数据时放在中间小说之后。
+  static List<BookListItem> insert_ad_in_batch_middle({
+    required List<BookListItem> batch,
+    required BookListItem ad_slot,
+  }) {
+    if (batch.isEmpty) return <BookListItem>[];
+
+    final List<BookListItem> result = List<BookListItem>.of(batch);
+    final int insert_index = (result.length + 1) ~/ 2;
+    result.insert(insert_index, ad_slot);
+    return result;
+  }
+
   /// 过滤候选列表内以及现有列表中重复的卡片。
   ///
   /// [candidates] 本次接口返回并完成映射的候选卡片。
