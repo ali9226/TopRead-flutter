@@ -20,7 +20,7 @@ void main() {
     debugDefaultTargetPlatformOverride = null;
   });
 
-  test('ATT 已拒绝时只检查状态且不再请求系统弹窗', () async {
+  test('ATT 状态读取器不会请求系统弹窗', () async {
     final List<String> invoked_methods = <String>[];
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall call) async {
@@ -31,8 +31,10 @@ void main() {
           return null;
         });
 
-    await AppTrackingTransparencyPermissionRequest.request_before_rewarded_ad();
+    final AppTrackingAuthorizationStatus status =
+        await AppTrackingTransparencyPermissionRequest.get_authorization_status();
 
     expect(invoked_methods, <String>['getTrackingAuthorizationStatus']);
+    expect(status, AppTrackingAuthorizationStatus.denied);
   });
 }

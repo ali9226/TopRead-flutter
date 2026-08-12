@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:app/permission_request/admob_consent_permission_request.dart';
-import 'package:app/permission_request/app_tracking_transparency_permission_request.dart';
+import 'package:app/util/google_mobile_ads_util.dart';
 import 'package:app/util/log_util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -43,18 +43,8 @@ class GoogleRewardedAdUtil {
   /// 应用内共享的激励广告工具实例。
   static final GoogleRewardedAdUtil instance = GoogleRewardedAdUtil._();
 
-  /// Android Debug 设备 ID，确保开发期间只请求测试广告。
-  static const String _android_debug_test_device_id =
-      '97ECB298D9F6E72D1D8A2C524D4FED6C';
-
   /// 日志前缀。
   static const String _log_prefix = '[GoogleRewardedAd]';
-
-  /// SDK 初始化任务，并发请求共享同一个 Future。
-  Future<InitializationStatus>? _initialization;
-
-  /// Android Debug 测试设备是否已经注册。
-  bool _is_debug_test_device_configured = false;
 
   /// 当前是否已有广告在加载或展示。
   bool _is_running = false;
@@ -99,8 +89,6 @@ class GoogleRewardedAdUtil {
         return GoogleRewardedAdResult.consent_unavailable;
       }
 
-      // UMP 完成后再检查 ATT，并保证该检查仍早于广告 SDK 初始化。
-      await AppTrackingTransparencyPermissionRequest.request_before_rewarded_ad();
       rewarded_ad = await _load_rewarded_ad(adUnitId);
       if (rewarded_ad == null) {
         return GoogleRewardedAdResult.load_failed;
@@ -131,11 +119,11 @@ class GoogleRewardedAdUtil {
   /// 初始化 SDK 并加载当前平台的激励广告。
   Future<RewardedAd?> _load_rewarded_ad(String adUnitId) async {
     try {
-      await _configure_debug_test_device();
-
-      _initialization ??= MobileAds.instance.initialize();
-      final InitializationStatus status = await _initialization!;
-      _log('SDK 初始化完成，适配器: ${status.adapterStatuses.keys.join(', ')}');
+      final bool is_initialized = await GoogleMobileAdsUtil.instance
+          .ensure_initialized();
+      if (!is_initialized) {
+        return null;
+      }
 
       final Completer<RewardedAd?> completer = Completer<RewardedAd?>();
       _log('开始加载激励广告，adUnitId=$adUnitId');
@@ -168,7 +156,6 @@ class GoogleRewardedAdUtil {
 
       return completer.future;
     } catch (error, stack_trace) {
-      _initialization = null;
       _log('SDK 初始化或广告加载异常: $error\n$stack_trace', type: 'e');
       return null;
     }
@@ -276,26 +263,6 @@ class GoogleRewardedAdUtil {
       complete_result(GoogleRewardedAdResult.show_failed);
       return result_completer.future;
     }
-  }
-
-  /// 只在 Android Debug 包内注册谷歌 SDK 生成的测试设备 ID。
-  Future<void> _configure_debug_test_device() async {
-    if (!kDebugMode ||
-        defaultTargetPlatform != TargetPlatform.android ||
-        _is_debug_test_device_configured) {
-      return;
-    }
-
-    await MobileAds.instance.updateRequestConfiguration(
-      RequestConfiguration(
-        testDeviceIds: const <String>[_android_debug_test_device_id],
-      ),
-    );
-    _is_debug_test_device_configured = true;
-    _log(
-      'Android Debug 测试设备注册完成，'
-      'testDeviceId=$_android_debug_test_device_id',
-    );
   }
 
   /// 输出广告流程日志。

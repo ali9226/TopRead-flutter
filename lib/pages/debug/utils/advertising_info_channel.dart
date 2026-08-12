@@ -11,16 +11,11 @@ class AdvertisingInfoChannel {
 
   /// 获取 Android GAID 或 iOS IDFA。
   ///
-  /// iOS 权限未决定时，[requestTrackingAuthorization] 为 true 会请求
-  /// App Tracking Transparency 授权。用户未授权时返回 null。
-  static Future<String?> getAdvertisingId({
-    bool requestTrackingAuthorization = true,
-  }) async {
+  /// iOS 未通过 UMP/ATT 授权时返回 null。调试页不会主动弹出 ATT，
+  /// 避免跳过 AdMob IDFA 铺垫消息。
+  static Future<String?> getAdvertisingId() async {
     final String? value = await _channel.invokeMethod<String>(
       'getAdvertisingId',
-      <String, Object?>{
-        'requestTrackingAuthorization': requestTrackingAuthorization,
-      },
     );
     if (value == null || value.isEmpty) return null;
     return value;

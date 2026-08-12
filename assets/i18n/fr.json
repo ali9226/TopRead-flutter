@@ -686,7 +686,8 @@
     "ad_unsupported": "Les publicités récompensées ne sont pas prises en charge sur cet appareil.",
     "ad_in_progress": "Une publicité récompensée est déjà en cours.",
     "content_unlocked": "Histoire complète débloquée. Bonne lecture !",
-    "ad_not_available": "Aucune publicité disponible pour le moment. Veuillez réessayer plus tard."
+    "ad_not_available": "Aucune publicité disponible pour le moment. Veuillez réessayer plus tard.",
+    "swipe_to_continue": "Glissez vers le haut pour continuer"
   },
   "comment": {
     "title": "Commentaires",

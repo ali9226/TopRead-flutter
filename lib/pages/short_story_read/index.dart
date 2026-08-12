@@ -39,6 +39,7 @@ import 'package:app/components/no_internet/index.dart';
 import 'package:app/components/share_sheet/index.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/language_util/index.dart';
+import 'package:app/util/log_util.dart';
 import 'package:app/pages/short_story_read/utils/resolve_next_story_preview_content.dart';
 import 'package:app/pages/short_story_read/widgets/previous_pull_header.dart';
 import 'package:app/pages/short_story_read/widgets/auto_read_settings_button.dart';
@@ -46,6 +47,7 @@ import 'package:app/config/font_config.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/models/ad_verify_result.dart';
 import 'package:app/util/rewarded_ad_util.dart';
+import 'package:app/pages/short_story_read/widgets/native_ad_banner.dart';
 
 /// 短篇小说阅读页面。
 ///
@@ -210,6 +212,12 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 当前短篇的激励视频广告是否正在加载或展示。
   bool _is_rewarded_ad_loading = false;
+
+  /// 原生高级广告横幅组件（在正文 1/4 位置展示）。
+  ///
+  /// 页面初始化时从 ads/short_story_read_show_ads 接口获取广告配置后创建。
+  /// 未获取到有效配置时保持 null，正文不插入广告。
+  Widget? _native_ad_widget;
 
   /// 正在保存进度的小说 ID；不同小说允许并行，同一小说按顺序提交。
   final Set<int> _progress_save_in_flight_ids = <int>{};
@@ -435,6 +443,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       return;
     }
 
+    // 后台加载原生高级广告配置（不阻塞页面展示和位置恢复）。
+    unawaited(_load_native_ad_config(logic: logic, generation: generation));
+
     if (restore_position && record != null) {
       await _restore_last_read_position(
         logic: logic,
@@ -467,6 +478,88 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         restore_position: true,
       ),
     );
+  }
+
+  /// 后台加载原生高级广告配置。
+  ///
+  /// 请求 ads/short_story_read_show_ads 接口获取广告单元 ID，
+  /// 成功且广告商为谷歌 AdMob 时创建 NativeAdBanner 组件。
+  /// 加载失败不影响页面正常展示。
+  Future<void> _load_native_ad_config({
+    required ShortStoryReadLogic logic,
+    required int generation,
+  }) async {
+    const String log_prefix = '[NativeAdConfig]';
+    try {
+      logUtil(msg: '$log_prefix 开始请求广告配置, source_id=${logic.story_id}');
+
+      final ResultsType<AdConfig> result = await postRequest<AdConfig>(
+        path: 'ads/short_story_read_show_ads',
+        parameter: <String, dynamic>{'source_id': logic.story_id},
+        showTips: false,
+        fromJson: (json) => AdConfig.fromJson(json),
+      );
+
+      // 页面已切换或已销毁，丢弃结果。
+      if (_logic_generation != generation || !mounted) {
+        logUtil(msg: '$log_prefix 页面已切换或销毁，丢弃结果');
+        return;
+      }
+
+      logUtil(
+        msg: '$log_prefix 接口响应: status=${result.status}, '
+            'message=${result.message}, '
+            'content=${result.content != null}',
+      );
+
+      if (!result.status || result.content == null) {
+        logUtil(
+          msg: '$log_prefix 接口返回失败或内容为空，跳过',
+          type: 'w',
+        );
+        return;
+      }
+
+      final AdConfig ad_config = result.content!;
+      logUtil(
+        msg: '$log_prefix 广告配置: '
+            'id=${ad_config.id}, '
+            'adsId=${ad_config.adsId}, '
+            'advertisers=${ad_config.advertisers}, '
+            'advertisersStr=${ad_config.advertisersStr}, '
+            'adsType=${ad_config.adsType}, '
+            'adsTypeStr=${ad_config.adsTypeStr}, '
+            'uuid=${ad_config.uuid}',
+      );
+
+      // advertisers=1 表示谷歌 AdMob，且 ads_id 必须有值。
+      if (ad_config.advertisers != 1 || ad_config.adsId.isEmpty) {
+        logUtil(
+          msg: '$log_prefix 广告商不是谷歌或adsId为空，跳过: '
+              'advertisers=${ad_config.advertisers}, '
+              'adsId="${ad_config.adsId}"',
+          type: 'w',
+        );
+        return;
+      }
+
+      logUtil(
+        msg: '$log_prefix 创建NativeAdBanner, adUnitId=${ad_config.adsId}',
+      );
+
+      setState(() {
+        _native_ad_widget = NativeAdBanner(
+          ad_unit_id: ad_config.adsId,
+          uuid: ad_config.uuid,
+          is_dark: device_info.dark.value,
+        );
+      });
+    } catch (e, stack_trace) {
+      logUtil(
+        msg: '$log_prefix 广告配置加载异常: $e\n$stack_trace',
+        type: 'e',
+      );
+    }
   }
 
   /// 退出页面时保存阅读进度。
@@ -1297,6 +1390,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       _is_initialization_complete = false;
       _has_user_engaged = false;
       _is_rewarded_ad_loading = false;
+      _native_ad_widget = null;
       _logic = next_logic;
       _logic_generation++;
     });
@@ -2242,6 +2336,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                       is_unlocking: _is_rewarded_ad_loading,
                       font_size: _logic.body_font_size.value,
                       on_unlock: _on_unlock_story_tap,
+                      native_ad_widget: _native_ad_widget,
                     ),
 
                     /// 当前篇正文结束位置，用于准确计算进度和恢复位置。

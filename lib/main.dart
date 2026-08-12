@@ -32,7 +32,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:app/firebase_options.dart';
 import 'package:app/fcm/fcm_service.dart';
-import 'package:app/permission_request/ios_app_start_permission_request.dart';
 import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:auto_hyphenating_text/auto_hyphenating_text.dart';
 import 'package:app/util/app_update/index.dart';
@@ -48,9 +47,6 @@ void main() async {
 
   // TODO 初始化 GetStorage（必须在 runApp 之前）
   await GetStorage.init();
-
-  // iOS：只准备首次启动标记，不在 runApp 前申请任何系统权限。
-  await IosAppStartPermissionRequest.prepare_for_app_launch();
 
   await LanguageUtil.load_asset_language_code_list();
 

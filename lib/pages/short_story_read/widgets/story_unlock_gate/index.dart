@@ -8,7 +8,7 @@ import 'unlock_overlay.dart';
 
 /// 短篇小说正文的激励广告解锁区域。
 ///
-/// 解锁前只展示大约三分之一的正文，并在折叠位置使用渐变遮罩和
+/// 解锁前只展示大约二分之一的正文，并在折叠位置使用渐变遮罩和
 /// 观看广告按钮。解锁后直接展示完整正文。
 class StoryUnlockGate extends StatelessWidget {
   const StoryUnlockGate({
@@ -19,6 +19,7 @@ class StoryUnlockGate extends StatelessWidget {
     required this.is_unlocking,
     required this.font_size,
     required this.on_unlock,
+    this.native_ad_widget,
     super.key,
   });
 
@@ -43,6 +44,11 @@ class StoryUnlockGate extends StatelessWidget {
   /// 用户点击观看广告按钮时执行的回调。
   final VoidCallback on_unlock;
 
+  /// 原生广告横幅组件（可选）。
+  ///
+  /// 非空时在正文 1/4 位置插入原生广告。
+  final Widget? native_ad_widget;
+
   @override
   Widget build(BuildContext context) {
     final bool is_cjk = LanguageUtil.is_cjk_language(
@@ -54,6 +60,7 @@ class StoryUnlockGate extends StatelessWidget {
         is_dark: is_dark,
         is_loading: is_loading,
         font_size: font_size,
+        native_ad_widget: native_ad_widget,
       );
     }
 
@@ -70,6 +77,7 @@ class StoryUnlockGate extends StatelessWidget {
         content: content,
         is_dark: is_dark,
         font_size: font_size,
+        native_ad_widget: native_ad_widget,
       );
     }
 
@@ -91,6 +99,7 @@ class StoryUnlockGate extends StatelessWidget {
               content: preview_data.preview_content,
               is_dark: is_dark,
               font_size: font_size,
+              native_ad_widget: native_ad_widget,
             ),
             SizedBox(height: gate_height),
           ],

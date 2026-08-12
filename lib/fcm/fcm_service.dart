@@ -7,7 +7,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:app/fcm/register_token.dart';
 import 'package:app/fcm/fcm_handler.dart';
-import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/util/device/app_environment.dart';
 import 'package:app/util/log_util.dart';
 
@@ -19,9 +18,8 @@ import 'package:app/util/log_util.dart';
 /// 3. 本地通知展示（前台收到推送时）
 ///
 /// 注意：
-/// - Android 在该服务启动时检查并按需请求系统通知权限。
-/// - iOS 的启动权限顺序和业务触发权限都由 lib/permission_request 统一处理，
-///   FCM 初始化本身不触发系统权限弹窗。
+/// - Android 和 iOS 的通知权限都由登录、收藏等业务触发点统一处理。
+/// - FCM 初始化本身不触发系统权限弹窗，避免与 UMP/ATT 启动流程连续弹窗。
 class FcmService {
   /// 单例。
   static final FcmService _instance = FcmService._();
@@ -67,9 +65,6 @@ class FcmService {
 
     // 初始化本地通知。
     await _init_local_notifications();
-
-    // Android 启动触发点：已授权或已永久拒绝时不弹窗，其他未授权状态发起系统请求。
-    await NotificationPermissionRequest.request_on_android_app_start();
 
     // 配置 iOS 前台通知展示方式。该调用不会触发系统权限弹窗。
     if (isIOSApp) {

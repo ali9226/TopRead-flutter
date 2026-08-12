@@ -12,7 +12,6 @@ import UserNotifications
   private static let getAdvertisingIdMethod = "getAdvertisingId"
   private static let isLimitAdTrackingEnabledMethod = "isLimitAdTrackingEnabled"
   private static let getTrackingAuthorizationStatusMethod = "getTrackingAuthorizationStatus"
-  private static let requestTrackingAuthorizationMethod = "requestTrackingAuthorization"
   private var badgeChannel: FlutterMethodChannel?
   private var advertisingInfoChannel: FlutterMethodChannel?
 
@@ -88,73 +87,24 @@ import UserNotifications
   ) {
     switch call.method {
     case Self.getAdvertisingIdMethod:
-      getAdvertisingId(call, result: result)
+      getAdvertisingId(result: result)
     case Self.isLimitAdTrackingEnabledMethod:
       result(isLimitAdTrackingEnabled())
     case Self.getTrackingAuthorizationStatusMethod:
       result(trackingAuthorizationStatusName(ATTrackingManager.trackingAuthorizationStatus))
-    case Self.requestTrackingAuthorizationMethod:
-      requestTrackingAuthorization(result: result)
     default:
       result(FlutterMethodNotImplemented)
     }
   }
 
-  private func requestTrackingAuthorization(result: @escaping FlutterResult) {
-    let currentStatus = ATTrackingManager.trackingAuthorizationStatus
-    guard currentStatus == .notDetermined else {
-      result(trackingAuthorizationStatusName(currentStatus))
-      return
-    }
-
-    guard UIApplication.shared.applicationState == .active else {
-      result(
-        FlutterError(
-          code: "application_not_active",
-          message: "ATT authorization can only be requested while the app is active.",
-          details: nil
-        )
-      )
-      return
-    }
-
-    ATTrackingManager.requestTrackingAuthorization { [weak self] status in
-      DispatchQueue.main.async {
-        guard let self else {
-          result("unknown")
-          return
-        }
-        result(self.trackingAuthorizationStatusName(status))
-      }
-    }
-  }
-
-  private func getAdvertisingId(
-    _ call: FlutterMethodCall,
-    result: @escaping FlutterResult
-  ) {
+  private func getAdvertisingId(result: @escaping FlutterResult) {
     let status = ATTrackingManager.trackingAuthorizationStatus
 
     switch status {
     case .authorized:
       result(nonZeroAdvertisingIdentifier())
     case .notDetermined:
-      let arguments = call.arguments as? [String: Any]
-      let shouldRequestAuthorization =
-        arguments?["requestTrackingAuthorization"] as? Bool ?? false
-      guard shouldRequestAuthorization, UIApplication.shared.applicationState == .active else {
-        result(nil)
-        return
-      }
-      ATTrackingManager.requestTrackingAuthorization { [weak self] status in
-        DispatchQueue.main.async {
-          guard status == .authorized else {
-            result(nil)
-            return
-          }
-          result(self?.nonZeroAdvertisingIdentifier())
-        }
-      }
+      result(nil)
     case .denied, .restricted:
       result(nil)
     @unknown default:

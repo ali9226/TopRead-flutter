@@ -17,7 +17,7 @@ import 'package:app/components/app_wrapper/utils/route_asset_warm_up.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/permission_request/admob_consent_permission_request.dart';
-import 'package:app/permission_request/ios_app_start_permission_request.dart';
+import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/stores/bottom_navigation_info.dart';
 import 'package:app/stores/device_info.dart';
 
@@ -91,11 +91,9 @@ class _AppWrapperState extends State<AppWrapper> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
-      // iOS 启动权限顺序：首次启动跳过；后续启动先通知，确认无通知弹窗后再检查 ATT。
-      unawaited(IosAppStartPermissionRequest.request_after_first_frame());
-
-      // Android/iOS 每次冷启动只刷新 UMP 同意状态；必要表单延迟到用户请求广告时展示。
-      unawaited(AdMobConsentPermissionRequest.update_on_app_start());
+      // 启动权限 UI 串行调度：UMP/IDFA/ATT 本次有实际弹窗就结束；
+      // 若都没有弹窗，再检查并按需请求通知权限。
+      unawaited(_run_startup_permission_flow());
 
       unawaited(RouteAssetWarmUp.warmUpAfterFirstFrame(context));
       unawaited(
@@ -106,6 +104,33 @@ class _AppWrapperState extends State<AppWrapper> {
       );
       autoLogin();
     });
+  }
+
+  Future<void> _run_startup_permission_flow() async {
+    bool did_present_system_prompt = false;
+    final AppLifecycleListener lifecycle_listener = AppLifecycleListener(
+      onStateChange: (AppLifecycleState state) {
+        if (state == AppLifecycleState.inactive ||
+            state == AppLifecycleState.paused) {
+          did_present_system_prompt = true;
+        }
+      },
+    );
+
+    late final AdMobStartupPrivacyResult privacy_result;
+    try {
+      privacy_result =
+          await AdMobConsentPermissionRequest.initialize_on_app_start_with_result();
+    } finally {
+      lifecycle_listener.dispose();
+    }
+
+    if (!mounted ||
+        did_present_system_prompt ||
+        !privacy_result.can_continue_to_notification_permission) {
+      return;
+    }
+    await NotificationPermissionRequest.request_on_app_start_if_needed();
   }
 
   @override
