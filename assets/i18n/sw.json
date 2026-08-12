@@ -660,7 +660,8 @@
     "ad_in_progress": "Tangazo la zawadi tayari linachezwa.",
     "content_unlocked": "Hadithi nzima imefunguliwa. Anza kusoma!",
     "ad_not_available": "Hakuna matangazo yanayopatikana kwa sasa. Tafadhali jaribu tena baadaye.",
-    "swipe_to_continue": "Sogeza juu ili kuendelea kusoma"
+    "swipe_to_continue": "Sogeza juu ili kuendelea kusoma",
+    "unlock": "Fungua"
   },
   "comment": {
     "title": "Maoni",

@@ -692,7 +692,8 @@
     "ad_in_progress": "A rewarded ad is already playing.",
     "content_unlocked": "Full story unlocked. Start reading!",
     "ad_not_available": "No ads available right now. Please try again later.",
-    "swipe_to_continue": "Swipe up to continue reading"
+    "swipe_to_continue": "Swipe up to continue reading",
+    "unlock": "Unlock"
   },
   "comment": {
     "title": "Comments",

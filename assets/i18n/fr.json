@@ -688,7 +688,8 @@
     "ad_in_progress": "Une publicité récompensée est déjà en cours.",
     "content_unlocked": "Histoire complète débloquée. Bonne lecture !",
     "ad_not_available": "Aucune publicité disponible pour le moment. Veuillez réessayer plus tard.",
-    "swipe_to_continue": "Glissez vers le haut pour continuer"
+    "swipe_to_continue": "Glissez vers le haut pour continuer",
+    "unlock": "Débloquer"
   },
   "comment": {
     "title": "Commentaires",

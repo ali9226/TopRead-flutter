@@ -693,7 +693,8 @@
     "ad_in_progress": "激励视频广告正在播放",
     "content_unlocked": "全文已解锁，开始阅读吧!",
     "ad_not_available": "暂无可用广告，请稍后再试",
-    "swipe_to_continue": "上滑继续看故事"
+    "swipe_to_continue": "上滑继续看故事",
+    "unlock": "解锁"
   },
   "comment": {
     "title": "评论",

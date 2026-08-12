@@ -25,10 +25,18 @@ class NativeAdBanner extends StatefulWidget {
   /// 广告配置的唯一标识，用于服务器端验证。
   final String uuid;
 
+  /// 点击"解锁"徽章时的回调（由父组件传入，触发激励视频广告流程）。
+  final VoidCallback? on_unlock;
+
+  /// 激励视频广告是否正在加载中（控制徽章加载动画）。
+  final bool is_unlocking;
+
   const NativeAdBanner({
     super.key,
     required this.ad_unit_id,
     required this.uuid,
+    this.on_unlock,
+    this.is_unlocking = false,
   });
 
   @override
@@ -246,7 +254,53 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
                 ],
               ),
               clipBehavior: Clip.antiAlias,
-              child: AdWidget(ad: _native_ad!),
+              child: Stack(
+                children: <Widget>[
+                  // 原生广告内容。
+                  Positioned.fill(
+                    child: AdWidget(ad: _native_ad!),
+                  ),
+                  // 左上角"解锁"徽章（加载中显示转圈动画）。
+                  if (widget.on_unlock != null)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: GestureDetector(
+                        onTap: widget.is_unlocking ? null : widget.on_unlock,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.55),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: widget.is_unlocking
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 1.5,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(
+                                  tr('short_story_read.unlock'),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontConfig.adjustedWeight(
+                                      FontWeight.w500,
+                                    ),
+                                    color: Colors.white,
+                                    height: 1.2,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: _hint_spacing),

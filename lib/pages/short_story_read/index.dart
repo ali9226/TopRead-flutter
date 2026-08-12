@@ -552,6 +552,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         _native_ad_widget = NativeAdBanner(
           ad_unit_id: ad_config.adsId,
           uuid: ad_config.uuid,
+          on_unlock: _on_unlock_story_tap,
+          is_unlocking: _is_rewarded_ad_loading,
         );
       });
     } catch (e, stack_trace) {
@@ -1105,40 +1107,34 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
       switch (result) {
         case GoogleRewardedAdResult.rewarded:
-          // 广告播放完成，向后端验证是否真正看完。
-          final verifyResult = await postRequest<AdVerifyResult>(
-            path: 'novel_ads/search_results',
-            showTips: false,
-            parameter: {'uuid': adConfig.uuid},
-            fromJson: (json) => AdVerifyResult.fromJson(json),
+          // 广告播放完成，直接解锁全文（后台异步验证，不阻塞用户）。
+          unawaited(
+            postRequest<AdVerifyResult>(
+              path: 'novel_ads/search_results',
+              showTips: false,
+              parameter: {'uuid': adConfig.uuid},
+              fromJson: (json) => AdVerifyResult.fromJson(json),
+            ),
           );
-          if (!_is_current_logic(action_logic, action_generation)) return;
-
-          if (verifyResult.status &&
-              verifyResult.content?.status == AdVerifyResult.status_completed) {
-            // 广告已完整观看，解锁全文。
-            action_logic.unlock_current_story();
-            _has_user_engaged = true;
-            _reading_progress_max_extent = null;
-            _next_story_overlay_opacity = 0;
-            setState(() {});
-            await WidgetsBinding.instance.endOfFrame;
-            await WidgetsBinding.instance.endOfFrame;
-            if (!_is_current_logic(action_logic, action_generation) ||
-                !_scroll_controller.hasClients) {
-              return;
-            }
-            final double full_extent = _calculate_current_story_extent();
-            _reading_progress_max_extent = full_extent;
-            action_logic.update_reading_progress(
-              _scroll_controller.offset,
-              full_extent,
-            );
-            showBottomTip(easy.tr('short_story_read.content_unlocked'));
-          } else {
-            // status=1 或其他，广告未完整观看。
-            showBottomTip(easy.tr('short_story_read.ad_not_completed'));
+          action_logic.unlock_current_story();
+          _native_ad_widget = null;
+          _has_user_engaged = true;
+          _reading_progress_max_extent = null;
+          _next_story_overlay_opacity = 0;
+          setState(() {});
+          await WidgetsBinding.instance.endOfFrame;
+          await WidgetsBinding.instance.endOfFrame;
+          if (!_is_current_logic(action_logic, action_generation) ||
+              !_scroll_controller.hasClients) {
+            return;
           }
+          final double full_extent = _calculate_current_story_extent();
+          _reading_progress_max_extent = full_extent;
+          action_logic.update_reading_progress(
+            _scroll_controller.offset,
+            full_extent,
+          );
+          showBottomTip(easy.tr('short_story_read.content_unlocked'));
           break;
         case GoogleRewardedAdResult.dismissed:
           showBottomTip(easy.tr('short_story_read.ad_not_completed'));
