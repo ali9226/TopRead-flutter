@@ -56,6 +56,9 @@ class ProjectConfig {
   /// 名言内容。
   final String famous_quote;
 
+  /// 苹果审核状态。1 = 审核中，2 = 审核通过。
+  final int app_review_status;
+
   const ProjectConfig({
     required this.id,
     required this.ads_switch,
@@ -67,6 +70,7 @@ class ProjectConfig {
     required this.share_switch,
     required this.contact_customer_service_switch,
     required this.famous_quote,
+    required this.app_review_status,
   });
 
   /// 空配置兜底。
@@ -80,7 +84,8 @@ class ProjectConfig {
         creator_switch = SwitchValue.on,
         share_switch = SwitchValue.on,
         contact_customer_service_switch = SwitchValue.on,
-        famous_quote = '';
+        famous_quote = '',
+        app_review_status = 2;
 
   /// 从 JSON 解析。
   factory ProjectConfig.from_json(Map<String, dynamic> json) {
@@ -97,6 +102,7 @@ class ProjectConfig {
       contact_customer_service_switch:
           _parse_int(json['contact_customer_service_switch']),
       famous_quote: _parse_string(json['famous_quote']),
+      app_review_status: _parse_int(json['app_review_status']),
     );
   }
 
@@ -183,4 +189,11 @@ class ProjectConfig {
   /// 判断联系客服是否启用。
   bool get is_contact_customer_service_enabled =>
       is_enabled(contact_customer_service_switch);
+
+  /// 判断是否处于苹果审核模式。
+  ///
+  /// 苹果设备且 app_review_status = 1（审核中）时返回 true，
+  /// 此时快捷登录需要使用符合 Apple HIG 规范的按钮样式。
+  bool get is_apple_review_mode =>
+      Platform.isIOS && app_review_status == 1;
 }

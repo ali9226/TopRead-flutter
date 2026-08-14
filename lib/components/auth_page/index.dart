@@ -409,7 +409,9 @@ class AuthFooterAction extends StatelessWidget {
             promptText,
             style: TextStyle(
               fontSize: AuthPageStyle.footerPromptFontSize,
-              color: ColorConstants.hintColor,
+              color: isDark
+                  ? ColorConstants.nightTextColor
+                  : ColorConstants.lightTextColor,
               fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
             ),
           ),
@@ -426,14 +428,10 @@ class AuthFooterAction extends StatelessWidget {
                   actionText,
                   style: TextStyle(
                     fontSize: AuthPageStyle.footerPromptFontSize,
-                    color: isDark
-                        ? ColorConstants.themeColor
-                        : ColorConstants.lightTextColor,
+                    color: ColorConstants.dangerColor,
                     fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                     decoration: TextDecoration.underline,
-                    decorationColor: isDark
-                        ? ColorConstants.themeColor
-                        : ColorConstants.lightTextColor,
+                    decorationColor: ColorConstants.dangerColor,
                   ),
                 ),
               ),

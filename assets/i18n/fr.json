@@ -162,7 +162,10 @@
     "success_01": "Inscription réussie",
     "agreement_prefix": "En vous inscrivant, vous acceptez les",
     "user_agreement": "Conditions d'utilisation",
-    "agreement_required": "Veuillez d'abord accepter les conditions d'utilisation"
+    "agreement_required": "Veuillez d'abord accepter les conditions d'utilisation",
+    "agreement_dialog_title": "Veuillez lire et accepter les conditions d'utilisation",
+    "agreement_reject": "Refuser",
+    "agreement_agree": "Accepter"
   },
   "login": {
     "slogan": "Tout ce que vous voulez est ici",

@@ -131,7 +131,10 @@
     "success_01": "Usajili umefanikiwa",
     "agreement_prefix": "Kwa kujisajili, unakubali",
     "user_agreement": "Masharti ya Mtumiaji",
-    "agreement_required": "Tafadhali kubali Masharti ya Mtumiaji kwanza"
+    "agreement_required": "Tafadhali kubali Masharti ya Mtumiaji kwanza",
+    "agreement_dialog_title": "Tafadhali soma na ukubali Masharti ya Mtumiaji",
+    "agreement_reject": "Kataa",
+    "agreement_agree": "Kubali"
   },
   "login": {
     "slogan": "Kila unachotaka kiko hapa",

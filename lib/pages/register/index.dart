@@ -10,7 +10,7 @@ import 'package:app/components/authorized_login/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/stores/authorized_login_store.dart';
-import 'package:app/util/dialog/show_bottom_tip.dart';
+import 'package:app/stores/device_info.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/util/router/web_history.dart';
 import 'package:get/get.dart';
@@ -33,12 +33,15 @@ class _RegisterState extends State<Register> {
   /// 提交按钮 loading 状态。
   bool loading = false;
 
-  /// 用户协议勾选状态。
-  bool _isAgreed = false;
+  /// 用户协议勾选状态，默认已勾选。
+  bool _isAgreed = true;
 
   /// 登录、注册及第三方授权共用的认证互斥状态。
   final AuthorizedLoginStore authorized_login_store =
       Get.find<AuthorizedLoginStore>();
+
+  /// 主题信息，用于判断当前是否为夜间模式。
+  final DeviceInfo device_info = Get.find<DeviceInfo>();
 
   /// 注册页逻辑层。
   late final Logic logic;
@@ -167,18 +170,11 @@ class _RegisterState extends State<Register> {
         ),
 
         /// 邀请码输入区（账号未注册时显示）。
+        // TODO: 邀请码输入暂时隐藏，后续需要时恢复 show: isRegisterMode
         AuthInvitationCodeSection(
-          show: isRegisterMode,
+          show: false,
           controller: invitationController,
           onChanged: (String value) => logic.invitationCode = value,
-        ),
-        const SizedBox(height: Style.footerSpacing),
-
-        /// 主提交按钮（根据模式切换文案）。
-        AuthSubmitButton(
-          isLoginMode: !isRegisterMode,
-          loading: loading,
-          onTap: isRegisterMode ? _handleRegister : _handleLogin,
         ),
 
         /// 用户协议勾选框（仅注册模式显示）。
@@ -206,7 +202,10 @@ class _RegisterState extends State<Register> {
                       border: Border.all(
                         color: _isAgreed
                             ? ColorConstants.themeColor
-                            : ColorConstants.lightTextColor.withValues(alpha: 0.4),
+                            : (device_info.dark.value
+                                    ? ColorConstants.nightTextColor
+                                    : ColorConstants.lightTextColor)
+                                .withValues(alpha: 0.4),
                         width: 1.5,
                       ),
                       borderRadius: BorderRadius.circular(3),
@@ -230,7 +229,9 @@ class _RegisterState extends State<Register> {
                       text: TextSpan(
                         style: TextStyle(
                           fontSize: 12,
-                          color: ColorConstants.lightTextColor,
+                          color: device_info.dark.value
+                              ? ColorConstants.nightTextColor
+                              : ColorConstants.lightTextColor,
                           fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                         ),
                         children: [
@@ -267,6 +268,15 @@ class _RegisterState extends State<Register> {
           ),
         ],
 
+        const SizedBox(height: Style.footerSpacing),
+
+        /// 主提交按钮（根据模式切换文案）。
+        AuthSubmitButton(
+          isLoginMode: !isRegisterMode,
+          loading: loading,
+          onTap: isRegisterMode ? _handleRegister : _handleLogin,
+        ),
+
         const SizedBox(height: 20),
 
         /// 底部跳转入口（根据模式切换文案）。
@@ -280,19 +290,57 @@ class _RegisterState extends State<Register> {
           onTap: isRegisterMode ? _goToLogin : _switchToRegisterMode,
         ),
         const SizedBox(height: Style.supportSpacing),
-        AuthorizedLoginView(),
+        AuthorizedLoginView(
+          onBeforeLogin: _check_agreement,
+        ),
         const SizedBox(height: 30),
       ],
     );
   }
 
+  /// 检查用户协议勾选状态，未勾选时弹窗询问。
+  ///
+  /// 返回 true 表示已同意（原本就勾选或弹窗中点击了同意），可继续后续操作。
+  Future<bool> _check_agreement() async {
+    if (_isAgreed) return true;
+
+    final bool? agreed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(context.tr('register.agreement_dialog_title')),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(context.tr('register.agreement_reject')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(
+                context.tr('register.agreement_agree'),
+                style: TextStyle(color: ColorConstants.themeColor),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (agreed == true) {
+      setState(() {
+        _isAgreed = true;
+      });
+      return true;
+    }
+
+    return false;
+  }
+
   /// 提交注册请求并在成功后跳转首页。
   Future<void> _handleRegister() async {
-    /// 未勾选用户协议时提示。
-    if (!_isAgreed) {
-      showBottomTip(context.tr('register.agreement_required'));
-      return;
-    }
+    /// 未勾选用户协议时弹窗确认。
+    if (!await _check_agreement()) return;
+    if (!mounted) return;
 
     /// 提交前收起键盘。
     FocusScope.of(context).unfocus();

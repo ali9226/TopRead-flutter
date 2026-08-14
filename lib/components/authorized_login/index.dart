@@ -10,13 +10,17 @@ import 'package:app/models/rotation.dart';
 import 'package:app/stores/authorized_login_store.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/project_config_store.dart';
+import 'apple_review/index.dart';
 import 'logic.dart';
 import 'style.dart';
 import 'package:app/config/font_config.dart';
 
 /// 授权登录列表公共组件。
 class AuthorizedLoginView extends StatefulWidget {
-  const AuthorizedLoginView({super.key});
+  /// 登录前的拦截回调，返回 false 可阻止登录流程继续。
+  final Future<bool> Function()? onBeforeLogin;
+
+  const AuthorizedLoginView({super.key, this.onBeforeLogin});
 
   @override
   State<AuthorizedLoginView> createState() => _AuthorizedLoginViewState();
@@ -48,6 +52,11 @@ class _AuthorizedLoginViewState extends State<AuthorizedLoginView> {
       // 授权登录开关关闭时隐藏整个组件。
       if (!projectConfigStore.current.is_authorized_login_enabled) {
         return const SizedBox.shrink();
+      }
+
+      // 苹果审核模式下使用符合 HIG 规范的按钮布局。
+      if (projectConfigStore.current.is_apple_review_mode) {
+        return AppleReviewLoginView(onBeforeLogin: widget.onBeforeLogin);
       }
 
       final List<Rotation> rotation_list = authorized_login_store.rotation_list
@@ -83,7 +92,7 @@ class _AuthorizedLoginViewState extends State<AuthorizedLoginView> {
                       fontSize: AuthorizedLoginStyle.title_font_size,
                       color: device_info.dark.value
                           ? ColorConstants.nightTextColor
-                          : ColorConstants.hintColor,
+                          : ColorConstants.lightTextColor,
                       fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                     ),
                   ),
@@ -138,7 +147,13 @@ class _AuthorizedLoginViewState extends State<AuthorizedLoginView> {
           behavior: HitTestBehavior.opaque,
           onTap: is_authentication_loading
               ? null
-              : () => logic.handle_authorized_login_tap(item),
+              : () async {
+                  if (widget.onBeforeLogin != null &&
+                      !(await widget.onBeforeLogin!())) {
+                    return;
+                  }
+                  await logic.handle_authorized_login_tap(item);
+                },
           child: SizedBox(
             width: AuthorizedLoginStyle.item_width,
             child: Column(

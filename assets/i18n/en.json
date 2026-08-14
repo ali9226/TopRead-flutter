@@ -152,7 +152,10 @@
     "success_01": "Signed up",
     "agreement_prefix": "By registering, you agree to the",
     "user_agreement": "User Agreement",
-    "agreement_required": "Please agree to the User Agreement first"
+    "agreement_required": "Please agree to the User Agreement first",
+    "agreement_dialog_title": "Please read and agree to the User Agreement",
+    "agreement_reject": "Reject",
+    "agreement_agree": "Agree"
   },
   "login": {
     "slogan": "All your stories are here",

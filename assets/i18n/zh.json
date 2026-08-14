@@ -153,7 +153,10 @@
     "success_01": "成功注册",
     "agreement_prefix": "注册即代表同意",
     "user_agreement": "《用户协议》",
-    "agreement_required": "请先勾选用户协议"
+    "agreement_required": "请先勾选用户协议",
+    "agreement_dialog_title": "请先阅读并同意用户协议",
+    "agreement_reject": "拒绝",
+    "agreement_agree": "同意"
   },
   "login": {
     "slogan": "你想要的,这里都有",
