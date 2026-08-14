@@ -25,11 +25,14 @@ class NativeAdBanner extends StatefulWidget {
   /// 广告配置的唯一标识，用于服务器端验证。
   final String uuid;
 
-  /// 点击"解锁"徽章时的回调（由父组件传入，触发激励视频广告流程）。
+  /// 点击徽章时的回调（由父组件传入）。
   final VoidCallback? on_unlock;
 
   /// 激励视频广告是否正在加载中（控制徽章加载动画）。
   final bool is_unlocking;
+
+  /// 徽章文案的多语种 key，默认为解锁文案。
+  final String badge_text_key;
 
   const NativeAdBanner({
     super.key,
@@ -37,6 +40,7 @@ class NativeAdBanner extends StatefulWidget {
     required this.uuid,
     this.on_unlock,
     this.is_unlocking = false,
+    this.badge_text_key = 'short_story_read.unlock',
   });
 
   @override
@@ -286,7 +290,7 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
                                   ),
                                 )
                               : Text(
-                                  tr('short_story_read.unlock'),
+                                  tr(widget.badge_text_key),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontConfig.adjustedWeight(

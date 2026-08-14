@@ -150,7 +150,10 @@
     "invitation_code_tips": "为什么填邀请码?",
     "account_tips": "已经有账号?",
     "login_now": "立即登录",
-    "success_01": "成功注册"
+    "success_01": "成功注册",
+    "agreement_prefix": "注册即代表同意",
+    "user_agreement": "《用户协议》",
+    "agreement_required": "请先勾选用户协议"
   },
   "login": {
     "slogan": "你想要的,这里都有",
@@ -694,7 +697,8 @@
     "content_unlocked": "全文已解锁，开始阅读吧!",
     "ad_not_available": "暂无可用广告，请稍后再试",
     "swipe_to_continue": "上滑继续看故事",
-    "unlock": "解锁"
+    "unlock": "解锁",
+    "ad_free": "免广告"
   },
   "comment": {
     "title": "评论",

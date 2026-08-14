@@ -6,7 +6,11 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import 'package:app/api/bookshelf.dart';
+import 'package:app/api/post_request.dart';
+import 'package:app/api/results_type.dart';
 import 'package:app/config/color_config.dart';
+import 'package:app/models/ad_config.dart';
+import 'package:app/util/log_util.dart';
 import 'package:app/components/page_top_gradient_overlay/index.dart';
 import 'package:app/pages/read/utils/scroll_utils.dart';
 import 'package:app/pages/ranking_full_list/widgets/starfield_decoration.dart';
@@ -98,6 +102,12 @@ class _ReadPageState extends State<ReadPage>
   /// 滚动过程中只刷新进度相关小组件，避免整页正文随每个像素重建。
   final ValueNotifier<double> _reading_progress_notifier =
       ValueNotifier<double>(0);
+
+  /// 原生广告单元 ID（从后端接口加载，为空时不展示广告）。
+  String _ad_unit_id = '';
+
+  /// 广告配置的唯一标识，用于服务器端验证。
+  String _ad_uuid = '';
 
   /// 是否进入正文区域的展示通知器。
   final ValueNotifier<bool> _has_started_reading_notifier = ValueNotifier<bool>(
@@ -201,6 +211,9 @@ class _ReadPageState extends State<ReadPage>
     // 进入页面时请求接口，有阅读进度时静默加载目标章节。
     _initialization_future = _init_with_progress_restore();
 
+    // 后台加载原生高级广告配置（不阻塞页面展示）。
+    unawaited(_load_native_ad_config());
+
     // 从消息页跳转时，等待阅读页初始化完成后再打开评论区，避免两个路由动画
     // 与初始进度定位同时执行。
     if (widget.initial_comment_id > 0) {
@@ -223,6 +236,62 @@ class _ReadPageState extends State<ReadPage>
         AppRouter.back();
       }
     });
+  }
+
+  /// 后台加载原生高级广告配置。
+  ///
+  /// 请求 ads/short_story_read_show_ads 接口获取广告单元 ID，
+  /// 成功且广告商为谷歌 AdMob 时存储配置，供正文区域 10% 概率插入广告使用。
+  /// 加载失败不影响页面正常展示。
+  Future<void> _load_native_ad_config() async {
+    const String log_prefix = '[ReadNativeAdConfig]';
+    try {
+      logUtil(msg: '$log_prefix 开始请求广告配置, novel_id=${widget.story_id}');
+
+      final ResultsType<AdConfig> result = await postRequest<AdConfig>(
+        path: 'ads/short_story_read_show_ads',
+        parameter: <String, dynamic>{'source_id': widget.story_id},
+        showTips: false,
+        fromJson: (json) => AdConfig.fromJson(json),
+      );
+
+      if (!mounted) return;
+
+      logUtil(
+        msg: '$log_prefix 接口响应: status=${result.status}, '
+            'content=${result.content != null}',
+      );
+
+      if (!result.status || result.content == null) {
+        logUtil(msg: '$log_prefix 接口返回失败或内容为空，跳过', type: 'w');
+        return;
+      }
+
+      final AdConfig ad_config = result.content!;
+
+      // advertisers=1 表示谷歌 AdMob，且 ads_id 必须有值。
+      if (ad_config.advertisers != 1 || ad_config.adsId.isEmpty) {
+        logUtil(
+          msg: '$log_prefix 广告商不是谷歌或adsId为空，跳过',
+          type: 'w',
+        );
+        return;
+      }
+
+      logUtil(
+        msg: '$log_prefix 广告配置加载成功, adUnitId=${ad_config.adsId}',
+      );
+
+      setState(() {
+        _ad_unit_id = ad_config.adsId;
+        _ad_uuid = ad_config.uuid;
+      });
+    } catch (e, stack_trace) {
+      logUtil(
+        msg: '$log_prefix 广告配置加载异常: $e\n$stack_trace',
+        type: 'e',
+      );
+    }
   }
 
   /// 初始化页面，有阅读进度时静默加载目标章节。
@@ -1481,6 +1550,9 @@ class _ReadPageState extends State<ReadPage>
                     reading_items: reading_items,
                     reading_section_key: reading_section_key,
                     on_reading_tap_down: _handle_reading_tap_down,
+                    novel_id: widget.story_id,
+                    ad_unit_id: _ad_unit_id,
+                    ad_uuid: _ad_uuid,
                   ),
                 ),
               ),

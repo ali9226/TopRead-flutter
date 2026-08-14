@@ -12,6 +12,7 @@ import 'package:app/stores/customer_service_store.dart';
 import 'package:app/stores/authorized_login_store.dart';
 import 'package:app/stores/preference_store.dart';
 import 'package:app/stores/share_store.dart';
+import 'package:app/stores/project_config_store.dart';
 
 /// TODO: Redis 数据请求中心控制器
 class RedisRequestStore extends GetxController {
@@ -155,6 +156,10 @@ class RedisRequestStore extends GetxController {
           ..save_dislike_list(data.dislike_list)
           ..save_popular_searches(data.popular_searches)
           ..finish_language_refresh();
+      }
+
+      if (Get.isRegistered<ProjectConfigStore>()) {
+        Get.find<ProjectConfigStore>().save_config(data.project_config);
       }
 
       logUtil(

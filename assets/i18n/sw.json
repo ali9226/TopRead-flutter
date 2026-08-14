@@ -128,7 +128,10 @@
     "invitation_code_tips": "Kwa nini ujaze nambari ya mwaliko?",
     "account_tips": "Tayari una akaunti?",
     "login_now": "Ingia sasa",
-    "success_01": "Usajili umefanikiwa"
+    "success_01": "Usajili umefanikiwa",
+    "agreement_prefix": "Kwa kujisajili, unakubali",
+    "user_agreement": "Masharti ya Mtumiaji",
+    "agreement_required": "Tafadhali kubali Masharti ya Mtumiaji kwanza"
   },
   "login": {
     "slogan": "Kila unachotaka kiko hapa",
@@ -661,7 +664,8 @@
     "content_unlocked": "Hadithi nzima imefunguliwa. Anza kusoma!",
     "ad_not_available": "Hakuna matangazo yanayopatikana kwa sasa. Tafadhali jaribu tena baadaye.",
     "swipe_to_continue": "Sogeza juu ili kuendelea kusoma",
-    "unlock": "Fungua"
+    "unlock": "Fungua",
+    "ad_free": "Bila tangazo"
   },
   "comment": {
     "title": "Maoni",

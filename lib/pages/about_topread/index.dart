@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart' as easy;
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
@@ -15,6 +13,7 @@ import 'package:app/models/language_info.dart';
 import 'package:app/permission_request/admob_consent_permission_request.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/language_store.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/dialog/show_message.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
@@ -41,6 +40,9 @@ class _AboutTopReadState extends State<AboutTopRead> {
   /// 用户信息仓库。
   final userInformation = Get.find<UserInformation>();
 
+  /// 项目配置仓库。
+  final projectConfigStore = Get.find<ProjectConfigStore>();
+
   /// 页面逻辑层。
   late Logic logic;
 
@@ -64,7 +66,6 @@ class _AboutTopReadState extends State<AboutTopRead> {
       final bool isLoggedIn = userInformation.isLoggedIn.value;
       final bool showDebug =
           isLoggedIn && userInformation.userInfo.value?.debug == 2;
-      final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
       /// 背景色：与 user_info 页面保持一致。
       final Color bgColor = isDark
@@ -150,7 +151,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
               /// 操作列表（无外框）。
               Column(
                 children: [
-                  if (!isIOS)
+                  if (projectConfigStore.current.is_rating_enabled)
                     _buildListItem(
                       title: easy.tr('AboutTopRead.rate_us'),
                       textColor: titleColor,
@@ -246,6 +247,14 @@ class _AboutTopReadState extends State<AboutTopRead> {
 
   /// 刷新 UMP 对“隐私选项”入口的法规要求，并仅在需要时展示列表项。
   Future<void> _refresh_ad_privacy_options_requirement() async {
+    // 广告开关关闭时不显示广告隐私选项。
+    if (!projectConfigStore.current.is_ads_enabled) {
+      if (mounted && _show_ad_privacy_options) {
+        setState(() => _show_ad_privacy_options = false);
+      }
+      return;
+    }
+
     final bool is_required =
         await AdMobConsentPermissionRequest.is_privacy_options_required();
     if (!mounted || _show_ad_privacy_options == is_required) return;

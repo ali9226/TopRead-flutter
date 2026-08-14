@@ -12,6 +12,7 @@ import 'package:app/stores/user_information.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/language_store.dart';
 import 'package:app/stores/message_store.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'package:app/util/clipboard/clipboard.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/dialog/show_message.dart';
@@ -38,6 +39,9 @@ class _OperationListState extends State<OperationList> {
 
   /// 设备主题仓库。
   final deviceInfo = Get.find<DeviceInfo>();
+
+  /// 项目配置仓库。
+  final projectConfigStore = Get.find<ProjectConfigStore>();
 
   /// 语种状态仓库。
   final languageStore = Get.find<LanguageStore>();
@@ -140,7 +144,7 @@ class _OperationListState extends State<OperationList> {
           ),
         );
       }
-      if (isLoggedIn) {
+      if (isLoggedIn && projectConfigStore.current.is_creator_enabled) {
         group1Children.add(
           OperationLi(
             icon: "signature",
@@ -176,31 +180,32 @@ class _OperationListState extends State<OperationList> {
           showDivider: true,
         ),
       );
-      group2Children.add(
-        OperationLi(
-          icon: "customer_service",
-          title: easy.tr('UserInfo.online_customer_service'),
-          type: 1,
-          showDivider: true,
-          trailing: Obx(() {
-            final unread = Get.find<MessageStore>().chat_unread.value;
-            if (unread > 0) {
-              return _buildUnreadBadge(unread);
-            }
-            // 没有未读数时显示箭头。
-            return SvgIcon(
-              name: "right",
-              width: 16,
-              height: 16,
-              color: deviceInfo.dark.value
-                  ? Colors.white.withValues(alpha: 0.38)
-                  : ColorConstants.lightTextColor.withValues(alpha: 0.22),
-            );
-          }),
-          onTap: () {
-            GoRouter.of(context).push('/customer_service_chat');
-          },
-        ),
+      if (projectConfigStore.current.is_online_customer_service_enabled)
+        group2Children.add(
+          OperationLi(
+            icon: "customer_service",
+            title: easy.tr('UserInfo.online_customer_service'),
+            type: 1,
+            showDivider: true,
+            trailing: Obx(() {
+              final unread = Get.find<MessageStore>().chat_unread.value;
+              if (unread > 0) {
+                return _buildUnreadBadge(unread);
+              }
+              // 没有未读数时显示箭头。
+              return SvgIcon(
+                name: "right",
+                width: 16,
+                height: 16,
+                color: deviceInfo.dark.value
+                    ? Colors.white.withValues(alpha: 0.38)
+                    : ColorConstants.lightTextColor.withValues(alpha: 0.22),
+              );
+            }),
+            onTap: () {
+              GoRouter.of(context).push('/customer_service_chat');
+            },
+          ),
       );
       group2Children.add(
         OperationLi(

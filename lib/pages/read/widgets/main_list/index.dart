@@ -34,6 +34,15 @@ class ReadMainList extends StatelessWidget {
   /// 正文点击回调。
   final GestureTapDownCallback on_reading_tap_down;
 
+  /// 小说 ID（用于稳定随机决定哪些章节插入广告）。
+  final int novel_id;
+
+  /// 原生广告单元 ID（为空时不展示广告）。
+  final String ad_unit_id;
+
+  /// 广告配置的唯一标识。
+  final String ad_uuid;
+
   const ReadMainList({
     super.key,
     required this.logic,
@@ -44,6 +53,9 @@ class ReadMainList extends StatelessWidget {
     required this.reading_items,
     required this.reading_section_key,
     required this.on_reading_tap_down,
+    this.novel_id = 0,
+    this.ad_unit_id = '',
+    this.ad_uuid = '',
   });
 
   @override
@@ -78,6 +90,9 @@ class ReadMainList extends StatelessWidget {
               reading_items: reading_items,
               reading_section_key: reading_section_key,
               on_reading_tap_down: on_reading_tap_down,
+              novel_id: novel_id,
+              ad_unit_id: ad_unit_id,
+              ad_uuid: ad_uuid,
             ),
           ],
         ),

@@ -1,9 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/models/novel_info.dart';
+import 'package:app/stores/project_config_store.dart';
 
 /// 阅读页底部导航栏组件。
 ///
@@ -103,6 +105,10 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
 
   @override
   Widget build(BuildContext context) {
+    /// 评论开关。
+    final bool isCommentEnabled =
+        Get.find<ProjectConfigStore>().current.is_comment_enabled;
+
     /// 底部安全区域高度。
     final double bottom_padding = MediaQuery.viewPaddingOf(context).bottom;
 
@@ -165,14 +171,15 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
                   ),
 
                   /// 3. 评论。
-                  Expanded(
-                    child: _buildActionItem(
-                      icon: 'message',
-                      label: '${widget.comment_count}',
-                      icon_color: icon_color,
-                      onTap: widget.on_comment_tap,
+                  if (isCommentEnabled)
+                    Expanded(
+                      child: _buildActionItem(
+                        icon: 'message',
+                        label: '${widget.comment_count}',
+                        icon_color: icon_color,
+                        onTap: widget.on_comment_tap,
+                      ),
                     ),
-                  ),
 
                   /// 4. 喜欢。
                   Expanded(child: _buildLikeItem(icon_color: icon_color)),

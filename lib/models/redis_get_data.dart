@@ -5,6 +5,7 @@ import 'package:app/models/rotation.dart';
 import 'package:app/models/preference.dart';
 import 'package:app/models/home_classification.dart';
 import 'package:app/models/popular_search_item.dart';
+import 'package:app/models/project_config.dart';
 
 /* TODO
  * redis/get 接口返回的 content 数据模型。
@@ -37,6 +38,9 @@ class RedisGetData {
   /// 热门搜索标签列表。
   final List<PopularSearchItem> popular_searches;
 
+  /// 项目配置。
+  final ProjectConfig project_config;
+
   const RedisGetData({
     required this.language_list,
     required this.rotation_list,
@@ -46,6 +50,7 @@ class RedisGetData {
     required this.search_list,
     required this.dislike_list,
     required this.popular_searches,
+    required this.project_config,
   });
 
   /// TODO 空数据兜底。
@@ -57,7 +62,8 @@ class RedisGetData {
       rankings = const [],
       search_list = const [],
       dislike_list = const [],
-      popular_searches = const [];
+      popular_searches = const [],
+      project_config = const ProjectConfig.empty();
 
   /// TODO 从接口返回的原始 json 中解析业务对象。
   ///
@@ -75,6 +81,7 @@ class RedisGetData {
       search_list: _parse_search_list(json['search_list']),
       dislike_list: _parse_dislike_list(json['dislike_list']),
       popular_searches: _parse_popular_searches(json['popular_searches']),
+      project_config: _parse_project_config(json['project_config']),
     );
   }
 
@@ -132,5 +139,11 @@ class RedisGetData {
   static List<PopularSearchItem> _parse_popular_searches(dynamic raw) {
     if (raw is! List) return const [];
     return PopularSearchItem.from_json_list(raw);
+  }
+
+  /// TODO 解析项目配置。
+  static ProjectConfig _parse_project_config(dynamic raw) {
+    if (raw is! Map) return const ProjectConfig.empty();
+    return ProjectConfig.from_json(Map<String, dynamic>.from(raw));
   }
 }

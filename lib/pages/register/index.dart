@@ -7,7 +7,10 @@ import 'package:app/components/auth_page/index.dart';
 import 'package:app/components/auth_page/style.dart';
 import 'package:app/components/auth_form_widgets/index.dart';
 import 'package:app/components/authorized_login/index.dart';
+import 'package:app/config/color_config.dart';
+import 'package:app/config/font_config.dart';
 import 'package:app/stores/authorized_login_store.dart';
+import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/util/router/web_history.dart';
 import 'package:get/get.dart';
@@ -29,6 +32,9 @@ class Register extends StatefulWidget {
 class _RegisterState extends State<Register> {
   /// 提交按钮 loading 状态。
   bool loading = false;
+
+  /// 用户协议勾选状态。
+  bool _isAgreed = false;
 
   /// 登录、注册及第三方授权共用的认证互斥状态。
   final AuthorizedLoginStore authorized_login_store =
@@ -174,6 +180,93 @@ class _RegisterState extends State<Register> {
           loading: loading,
           onTap: isRegisterMode ? _handleRegister : _handleLogin,
         ),
+
+        /// 用户协议勾选框（仅注册模式显示）。
+        if (isRegisterMode) ...[
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AuthPageStyle.fieldHorizontalPadding,
+            ),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isAgreed = !_isAgreed;
+                });
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  /// 勾选框。
+                  Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: _isAgreed
+                            ? ColorConstants.themeColor
+                            : ColorConstants.lightTextColor.withValues(alpha: 0.4),
+                        width: 1.5,
+                      ),
+                      borderRadius: BorderRadius.circular(3),
+                      color: _isAgreed
+                          ? ColorConstants.themeColor
+                          : Colors.transparent,
+                    ),
+                    child: _isAgreed
+                        ? const Icon(
+                            Icons.check,
+                            size: 12,
+                            color: Colors.white,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 8),
+
+                  /// 协议文字。
+                  Flexible(
+                    child: RichText(
+                      text: TextSpan(
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: ColorConstants.lightTextColor,
+                          fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                        ),
+                        children: [
+                          TextSpan(
+                            text: context.tr('register.agreement_prefix'),
+                          ),
+                          WidgetSpan(
+                            child: GestureDetector(
+                              onTap: () {
+                                routerUtil(path: '/image_text?type=60');
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 5),
+                                child: Text(
+                                  context.tr('register.user_agreement'),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: ColorConstants.dangerColor,
+                                    fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: ColorConstants.dangerColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+
         const SizedBox(height: 20),
 
         /// 底部跳转入口（根据模式切换文案）。
@@ -195,6 +288,12 @@ class _RegisterState extends State<Register> {
 
   /// 提交注册请求并在成功后跳转首页。
   Future<void> _handleRegister() async {
+    /// 未勾选用户协议时提示。
+    if (!_isAgreed) {
+      showBottomTip(context.tr('register.agreement_required'));
+      return;
+    }
+
     /// 提交前收起键盘。
     FocusScope.of(context).unfocus();
 

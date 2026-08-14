@@ -19,6 +19,7 @@ import 'package:app/models/short_story_item.dart';
 import 'package:app/stores/comment_navigation.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/pages/short_story_read/logic.dart';
 import 'package:app/pages/short_story_read/style.dart';
@@ -444,8 +445,12 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       return;
     }
 
-    // 后台加载原生高级广告配置（不阻塞页面展示和位置恢复）。
-    unawaited(_load_native_ad_config(logic: logic, generation: generation));
+    // 广告开关开启时才加载原生广告配置。
+    final ProjectConfigStore projectConfigStore = Get.find<ProjectConfigStore>();
+    if (projectConfigStore.current.is_ads_enabled) {
+      // 后台加载原生高级广告配置（不阻塞页面展示和位置恢复）。
+      unawaited(_load_native_ad_config(logic: logic, generation: generation));
+    }
 
     if (restore_position && record != null) {
       await _restore_last_read_position(

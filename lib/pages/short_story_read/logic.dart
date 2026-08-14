@@ -13,6 +13,7 @@ import 'package:app/models/short_story_read_data.dart';
 import 'package:app/models/short_story_item.dart';
 import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/stores/short_story_catalog_store.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'package:app/util/device/save_body_font_size.dart';
 
 /// 短篇小说阅读页面逻辑层。
@@ -139,7 +140,13 @@ class ShortStoryReadLogic {
     final double? saved_speed = load_auto_read_speed();
     auto_read_speed = (saved_speed ?? 0.2).obs;
 
-    is_story_unlocked = _unlocked_story_ids.contains(story_id).obs;
+    // 广告开关关闭时直接解锁所有内容。
+    final ProjectConfigStore projectConfigStore = Get.find<ProjectConfigStore>();
+    final bool ads_disabled = !projectConfigStore.current.is_ads_enabled;
+    if (ads_disabled) {
+      _unlocked_story_ids.add(story_id);
+    }
+    is_story_unlocked = (_unlocked_story_ids.contains(story_id) || ads_disabled).obs;
   }
 
   /// 增加正文字号（步长 2，最大 36），并持久化。

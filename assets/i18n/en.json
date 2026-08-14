@@ -149,7 +149,10 @@
     "invitation_code_tips": "Why invite code?",
     "account_tips": "Already have an account?",
     "login_now": "Log In",
-    "success_01": "Signed up"
+    "success_01": "Signed up",
+    "agreement_prefix": "By registering, you agree to the",
+    "user_agreement": "User Agreement",
+    "agreement_required": "Please agree to the User Agreement first"
   },
   "login": {
     "slogan": "All your stories are here",
@@ -693,7 +696,8 @@
     "content_unlocked": "Full story unlocked. Start reading!",
     "ad_not_available": "No ads available right now. Please try again later.",
     "swipe_to_continue": "Swipe up to continue reading",
-    "unlock": "Unlock"
+    "unlock": "Unlock",
+    "ad_free": "Ad free"
   },
   "comment": {
     "title": "Comments",

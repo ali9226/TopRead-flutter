@@ -22,6 +22,7 @@ import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/stores/short_story_catalog_store.dart';
 import 'package:app/stores/preference_store.dart';
 import 'package:app/stores/share_store.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'package:app/stores/message_store.dart';
 import 'package:app/stores/bookshelf_store.dart';
 import 'package:app/stores/ranking_full_list_store.dart';
@@ -86,6 +87,7 @@ void main() async {
   Get.put(ShortStoryCatalogStore());
   Get.put(PreferenceStore());
   Get.put(ShareStore());
+  Get.put(ProjectConfigStore());
   Get.put(MessageStore());
   Get.put(BookshelfStore());
   Get.put(RankingFullListStore());

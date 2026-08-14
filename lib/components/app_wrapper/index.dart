@@ -20,6 +20,7 @@ import 'package:app/permission_request/admob_consent_permission_request.dart';
 import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/stores/bottom_navigation_info.dart';
 import 'package:app/stores/device_info.dart';
+import 'package:app/stores/project_config_store.dart';
 
 /// AppWrapper 是整个应用的根容器。
 ///
@@ -107,6 +108,14 @@ class _AppWrapperState extends State<AppWrapper> {
   }
 
   Future<void> _run_startup_permission_flow() async {
+    // 广告开关关闭时跳过 UMP 初始化。
+    final ProjectConfigStore projectConfigStore = Get.find<ProjectConfigStore>();
+    if (!projectConfigStore.current.is_ads_enabled) {
+      // 仅检查通知权限。
+      await NotificationPermissionRequest.request_on_app_start_if_needed();
+      return;
+    }
+
     bool did_present_system_prompt = false;
     final AppLifecycleListener lifecycle_listener = AppLifecycleListener(
       onStateChange: (AppLifecycleState state) {

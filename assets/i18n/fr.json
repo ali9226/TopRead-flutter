@@ -159,7 +159,10 @@
     "invitation_code_tips": "Pourquoi saisir un code d’invitation ?",
     "account_tips": "Vous avez déjà un compte ?",
     "login_now": "Se connecter maintenant",
-    "success_01": "Inscription réussie"
+    "success_01": "Inscription réussie",
+    "agreement_prefix": "En vous inscrivant, vous acceptez les",
+    "user_agreement": "Conditions d'utilisation",
+    "agreement_required": "Veuillez d'abord accepter les conditions d'utilisation"
   },
   "login": {
     "slogan": "Tout ce que vous voulez est ici",
@@ -689,7 +692,8 @@
     "content_unlocked": "Histoire complète débloquée. Bonne lecture !",
     "ad_not_available": "Aucune publicité disponible pour le moment. Veuillez réessayer plus tard.",
     "swipe_to_continue": "Glissez vers le haut pour continuer",
-    "unlock": "Débloquer"
+    "unlock": "Débloquer",
+    "ad_free": "Sans pub"
   },
   "comment": {
     "title": "Commentaires",
@@ -787,6 +791,7 @@
   "AboutTopRead": {
     "rate_us": "Évaluer",
     "user_agreement": "Conditions d'utilisation",
+    "agreement_required": "Veuillez d'abord accepter les conditions d'utilisation",
     "privacy_policy": "Politique de confidentialité",
     "ad_privacy_options": "Choix de confidentialité publicitaire",
     "ad_privacy_options_unavailable": "Les choix de confidentialité publicitaire sont temporairement indisponibles. Réessayez plus tard.",

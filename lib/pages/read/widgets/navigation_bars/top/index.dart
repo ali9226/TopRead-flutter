@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:app/components/svg_icon/index.dart';
+import 'package:app/stores/project_config_store.dart';
 
 /// 阅读页顶部导航栏组件。
 ///
@@ -45,6 +47,10 @@ class ReadTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    /// 分享开关。
+    final bool isShareEnabled =
+        Get.find<ProjectConfigStore>().current.is_share_enabled;
+
     final double status_bar_height = MediaQuery.viewPaddingOf(context).top;
 
     /// 导航栏高度（不含状态栏）。
@@ -148,28 +154,29 @@ class ReadTopBar extends StatelessWidget {
                     ),
 
               /// 分享按钮（加载时显示骨架屏，完成后显示真实图标）。
-              is_loading
-                  ? Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: _IconSkeleton(
-                        size: 20,
-                        base_color: skeleton_base_color,
-                        highlight_color: skeleton_highlight_color,
-                      ),
-                    )
-                  : GestureDetector(
-                      onTap: on_share,
-                      behavior: HitTestBehavior.opaque,
-                      child: Padding(
+              if (isShareEnabled)
+                is_loading
+                    ? Padding(
                         padding: const EdgeInsets.only(right: 16),
-                        child: SvgIcon(
-                          name: 'share',
-                          width: 20,
-                          height: 20,
-                          color: is_dark ? const Color(0xFFD0D4DB).withValues(alpha: 0.82) : right_icon_color,
+                        child: _IconSkeleton(
+                          size: 20,
+                          base_color: skeleton_base_color,
+                          highlight_color: skeleton_highlight_color,
+                        ),
+                      )
+                    : GestureDetector(
+                        onTap: on_share,
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: SvgIcon(
+                            name: 'share',
+                            width: 20,
+                            height: 20,
+                            color: is_dark ? const Color(0xFFD0D4DB).withValues(alpha: 0.82) : right_icon_color,
+                          ),
                         ),
                       ),
-                    ),
             ],
           ),
         ),

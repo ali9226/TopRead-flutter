@@ -9,6 +9,7 @@ import 'package:app/config/color_config.dart';
 import 'package:app/models/rotation.dart';
 import 'package:app/stores/authorized_login_store.dart';
 import 'package:app/stores/device_info.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'logic.dart';
 import 'style.dart';
 import 'package:app/config/font_config.dart';
@@ -29,6 +30,9 @@ class _AuthorizedLoginViewState extends State<AuthorizedLoginView> {
   final AuthorizedLoginStore authorized_login_store =
       Get.find<AuthorizedLoginStore>();
 
+  /// 项目配置仓库
+  final ProjectConfigStore projectConfigStore = Get.find<ProjectConfigStore>();
+
   /// 交互逻辑
   late Logic logic;
 
@@ -41,6 +45,11 @@ class _AuthorizedLoginViewState extends State<AuthorizedLoginView> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
+      // 授权登录开关关闭时隐藏整个组件。
+      if (!projectConfigStore.current.is_authorized_login_enabled) {
+        return const SizedBox.shrink();
+      }
+
       final List<Rotation> rotation_list = authorized_login_store.rotation_list
           .toList();
 
