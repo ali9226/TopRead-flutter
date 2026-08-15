@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/stores/device_info.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'package:app/util/language_util/index.dart';
 import 'logic.dart';
 import 'style.dart';
@@ -19,6 +20,9 @@ class Statistics extends StatefulWidget {
 class _StatisticsState extends State<Statistics> {
   /// TODO 设备主题仓库。
   final deviceInfo = Get.find<DeviceInfo>();
+
+  /// 项目配置仓库。
+  final ProjectConfigStore projectConfigStore = Get.find<ProjectConfigStore>();
 
   /// TODO 统计逻辑层。
   final logic = Logic();
@@ -51,32 +55,36 @@ class _StatisticsState extends State<Statistics> {
         context.locale.languageCode,
       );
 
+      final bool show_comment = projectConfigStore.current.is_comment_enabled;
+
       return Container(
         padding: const EdgeInsets.fromLTRB(10, 10, 10, 14),
         color: Colors.transparent,
         child: Row(
           children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: () => logic.go_to_message(2),
-                child: _StatCard(
-                  value: '${logic.comment_total}',
-                  unread: logic.comment_unread,
-                  label: easy.tr('message.stats.comment'),
-                  accentColor: _comment_color,
-                  startColor: isDark
-                      ? const Color(0xFF18222F)
-                      : const Color(0xFFF2F7FF),
-                  endColor: isDark
-                      ? const Color(0xFF101721)
-                      : const Color(0xFFFBFDFF),
-                  titleColor: titleColor,
-                  subtitleColor: subtitleColor,
-                  is_cjk: is_cjk,
+            if (show_comment) ...[
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => logic.go_to_message(2),
+                  child: _StatCard(
+                    value: '${logic.comment_total}',
+                    unread: logic.comment_unread,
+                    label: easy.tr('message.stats.comment'),
+                    accentColor: _comment_color,
+                    startColor: isDark
+                        ? const Color(0xFF18222F)
+                        : const Color(0xFFF2F7FF),
+                    endColor: isDark
+                        ? const Color(0xFF101721)
+                        : const Color(0xFFFBFDFF),
+                    titleColor: titleColor,
+                    subtitleColor: subtitleColor,
+                    is_cjk: is_cjk,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
+              const SizedBox(width: 10),
+            ],
             Expanded(
               child: GestureDetector(
                 onTap: () => logic.go_to_message(3),

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:get/get.dart';
+import 'package:app/common_style/auth_text/style.dart';
 import 'package:app/components/network_cover_image/index.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
@@ -89,11 +90,9 @@ class _AuthorizedLoginViewState extends State<AuthorizedLoginView> {
                   Text(
                     easy.tr('AuthorizedLogin.title'),
                     style: TextStyle(
-                      fontSize: AuthorizedLoginStyle.title_font_size,
-                      color: device_info.dark.value
-                          ? ColorConstants.nightTextColor
-                          : ColorConstants.lightTextColor,
-                      fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                      fontSize: AuthTextStyle.fontSize,
+                      color: AuthTextStyle.textColor(isDark: device_info.dark.value),
+                      fontWeight: AuthTextStyle.fontWeight,
                     ),
                   ),
                   const SizedBox(

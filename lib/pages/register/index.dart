@@ -3,6 +3,7 @@
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:app/common_style/auth_text/style.dart';
 import 'package:app/components/auth_page/index.dart';
 import 'package:app/components/auth_page/style.dart';
 import 'package:app/components/auth_form_widgets/index.dart';
@@ -228,11 +229,9 @@ class _RegisterState extends State<Register> {
                     child: RichText(
                       text: TextSpan(
                         style: TextStyle(
-                          fontSize: 12,
-                          color: device_info.dark.value
-                              ? ColorConstants.nightTextColor
-                              : ColorConstants.lightTextColor,
-                          fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                          fontSize: AuthTextStyle.fontSize,
+                          color: AuthTextStyle.textColor(isDark: device_info.dark.value),
+                          fontWeight: AuthTextStyle.fontWeight,
                         ),
                         children: [
                           TextSpan(
@@ -248,9 +247,9 @@ class _RegisterState extends State<Register> {
                                 child: Text(
                                   context.tr('register.user_agreement'),
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: AuthTextStyle.fontSize,
                                     color: ColorConstants.dangerColor,
-                                    fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                                    fontWeight: AuthTextStyle.actionFontWeight,
                                     decoration: TextDecoration.underline,
                                     decorationColor: ColorConstants.dangerColor,
                                   ),

@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:app/common_style/auth_text/style.dart';
 import 'package:app/components/auth_form_widgets/auth_top_bar.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
@@ -98,7 +99,7 @@ class AuthFieldLabel extends StatelessWidget {
 
     return Obx(() {
       final bool isDark = deviceInfo.dark.value;
-      final Color textColor = AuthPageStyle.primaryTextColor(isDark);
+      final Color textColor = AuthTextStyle.labelTextColor(isDark: isDark);
 
       return Row(
         children: [
@@ -113,9 +114,9 @@ class AuthFieldLabel extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: AuthTextStyle.labelFontSize,
               color: textColor,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+              fontWeight: AuthTextStyle.labelFontWeight,
             ),
           ),
         ],
@@ -303,7 +304,7 @@ class AuthRememberRow extends StatelessWidget {
 
     return Obx(() {
       final bool isDark = deviceInfo.dark.value;
-      final Color textColor = AuthPageStyle.primaryTextColor(isDark);
+      final Color textColor = AuthTextStyle.textColor(isDark: isDark);
 
       return Row(
         children: [
@@ -344,9 +345,9 @@ class AuthRememberRow extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: AuthTextStyle.fontSize,
                         color: textColor,
-                        fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                        fontWeight: AuthTextStyle.fontWeight,
                       ),
                     ),
                   ),
@@ -365,8 +366,9 @@ class AuthRememberRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: AuthTextStyle.fontSize,
                   color: textColor,
+                  fontWeight: AuthTextStyle.fontWeight,
                   decoration: TextDecoration.underline,
                   decorationColor: textColor,
                 ),
@@ -408,11 +410,9 @@ class AuthFooterAction extends StatelessWidget {
           Text(
             promptText,
             style: TextStyle(
-              fontSize: AuthPageStyle.footerPromptFontSize,
-              color: isDark
-                  ? ColorConstants.nightTextColor
-                  : ColorConstants.lightTextColor,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+              fontSize: AuthTextStyle.fontSize,
+              color: AuthTextStyle.textColor(isDark: isDark),
+              fontWeight: AuthTextStyle.fontWeight,
             ),
           ),
           const SizedBox(width: 8),
@@ -427,9 +427,9 @@ class AuthFooterAction extends StatelessWidget {
                 child: Text(
                   actionText,
                   style: TextStyle(
-                    fontSize: AuthPageStyle.footerPromptFontSize,
+                    fontSize: AuthTextStyle.fontSize,
                     color: ColorConstants.dangerColor,
-                    fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                    fontWeight: AuthTextStyle.actionFontWeight,
                     decoration: TextDecoration.underline,
                     decorationColor: ColorConstants.dangerColor,
                   ),

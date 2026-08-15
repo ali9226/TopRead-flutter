@@ -23,6 +23,7 @@ import 'package:app/pages/message/widgets/message_item_card.dart';
 import 'package:app/pages/message/widgets/message_skeleton.dart';
 import 'package:app/pages/message/widgets/no_login_entry.dart';
 import 'package:app/stores/device_info.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/stores/message_store.dart';
 import 'package:app/stores/shell_tab_info.dart';
@@ -40,6 +41,7 @@ class MessagePage extends StatefulWidget {
 
 class _MessagePageState extends State<MessagePage> {
   final DeviceInfo device_info = Get.find<DeviceInfo>();
+  final ProjectConfigStore projectConfigStore = Get.find<ProjectConfigStore>();
   final UserInformation user_information = Get.find<UserInformation>();
   final MessageStore message_store = Get.find<MessageStore>();
   final ShellTabInfo shell_tab_info = Get.find<ShellTabInfo>();
@@ -68,13 +70,14 @@ class _MessagePageState extends State<MessagePage> {
 
   /// 顶部统计数据。
   List<_quick_stat_item> get quick_stat_list => <_quick_stat_item>[
-    _quick_stat_item(
-      title: easy.tr('message.stats.comment'),
-      total: message_store.comment_total.value,
-      unread: message_store.comment_unread.value,
-      color: _comment_color,
-      type: 2,
-    ),
+    if (projectConfigStore.current.is_comment_enabled)
+      _quick_stat_item(
+        title: easy.tr('message.stats.comment'),
+        total: message_store.comment_total.value,
+        unread: message_store.comment_unread.value,
+        color: _comment_color,
+        type: 2,
+      ),
     _quick_stat_item(
       title: easy.tr('message.stats.like'),
       total: message_store.like_total.value,

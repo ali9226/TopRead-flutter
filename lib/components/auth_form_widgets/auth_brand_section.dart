@@ -3,6 +3,7 @@
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:app/common_style/auth_text/style.dart';
 import 'package:app/components/auth_page/style.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/font_config.dart';
@@ -20,7 +21,7 @@ class AuthBrandSection extends StatelessWidget {
 
     return Obx(() {
       final bool isDark = deviceInfo.dark.value;
-      final Color logoColor = AuthPageStyle.primaryTextColor(isDark);
+      final Color logoColor = AuthTextStyle.primaryTextColor(isDark: isDark);
 
       return Column(
         children: [
@@ -30,10 +31,11 @@ class AuthBrandSection extends StatelessWidget {
             child: SvgIcon(
               name: 'logo',
               color: logoColor,
-              width: AuthPageStyle.logoSize,
-              height: AuthPageStyle.logoHeightSize,
+              width: AuthTextStyle.logoWidth,
+              height: AuthTextStyle.logoHeight,
             ),
           ),
+          const SizedBox(height: AuthTextStyle.logoToSloganSpacing),
           const Center(child: AuthSlogan()),
           const SizedBox(height: 30),
         ],
@@ -58,7 +60,7 @@ class AuthSlogan extends StatelessWidget {
 
     return Obx(() {
       final bool isDark = deviceInfo.dark.value;
-      final Color textColor = color ?? AuthPageStyle.primaryTextColor(isDark);
+      final Color textColor = color ?? AuthTextStyle.primaryTextColor(isDark: isDark);
 
       final LanguageStore languageStore = Get.find<LanguageStore>();
       final LanguageInfo? currentLanguageInfo =
@@ -78,8 +80,8 @@ class AuthSlogan extends StatelessWidget {
           children: [
             if (!alignLeft)
               Container(
-                width: AuthPageStyle.sloganWidth,
-                height: AuthPageStyle.sloganHeight,
+                width: AuthTextStyle.sloganBarWidth,
+                height: AuthTextStyle.sloganBarHeight,
                 decoration: AuthPageStyle.sloganGradientBar(
                   isDark: isDark,
                   reverse: false,
@@ -93,17 +95,17 @@ class AuthSlogan extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: AuthTextStyle.sloganFontSize,
                   color: textColor,
-                  fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                  fontWeight: AuthTextStyle.sloganFontWeight,
                 ),
               ),
             ),
             if (!alignLeft) const SizedBox(width: 10),
             if (!alignLeft)
               Container(
-                width: AuthPageStyle.sloganWidth,
-                height: AuthPageStyle.sloganHeight,
+                width: AuthTextStyle.sloganBarWidth,
+                height: AuthTextStyle.sloganBarHeight,
                 decoration: AuthPageStyle.sloganGradientBar(
                   isDark: isDark,
                   reverse: true,

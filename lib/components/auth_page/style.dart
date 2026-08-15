@@ -11,7 +11,6 @@ class AuthPageStyle {
   static const double fieldIconSize = 22;
   static const double passwordIconSize = 26;
   static const double rememberSize = 16;
-  static const double footerPromptFontSize = 13;
   static const double sloganWidth = 50;
   static const double sloganHeight = 2;
   static const EdgeInsets contentPadding = EdgeInsets.zero;
