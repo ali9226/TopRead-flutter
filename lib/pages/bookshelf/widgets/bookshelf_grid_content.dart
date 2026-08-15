@@ -11,6 +11,7 @@ import 'package:app/config/font_config.dart';
 import 'package:app/pages/bookshelf/logic.dart';
 import 'package:app/pages/bookshelf/style.dart';
 import 'package:app/pages/bookshelf/widgets/bookshelf_book_card.dart';
+import 'package:app/stores/bookshelf_store.dart';
 import 'package:app/util/dialog/show_message.dart';
 import 'package:app/util/novel_navigation/index.dart';
 
@@ -45,6 +46,9 @@ class BookshelfGridContent extends StatefulWidget {
   /// 是否处于首屏加载。
   final bool is_initial_loading;
 
+  /// 是否正在加载下一页（状态由 Store 统一管理）。
+  final bool is_loading_more;
+
   /// 加载更多回调（滚动到底部时触发）。
   final Future<void> Function()? on_load_more;
 
@@ -65,6 +69,7 @@ class BookshelfGridContent extends StatefulWidget {
     required this.items,
     this.has_more = false,
     this.is_initial_loading = false,
+    this.is_loading_more = false,
     this.on_load_more,
     this.on_refresh,
     this.on_item_removed,
@@ -78,9 +83,6 @@ class BookshelfGridContent extends StatefulWidget {
 class _BookshelfGridContentState extends State<BookshelfGridContent> {
   /// 内容滚动控制器。
   final ScrollController _scroll_controller = ScrollController();
-
-  /// 当前是否处于加载更多。
-  bool _is_loading_more = false;
 
   /// 返回顶部按钮是否可见。
   bool _is_back_to_top_visible = false;
@@ -119,7 +121,10 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
       return _build_loading_grid();
     }
 
-    if (widget.items.isEmpty) {
+    // 兜底去重：防止 API 返回重复数据导致 Duplicate keys 错误。
+    final List<BookshelfBookItem> items = _deduplicate_items(widget.items);
+
+    if (items.isEmpty) {
       return _build_empty_state();
     }
 
@@ -132,7 +137,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
             grid_count;
 
         final positions = _calculate_grid_positions(
-          widget.items,
+          items,
           grid_count,
           column_width,
           MediaQuery.textScalerOf(context),
@@ -155,7 +160,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
                     height: total_height,
                     child: Stack(
                       clipBehavior: Clip.hardEdge,
-                      children: widget.items.map((item) {
+                      children: items.map((item) {
                         final rect = positions[item.id];
                         if (rect == null) return const SizedBox.shrink();
 
@@ -219,6 +224,18 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
         );
       },
     );
+  }
+
+  /// 按 item.id 去重，保留首次出现的项。
+  List<BookshelfBookItem> _deduplicate_items(List<BookshelfBookItem> items) {
+    final Set<String> seen = <String>{};
+    final List<BookshelfBookItem> result = <BookshelfBookItem>[];
+    for (final BookshelfBookItem item in items) {
+      if (seen.add(item.id)) {
+        result.add(item);
+      }
+    }
+    return result;
   }
 
   /// 卡片高度回调：首次测量后存储高度并触发布局更新。
@@ -393,7 +410,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
       });
     }
 
-    if (_is_loading_more || !widget.has_more) return;
+    if (widget.is_loading_more || !widget.has_more) return;
 
     if (_scroll_controller.position.pixels >=
         _scroll_controller.position.maxScrollExtent -
@@ -415,19 +432,8 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
 
   /// 加载更多数据。
   Future<void> _load_more_data() async {
-    if (_is_loading_more || !widget.has_more) return;
-
-    setState(() {
-      _is_loading_more = true;
-    });
-
+    if (widget.is_loading_more || !widget.has_more) return;
     await widget.on_load_more?.call();
-
-    if (mounted) {
-      setState(() {
-        _is_loading_more = false;
-      });
-    }
   }
 
   /// 下拉刷新数据。
@@ -537,7 +543,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
   Widget _build_load_more_section() {
     return LoadMoreFooter(
       is_dark: widget.is_dark,
-      is_loading: _is_loading_more,
+      is_loading: widget.is_loading_more,
       has_more: widget.has_more,
       on_load_more: _load_more_data,
     );

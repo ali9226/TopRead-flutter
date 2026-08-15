@@ -575,6 +575,7 @@ class _RecommendTabContentState extends State<RecommendTabContent>
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: AnimatedRecommendWaterfall(
                     key: _recommend_waterfall_key,
+                    waterfall_id: 'home_recommend',
                     is_dark: is_dark,
                   ),
                 ),

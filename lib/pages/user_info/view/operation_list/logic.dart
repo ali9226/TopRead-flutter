@@ -6,6 +6,7 @@ import 'package:app/fcm/fcm_auth.dart';
 import 'package:app/message/message_service.dart';
 import 'package:app/models/login.dart';
 import 'package:app/stores/message_store.dart';
+import 'package:app/stores/bookshelf_store.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/encryption/index.dart';
@@ -36,10 +37,12 @@ class Logic {
   Future<void> logout() async {
     final UserInformation user_information = Get.find<UserInformation>();
     final MessageStore message_store = Get.find<MessageStore>();
+    final BookshelfStore bookshelf_store = Get.find<BookshelfStore>();
 
     /// 先递增会话版本，确保所有退出前发出的异步响应立即失效。
     final int logout_revision = user_information.begin_logout();
     message_store.clear();
+    bookshelf_store.clear();
 
     /// Token 必须确认从本地移除，避免应用重启后恢复旧会话。
     await StorageUtil.removeData(Constant.tokenKey);
@@ -121,10 +124,12 @@ class Logic {
     /// 删除成功，执行退出登录清理。
     final UserInformation user_information = Get.find<UserInformation>();
     final MessageStore message_store = Get.find<MessageStore>();
+    final BookshelfStore bookshelf_store = Get.find<BookshelfStore>();
 
     /// 递增会话版本，确保所有退出前发出的异步响应立即失效。
     final int logout_revision = user_information.begin_logout();
     message_store.clear();
+    bookshelf_store.clear();
 
     /// 移除本地 token。
     await StorageUtil.removeData(Constant.tokenKey);

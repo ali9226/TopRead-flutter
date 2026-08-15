@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:app/stores/message_store.dart';
+import 'package:app/stores/bookshelf_store.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/log_util.dart';
 
@@ -21,8 +22,11 @@ class MessageService {
 
     logUtil(msg: 'MessageService: 登录成功，清空访客数据并获取用户未读消息');
     final message_store = Get.find<MessageStore>();
+    final bookshelf_store = Get.find<BookshelfStore>();
     // 清空访客数据（包括访客的客服未读数）。
     message_store.clear();
+    // 隔离上一个账号的书架列表及分页状态。
+    bookshelf_store.clear();
     // 获取已登录用户的未读消息。
     await message_store.fetch_statistics();
   }

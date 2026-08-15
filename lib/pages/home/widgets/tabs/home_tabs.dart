@@ -23,25 +23,26 @@ class HomeTabs extends StatelessWidget {
     return TabBarView(
       controller: tab_controller,
       physics: const BouncingScrollPhysics(),
-      children: List<Widget>.generate(
-        titles.length,
-        (int index) {
-          final int classification_id = index < classification_list.length
-              ? classification_list[index].id
-              : _get_default_id_by_index(index);
+      children: List<Widget>.generate(titles.length, (int index) {
+        final int classification_id = index < classification_list.length
+            ? classification_list[index].id
+            : _get_default_id_by_index(index);
 
-          if (classification_id == 143) {
-            return const RecommendTabContent(key: ValueKey('recommend_tab'));
-          }
-          if (classification_id == 145) {
-            return const ShortStoryTabContent(key: ValueKey('short_story_tab'));
-          }
-          return DefaultTabContent(
-            key: ValueKey('default_tab_$classification_id'),
-            title: titles[index],
-          );
-        },
-      ),
+        if (classification_id == 143) {
+          return const RecommendTabContent(key: ValueKey('recommend_tab'));
+        }
+        if (classification_id == 145) {
+          return const ShortStoryTabContent(key: ValueKey('short_story_tab'));
+        }
+        final String classification_scope = classification_id > 0
+            ? '$classification_id'
+            : 'fallback_$index';
+        return DefaultTabContent(
+          key: ValueKey('default_tab_$classification_scope'),
+          title: titles[index],
+          waterfall_id: 'home_classification_$classification_scope',
+        );
+      }),
     );
   }
 

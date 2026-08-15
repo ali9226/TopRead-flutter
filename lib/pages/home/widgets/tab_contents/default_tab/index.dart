@@ -13,7 +13,14 @@ class DefaultTabContent extends StatefulWidget {
   /// Tab 标题，用于显示页面名称。
   final String title;
 
-  const DefaultTabContent({super.key, required this.title});
+  /// 当前 Tab 的推荐瀑布流全局唯一 ID。
+  final String waterfall_id;
+
+  const DefaultTabContent({
+    super.key,
+    required this.title,
+    required this.waterfall_id,
+  });
 
   @override
   State<DefaultTabContent> createState() => _DefaultTabContentState();
@@ -59,7 +66,8 @@ class _DefaultTabContentState extends State<DefaultTabContent>
 
     // 检查是否需要加载更多数据
     if (_scroll_controller.position.pixels >=
-        _scroll_controller.position.maxScrollExtent - _load_more_trigger_distance) {
+        _scroll_controller.position.maxScrollExtent -
+            _load_more_trigger_distance) {
       _recommend_waterfall_key.currentState?.load_more();
     }
   }
@@ -78,6 +86,7 @@ class _DefaultTabContentState extends State<DefaultTabContent>
       children: <Widget>[
         AnimatedRecommendWaterfall(
           key: _recommend_waterfall_key,
+          waterfall_id: widget.waterfall_id,
           is_dark: isDark,
         ),
       ],

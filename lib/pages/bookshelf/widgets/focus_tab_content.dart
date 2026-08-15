@@ -47,9 +47,6 @@ class _FocusTabContentState extends State<FocusTabContent>
   /// 书架数据仓库。
   final BookshelfStore _store = Get.find<BookshelfStore>();
 
-  /// 当前是否处于加载更多。
-  bool _is_loading_more = false;
-
   /// 返回顶部按钮是否可见。
   bool _is_back_to_top_visible = false;
 
@@ -151,11 +148,6 @@ class _FocusTabContentState extends State<FocusTabContent>
   /// 下拉刷新数据。
   Future<void> _handle_refresh() async {
     await _store.refresh_focus();
-    if (mounted) {
-      setState(() {
-        _is_loading_more = false;
-      });
-    }
   }
 
   /// 处理滚动事件：控制返回顶部按钮显隐、触发加载更多。
@@ -173,7 +165,7 @@ class _FocusTabContentState extends State<FocusTabContent>
 
     // 加载更多。
     if (_store.focus_is_loading.value ||
-        _is_loading_more ||
+        _store.focus_is_loading_more.value ||
         !_store.focus_has_more.value) {
       return;
     }
@@ -198,19 +190,10 @@ class _FocusTabContentState extends State<FocusTabContent>
 
   /// 加载更多数据。
   Future<void> _load_more_data() async {
-    if (_is_loading_more || !_store.focus_has_more.value) return;
-
-    setState(() {
-      _is_loading_more = true;
-    });
-
-    await _store.load_more_focus();
-
-    if (mounted) {
-      setState(() {
-        _is_loading_more = false;
-      });
+    if (_store.focus_is_loading_more.value || !_store.focus_has_more.value) {
+      return;
     }
+    await _store.load_more_focus();
   }
 
   /// 构建空状态。
@@ -257,7 +240,7 @@ class _FocusTabContentState extends State<FocusTabContent>
   Widget _build_load_more_section({required bool has_more}) {
     return LoadMoreFooter(
       is_dark: widget.is_dark,
-      is_loading: _is_loading_more,
+      is_loading: _store.focus_is_loading_more.value,
       has_more: has_more,
       on_load_more: _load_more_data,
     );

@@ -8,31 +8,25 @@ import 'package:app/util/log_util.dart';
 
 typedef MasonryAdConfigFetcher = Future<AdConfig?> Function();
 
-/// 今日推荐瀑布流的全局广告配置服务。
+/// 推荐瀑布流的广告配置服务。
 ///
-/// 同一次 App 进程内只会请求一次
-/// `ads/masonry_layout_show_ads`。首页多个 Tab、搜索页等处同时创建
-/// 瀑布流时共享这一个配置 Future，但不共享 NativeAd 实例。
+/// 每个新数据批次产生的广告槽位都独立请求
+/// `ads/masonry_layout_show_ads`，使后端可以按次数、权重与当前
+/// 用户状态返回广告。页面恢复时由广告池复用已有 NativeAd，
+/// 不通过缓存这个后端响应来规避重载。
 class MasonryAdConfigService {
   const MasonryAdConfigService._();
 
   static const String _log_prefix = '[MasonryAdConfig]';
 
-  /// 本次 App 进程的唯一配置请求。
-  ///
-  /// 失败结果也会保留，避免页面反复创建时循环请求不会变化的
-  /// 广告配置。下一次冷启动会自然获得新的进程级缓存。
-  static Future<AdConfig?>? _session_config_request;
-
   static MasonryAdConfigFetcher _fetcher = _fetch_from_backend;
 
-  /// 返回本次启动的 Google AdMob 瀑布流配置。
+  /// 返回当前广告槽位的 Google AdMob 瀑布流配置。
   ///
   /// 只接受 `advertisers == 1` 且 `ads_id` 非空的配置；其他广告商
   /// 由后续对应的 SDK 实现，不会误传给 Google Mobile Ads。
-  static Future<AdConfig?> get_google_ad_config() {
-    return _session_config_request ??= _load_and_validate_config();
-  }
+  static Future<AdConfig?> get_google_ad_config() =>
+      _load_and_validate_config();
 
   static Future<AdConfig?> _load_and_validate_config() async {
     try {
@@ -91,13 +85,11 @@ class MasonryAdConfigService {
   @visibleForTesting
   static void set_fetcher_for_test(MasonryAdConfigFetcher fetcher) {
     _fetcher = fetcher;
-    _session_config_request = null;
   }
 
-  /// 清理进程级缓存，仅供单元测试隔离用例。
+  /// 恢复默认请求器，仅供单元测试隔离用例。
   @visibleForTesting
   static void reset_for_test() {
     _fetcher = _fetch_from_backend;
-    _session_config_request = null;
   }
 }

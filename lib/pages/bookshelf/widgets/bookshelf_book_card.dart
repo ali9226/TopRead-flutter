@@ -2,8 +2,8 @@ import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/novel_cover/index.dart';
-import 'package:app/pages/bookshelf/logic.dart';
 import 'package:app/pages/bookshelf/style.dart';
+import 'package:app/stores/bookshelf_store.dart';
 import 'package:app/util/text/text_layout_measure.dart';
 
 /// 书籍卡片组件。

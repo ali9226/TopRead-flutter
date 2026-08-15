@@ -1,13 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/api/post_request.dart';
 import 'package:app/config/constant.dart';
 import 'package:app/models/app_config_inquire.dart';
 import 'package:app/stores/message_store.dart';
+import 'package:app/stores/bookshelf_store.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/dialog/show_upgrade_dialog.dart';
@@ -110,9 +112,11 @@ class Logic {
 
     final UserInformation user_information = Get.find<UserInformation>();
     final MessageStore message_store = Get.find<MessageStore>();
+    final BookshelfStore bookshelf_store = Get.find<BookshelfStore>();
 
     final int logout_revision = user_information.begin_logout();
     message_store.clear();
+    bookshelf_store.clear();
 
     await StorageUtil.removeData(Constant.tokenKey);
 

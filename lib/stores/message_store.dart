@@ -12,6 +12,13 @@ import 'package:app/websocket/websocket_service.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/storage_util/index.dart';
 
+typedef MessageListFetcher =
+    Future<MessageListResult?> Function({
+      required int page,
+      required int page_size,
+      int? type,
+    });
+
 /// 消息桶：每个筛选类型独立存储，互不干扰。
 class _MessageBucket {
   final list = <MessageData>[].obs;
@@ -20,6 +27,18 @@ class _MessageBucket {
   bool refresh_pending = false;
   int current_page = 1;
   final is_loading = false.obs;
+
+  /// 当前分桶真正在途的请求任务。
+  Future<void>? request;
+
+  /// 清空数据时递增，防止旧响应回写到新会话。
+  int data_revision = 0;
+
+  /// 当前在途请求的上下文，用于判断重复请求是复用还是追加刷新。
+  int request_data_revision = -1;
+  int request_auth_revision = -1;
+  int request_mutation_revision = -1;
+  bool request_is_refresh = false;
 }
 
 /// 全局消息状态管理。
@@ -30,8 +49,11 @@ class MessageStore extends GetxController {
   MessageStore({
     Future<MessageUnreadCount?> Function()? fetch_unread_count,
     Future<message_api.MessageReadAllResult> Function()? read_all_messages,
+    MessageListFetcher? fetch_message_list,
   }) : _fetch_unread_count = fetch_unread_count ?? message_api.get_unread_count,
-       _read_all_messages = read_all_messages ?? message_api.read_all_messages;
+       _read_all_messages = read_all_messages ?? message_api.read_all_messages,
+       _fetch_message_list =
+           fetch_message_list ?? message_api.inquire_message_list;
 
   /// 单例实例。
   static MessageStore get to => Get.find<MessageStore>();
@@ -41,6 +63,9 @@ class MessageStore extends GetxController {
 
   /// 全部已读请求实现，测试时可注入可控异步结果。
   final Future<message_api.MessageReadAllResult> Function() _read_all_messages;
+
+  /// 消息列表请求实现，测试时可注入可控异步结果。
+  final MessageListFetcher _fetch_message_list;
 
   /// 未读消息总数（用于底部导航角标）。
   final unread_total = 0.obs;
@@ -83,6 +108,17 @@ class MessageStore extends GetxController {
 
   /// 最近一次未读统计请求序号。
   int _latest_statistics_request = 0;
+
+  /// 未读统计当前在途任务。
+  Future<void>? _statistics_request;
+
+  /// 在途统计任务失效后是否需要串行补一次。
+  bool _statistics_refresh_pending = false;
+
+  /// 当前在途统计请求的状态上下文。
+  int _statistics_request_auth_revision = -1;
+  int _statistics_request_unread_revision = -1;
+  int _statistics_request_mutation_revision = -1;
 
   /// 是否正在向后端同步全部已读。
   bool _is_marking_all_read = false;
@@ -201,10 +237,50 @@ class MessageStore extends GetxController {
 
     final UserInformation user_information = Get.find<UserInformation>();
     if (!user_information.isLoggedIn.value) return;
+
+    final Future<void>? active_request = _statistics_request;
+    if (active_request != null) {
+      if (_statistics_request_auth_revision != user_information.auth_revision ||
+          _statistics_request_unread_revision != _unread_state_revision ||
+          _statistics_request_mutation_revision !=
+              _local_unread_mutation_revision) {
+        _statistics_refresh_pending = true;
+      }
+      await active_request;
+      return;
+    }
+
+    late final Future<void> request;
+    request = _drain_statistics_requests();
+    _statistics_request = request;
+    try {
+      await request;
+    } finally {
+      if (identical(_statistics_request, request)) {
+        _statistics_request = null;
+      }
+    }
+  }
+
+  /// 串行执行未读统计请求，过期期间的多次补拉只合并为一次。
+  Future<void> _drain_statistics_requests() async {
+    do {
+      _statistics_refresh_pending = false;
+      await _fetch_statistics_once();
+    } while (_statistics_refresh_pending);
+  }
+
+  /// 执行一轮未读统计请求。
+  Future<void> _fetch_statistics_once() async {
+    final UserInformation user_information = Get.find<UserInformation>();
+    if (!user_information.isLoggedIn.value) return;
     final int request_revision = user_information.auth_revision;
     final int unread_revision = _unread_state_revision;
     final int mutation_revision = _local_unread_mutation_revision;
     final int statistics_request = ++_latest_statistics_request;
+    _statistics_request_auth_revision = request_revision;
+    _statistics_request_unread_revision = unread_revision;
+    _statistics_request_mutation_revision = mutation_revision;
 
     final MessageUnreadCount? result = await _fetch_unread_count();
     if (result == null) return;
@@ -235,28 +311,96 @@ class MessageStore extends GetxController {
 
     final UserInformation user_information = Get.find<UserInformation>();
     if (!user_information.isLoggedIn.value) return;
-    final int request_revision = user_information.auth_revision;
-    final int unread_revision = _unread_state_revision;
-    final int mutation_revision = _local_unread_mutation_revision;
 
     final int? requested_type = _active_type.value;
-    final bucket = _active_bucket;
-    if (bucket.is_loading.value) {
-      if (is_refresh) bucket.refresh_pending = true;
+    final _MessageBucket bucket = _active_bucket;
+    final Future<void>? active_request = bucket.request;
+    if (active_request != null) {
+      final bool request_context_changed =
+          bucket.request_data_revision != bucket.data_revision ||
+          bucket.request_auth_revision != user_information.auth_revision ||
+          bucket.request_mutation_revision != _local_unread_mutation_revision;
+      if (request_context_changed ||
+          (is_refresh && !bucket.request_is_refresh)) {
+        bucket.refresh_pending = true;
+        bucket.is_loading.value = true;
+      }
+      await active_request;
       return;
     }
+
+    late final Future<void> request;
+    request = _drain_message_list_requests(
+      bucket: bucket,
+      requested_type: requested_type,
+      page: page,
+      is_refresh: is_refresh,
+    );
+    bucket.request = request;
+
+    try {
+      await request;
+    } finally {
+      if (identical(bucket.request, request)) {
+        bucket.request = null;
+      }
+    }
+  }
+
+  /// 串行执行单个筛选桶的列表请求。
+  Future<void> _drain_message_list_requests({
+    required _MessageBucket bucket,
+    required int? requested_type,
+    required int page,
+    required bool is_refresh,
+  }) async {
+    int next_page = page;
+    bool next_is_refresh = is_refresh;
     bucket.is_loading.value = true;
 
     try {
-      final MessageListResult? result = await message_api.inquire_message_list(
+      do {
+        bucket.refresh_pending = false;
+        await _fetch_message_list_once(
+          bucket: bucket,
+          requested_type: requested_type,
+          page: next_page,
+          is_refresh: next_is_refresh,
+        );
+        next_page = 1;
+        next_is_refresh = bucket.refresh_pending;
+      } while (next_is_refresh);
+    } finally {
+      bucket.is_loading.value = false;
+    }
+  }
+
+  /// 执行某个筛选桶的一轮列表请求。
+  Future<void> _fetch_message_list_once({
+    required _MessageBucket bucket,
+    required int? requested_type,
+    required int page,
+    required bool is_refresh,
+  }) async {
+    final UserInformation user_information = Get.find<UserInformation>();
+    if (!user_information.isLoggedIn.value) return;
+    final int request_revision = user_information.auth_revision;
+    final int unread_revision = _unread_state_revision;
+    final int mutation_revision = _local_unread_mutation_revision;
+    final int data_revision = bucket.data_revision;
+    bucket.request_data_revision = data_revision;
+    bucket.request_auth_revision = request_revision;
+    bucket.request_mutation_revision = mutation_revision;
+    bucket.request_is_refresh = is_refresh;
+
+    try {
+      final MessageListResult? result = await _fetch_message_list(
         page: page,
         page_size: 20,
         type: requested_type,
       );
 
-      if (result == null) {
-        return;
-      }
+      if (result == null || data_revision != bucket.data_revision) return;
       if (!user_information.can_apply_authenticated_response(
         request_revision,
       )) {
@@ -275,27 +419,19 @@ class MessageStore extends GetxController {
         chat_unread.value = result.chat_unread;
       }
 
-      if (is_refresh) {
-        bucket.list.value = merge_unique_message_list(
-          current_messages: const <MessageData>[],
-          incoming_messages: result.list,
-        );
-        bucket.current_page = page;
-      } else {
-        // 后端关联多语言封面时，同一条消息可能在当前页或相邻页重复。
-        // 一次性合并并按稳定身份去重，避免 ListView 收到重复 Key。
-        bucket.list.value = merge_unique_message_list(
-          current_messages: bucket.list,
-          incoming_messages: result.list,
-        );
-        bucket.current_page = page;
-      }
+      bucket.list.value = merge_unique_message_list(
+        current_messages: is_refresh ? const <MessageData>[] : bucket.list,
+        incoming_messages: result.list,
+      );
+      bucket.current_page = page;
 
       // TODO 仅全部桶展示客服摘要；实时状态已更新时保留较新的本地摘要。
       if (requested_type == null) {
-        final filtered = bucket.list
-            .where((m) => m.type != MessageType.chat_reply)
-            .toList();
+        final List<MessageData> filtered = bucket.list
+            .where(
+              (MessageData message) => message.type != MessageType.chat_reply,
+            )
+            .toList(growable: false);
         final MessageData? chat_message = can_apply_unread
             ? result.chat_message
             : current_chat_message;
@@ -315,27 +451,15 @@ class MessageStore extends GetxController {
       }
       bucket.has_more = result.list.length >= 20;
       bucket.has_loaded = true;
-    } catch (e) {
-      debugPrint('TODO MessageStore fetch_message_list error: $e');
-    } finally {
-      bucket.is_loading.value = false;
-      if (bucket.refresh_pending) {
-        bucket.refresh_pending = false;
-        if (_active_type.value == requested_type) {
-          unawaited(
-            fetch_message_list(page: 1, is_refresh: true, silent: true),
-          );
-        } else {
-          bucket.has_loaded = false;
-        }
-      }
+    } catch (error) {
+      debugPrint('MessageStore fetch_message_list failed: $error');
     }
   }
 
   /// 加载更多（当前桶翻页）。
   Future<void> load_more() async {
     final bucket = _active_bucket;
-    if (bucket.is_loading.value || !bucket.has_more) return;
+    if (bucket.request != null || !bucket.has_more) return;
     await fetch_message_list(page: bucket.current_page + 1);
   }
 
@@ -562,10 +686,12 @@ class MessageStore extends GetxController {
     _local_unread_mutation_revision++;
     _unread_state_revision++;
     _latest_statistics_request++;
+    _statistics_refresh_pending = false;
     _is_marking_all_read = false;
     _unread_reconcile_pending = false;
     _list_refresh_pending = false;
     for (final bucket in _buckets.values) {
+      bucket.data_revision++;
       bucket.list.clear();
       bucket.has_loaded = false;
       bucket.has_more = true;
@@ -1065,8 +1191,12 @@ class MessageStore extends GetxController {
       final int? bucket_type = entry.key;
       final _MessageBucket bucket = entry.value;
 
-      // 去重：如果已存在则跳过
-      if (bucket.list.any((m) => m.id == message.id)) continue;
+      // 客服消息与普通消息可能共用数字 ID，必须按稳定身份去重。
+      if (bucket.list.any(
+        (MessageData cached) => cached.identity_key == message.identity_key,
+      )) {
+        continue;
+      }
 
       // 全部桶：总是插入
       if (bucket_type == null) {

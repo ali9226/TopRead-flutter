@@ -779,6 +779,7 @@ class _SearchPageState extends State<SearchPage> {
                     /// 推荐瀑布流区域。
                     AnimatedRecommendWaterfall(
                       key: _recommend_waterfall_key,
+                      waterfall_id: 'search_recommend',
                       is_dark: is_dark,
                     ),
                   ] else ...[

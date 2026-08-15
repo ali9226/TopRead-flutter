@@ -50,6 +50,7 @@ class _HistoryTabContentState extends State<HistoryTabContent>
         items: _store.history_list.toList(),
         has_more: _store.history_has_more.value,
         is_initial_loading: _store.history_is_loading.value,
+        is_loading_more: _store.history_is_loading_more.value,
         on_load_more: _store.load_more_history,
         on_refresh: _store.refresh_history,
         on_item_removed: _store.remove_history_item,
