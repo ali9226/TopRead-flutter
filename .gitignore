@@ -64,3 +64,4 @@ app.*.map.json
 # Android signing
 android_key/
 android/key.properties
+资料/操作视频.mp4
