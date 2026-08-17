@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:app/common_style/auth_text/style.dart';
 import 'package:app/common_style/submit_button/index.dart';
 import 'package:app/components/auth_page/index.dart';
 import 'package:app/components/auth_page/style.dart';
@@ -466,6 +467,7 @@ class _ApplyViewState extends State<ApplyView> {
   Widget _buildAgreementText() {
     return Obx(() {
       final bool isDark = _deviceInfo.dark.value;
+      final Color textColor = AuthTextStyle.textColor(isDark: isDark);
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -473,19 +475,20 @@ class _ApplyViewState extends State<ApplyView> {
             textAlign: TextAlign.center,
             text: TextSpan(
               style: TextStyle(
-                fontSize: Style.agreementFontSize,
+                fontSize: AuthTextStyle.fontSize,
                 height: Style.agreementHeight,
-                color: AuthPageStyle.hintColor(isDark),
+                color: textColor,
+                fontWeight: AuthTextStyle.fontWeight,
               ),
               children: [
                 TextSpan(text: easy.tr('installation.agreement_prefix')),
                 TextSpan(
                   text: easy.tr('installation.agreement_link'),
                   style: TextStyle(
-                    color: isDark
-                        ? ColorConstants.themeColor
-                        : ColorConstants.lightTextColor,
-                    fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                    color: ColorConstants.dangerColor,
+                    fontWeight: AuthTextStyle.actionFontWeight,
+                    decoration: TextDecoration.underline,
+                    decorationColor: ColorConstants.dangerColor,
                   ),
                   recognizer: TapGestureRecognizer()
                     ..onTap = () {

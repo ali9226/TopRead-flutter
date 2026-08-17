@@ -72,9 +72,6 @@ class Style {
 
   // ==================== 协议 ====================
 
-  /// 协议文字字号。
-  static const double agreementFontSize = 12;
-
   /// 协议文字行高。
   static const double agreementHeight = 1.5;
 }
