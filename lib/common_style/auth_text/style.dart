@@ -25,7 +25,7 @@ class AuthTextStyle {
   /// Logo 宽度。
   static const double logoWidth = 90;
 
-  /// Logo 高度。
+  /// Logo 高度
   static const double logoHeight = 90;
 
   /// Logo 与口号之间的间距。
