@@ -15,6 +15,15 @@ class OperationLi extends StatefulWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
 
+  /// 标题文字颜色，为空时使用默认主题色。
+  final Color? titleColor;
+
+  /// 图标颜色，为空时使用默认主题色。
+  final Color? iconColor;
+
+  /// 右侧箭头颜色，为空时使用默认次要色。
+  final Color? arrowColor;
+
   const OperationLi({
     super.key,
     required this.icon,
@@ -23,6 +32,9 @@ class OperationLi extends StatefulWidget {
     this.showDivider = true,
     this.trailing,
     this.onTap,
+    this.titleColor,
+    this.iconColor,
+    this.arrowColor,
   });
 
   @override
@@ -189,7 +201,7 @@ class _OperationLiState extends State<OperationLi>
                     ),
                     child: SvgIcon(
                       name: widget.icon,
-                      color: textColor,
+                      color: widget.iconColor ?? textColor,
                       width: 20,
                       height: 20,
                     ),
@@ -203,7 +215,7 @@ class _OperationLiState extends State<OperationLi>
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: Style.titleFontWeight,
-                        color: textColor,
+                        color: widget.titleColor ?? textColor,
                       ),
                     ),
                   ),
@@ -215,7 +227,7 @@ class _OperationLiState extends State<OperationLi>
                       name: "right",
                       width: 16,
                       height: 16,
-                      color: subColor,
+                      color: widget.arrowColor ?? subColor,
                     )
                   else if (widget.type == 2)
                     IgnorePointer(

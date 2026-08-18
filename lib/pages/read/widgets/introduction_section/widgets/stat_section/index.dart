@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/read/logic.dart';
+import 'package:app/stores/project_config_store.dart';
 import './style.dart';
 import 'package:app/config/font_config.dart';
 
@@ -29,24 +31,30 @@ class ReadStatSection extends StatelessWidget {
         ? Colors.white.withValues(alpha: StatStyle.stat_divider_night_alpha)
         : Colors.black.withValues(alpha: StatStyle.stat_divider_light_alpha);
 
+    // iOS 审核模式下隐藏评分/评论列。
+    final bool show_review =
+        !Get.find<ProjectConfigStore>().current.is_apple_review_mode;
+
     return IntrinsicHeight(
       child: Row(
         children: <Widget>[
           // 第一列：评分信息，显示右箭头表示可深入查看点评。
-          Expanded(
-            child: _ReaderStatItem(
-              is_dark: is_dark,
-              major_text: detail.score_major_text,
-              minor_text: detail.score_minor_text,
-              subtitle_text: detail.review_count_text,
-              show_arrow: true,
+          if (show_review) ...[
+            Expanded(
+              child: _ReaderStatItem(
+                is_dark: is_dark,
+                major_text: detail.score_major_text,
+                minor_text: detail.score_minor_text,
+                subtitle_text: detail.review_count_text,
+                show_arrow: true,
+              ),
             ),
-          ),
-          // 第一、二列之间的分割线。
-          VerticalDivider(
-            color: divider_color,
-            width: StatStyle.stat_divider_width,
-          ),
+            // 第一、二列之间的分割线。
+            VerticalDivider(
+              color: divider_color,
+              width: StatStyle.stat_divider_width,
+            ),
+          ],
           // 第二列：在读人数信息。
           Expanded(
             child: _ReaderStatItem(

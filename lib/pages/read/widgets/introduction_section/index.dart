@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:app/components/network_cover_image/index.dart';
 import 'package:app/pages/read/logic.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/author_section/index.dart';
@@ -7,6 +8,7 @@ import 'package:app/pages/read/widgets/introduction_section/widgets/tag_section/
 import 'package:app/pages/read/widgets/introduction_section/widgets/intro_summary_section/index.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/comment_section/index.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/stores/project_config_store.dart';
 import './style.dart';
 
 /// 阅读页介绍组件。
@@ -37,6 +39,10 @@ class ReadIntroductionSection extends StatelessWidget {
     final Color title_color = is_dark
         ? IntroductionStyle.title_color_dark
         : IntroductionStyle.title_color_light;
+
+    // iOS 审核模式下隐藏评论区。
+    final bool show_comment =
+        !Get.find<ProjectConfigStore>().current.is_apple_review_mode;
 
     // 该区块按"封面 -> 标题 -> 作者 -> 统计 -> 标签 -> 简介 -> 评论"的顺序组织。
     return Column(
@@ -90,10 +96,15 @@ class ReadIntroductionSection extends StatelessWidget {
           is_dark: is_dark,
           intro_text: detail.intro_text,
         ),
-        // 简介区与评论区之间的间距。
-        const SizedBox(height: IntroductionStyle.comment_top_spacing),
-        // 评论子组件，展示热门书评列表。
-        ReadCommentSection(is_dark: is_dark, comment_list: detail.comment_list),
+        if (show_comment) ...[
+          // 简介区与评论区之间的间距。
+          const SizedBox(height: IntroductionStyle.comment_top_spacing),
+          // 评论子组件，展示热门书评列表。
+          ReadCommentSection(
+            is_dark: is_dark,
+            comment_list: detail.comment_list,
+          ),
+        ],
       ],
     );
   }

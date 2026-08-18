@@ -56,8 +56,8 @@ android {
             signingConfig = signingConfigs.getByName("release")
 
             // 启用 R8 混淆
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -66,14 +66,6 @@ android {
         debug {
             isMinifyEnabled = false
             isShrinkResources = false
-        }
-    }
-
-
-    // ✅ 去掉 so 文件调试符号，减小 APK
-    buildTypes.configureEach {
-        ndk {
-            debugSymbolLevel = "none"
         }
     }
 

@@ -4,7 +4,7 @@
     flutter build apk --release
 
 # 打包abb文件
-    flutter build appbundle --release
+    fvm flutter build appbundle --release
 
 # 分版本打包
     flutter build apk --release --split-per-abi --split-debug-info=build/symbols

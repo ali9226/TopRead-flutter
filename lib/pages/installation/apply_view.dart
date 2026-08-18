@@ -482,6 +482,9 @@ class _ApplyViewState extends State<ApplyView> {
               ),
               children: [
                 TextSpan(text: easy.tr('installation.agreement_prefix')),
+                WidgetSpan(
+                  child: SizedBox(width: 5),
+                ),
                 TextSpan(
                   text: easy.tr('installation.agreement_link'),
                   style: TextStyle(
