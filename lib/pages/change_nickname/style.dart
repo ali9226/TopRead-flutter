@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/config/color_config.dart';
+import 'package:app/config/layout_config.dart';
 
 /// 更新昵称页面样式配置。
 ///
@@ -41,7 +42,7 @@ class Style {
   // ======================== 页面布局 ========================
 
   /// 页面水平内边距。
-  static const double pageHorizontalPadding = 20.0;
+  static const double pageHorizontalPadding = LayoutConfig.page_horizontal_padding;
 
   /// 页面底部内边距。
   static const double pageBottomPadding = 32.0;

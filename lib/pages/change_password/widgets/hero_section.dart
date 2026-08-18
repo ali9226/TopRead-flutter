@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import 'package:app/components/cute_mascot/index.dart';
 import 'package:app/pages/change_password/style.dart';
-import 'package:app/util/language_util/index.dart';
 
 /// 修改密码页面英雄区域组件。
 ///
@@ -28,44 +27,18 @@ class HeroSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    /// 根据当前语种判断是否为 CJK，用于调整副标题行高。
-    final bool is_cjk = LanguageUtil.is_cjk_language(
-      context.locale.languageCode,
-    );
-    final double subtitle_height = is_cjk
-        ? Style.heroSubtitleHeightCjk
-        : Style.heroSubtitleHeightAlphabetic;
-
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
-        /// 左侧文字区域（标题 + 副标题）。
+        /// 左侧文字区域（标题）。
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              /// 页面主标题（"修改密码"）。
-              Text(
-                easy.tr('UserInfo.change_password'),
-                style: TextStyle(
-                  fontSize: Style.heroTitleSize,
-                  fontWeight: Style.heroTitleWeight,
-                  color: Style.titleColor(isDark: isDark),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              /// 页面副标题（"设置一个新的登录密码…"）。
-              Text(
-                easy.tr('UserInfo.change_password_subtitle'),
-                style: TextStyle(
-                  fontSize: Style.heroSubtitleSize,
-                  height: subtitle_height,
-                  fontWeight: Style.heroSubtitleWeight,
-                  color: Style.subtitleColor(isDark: isDark),
-                ),
-              ),
-            ],
+          child: Text(
+            easy.tr('UserInfo.change_password'),
+            style: TextStyle(
+              fontSize: Style.heroTitleSize,
+              fontWeight: Style.heroTitleWeight,
+              color: Style.titleColor(isDark: isDark),
+            ),
           ),
         ),
 
@@ -73,11 +46,9 @@ class HeroSection extends StatelessWidget {
         SizedBox(
           width: Style.heroDecorationWidth,
           height: Style.heroDecorationHeight,
-          child: Center(
-            child: CuteMascot(
-              isCovering: isCovering,
-              isDark: isDark,
-            ),
+          child: CuteMascot(
+            isCovering: isCovering,
+            isDark: isDark,
           ),
         ),
       ],

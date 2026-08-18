@@ -72,7 +72,6 @@ class PasswordField extends StatelessWidget {
                             : ColorConstants.lightTextColor.withOpacity(0.88),
                     ),
                 ),
-                const SizedBox(height: 10),
                 // TODO 输入框（下划线样式，参考登录页）
                 TextField(
                     controller: controller,

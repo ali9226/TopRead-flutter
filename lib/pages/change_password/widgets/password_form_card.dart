@@ -40,12 +40,10 @@ class PasswordFormCard extends StatelessWidget {
 
     @override
     Widget build(BuildContext context) {
-        return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
                     // TODO 新密码输入框
                     PasswordField(
                         label: easy.tr('UserInfo.new_password_label'),
@@ -83,8 +81,7 @@ class PasswordFormCard extends StatelessWidget {
                         onSubmitted: onConfirmPasswordSubmitted,
                         onVisibilityTap: onConfirmPasswordVisibilityTap,
                     ),
-                ],
-            ),
+            ],
         );
     }
 }

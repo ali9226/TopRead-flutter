@@ -54,7 +54,7 @@ class NoLoginEntry extends StatelessWidget {
               style: TextStyle(
                 color: primary_text_color,
                 fontSize: MessageStyle.title_size,
-                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
               ),
             ),
             const SizedBox(height: MessageStyle.no_login_top_spacing),
