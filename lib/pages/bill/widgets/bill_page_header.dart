@@ -1,4 +1,3 @@
-import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/components/language_selection/index.dart';
 

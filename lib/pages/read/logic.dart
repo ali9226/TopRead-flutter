@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
@@ -14,121 +13,15 @@ import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/util/device/save_body_font_size.dart';
 
 import 'style.dart';
+import 'utils/read_models.dart';
+import 'utils/progress_calculator.dart';
+import 'utils/chapter_cache.dart';
+import 'utils/detail_builder.dart';
+
+export 'utils/read_models.dart';
 
 /// 章节正文加载器。
 typedef ChapterContentLoader = Future<String> Function(String url);
-
-/// 阅读页详情数据模型。
-class ReadDetail {
-  /// 书籍 id。
-  final int story_id;
-
-  /// 书籍标题。
-  final String title;
-
-  /// 封面地址。
-  final String cover_url;
-
-  /// 作者ID（数据库中的真实作者ID，用于关注接口）。
-  final int author_id;
-
-  /// 作者头像地址。
-  final String author_avatar_url;
-
-  /// 作者名称。
-  final String author_name;
-
-  /// 是否关注作者。
-  final bool focus_on;
-
-  /// 评分整数部分。
-  final String score_major_text;
-
-  /// 评分单位文案。
-  final String score_minor_text;
-
-  /// 点评人数文案。
-  final String review_count_text;
-
-  /// 在读人数整数部分。
-  final String reading_major_text;
-
-  /// 在读人数单位文案。
-  final String reading_minor_text;
-
-  /// 在读副标题文案。
-  final String reading_subtitle_text;
-
-  /// 字数整数部分。
-  final String word_count_major_text;
-
-  /// 字数单位文案。
-  final String word_count_minor_text;
-
-  /// 字数副标题文案。
-  final String word_count_subtitle_text;
-
-  /// 标签列表。
-  final List<String> tag_list;
-
-  /// 简介内容。
-  final String intro_text;
-
-  /// 第一章标题。
-  final String chapter_title;
-
-  /// 热门评论列表。
-  final List<ReadComment> comment_list;
-
-  const ReadDetail({
-    required this.story_id,
-    required this.title,
-    required this.cover_url,
-    required this.author_id,
-    required this.author_avatar_url,
-    required this.author_name,
-    required this.focus_on,
-    required this.score_major_text,
-    required this.score_minor_text,
-    required this.review_count_text,
-    required this.reading_major_text,
-    required this.reading_minor_text,
-    required this.reading_subtitle_text,
-    required this.word_count_major_text,
-    required this.word_count_minor_text,
-    required this.word_count_subtitle_text,
-    required this.tag_list,
-    required this.intro_text,
-    required this.chapter_title,
-    required this.comment_list,
-  });
-}
-
-/// 阅读页评论数据模型。
-class ReadComment {
-  /// 评论人头像地址。
-  final String avatar_url;
-
-  /// 评论人名称。
-  final String user_name;
-
-  /// 评论内容。
-  final String content;
-
-  /// 评论星级。
-  final int star_count;
-
-  /// 评论人用户ID，用于 CommentAvatar 生成 SVG 兜底头像。
-  final int user_id;
-
-  const ReadComment({
-    required this.avatar_url,
-    required this.user_name,
-    required this.content,
-    required this.star_count,
-    required this.user_id,
-  });
-}
 
 /// 阅读页占位逻辑层。
 class Logic extends GetxController {
@@ -215,11 +108,6 @@ class Logic extends GetxController {
   Future<void> _wait_until_chapter_mutation_allowed() async {
     await wait_until_chapter_mutation_allowed?.call();
   }
-
-  /// 章节正文磁盘缓存有效期。
-  ///
-  /// 缓存过期后会自动删除并重新请求远程正文，避免长期命中过旧内容。
-  static const Duration _chapter_disk_cache_ttl = Duration(days: 7);
 
   /// 章节锚点 key 映射，用于精确滚动到指定章节。
   final Map<int, GlobalKey> _chapter_keys = {};
@@ -659,84 +547,7 @@ class Logic extends GetxController {
     }
   }
 
-  /// 长篇小说章节正文磁盘缓存目录。
-  Directory get _chapter_cache_directory {
-    return Directory('${Directory.systemTemp.path}/read_chapter_content_cache');
-  }
 
-  /// 将章节正文 url 转换成可安全落盘的文件名。
-  ///
-  /// [content_url] 章节正文远程地址。
-  /// 返回经过编码并裁剪长度后的 txt 文件名。
-  String _chapter_cache_file_name(String content_url) {
-    final String encoded = Uri.encodeComponent(
-      content_url,
-    ).replaceAll('%', '_').replaceAll('.', '_').replaceAll('-', '_');
-    if (encoded.length <= 180) {
-      return '$encoded.txt';
-    }
-    return '${encoded.substring(0, 180)}_${content_url.hashCode.abs()}.txt';
-  }
-
-  /// 获取指定章节正文 url 对应的磁盘缓存文件。
-  ///
-  /// [content_url] 章节正文远程地址。
-  File _chapter_cache_file(String content_url) {
-    return File(
-      '${_chapter_cache_directory.path}/${_chapter_cache_file_name(content_url)}',
-    );
-  }
-
-  /// 从磁盘缓存读取章节正文。
-  ///
-  /// [content_url] 章节正文远程地址。
-  /// 返回缓存文本；缓存不存在、过期或读取失败时返回 null。
-  Future<String?> _read_chapter_content_from_disk_cache(
-    String content_url,
-  ) async {
-    try {
-      final File file = _chapter_cache_file(content_url);
-      if (!await file.exists()) {
-        return null;
-      }
-
-      final DateTime modified = await file.lastModified();
-      final bool expired =
-          DateTime.now().difference(modified) > _chapter_disk_cache_ttl;
-      if (expired) {
-        await file.delete();
-        return null;
-      }
-
-      return await file.readAsString();
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// 将章节正文写入磁盘缓存。
-  ///
-  /// [content_url] 章节正文远程地址。
-  /// [content] 章节正文文本。
-  Future<void> _write_chapter_content_to_disk_cache(
-    String content_url,
-    String content,
-  ) async {
-    if (content_url.isEmpty || content.isEmpty) {
-      return;
-    }
-
-    try {
-      final Directory directory = _chapter_cache_directory;
-      if (!await directory.exists()) {
-        await directory.create(recursive: true);
-      }
-      final File file = _chapter_cache_file(content_url);
-      await file.writeAsString(content, flush: false);
-    } catch (_) {
-      // 缓存失败不影响阅读。
-    }
-  }
 
   /// 请求书籍详情接口，用于页面进入时拉取最新小说数据。
   ///
@@ -1212,7 +1023,7 @@ class Logic extends GetxController {
 
     // 磁盘缓存命中，回写内存缓存后返回。
     if (!force) {
-      final String? disk_cached = await _read_chapter_content_from_disk_cache(
+      final String? disk_cached = await ChapterCache.read(
         content_url,
       );
       if (disk_cached != null && disk_cached.isNotEmpty) {
@@ -1225,7 +1036,7 @@ class Logic extends GetxController {
     final String content = await _chapter_content_loader(chapter.content_url);
     if (content.isNotEmpty) {
       _store.cache_chapter_content(index, content);
-      await _write_chapter_content_to_disk_cache(content_url, content);
+      await ChapterCache.write(content_url, content);
     }
     return content;
   }
@@ -1341,94 +1152,10 @@ class Logic extends GetxController {
 
   /// 构建占位详情数据。
   ReadDetail build_detail() {
-    final NovelInfo? info = _store.novel_info.value;
-
-    if (info == null) {
-      // 如果 Store 为空（加载中或加载失败），返回基础占位数据。
-      return _build_placeholder_detail();
-    }
-
-    // 根据 publish_status 确定字数副标题文案。
-    String word_count_subtitle = '';
-    if (info.publish_status == 1) {
-      word_count_subtitle = easy.tr('read.status_serializing');
-    } else if (info.publish_status == 2) {
-      word_count_subtitle = easy.tr('read.status_completed');
-    } else if (info.publish_status == 3) {
-      word_count_subtitle = easy.tr('read.status_removed');
-    }
-
-    // 将 NovelInfo 映射为 ReadDetail。
-    return ReadDetail(
-      story_id: int.tryParse(info.id) ?? story_id,
-      title: info.language_info.title,
-      cover_url: info.language_info.cover_url,
-      author_id: int.tryParse(info.author_id) ?? 0,
-      author_avatar_url: info.author_avatar,
-      author_name: info.author_name,
-      focus_on: info.focus_on,
-      score_major_text: info.score.toStringAsFixed(1),
-      score_minor_text: easy.tr('read.score_unit'),
-      review_count_text: easy.tr(
-        'read.review_count',
-        args: [info.comment_count],
-      ),
-      reading_major_text: info.read_count,
-      reading_minor_text: easy.tr('read.reading_unit'),
-      reading_subtitle_text: easy.tr('read.reading_status'),
-      word_count_major_text: (info.language_info.word_count / 10000)
-          .toStringAsFixed(1),
-      word_count_minor_text: easy.tr('read.word_count_unit'),
-      word_count_subtitle_text: word_count_subtitle,
-      tag_list: info.category_list,
-      intro_text: info.language_info.introduction,
-      chapter_title:
-          info.chapter_info?.title ??
-          (_store.chapter_list.isNotEmpty
-              ? _store.chapter_list.first.title
-              : ''),
-      comment_list: info.comment_list
-          .map(
-            (c) => ReadComment(
-              avatar_url: c.avatar_url,
-              user_name: c.name,
-              content: c.comment_content,
-              star_count: c.score,
-              user_id: int.tryParse(c.user_id) ?? 0,
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  /// 构建基础占位详情数据。
-  ReadDetail _build_placeholder_detail() {
-    // 标题为空时使用兜底标题，避免封面区出现空文本。
-    final String resolved_title = story_title.trim().isEmpty
-        ? '未命名小说 $story_id'
-        : story_title.trim();
-
-    return ReadDetail(
+    return DetailBuilder.build(
+      store: _store,
       story_id: story_id,
-      title: resolved_title,
-      cover_url: '',
-      author_id: 0,
-      author_avatar_url: '',
-      author_name: '',
-      focus_on: false,
-      score_major_text: '0.0',
-      score_minor_text: easy.tr('read.score_unit'),
-      review_count_text: easy.tr('read.review_count', args: ['0']),
-      reading_major_text: '0',
-      reading_minor_text: easy.tr('read.reading_unit'),
-      reading_subtitle_text: easy.tr('read.reading_status'),
-      word_count_major_text: '0',
-      word_count_minor_text: easy.tr('read.word_count_unit'),
-      word_count_subtitle_text: easy.tr('image_text.loading'),
-      tag_list: const <String>[],
-      intro_text: easy.tr('image_text.loading'),
-      chapter_title: '',
-      comment_list: const <ReadComment>[],
+      story_title: story_title,
     );
   }
 
@@ -1483,106 +1210,37 @@ class Logic extends GetxController {
     );
   }
 
+  /// 获取进度计算器实例。
+  ProgressCalculator get _progress_calculator => ProgressCalculator(
+    chapter_list: _store.chapter_list,
+    total_word_count: _total_word_count,
+  );
+
   /// 根据全书阅读百分比推算所在章节索引。
-  ///
-  /// 遍历章节字数累加，找到进度百分比落入的章节。
-  /// 返回章节索引；章节列表为空时返回 0。
   int find_chapter_index_by_progress(double progress_percent) {
-    if (_store.chapter_list.isEmpty) return 0;
-
-    int total_words = _total_word_count;
-    if (total_words <= 0) {
-      for (final ch in _store.chapter_list) {
-        total_words += ch.word_count;
-      }
-    }
-    if (total_words <= 0) return 0;
-
-    final double target_words = total_words * progress_percent / 100;
-    int cumulative = 0;
-    for (int i = 0; i < _store.chapter_list.length; i++) {
-      cumulative += _store.chapter_list[i].word_count;
-      if (cumulative >= target_words) return i;
-    }
-    return _store.chapter_list.length - 1;
+    return _progress_calculator.find_chapter_index_by_progress(progress_percent);
   }
 
   /// 根据全书阅读进度换算指定章节内部的阅读百分比。
-  ///
-  /// [reading_progress_percent] 当前全书阅读百分比，来自现有滚动进度计算。
-  /// [chapter_index] 需要换算的章节索引，通常为当前正在阅读的章节。
-  /// 返回 0-100 的章节内进度百分比；章节字数缺失时返回 0。
   double calculate_chapter_progress_percent({
     required double reading_progress_percent,
     required int chapter_index,
   }) {
-    if (chapter_index < 0 || chapter_index >= _store.chapter_list.length) {
-      return 0;
-    }
-
-    int total_word_count = _total_word_count;
-    if (total_word_count <= 0) {
-      for (final NovelChapterInfo chapter in _store.chapter_list) {
-        total_word_count += chapter.word_count;
-      }
-    }
-
-    final NovelChapterInfo chapter = _store.chapter_list[chapter_index];
-    if (total_word_count <= 0 || chapter.word_count <= 0) {
-      return 0;
-    }
-
-    int words_before_chapter = 0;
-    for (int i = 0; i < chapter_index; i++) {
-      words_before_chapter += _store.chapter_list[i].word_count;
-    }
-
-    final double estimated_read_words =
-        total_word_count * (reading_progress_percent.clamp(0.0, 100.0) / 100);
-    final double read_words_in_chapter =
-        (estimated_read_words - words_before_chapter).clamp(
-          0.0,
-          chapter.word_count.toDouble(),
-        );
-
-    return ((read_words_in_chapter / chapter.word_count) * 100).clamp(
-      0.0,
-      100.0,
+    return _progress_calculator.calculate_chapter_progress_percent(
+      reading_progress_percent: reading_progress_percent,
+      chapter_index: chapter_index,
     );
   }
 
   /// 根据章节索引和章节内进度换算全书阅读进度。
-  ///
-  /// [chapter_index] 当前章节索引。
-  /// [chapter_progress_percent] 当前章节内阅读百分比，取值 0 到 100。
   double calculate_total_progress_percent_for_chapter({
     required int chapter_index,
     required double chapter_progress_percent,
   }) {
-    if (chapter_index < 0 || chapter_index >= _store.chapter_list.length) {
-      return 0;
-    }
-
-    int total_word_count = _total_word_count;
-    if (total_word_count <= 0) {
-      for (final NovelChapterInfo chapter in _store.chapter_list) {
-        total_word_count += chapter.word_count;
-      }
-    }
-    if (total_word_count <= 0) {
-      return 0;
-    }
-
-    int words_before_chapter = 0;
-    for (int i = 0; i < chapter_index; i++) {
-      words_before_chapter += _store.chapter_list[i].word_count;
-    }
-
-    final NovelChapterInfo chapter = _store.chapter_list[chapter_index];
-    final double chapter_read_words =
-        chapter.word_count * (chapter_progress_percent.clamp(0.0, 100.0) / 100);
-    final double read_words = words_before_chapter + chapter_read_words;
-    return ((read_words / total_word_count) * 100).clamp(0.0, 100.0);
+    return _progress_calculator.calculate_total_progress_percent_for_chapter(
+      chapter_index: chapter_index,
+      chapter_progress_percent: chapter_progress_percent,
+    );
   }
 
   /// 获取指定章节的 GlobalKey。

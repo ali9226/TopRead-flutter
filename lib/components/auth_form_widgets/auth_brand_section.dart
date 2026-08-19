@@ -6,7 +6,6 @@ import 'package:get/get.dart';
 import 'package:app/common_style/auth_text/style.dart';
 import 'package:app/components/auth_page/style.dart';
 import 'package:app/components/svg_icon/index.dart';
-import 'package:app/config/font_config.dart';
 import 'package:app/models/language_info.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/language_store.dart';

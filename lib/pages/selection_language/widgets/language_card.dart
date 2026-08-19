@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
-import 'package:app/config/font_config.dart';
 import 'package:app/models/language_info.dart';
 import 'package:app/util/language_util/index.dart';
 import '../style.dart';
@@ -60,8 +60,8 @@ class LanguageCard extends StatelessWidget {
     }
     final String asset_path = languageInfo.icon.trim();
     if (asset_path.isNotEmpty) {
-      return Image.network(
-        asset_path,
+      return CachedNetworkImage(
+        imageUrl: asset_path,
         width: Style.flagSize,
         height: Style.flagSize,
         fit: BoxFit.cover,

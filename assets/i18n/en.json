@@ -258,7 +258,6 @@
     "delete_account_success_message": "We're sorry for the inconvenience. Your account has been deleted. We value your feedback and will strive to improve!",
     "author_center": "Author Center"
   },
-
   "installation": {
     "title": "Apply as Author",
     "subtitle": "Join us and start your writing journey",
@@ -304,7 +303,6 @@
     "send_code_success": "Code sent, check your email",
     "send_code_failed": "Failed to send, try again"
   },
-
   "customer_service_sheet": {
     "title": "Online Support",
     "description": "If you encounter any issues while using the app, please contact our online support. We are happy to help.",
@@ -314,7 +312,6 @@
     "send": "Send",
     "photo_permission_hint": "Photo permission is required to send images. Please enable it in Settings."
   },
-
   "message": {
     "title": "Message Center",
     "subtitle": "Inbox",
@@ -481,7 +478,9 @@
     "type_108": "Agent Share",
     "type_109": "Agent Share",
     "type_110": "Agent Share",
-    "type_default": "Balance Change"
+    "type_default": "Balance Change",
+    "type_103": "System Credit",
+    "type_104": "System Debit"
   },
   "back": {
     "exit_prompt": "Press back again to exit"
@@ -782,5 +781,13 @@
     "ad_privacy_options": "Ad Privacy Choices",
     "ad_privacy_options_unavailable": "Ad privacy choices are temporarily unavailable. Please try again later.",
     "version_update": "Version Update"
+  },
+  "game": {
+    "action": {
+      "confirm": "Confirm"
+    }
+  },
+  "customer_service": {
+    "input_hint": "Type a message..."
   }
 }

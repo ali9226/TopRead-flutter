@@ -44,7 +44,7 @@ class Logic {
     if (!results.status) return false;
     if (results.content == null) return false;
 
-    final userController = Get.put(UserInformation());
+    final userController = Get.find<UserInformation>();
     userController.saveUserInfo(results.content!);
     showBottomTip(easy.tr('UserInfo.success_04'));
     return true;

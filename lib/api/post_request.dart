@@ -3,6 +3,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:app/api/dio_client.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/config/constant.dart';
 import 'package:app/util/device/app_environment.dart';
@@ -12,11 +13,6 @@ import 'package:app/util/encryption/set_encryption.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/storage_util/index.dart';
-
-// TODO 统一网络超时，避免接口端长时间等待时前端无限 pending。
-const int _postRequestConnectTimeoutMs = 12000;
-const int _postRequestSendTimeoutMs = 12000;
-const int _postRequestReceiveTimeoutMs = 15000;
 
 /* TODO
  * 封装项目统一的 POST 请求。
@@ -45,19 +41,10 @@ Future<ResultsType<T>> postRequest<T>({
   );
 
   try {
-    final Dio dio = Dio(
-      BaseOptions(
-        baseUrl: baseUrl ?? Constant.requestUrl,
-        validateStatus: (int? status) => status != null,
-        connectTimeout: const Duration(
-          milliseconds: _postRequestConnectTimeoutMs,
-        ),
-        sendTimeout: const Duration(milliseconds: _postRequestSendTimeoutMs),
-        receiveTimeout: const Duration(
-          milliseconds: _postRequestReceiveTimeoutMs,
-        ),
-      ),
-    );
+    /// 复用全局 Dio 单例连接池；特殊域名（如 Telegram 登录）单独创建。
+    final Dio dio = (baseUrl == null)
+        ? DioClient().instance
+        : DioClient().create(baseUrl: baseUrl);
     final String language = await LanguageUtil.get_language();
     final int languageId = await LanguageUtil.get_language_id();
     final String locale = LanguageUtil.resolve_locale_code_by_language(

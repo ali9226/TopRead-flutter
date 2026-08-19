@@ -62,7 +62,7 @@ class _ChangeNicknameState extends State<ChangeNickname> {
     final DeviceInfo deviceInfo = Get.find<DeviceInfo>();
     final bool isDark = deviceInfo.theme.value == ThemeMode.dark;
 
-    final UserInformation userController = Get.put(UserInformation());
+    final UserInformation userController = Get.find<UserInformation>();
     final String currentName =
         userController.userInfo.value?.name.trim().isNotEmpty == true
             ? userController.userInfo.value!.name.trim()

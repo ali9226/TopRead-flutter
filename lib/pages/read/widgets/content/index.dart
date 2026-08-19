@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/pages/read/logic.dart' as read_logic;

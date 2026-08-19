@@ -62,7 +62,7 @@ Future<void> autoLogin() async {
   await StorageUtil.saveData(Constant.tokenKey, token);
 
   // 自动登录成功，把最新用户信息写入全局 store。
-  final userController = Get.put(UserInformation());
+  final userController = Get.find<UserInformation>();
   userController.saveUserInfo(loginData.userInfo);
 
   // 异步连接 WebSocket（不等待连接完成）。

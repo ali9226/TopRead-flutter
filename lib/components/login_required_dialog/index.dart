@@ -1,5 +1,4 @@
 import 'package:easy_localization/easy_localization.dart' as easy;
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:app/components/svg_icon/index.dart';

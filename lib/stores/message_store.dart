@@ -6,11 +6,13 @@ import 'package:get/get.dart';
 import 'package:app/models/message_data.dart';
 import 'package:app/api/message.dart' as message_api;
 import 'package:app/api/post_request.dart';
-import 'package:app/fcm/fcm_service.dart';
 import 'package:app/stores/utils/merge_unique_message_list.dart';
 import 'package:app/websocket/websocket_service.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/storage_util/index.dart';
+import 'package:app/fcm/fcm_service.dart';
+import 'package:app/stores/message_deduplicator.dart';
+import 'package:app/stores/message_unread_counter.dart';
 
 typedef MessageListFetcher =
     Future<MessageListResult?> Function({
@@ -67,35 +69,38 @@ class MessageStore extends GetxController {
   /// 消息列表请求实现，测试时可注入可控异步结果。
   final MessageListFetcher _fetch_message_list;
 
+  /// 未读计数管理器（集中管理各类型未读数和角标同步）。
+  final MessageUnreadCounter _unread = MessageUnreadCounter();
+
   /// 未读消息总数（用于底部导航角标）。
-  final unread_total = 0.obs;
+  RxInt get unread_total => _unread.unread_total;
 
   /// 在线客服未读消息数。
-  final chat_unread = 0.obs;
+  RxInt get chat_unread => _unread.chat_unread;
 
   /// 系统通知及后端未来扩展类型的未读数。
-  final system_unread = 0.obs;
+  RxInt get system_unread => _unread.system_unread;
 
   /// 评论相关未读数（评论回复）。
-  final comment_unread = 0.obs;
+  RxInt get comment_unread => _unread.comment_unread;
 
   /// 评论相关总数。
-  final comment_total = 0.obs;
+  RxInt get comment_total => _unread.comment_total;
 
   /// 点赞相关未读数（评论点赞 + 小说点赞）。
-  final like_unread = 0.obs;
+  RxInt get like_unread => _unread.like_unread;
 
   /// 点赞相关总数。
-  final like_total = 0.obs;
+  RxInt get like_total => _unread.like_total;
 
   /// 收藏相关未读数（小说收藏）。
-  final favorite_unread = 0.obs;
+  RxInt get favorite_unread => _unread.favorite_unread;
 
   /// 收藏相关总数。
-  final favorite_total = 0.obs;
+  RxInt get favorite_total => _unread.favorite_total;
 
-  /// 角标更新防抖定时器。
-  Timer? _badge_update_timer;
+  /// 消息去重器。
+  final MessageDeduplicator _dedup = MessageDeduplicator();
 
   /// FCM 前台消息触发权威统计补拉的防抖定时器。
   Timer? _foreground_refresh_timer;
@@ -135,17 +140,7 @@ class MessageStore extends GetxController {
   /// 是否已向 FCM 服务注册前台补拉回调。
   bool _foreground_callback_registered = false;
 
-  /// 已处理的客服实时消息 ID，用于防止重连或重复推送造成角标重复累加。
-  final Set<int> _processed_chat_message_ids = <int>{};
 
-  /// 已处理的普通实时消息 ID，用于防止 Redis 重试或重连补发造成重复累加。
-  final Set<int> _processed_message_ids = <int>{};
-
-  /// 客服消息去重窗口大小。
-  static const int _processed_chat_message_limit = 200;
-
-  /// 普通消息去重窗口大小。
-  static const int _processed_message_limit = 500;
 
   /// 最近处理的客服消息 ID，用于抵御乱序事件覆盖较新的权威未读数。
   int _latest_chat_message_id = 0;
@@ -447,7 +442,7 @@ class MessageStore extends GetxController {
       }
 
       if (can_apply_unread) {
-        _recompute_unread_total();
+        _unread.recompute_total();
       }
       bucket.has_more = result.list.length >= 20;
       bucket.has_loaded = true;
@@ -484,8 +479,8 @@ class MessageStore extends GetxController {
     if (unread_message != null) {
       _local_unread_mutation_revision++;
       _unread_state_revision++;
-      _update_type_unread(unread_message.type, -1);
-      _recompute_unread_total();
+      _unread.update_by_type(unread_message.type, -1);
+      _unread.recompute_total();
     }
   }
 
@@ -516,7 +511,7 @@ class MessageStore extends GetxController {
     like_unread.value = 0;
     favorite_unread.value = 0;
     system_unread.value = 0;
-    _recompute_unread_total();
+    _unread.recompute_total();
 
     bool should_recover = false;
     bool needs_authoritative_fetch = false;
@@ -595,7 +590,7 @@ class MessageStore extends GetxController {
             .toList();
       }
       chat_unread.value = 0;
-      _recompute_unread_total();
+      _unread.recompute_total();
       unawaited(_sync_chat_messages_read());
       return;
     }
@@ -604,8 +599,8 @@ class MessageStore extends GetxController {
     if (deleted_message.is_unread) {
       _local_unread_mutation_revision++;
       _unread_state_revision++;
-      _update_type_unread(deleted_message.type, -1);
-      _recompute_unread_total();
+      _unread.update_by_type(deleted_message.type, -1);
+      _unread.recompute_total();
     }
     final bool success = await message_api.delete_message(id: message_id);
     if (!success) {
@@ -639,7 +634,7 @@ class MessageStore extends GetxController {
             .toList();
       }
     }
-    _recompute_unread_total();
+    _unread.recompute_total();
   }
 
   /// 获取访客的客服聊天未读数（未登录时调用）。
@@ -667,7 +662,7 @@ class MessageStore extends GetxController {
     }
     if (visitor_id == null || visitor_id.isEmpty) {
       chat_unread.value = 0;
-      _recompute_unread_total(force_badge_sync: true);
+      _unread.recompute_total(force_badge_sync: true);
       return;
     }
 
@@ -678,7 +673,7 @@ class MessageStore extends GetxController {
       return;
     }
     chat_unread.value = unread;
-    _recompute_unread_total(force_badge_sync: true);
+    _unread.recompute_total(force_badge_sync: true);
   }
 
   /// 清空所有数据（登出时调用）。
@@ -700,35 +695,26 @@ class MessageStore extends GetxController {
       bucket.is_loading.value = false;
     }
     _active_type.value = null;
-    unread_total.value = 0;
-    chat_unread.value = 0;
-    system_unread.value = 0;
-    comment_unread.value = 0;
-    comment_total.value = 0;
-    like_unread.value = 0;
-    like_total.value = 0;
-    favorite_unread.value = 0;
-    favorite_total.value = 0;
-    _processed_message_ids.clear();
-    _processed_chat_message_ids.clear();
+    _unread.clear();
+    _dedup.clear();
     _latest_chat_message_id = 0;
     _latest_server_state_version = 0;
-    _recompute_unread_total(force_badge_sync: true);
   }
 
   // ==================== 内部方法 ====================
 
   /// 应用后端返回的权威未读统计。
   void _apply_unread_count(MessageUnreadCount result) {
-    comment_unread.value = result.comment_unread;
-    comment_total.value = result.comment_total;
-    like_unread.value = result.like_unread;
-    like_total.value = result.like_total;
-    favorite_unread.value = result.favorite_unread;
-    favorite_total.value = result.favorite_total;
-    chat_unread.value = result.chat_unread;
-    system_unread.value = result.system_unread;
-    _recompute_unread_total(force_badge_sync: true);
+    _unread.apply_authoritative(
+      comment_unread: result.comment_unread,
+      comment_total: result.comment_total,
+      like_unread: result.like_unread,
+      like_total: result.like_total,
+      favorite_unread: result.favorite_unread,
+      favorite_total: result.favorite_total,
+      chat_unread: result.chat_unread,
+      system_unread: result.system_unread,
+    );
   }
 
   /// 获取消息桶中现有的客服摘要。
@@ -745,69 +731,9 @@ class MessageStore extends GetxController {
     if (message.id > _latest_chat_message_id) {
       _latest_chat_message_id = message.id;
     }
-    _remember_chat_message(message.id);
+    _dedup.remember_chat(message.id);
   }
 
-  /// 重新计算未读总数并更新角标。
-  void _recompute_unread_total({bool force_badge_sync = false}) {
-    final int new_total =
-        comment_unread.value +
-        like_unread.value +
-        favorite_unread.value +
-        system_unread.value +
-        chat_unread.value;
-    if (!force_badge_sync && new_total == unread_total.value) return;
-    unread_total.value = new_total;
-    _badge_update_timer?.cancel();
-    _badge_update_timer = Timer(const Duration(milliseconds: 500), () {
-      FcmService().update_badge(unread_total.value);
-    });
-  }
-
-  /// 更新指定类型的未读数。
-  void _update_type_unread(int type, int delta) {
-    if (type == MessageType.comment_reply) {
-      comment_unread.value = (comment_unread.value + delta).clamp(0, 9999);
-    } else if (type == MessageType.comment_like ||
-        type == MessageType.novel_like) {
-      like_unread.value = (like_unread.value + delta).clamp(0, 9999);
-    } else if (type == MessageType.novel_favorite) {
-      favorite_unread.value = (favorite_unread.value + delta).clamp(0, 9999);
-    } else if (type == MessageType.system) {
-      system_unread.value = (system_unread.value + delta).clamp(0, 9999);
-    }
-  }
-
-  /// 从 WebSocket 数据更新未读数。
-  void _update_unread_from_ws(Map<String, dynamic> data) {
-    final int comment = _parse_int(data['comment_unread']);
-    final int like = _parse_int(data['like_unread']);
-    final int favorite = _parse_int(data['favorite_unread']);
-    final int chat = data.containsKey('chat_unread')
-        ? _parse_int(data['chat_unread'])
-        : chat_unread.value;
-
-    comment_unread.value = comment;
-    comment_total.value = _parse_int(data['comment_total']);
-    like_unread.value = like;
-    like_total.value = _parse_int(data['like_total']);
-    favorite_unread.value = favorite;
-    favorite_total.value = _parse_int(data['favorite_total']);
-    if (data.containsKey('chat_unread')) {
-      chat_unread.value = chat;
-    }
-
-    if (data.containsKey('system_unread')) {
-      system_unread.value = _parse_int(data['system_unread']);
-    } else if (data.containsKey('total')) {
-      final int known_unread = comment + like + favorite + chat;
-      system_unread.value = (_parse_int(data['total']) - known_unread).clamp(
-        0,
-        9999,
-      );
-    }
-    _recompute_unread_total(force_badge_sync: true);
-  }
 
   /// 全部已读同步期间只记录刷新需求，不允许旧实时快照恢复角标。
   bool _defer_realtime_unread_update() {
@@ -819,7 +745,7 @@ class MessageStore extends GetxController {
   /// 应用实时权威快照，并使更早发出的 HTTP 请求失效。
   void _apply_realtime_unread(Map<String, dynamic> data) {
     if (_defer_realtime_unread_update()) return;
-    _update_unread_from_ws(data);
+    _unread.update_from_ws(data);
     _unread_state_revision++;
   }
 
@@ -877,7 +803,7 @@ class MessageStore extends GetxController {
             if (suppress_unread_update) {
               new_message = _message_with_current_unread_status(new_message);
             }
-            final bool is_new_event = _remember_message(new_message.id);
+            final bool is_new_event = _dedup.remember(new_message.id);
             final bool is_cached = _is_message_cached(new_message);
 
             // TODO 权威快照已经包含当前消息，存在快照时绝不能再次本地加一。
@@ -889,8 +815,8 @@ class MessageStore extends GetxController {
                 !is_cached &&
                 new_message.is_unread &&
                 !_defer_realtime_unread_update()) {
-              _update_type_unread(new_message.type, 1);
-              _recompute_unread_total();
+              _unread.update_by_type(new_message.type, 1);
+              _unread.recompute_total();
               _unread_state_revision++;
             }
 
@@ -915,7 +841,7 @@ class MessageStore extends GetxController {
           );
           final int unread = _parse_int(chat_data['unread']);
           chat_unread.value = unread;
-          _recompute_unread_total();
+          _unread.recompute_total();
           _unread_state_revision++;
         }
         break;
@@ -957,7 +883,7 @@ class MessageStore extends GetxController {
           if (_defer_realtime_unread_update()) break;
           final int unread = _parse_int(chat_data['unread']);
           chat_unread.value = unread;
-          _recompute_unread_total();
+          _unread.recompute_total();
           _unread_state_revision++;
         }
         break;
@@ -977,7 +903,7 @@ class MessageStore extends GetxController {
     if (_parse_int(chat_data['sender_type']) != 2) return;
 
     final int message_id = _parse_int(chat_data['id']);
-    if (message_id > 0 && !_remember_chat_message(message_id)) return;
+    if (message_id > 0 && !_dedup.remember_chat(message_id)) return;
     final bool is_latest_message =
         message_id <= 0 || message_id >= _latest_chat_message_id;
     if (message_id > _latest_chat_message_id) {
@@ -1004,7 +930,7 @@ class MessageStore extends GetxController {
     } else {
       chat_unread.value = (chat_unread.value + 1).clamp(0, 9999);
     }
-    _recompute_unread_total();
+    _unread.recompute_total();
     _unread_state_revision++;
   }
 
@@ -1061,24 +987,9 @@ class MessageStore extends GetxController {
     }
   }
 
-  /// 记录已处理的客服消息，并限制集合大小避免长期运行时无限增长。
-  bool _remember_chat_message(int message_id) {
-    if (!_processed_chat_message_ids.add(message_id)) return false;
-    if (_processed_chat_message_ids.length > _processed_chat_message_limit) {
-      _processed_chat_message_ids.remove(_processed_chat_message_ids.first);
-    }
-    return true;
-  }
 
-  /// 记录普通消息事件，并限制集合大小。
-  bool _remember_message(int message_id) {
-    if (message_id <= 0) return true;
-    if (!_processed_message_ids.add(message_id)) return false;
-    if (_processed_message_ids.length > _processed_message_limit) {
-      _processed_message_ids.remove(_processed_message_ids.first);
-    }
-    return true;
-  }
+
+
 
   /// 判断普通消息是否已存在于任意缓存桶。
   bool _is_message_cached(MessageData message) {
@@ -1224,7 +1135,7 @@ class MessageStore extends GetxController {
             ? results.content!['unread'] as int
             : int.tryParse(results.content!['unread']?.toString() ?? '0') ?? 0;
         chat_unread.value = unread;
-        _recompute_unread_total();
+        _unread.recompute_total();
       }
     } catch (e) {
       debugPrint('fetch_chat_unread error: $e');
@@ -1241,7 +1152,7 @@ class MessageStore extends GetxController {
   @override
   void onClose() {
     _ws_subscription?.cancel();
-    _badge_update_timer?.cancel();
+    _unread.dispose();
     _foreground_refresh_timer?.cancel();
     if (_foreground_callback_registered) {
       FcmService().on_foreground_data = null;

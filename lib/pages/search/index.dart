@@ -13,7 +13,6 @@ import 'package:app/components/floating_back_to_top/style.dart'
 import 'package:app/components/language_selection/index.dart';
 import 'package:app/components/recommend_book_card/animated_waterfall.dart';
 import 'package:app/components/recommend_book_card/book_list_item.dart';
-import 'package:app/components/recommend_book_card/index.dart';
 import 'package:app/components/recommend_book_card/logic.dart';
 import 'package:app/components/top_header_gradient/index.dart';
 import 'package:app/config/color_config.dart';
@@ -28,6 +27,8 @@ import 'package:app/util/router/router_util.dart';
 
 import 'logic.dart';
 import 'style.dart';
+import 'package:app/pages/search/widgets/cycling_hint_overlay.dart';
+import 'package:app/pages/search/widgets/search_result_waterfall.dart';
 
 /// 小说搜索页。
 class SearchPage extends StatefulWidget {
@@ -650,7 +651,7 @@ class _SearchPageState extends State<SearchPage> {
                                       opacity: keyword.trim().isEmpty
                                           ? 1.0
                                           : 0.0,
-                                      child: _CyclingHintOverlay(
+                                      child: CyclingHintOverlay(
                                         hint_text: _get_hint_text(),
                                         text_style: TextStyle(
                                           color: secondary_text_color,
@@ -803,7 +804,7 @@ class _SearchPageState extends State<SearchPage> {
                     else if (_search_results.isEmpty)
                       _build_empty_result(secondary_text_color)
                     else ...[
-                      _SearchResultWaterfall(
+                      SearchResultWaterfall(
                         items: _search_results,
                         is_dark: is_dark,
                       ),
@@ -960,218 +961,6 @@ class _SearchPageState extends State<SearchPage> {
               style: TextStyle(color: secondary_text_color, fontSize: 16),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 搜索结果瀑布流组件。
-class _SearchResultWaterfall extends StatefulWidget {
-  final List<BookListItem> items;
-  final bool is_dark;
-
-  const _SearchResultWaterfall({required this.items, required this.is_dark});
-
-  @override
-  State<_SearchResultWaterfall> createState() => _SearchResultWaterfallState();
-}
-
-class _SearchResultWaterfallState extends State<_SearchResultWaterfall> {
-  final Map<String, double> _item_heights = <String, double>{};
-  int _column_count = 2;
-  double _total_width = 0;
-
-  Map<String, Rect> _calculate_layout() {
-    if (_total_width == 0) return <String, Rect>{};
-    final double column_width =
-        (_total_width - 12 * (_column_count - 1)) / _column_count;
-    final List<double> column_heights = List<double>.filled(_column_count, 0);
-    final Map<String, Rect> positions = <String, Rect>{};
-
-    for (int i = 0; i < widget.items.length; i++) {
-      final BookListItem item = widget.items[i];
-      int shortest_column = 0;
-      double min_height = column_heights[0];
-      for (int c = 1; c < _column_count; c++) {
-        if (column_heights[c] < min_height) {
-          min_height = column_heights[c];
-          shortest_column = c;
-        }
-      }
-      final double x = shortest_column * (column_width + 12);
-      final double item_height = _item_heights[item.id] ?? 200;
-      positions[item.id] = Rect.fromLTWH(
-        x,
-        column_heights[shortest_column],
-        column_width,
-        item_height,
-      );
-      column_heights[shortest_column] += item_height + 12;
-    }
-    return positions;
-  }
-
-  double _calculate_total_height(Map<String, Rect> positions) {
-    double max_bottom = 0;
-    for (final Rect rect in positions.values) {
-      final double bottom = rect.top + rect.height;
-      if (bottom > max_bottom) max_bottom = bottom;
-    }
-    return max_bottom;
-  }
-
-  int _resolve_column_count(double total_width) {
-    final int estimated = ((total_width + 12) / (160 + 12)).floor();
-    return estimated.clamp(2, 3);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        _total_width = constraints.maxWidth;
-        _column_count = _resolve_column_count(_total_width);
-        final Map<String, Rect> positions = _calculate_layout();
-        final double total_height = _calculate_total_height(positions);
-
-        return SizedBox(
-          height: total_height,
-          child: Stack(
-            children: widget.items.map((BookListItem item) {
-              final Rect? rect = positions[item.id];
-              if (rect == null) return const SizedBox.shrink();
-
-              return Positioned(
-                key: ValueKey<String>(item.id),
-                left: rect.left,
-                top: rect.top,
-                width: rect.width,
-                child: _MeasurableWidget(
-                  on_height_measured: (double height) {
-                    if (_item_heights[item.id] != height && mounted) {
-                      setState(() {
-                        _item_heights[item.id] = height;
-                      });
-                    }
-                  },
-                  child: RecommendBookCard(
-                    item: item,
-                    is_dark: widget.is_dark,
-                    show_overlay: false,
-                    on_long_press: () {},
-                    on_overlay_close: () {},
-                    on_tap: () {
-                      navigate_to_novel(
-                        id: item.story_id,
-                        title: item.title,
-                        publish_status: item.publish_status,
-                      );
-                    },
-                    on_dislike: () {},
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _MeasurableWidget extends StatefulWidget {
-  final Widget child;
-  final ValueChanged<double> on_height_measured;
-
-  const _MeasurableWidget({
-    required this.child,
-    required this.on_height_measured,
-  });
-
-  @override
-  State<_MeasurableWidget> createState() => _MeasurableWidgetState();
-}
-
-class _MeasurableWidgetState extends State<_MeasurableWidget> {
-  double _last_height = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    return NotificationListener<SizeChangedLayoutNotification>(
-      onNotification: (_) {
-        _measure();
-        return false;
-      },
-      child: SizeChangedLayoutNotifier(child: widget.child),
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _measure();
-    });
-  }
-
-  void _measure() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final RenderBox? box = context.findRenderObject() as RenderBox?;
-      if (box != null && box.hasSize) {
-        final double height = box.size.height;
-        if ((height - _last_height).abs() > 1) {
-          _last_height = height;
-          widget.on_height_measured(height);
-        }
-      }
-    });
-  }
-}
-
-class _CyclingHintOverlay extends StatelessWidget {
-  final String hint_text;
-  final TextStyle text_style;
-
-  const _CyclingHintOverlay({
-    required this.hint_text,
-    required this.text_style,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 800),
-      switchInCurve: Curves.easeInOutCubic,
-      switchOutCurve: Curves.easeInOutCubic,
-      transitionBuilder: (Widget child, Animation<double> animation) {
-        return SlideTransition(
-          position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-              .animate(
-                CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeInOutCubic,
-                ),
-              ),
-          child: child,
-        );
-      },
-      layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
-        return Stack(
-          clipBehavior: Clip.hardEdge,
-          alignment: Alignment.centerLeft,
-          children: <Widget>[...previousChildren, ?currentChild],
-        );
-      },
-      child: Align(
-        alignment: Alignment.centerLeft,
-        key: ValueKey<String>(hint_text),
-        child: Text(
-          hint_text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: text_style,
         ),
       ),
     );

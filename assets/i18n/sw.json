@@ -148,7 +148,8 @@
     "register_now": "Jisajili sasa",
     "success_01": "Umeingia kwa mafanikio",
     "account_not_registered": "Akaunti hii bado haijasajiliwa, tafadhali jisajili kwanza",
-    "account_already_registered": "Akaunti hii imesajiliwa tayari, tafadhali ingia"
+    "account_already_registered": "Akaunti hii imesajiliwa tayari, tafadhali ingia",
+    "google_configuration_error": "Hitilafu ya usanidi wa kuingia kwa Google, angalia Web OAuth Client ID, jina la packet na SHA-1"
   },
   "SelectionLanguage": {
     "title": "Chagua Lugha",
@@ -236,7 +237,6 @@
     "delete_account_success_message": "Tunaomba msamaha kwa usumbufu. Akaunti yako imefutwa. Tunathamini maoni yako na tutajitahidi kuboresha!",
     "author_center": "Kituo cha Waandishi"
   },
-
   "installation": {
     "title": "Omba Kuwa Mwandishi",
     "subtitle": "Jiunge nasi, anzisha safari yako ya uandishi",
@@ -282,7 +282,6 @@
     "send_code_success": "Nambari imetumwa, angalia barua pepe yako",
     "send_code_failed": "Imeshindikana kutuma, jaribu tena"
   },
-
   "customer_service_sheet": {
     "title": "Msaada Mtandaoni",
     "description": "Ukihitaji msaada wowote wakati wa kutumia programu, tafadhali wasiliana na msaada wetu mtandaoni. Tunafuraha kukusaidia.",
@@ -292,7 +291,6 @@
     "send": "Tuma",
     "photo_permission_hint": "Ruhusa ya picha inahitajika kutuma picha. Tafadhali iwashe kwenye Mipangilio."
   },
-
   "message": {
     "title": "Ujumbe",
     "subtitle": "Kituo cha ujumbe",
@@ -459,7 +457,9 @@
     "type_108": "Mgawo wa Wakala",
     "type_109": "Mgawo wa Wakala",
     "type_110": "Mgawo wa Wakala",
-    "type_default": "Mabadiliko ya Bili"
+    "type_default": "Mabadiliko ya Bili",
+    "type_103": "Tuzo ya Mfumo",
+    "type_104": "Kupunguzwa kwa Mfumo"
   },
   "back": {
     "exit_prompt": "Bonyeza nyuma tena kutoka app"
@@ -605,7 +605,17 @@
     "chapter_word_count_suffix": "maneno",
     "chapter_read_percent": "Imesomwa {}%",
     "day_mode": "Mchana",
-    "night_mode": "Usiku"
+    "night_mode": "Usiku",
+    "score_unit": "alama",
+    "review_count": "Maoni ya watu {}",
+    "reading_unit": "wasomaji",
+    "reading_status": "Inasomwa",
+    "word_count_unit": "maneno 10k",
+    "status_serializing": "Inasasishwa",
+    "status_completed": "Imekamilika",
+    "status_removed": "Imeondolewa",
+    "collapse": "Punguza",
+    "chapter_label": "Sura {}"
   },
   "constant": {
     "refresh_success": "Usasishaji umefanikiwa",
@@ -771,5 +781,13 @@
     "ad_privacy_options": "Chaguo za Faragha ya Matangazo",
     "ad_privacy_options_unavailable": "Chaguo za faragha ya matangazo hazipatikani kwa sasa. Jaribu tena baadaye.",
     "version_update": "Sasisha Toleo"
+  },
+  "game": {
+    "action": {
+      "confirm": "Thibitisha"
+    }
+  },
+  "customer_service": {
+    "input_hint": "Andika ujumbe..."
   }
 }

@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:app/config/color_config.dart';
@@ -105,12 +106,12 @@ class MessageItemCard extends StatelessWidget {
               if (has_cover)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(MessageStyle.cover_radius),
-                  child: Image.network(
-                    novel_cover!,
+                  child: CachedNetworkImage(
+                    imageUrl: novel_cover!,
                     width: MessageStyle.cover_width,
                     height: MessageStyle.cover_height,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
+                    errorWidget: (context, url, error) =>
                         _build_icon(icon_and_badge_bg_color, icon_and_badge_text_color),
                   ),
                 )
@@ -278,10 +279,10 @@ class MessageItemCard extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 unread_count > 99 ? '99+' : '$unread_count',
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
                   fontSize: 10,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
                 ),
               ),
             ),

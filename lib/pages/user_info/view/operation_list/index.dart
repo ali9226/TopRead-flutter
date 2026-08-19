@@ -1,6 +1,8 @@
 import 'package:easy_localization/easy_localization.dart' as easy;
 
 import 'package:flutter/material.dart';
+import 'package:app/config/font_config.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
@@ -71,12 +73,12 @@ class _OperationListState extends State<OperationList> {
 
     return ClipOval(
       child: iconUrl.isNotEmpty
-          ? Image.network(
-              iconUrl,
+          ? CachedNetworkImage(
+              imageUrl: iconUrl,
               width: 28,
               height: 28,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
+              errorWidget: (context, url, error) {
                 return Image.asset(
                   localAsset,
                   width: 28,
@@ -130,10 +132,10 @@ class _OperationListState extends State<OperationList> {
         ),
         child: Text(
           count > 99 ? '99+' : count.toString(),
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.white,
             fontSize: 11,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
           ),
         ),
       );
@@ -270,7 +272,7 @@ class _OperationListState extends State<OperationList> {
             'V${Constant.appVersion}',
             style: TextStyle(
               fontSize: 14,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
               color: deviceInfo.dark.value
                   ? Colors.white.withValues(alpha: 0.38)
                   : ColorConstants.lightTextColor.withValues(alpha: 0.45),

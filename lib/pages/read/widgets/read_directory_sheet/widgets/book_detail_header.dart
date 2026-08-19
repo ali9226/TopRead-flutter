@@ -129,13 +129,11 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
                 InkWell(
                   onTap: () {},
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Flexible(
+                      Expanded(
                         child: Text(
                           widget.detail.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: title_color,
                             fontSize: title_font_size,
@@ -147,10 +145,13 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: title_color.withValues(alpha: 0.3),
-                        size: 14,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: title_color.withValues(alpha: 0.3),
+                          size: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -158,47 +159,65 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
                 const SizedBox(
                   height: ReadDirectorySheetStyle.title_author_spacing,
                 ),
-                Row(
-                  children: [
-                    if (widget.detail.author_avatar_url.isNotEmpty)
-                      CircleAvatar(
-                        radius: ReadDirectorySheetStyle.author_avatar_radius,
-                        backgroundColor: Colors.transparent,
-                        backgroundImage: CachedNetworkImageProvider(
-                          widget.detail.author_avatar_url,
-                        ),
-                      )
-                    else
-                      SvgPicture.asset(
-                        'assets/svg/avatar_${_random_avatar_index.toString().padLeft(2, '0')}.svg',
-                        width: ReadDirectorySheetStyle.author_avatar_radius * 2,
-                        height: ReadDirectorySheetStyle.author_avatar_radius * 2,
+                if (widget.detail.author_avatar_url.isNotEmpty ||
+                    widget.detail.author_name.trim().isNotEmpty)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: widget.detail.author_avatar_url.isNotEmpty
+                            ? ClipOval(
+                                child: CachedNetworkImage(
+                                  imageUrl: widget.detail.author_avatar_url,
+                                  width: ReadDirectorySheetStyle.author_avatar_radius * 2,
+                                  height: ReadDirectorySheetStyle.author_avatar_radius * 2,
+                                  fit: BoxFit.cover,
+                                  errorWidget: (context, url, error) =>
+                                      _buildFallbackAvatar(),
+                                ),
+                              )
+                            : _buildFallbackAvatar(),
                       ),
-                    const SizedBox(width: 6),
-                    if (widget.detail.author_name.trim().isNotEmpty)
-                      Flexible(
-                        child: Text(
-                          widget.detail.author_name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: sub_text_color,
-                            fontSize: author_font_size,
-                            fontWeight: FontConfig.adjustedWeight(
-                              FontWeight.w500,
-                            ),
-                          ),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            if (widget.detail.author_name.trim().isNotEmpty)
+                              Flexible(
+                                child: Text(
+                                  widget.detail.author_name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: sub_text_color,
+                                    fontSize: author_font_size,
+                                    fontWeight: FontConfig.adjustedWeight(
+                                      FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(width: 8),
+                            _buildFollowButton(is_cjk: is_cjk),
+                          ],
                         ),
                       ),
-                    const SizedBox(width: 8),
-                    _buildFollowButton(is_cjk: is_cjk),
-                  ],
-                ),
+                    ],
+                  ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// 构建随机 SVG 兜底头像。
+  Widget _buildFallbackAvatar() {
+    return SvgPicture.asset(
+      'assets/svg/avatar_${_random_avatar_index.toString().padLeft(2, '0')}.svg',
+      width: ReadDirectorySheetStyle.author_avatar_radius * 2,
+      height: ReadDirectorySheetStyle.author_avatar_radius * 2,
     );
   }
 

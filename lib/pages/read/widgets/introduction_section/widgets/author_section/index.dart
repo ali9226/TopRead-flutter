@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
 import 'package:app/config/color_config.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/api/bookshelf.dart';
 import 'package:app/pages/read/logic.dart';
@@ -193,13 +194,13 @@ class _ReaderAuthorAvatarState extends State<_ReaderAuthorAvatar> {
   Widget build(BuildContext context) {
     return ClipOval(
       child: widget.detail.author_avatar_url.isNotEmpty
-          ? Image.network(
-              widget.detail.author_avatar_url,
+          ? CachedNetworkImage(
+              imageUrl: widget.detail.author_avatar_url,
               width: AuthorStyle.author_avatar_size,
               height: AuthorStyle.author_avatar_size,
               fit: BoxFit.cover,
-              errorBuilder:
-                  (BuildContext context, Object error, StackTrace? stack_trace) {
+              errorWidget:
+                  (BuildContext context, String url, Object error) {
                     return SvgPicture.asset(
                       'assets/svg/avatar_${_random_avatar_index.toString().padLeft(2, '0')}.svg',
                       width: AuthorStyle.author_avatar_size,

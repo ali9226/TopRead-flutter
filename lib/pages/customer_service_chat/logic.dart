@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:app/api/dio_client.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile, Response;
 import 'package:app/config/constant.dart';
@@ -241,10 +242,8 @@ class ChatLogic {
       final FormData form_data = FormData.fromMap(<String, dynamic>{
         'file': await MultipartFile.fromFile(file.path),
       });
-      final Response<dynamic> response = await Dio().post(
-        upload_url,
-        data: form_data,
-      );
+      final Response<dynamic> response =
+          await DioClient().instance.post(upload_url, data: form_data);
       if (response.statusCode != 200) return null;
 
       FileUpload result;

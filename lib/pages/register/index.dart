@@ -9,7 +9,6 @@ import 'package:app/components/auth_page/style.dart';
 import 'package:app/components/auth_form_widgets/index.dart';
 import 'package:app/components/authorized_login/index.dart';
 import 'package:app/config/color_config.dart';
-import 'package:app/config/font_config.dart';
 import 'package:app/stores/authorized_login_store.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/util/router/router_util.dart';

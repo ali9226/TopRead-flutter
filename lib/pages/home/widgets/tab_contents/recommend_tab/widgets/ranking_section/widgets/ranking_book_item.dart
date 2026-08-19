@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/components/novel_cover/index.dart';
@@ -303,17 +304,17 @@ class RankingBookItem extends StatelessWidget {
     // 优先使用真实分类数据。
     if (book.category_text.isNotEmpty) return book.category_text;
 
-    // 兜底：使用模拟分类标签列表。
-    const List<String> category_list = <String>[
-      '都市日常',
-      '都市脑洞',
-      '历史古代',
-      '都市脑洞',
-      '历史古代',
-      '历史古代',
-      '都市日常',
-      '历史脑洞',
+    // 兜底：使用本地化分类标签（复用 installation 题材文案）。
+    const List<String> category_keys = <String>[
+      'installation.genre_urban',
+      'installation.genre_fantasy',
+      'installation.genre_history',
+      'installation.genre_fantasy',
+      'installation.genre_history',
+      'installation.genre_history',
+      'installation.genre_urban',
+      'installation.genre_fantasy',
     ];
-    return category_list[(index - 1) % category_list.length];
+    return easy.tr(category_keys[(index - 1) % category_keys.length]);
   }
 }

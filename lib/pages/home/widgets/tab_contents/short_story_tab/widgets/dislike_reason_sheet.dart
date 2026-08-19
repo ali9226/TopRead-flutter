@@ -86,8 +86,12 @@ class _DislikeReasonSheetState extends State<DislikeReasonSheet>
     _sheet_animation_controller.forward();
   }
 
+  /// 当前回弹动画控制器（活跃时持有引用，dispose 时统一释放，防止动画中途关闭弹窗泄漏）。
+  AnimationController? _bounce_ctrl;
+
   @override
   void dispose() {
+    _bounce_ctrl?.dispose();
     _sheet_animation_controller.dispose();
     super.dispose();
   }
@@ -131,11 +135,14 @@ class _DislikeReasonSheetState extends State<DislikeReasonSheet>
     final double start_offset = _drag_offset;
     final int duration_ms = 250;
 
-    late Animation<double> curve;
+    // 复用前先释放上一次未完成的回弹控制器。
+    _bounce_ctrl?.dispose();
     final AnimationController ctrl = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: duration_ms),
     );
+    _bounce_ctrl = ctrl;
+    late Animation<double> curve;
     curve = CurvedAnimation(parent: ctrl, curve: Curves.easeOutCubic);
 
     ctrl.addListener(() {
@@ -149,6 +156,7 @@ class _DislikeReasonSheetState extends State<DislikeReasonSheet>
     ctrl.addStatusListener((AnimationStatus status) {
       if (status == AnimationStatus.completed) {
         ctrl.dispose();
+        if (_bounce_ctrl == ctrl) _bounce_ctrl = null;
         if (mounted) {
           setState(() {
             _drag_offset = 0.0;

@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 
 /// 铃声播放工具。
@@ -14,6 +15,9 @@ class AudioUtil {
     /// 是否正在播放中（防止重复触发）。
     static bool _is_playing = false;
 
+    /// 播放完成订阅（复用，避免每次播放都新增订阅造成泄漏）。
+    static StreamSubscription<void>? _complete_sub;
+
     /// 播放消息提示铃声。
     ///
     /// 播放 assets/mp3/ringtone.mp3。
@@ -24,7 +28,9 @@ class AudioUtil {
         try {
             await _player.play(AssetSource('mp3/ringtone.mp3'));
             // TODO 等待播放完成后重置标记
-            _player.onPlayerComplete.listen((_) {
+            // 先取消旧订阅再重新监听，保证同一时刻只有一个完成回调。
+            _complete_sub?.cancel();
+            _complete_sub = _player.onPlayerComplete.listen((_) {
                 _is_playing = false;
             });
         } catch (e) {

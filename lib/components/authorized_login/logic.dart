@@ -120,7 +120,7 @@ class Logic {
       await StorageUtil.saveData(Constant.tokenKey, token);
 
       /// 保存用户信息。
-      final UserInformation user_controller = Get.put(UserInformation());
+      final UserInformation user_controller = Get.find<UserInformation>();
       user_controller.saveUserInfo(results.content!.userInfo);
 
       /// 绑定 FCM Token 到用户。
@@ -211,7 +211,7 @@ class Logic {
       await StorageUtil.saveData(Constant.tokenKey, token);
 
       /// 保存用户信息。
-      final UserInformation user_controller = Get.put(UserInformation());
+      final UserInformation user_controller = Get.find<UserInformation>();
       user_controller.saveUserInfo(results.content!.userInfo);
 
       /// 绑定 FCM Token 到用户。

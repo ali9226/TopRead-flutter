@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:app/config/font_config.dart';
 import '../style.dart';
 
@@ -84,11 +85,10 @@ class MessageBubble extends StatelessWidget {
                             maxWidth: 200,
                             maxHeight: 200,
                         ),
-                        child: Image.network(
-                            content,
+                        child: CachedNetworkImage(
+                            imageUrl: content,
                             fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
+                            placeholder: (context, url) {
                                 return SizedBox(
                                     width: 100,
                                     height: 100,
@@ -100,7 +100,7 @@ class MessageBubble extends StatelessWidget {
                                     ),
                                 );
                             },
-                            errorBuilder: (context, error, stackTrace) {
+                            errorWidget: (context, url, error) {
                                 return SizedBox(
                                     width: 100,
                                     height: 100,

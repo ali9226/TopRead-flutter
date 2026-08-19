@@ -148,7 +148,7 @@ Future<void> _request_telegram_backend_auth({
 
   await StorageUtil.saveData(Constant.tokenKey, token);
 
-  final UserInformation user_controller = Get.put(UserInformation());
+  final UserInformation user_controller = Get.find<UserInformation>();
   user_controller.saveUserInfo(results.content!.userInfo);
 
   // 绑定 FCM Token 到用户。

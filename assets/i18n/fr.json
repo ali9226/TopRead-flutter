@@ -179,7 +179,8 @@
     "register_now": "S’inscrire maintenant",
     "success_01": "Connexion réussie",
     "account_not_registered": "Ce compte n'est pas encore inscrit, veuillez vous inscrire d'abord",
-    "account_already_registered": "Ce compte est déjà inscrit, veuillez vous connecter"
+    "account_already_registered": "Ce compte est déjà inscrit, veuillez vous connecter",
+    "google_configuration_error": "Erreur de configuration du login Google, vérifiez l'ID du client OAuth Web, le nom du paquet et le SHA-1"
   },
   "SelectionLanguage": {
     "title": "Choisir la langue",
@@ -487,7 +488,9 @@
     "type_108": "Commission d’agent",
     "type_109": "Commission d’agent",
     "type_110": "Commission d’agent",
-    "type_default": "Variation de facture"
+    "type_default": "Variation de facture",
+    "type_103": "Crédit du système",
+    "type_104": "Débit du système"
   },
   "back": {
     "exit_prompt": "Appuyez à nouveau sur retour pour quitter l’application"
@@ -633,7 +636,17 @@
     "chapter_word_count_suffix": "mots",
     "chapter_read_percent": "Lu {} %",
     "day_mode": "Jour",
-    "night_mode": "Nuit"
+    "night_mode": "Nuit",
+    "score_unit": "pts",
+    "review_count": "{} avis",
+    "reading_unit": "lecteurs",
+    "reading_status": "Lecture en cours",
+    "word_count_unit": "10k mots",
+    "status_serializing": "En cours de mise à jour",
+    "status_completed": "Terminé",
+    "status_removed": "Retiré",
+    "collapse": "Réduire",
+    "chapter_label": "Chapitre {}"
   },
   "constant": {
     "refresh_success": "Actualisation réussie",
@@ -718,7 +731,8 @@
       "hours_ago": "h",
       "days_ago": "j",
       "weeks_ago": "sem"
-    }
+    },
+    "count_label": "{count} commentaires"
   },
   "favorite": {
     "add_success": "Ajouté aux favoris",
@@ -799,5 +813,13 @@
     "ad_privacy_options": "Choix de confidentialité publicitaire",
     "ad_privacy_options_unavailable": "Les choix de confidentialité publicitaire sont temporairement indisponibles. Réessayez plus tard.",
     "version_update": "Mise à jour"
+  },
+  "game": {
+    "action": {
+      "confirm": "Confirmer"
+    }
+  },
+  "customer_service": {
+    "input_hint": "Saisissez un message..."
   }
 }

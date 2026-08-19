@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:io';
 
 import 'package:dio/dio.dart' as dio_lib;
+import 'package:app/api/dio_client.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -15,6 +15,7 @@ import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/stores/short_story_catalog_store.dart';
 import 'package:app/stores/project_config_store.dart';
 import 'package:app/util/device/save_body_font_size.dart';
+import 'package:app/pages/short_story_read/utils/short_story_content_cache.dart';
 
 /// 短篇小说阅读页面逻辑层。
 ///
@@ -228,9 +229,6 @@ class ShortStoryReadLogic {
   /// 切换上下篇或重新进入页面时保留解锁状态，应用重启后重置。
   static final Set<int> _unlocked_story_ids = <int>{};
 
-  /// 正文磁盘缓存有效期。
-  static const Duration _content_disk_cache_ttl = Duration(days: 7);
-
   /// 正文文件连接超时。
   static const Duration _content_connect_timeout = Duration(seconds: 12);
 
@@ -281,65 +279,7 @@ class ShortStoryReadLogic {
     );
   }
 
-  /// 正文磁盘缓存目录。
-  Directory get _content_cache_directory {
-    return Directory(
-      '${Directory.systemTemp.path}/short_story_read_content_cache',
-    );
-  }
 
-  /// 把 url 转成安全的缓存文件名。
-  String _content_cache_file_name(String content_url) {
-    final String encoded = Uri.encodeComponent(
-      content_url,
-    ).replaceAll('%', '_').replaceAll('.', '_').replaceAll('-', '_');
-    if (encoded.length <= 180) return '$encoded.txt';
-    return '${encoded.substring(0, 180)}_${content_url.hashCode.abs()}.txt';
-  }
-
-  /// 正文磁盘缓存文件。
-  File _content_cache_file(String content_url) {
-    return File(
-      '${_content_cache_directory.path}/${_content_cache_file_name(content_url)}',
-    );
-  }
-
-  /// 从磁盘缓存读取正文。
-  Future<String?> _read_content_from_disk_cache(String content_url) async {
-    try {
-      final File file = _content_cache_file(content_url);
-      if (!await file.exists()) return null;
-
-      final DateTime modified = await file.lastModified();
-      final bool expired =
-          DateTime.now().difference(modified) > _content_disk_cache_ttl;
-      if (expired) {
-        await file.delete();
-        return null;
-      }
-
-      return await file.readAsString();
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// 写入正文磁盘缓存。
-  Future<void> _write_content_to_disk_cache(
-    String content_url,
-    String text,
-  ) async {
-    try {
-      final Directory directory = _content_cache_directory;
-      if (!await directory.exists()) {
-        await directory.create(recursive: true);
-      }
-      final File file = _content_cache_file(content_url);
-      await file.writeAsString(text, flush: false);
-    } catch (_) {
-      // 缓存失败不影响阅读。
-    }
-  }
 
   /// 加载正文文本，优先走内存缓存，其次磁盘缓存，最后网络。
   Future<String> _fetch_content_text_with_cache(String content_url) async {
@@ -366,7 +306,7 @@ class ShortStoryReadLogic {
   }
 
   Future<String> _load_content_text(String content_url) async {
-    final String? disk_text = await _read_content_from_disk_cache(content_url);
+    final String? disk_text = await ShortStoryContentCache.read(content_url);
     if (disk_text != null) {
       _write_memory_cache<String>(
         _content_memory_cache,
@@ -377,15 +317,15 @@ class ShortStoryReadLogic {
       return disk_text;
     }
 
-    final dio_lib.Dio dio = dio_lib.Dio(
-      dio_lib.BaseOptions(
+    /// 复用全局 Dio 单例，超时通过单次请求 Options 覆盖。
+    final dio_lib.Dio dio = DioClient().instance;
+    final dio_lib.Response<String> response = await dio.get<String>(
+      content_url,
+      options: dio_lib.Options(
+        responseType: dio_lib.ResponseType.plain,
         connectTimeout: _content_connect_timeout,
         receiveTimeout: _content_receive_timeout,
       ),
-    );
-    final dio_lib.Response<String> response = await dio.get<String>(
-      content_url,
-      options: dio_lib.Options(responseType: dio_lib.ResponseType.plain),
     );
 
     if (response.statusCode == 200 && response.data != null) {
@@ -396,7 +336,7 @@ class ShortStoryReadLogic {
         text,
         _content_memory_cache_capacity,
       );
-      await _write_content_to_disk_cache(content_url, text);
+      await ShortStoryContentCache.write(content_url, text);
       return text;
     }
 

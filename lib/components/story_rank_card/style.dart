@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 /// 榜单小说条目卡片样式常量。
 class StoryRankCardStyle {
   /// 封面宽度。

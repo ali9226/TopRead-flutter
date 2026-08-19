@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
@@ -49,6 +50,15 @@ class FcmService {
     playSound: true,
   );
 
+  /// Token 刷新订阅（存引用以便取消，避免重复初始化导致回调执行两次）。
+  StreamSubscription<String>? _token_refresh_sub;
+
+  /// 前台消息订阅。
+  StreamSubscription<RemoteMessage>? _on_message_sub;
+
+  /// 点击通知打开 App 订阅。
+  StreamSubscription<RemoteMessage>? _on_message_opened_sub;
+
   /// 消息回调（外部可注册，处理点击推送后的页面跳转等逻辑）。
   void Function(Map<String, dynamic> data)? on_message_tap;
 
@@ -78,17 +88,24 @@ class FcmService {
     // 获取 FCM Token 并注册到后端（不绑定用户）。
     await FcmRegisterToken.execute();
 
+    // 先取消旧订阅，避免重复初始化导致回调执行两次。
+    _token_refresh_sub?.cancel();
+    _on_message_sub?.cancel();
+    _on_message_opened_sub?.cancel();
+
     // 监听 Token 刷新。
-    _messaging.onTokenRefresh.listen((String new_token) {
+    _token_refresh_sub = _messaging.onTokenRefresh.listen((String new_token) {
       logUtil(msg: 'FCM Token 刷新: ${new_token.substring(0, 20)}...');
       FcmRegisterToken.execute();
     });
 
     // 监听前台消息。
-    FirebaseMessaging.onMessage.listen(_on_foreground_message);
+    _on_message_sub =
+        FirebaseMessaging.onMessage.listen(_on_foreground_message);
 
     // 监听后台消息点击（用户点击通知打开 App）。
-    FirebaseMessaging.onMessageOpenedApp.listen(_on_message_opened);
+    _on_message_opened_sub =
+        FirebaseMessaging.onMessageOpenedApp.listen(_on_message_opened);
 
     // 检查 App 是否通过点击通知启动（终止状态，始终触发导航）。
     final RemoteMessage? initial_message = await _messaging.getInitialMessage();
@@ -264,6 +281,13 @@ class FcmService {
     logUtil(msg: 'FCM: 用户点击后台通知, data: ${message.data}');
     final Map<String, dynamic> data = message.data;
     on_message_tap?.call(data);
+  }
+
+  /// 释放全部推送订阅（App 退出或重新初始化前调用）。
+  void dispose() {
+    _token_refresh_sub?.cancel();
+    _on_message_sub?.cancel();
+    _on_message_opened_sub?.cancel();
   }
 
   /// 取消所有本地通知。

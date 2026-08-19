@@ -2,6 +2,7 @@
 
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get.dart';
 import 'package:app/config/font_config.dart';
 
@@ -113,13 +114,13 @@ class HomeHeaderBar extends StatelessWidget {
   }) {
     // 优先加载网络图标（接口数据）
     if (languageIconUrl.startsWith('http')) {
-      return Image.network(
-        languageIconUrl,
+      return CachedNetworkImage(
+        imageUrl: languageIconUrl,
         width: 22,
         height: 22,
         fit: BoxFit.cover,
         // 如果网络图加载失败，回退到本地兜底逻辑
-        errorBuilder: (_, __, ___) => _buildLocalIcon(languageCode),
+        errorWidget: (_, __, ___) => _buildLocalIcon(languageCode),
       );
     }
     // 没有网络图时直接走本地兜底

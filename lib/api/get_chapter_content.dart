@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:app/api/dio_client.dart';
 import 'package:app/util/log_util.dart';
 
 /// 获取章节正文内容。
@@ -11,16 +12,16 @@ Future<String> get_chapter_content(String url) async {
   }
 
   try {
-    final Dio dio = Dio(
-      BaseOptions(
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 15),
-      ),
-    );
+    /// 复用全局 Dio 单例，超时通过单次请求 Options 覆盖。
+    final Dio dio = DioClient().instance;
 
     final Response<String> response = await dio.get<String>(
       url,
-      options: Options(responseType: ResponseType.plain),
+      options: Options(
+        responseType: ResponseType.plain,
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 15),
+      ),
     );
 
     if (response.statusCode == 200 && response.data != null) {

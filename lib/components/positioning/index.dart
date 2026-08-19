@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:app/config/font_config.dart';
 import 'package:app/components/positioning/style.dart';
 
 /// 定位按钮组件。

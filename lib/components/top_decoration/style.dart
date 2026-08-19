@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 /// 顶部装饰样式常量。
 class TopDecorationStyle {
   /// 日间模式圆圈透明度。

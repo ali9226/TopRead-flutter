@@ -1,6 +1,8 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/components/svg_icon/index.dart';
@@ -160,8 +162,8 @@ class _LanguageSelectionState extends State<LanguageSelection> {
                 IgnorePointer(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: titlePadding.clamp(
-                        60,
+                      horizontal: min<double>(
+                        titlePadding,
                         constraints.maxWidth / 2 - 12,
                       ),
                     ),
@@ -285,12 +287,12 @@ class _LanguageSelectionState extends State<LanguageSelection> {
             : 'assets/img/en.png';
 
     if (languageIconUrl.trim().isNotEmpty) {
-      return Image.network(
-        languageIconUrl,
+      return CachedNetworkImage(
+        imageUrl: languageIconUrl,
         width: Style.nationSize,
         height: Style.nationSize,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
+        errorWidget: (context, url, error) {
           return Image.asset(
             assetFallbackPath,
             width: Style.nationSize,

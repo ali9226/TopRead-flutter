@@ -1,5 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:get/get.dart';
@@ -9,7 +11,6 @@ import 'package:app/stores/language_store.dart';
 import 'package:app/stores/shell_tab_info.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/storage_util/index.dart';
-import 'package:oktoast/oktoast.dart';
 import 'package:app/components/app_wrapper/index.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/stores/redis_request.dart';
@@ -44,19 +45,10 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await EasyLocalization.ensureInitialized();
 
-  // TODO 初始化 Google Sign In
-  await GoogleSignIn.instance.initialize();
-
   // TODO 初始化 GetStorage（必须在 runApp 之前）
   await GetStorage.init();
 
   await LanguageUtil.load_asset_language_code_list();
-
-  // TODO 初始化应用版本号（从 pubspec.yaml 读取）
-  await Constant.getAppVersion();
-
-  // TODO 初始化自动断词（字母语种排版优化）
-  await initHyphenation();
 
   // TODO 初始化语种变化处理器
   await LanguageChangeHandler.init();
@@ -118,8 +110,7 @@ void main() async {
   // 用 ExcludeSemantics 跳过无障碍树构建来规避。不影响 release 模式。
   runApp(
     ExcludeSemantics(
-      child: OKToast(
-        child: EasyLocalization(
+      child: EasyLocalization(
           supportedLocales: LanguageUtil.supported_locales,
           path: 'assets/i18n',
 
@@ -130,18 +121,24 @@ void main() async {
           fallbackLocale: Locale(fallback_language_code),
 
           child: AppWrapper(),
-        ),
       ),
     ),
   );
+
+  // TODO 非关键初始化异步执行，不阻塞首帧渲染。
+  unawaited(GoogleSignIn.instance.initialize());
+  unawaited(Constant.getAppVersion());
+  unawaited(initHyphenation());
 
   redisRequestStore.fetch_redis_data();
 
   // TODO 检查 App 版本更新（浏览器环境自动跳过）
   checkAppUpdate();
 
-  // TODO 初始化推送通知服务
+  // TODO 初始化推送通知服务（异步，不阻塞首帧）
   final FcmService fcm_service = FcmService();
-  await fcm_service.init();
-  await fcm_service.update_badge(Get.find<MessageStore>().unread_total.value);
+  unawaited(
+    fcm_service.init().then((_) =>
+        fcm_service.update_badge(Get.find<MessageStore>().unread_total.value)),
+  );
 }

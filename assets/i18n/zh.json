@@ -114,7 +114,6 @@
     "title": "充值",
     "content": "充值"
   },
-
   "postRequest": {
     "default_error": "网络异常，请检查网络后再次重试",
     "error_02": "网络请求错误,请联系管理员",
@@ -259,7 +258,6 @@
     "delete_account_success_message": "很遗憾给您带来不好的体验，我们已经清除了您的账户。希望您能指出我们的不足，我们将努力做出改变！",
     "author_center": "创作者中心"
   },
-
   "installation": {
     "title": "申请成为作家",
     "subtitle": "加入我们，开启你的创作之旅",
@@ -305,7 +303,6 @@
     "send_code_success": "验证码已发送，请查收邮箱",
     "send_code_failed": "发送失败，请稍后重试"
   },
-
   "customer_service_sheet": {
     "title": "在线客服",
     "description": "如果您在使用过程中遇到任何问题，请联系我们的在线客服，我们将竭诚为您服务。",
@@ -315,7 +312,6 @@
     "send": "发送",
     "photo_permission_hint": "需要相册权限才能发送图片，请在设置中开启"
   },
-
   "message": {
     "title": "消息中心",
     "subtitle": "消息中心",
@@ -482,7 +478,9 @@
     "type_108": "代理分成",
     "type_109": "代理分成",
     "type_110": "代理分成",
-    "type_default": "账单变动"
+    "type_default": "账单变动",
+    "type_103": "系统发放",
+    "type_104": "系统扣减"
   },
   "back": {
     "exit_prompt": "再后退一次退出将会程序"
@@ -783,5 +781,13 @@
     "ad_privacy_options": "广告隐私选项",
     "ad_privacy_options_unavailable": "暂时无法打开广告隐私选项，请稍后重试",
     "version_update": "版本更新"
+  },
+  "game": {
+    "action": {
+      "confirm": "确认"
+    }
+  },
+  "customer_service": {
+    "input_hint": "输入消息..."
   }
 }

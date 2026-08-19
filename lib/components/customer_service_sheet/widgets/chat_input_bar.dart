@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 import '../style.dart';
@@ -130,7 +131,7 @@ class ChatInputBar extends StatelessWidget {
                                     color: text_color,
                                 ),
                                 decoration: InputDecoration(
-                                    hintText: '输入消息...',
+                                    hintText: easy.tr('customer_service.input_hint'),
                                     hintStyle: TextStyle(
                                         fontSize: CustomerServiceSheetStyle.input_font_size,
                                         color: CustomerServiceSheetStyle.input_hint_color,

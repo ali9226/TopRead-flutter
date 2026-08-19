@@ -8,6 +8,7 @@ import 'package:app/stores/user_information.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/log_util.dart';
 import 'package:dio/dio.dart';
+import 'package:app/api/dio_client.dart';
 import 'package:get/get.dart' as vuex;
 import 'package:app/models/user_info.dart';
 
@@ -66,7 +67,7 @@ Future<void> uploadAvatar(File imageFile) async {
     FormData formData = FormData.fromMap({
       "file": await MultipartFile.fromFile(imageFile.path),
     });
-    final dio = Dio();
+    final dio = DioClient().instance;
     final response = await dio.post(uploadUrl, data: formData);
     if (response.statusCode == 200) {
       if (response.data is Map<String, dynamic>) {
@@ -104,7 +105,7 @@ Future<void> uploadAvatar(File imageFile) async {
   final userInfo = results.content;
   showBottomTip(easy.tr("UserInfo.success_01"));
   // TODO 保存 userInfo
-  final userController = vuex.Get.put(UserInformation());
+  final userController = vuex.Get.find<UserInformation>();
 
   if (userInfo != null) {
     userController.saveUserInfo(userInfo);

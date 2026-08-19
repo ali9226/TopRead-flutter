@@ -23,7 +23,6 @@ import 'package:app/stores/project_config_store.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/pages/short_story_read/logic.dart';
 import 'package:app/pages/short_story_read/style.dart';
-import 'package:app/config/color_config.dart';
 import 'package:app/pages/short_story_read/widgets/full_appbar.dart';
 import 'package:app/pages/short_story_read/widgets/bottom_comment_bar.dart';
 import 'package:app/pages/short_story_read/widgets/tag_list.dart';
@@ -31,10 +30,8 @@ import 'package:app/pages/short_story_read/widgets/story_unlock_gate/index.dart'
 import 'package:app/pages/short_story_read/widgets/initialization_overlay.dart';
 import 'package:app/pages/ranking_full_list/widgets/starfield_decoration.dart';
 import 'package:app/components/novel_cover/index.dart';
-import 'package:app/components/page_top_gradient_overlay/index.dart';
 import 'package:app/pages/short_story_read/widgets/skeleton_screen.dart';
 import 'package:app/pages/short_story_read/widgets/catalog/catalog_sheet.dart';
-import 'package:app/pages/short_story_read/widgets/scroll_to_bottom_button.dart';
 import 'package:app/pages/short_story_read/widgets/reading_settings_sheet.dart';
 import 'package:app/pages/short_story_read/widgets/auto_read_settings_sheet.dart';
 import 'package:app/components/no_internet/index.dart';
@@ -43,8 +40,9 @@ import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/pages/short_story_read/utils/resolve_next_story_preview_content.dart';
+import 'package:app/pages/short_story_read/widgets/next_story_preview.dart';
+import 'package:app/pages/short_story_read/widgets/reader_overlay_layer.dart';
 import 'package:app/pages/short_story_read/widgets/previous_pull_header.dart';
-import 'package:app/pages/short_story_read/widgets/auto_read_settings_button.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/models/ad_verify_result.dart';
@@ -1868,137 +1866,6 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     );
   }
 
-  /// 构建下一篇小说的标签列表。
-  ///
-  /// 样式与正文顶部的 [TagList] 保持一致，
-  /// 颜色通过 [story_id] 和标签索引从 [ColorConstants.tagColorList] 中选取。
-  Widget _buildNextStoryTags({
-    required List<String> tags,
-    required int story_id,
-    required bool is_dark,
-    required bool is_cjk,
-  }) {
-    return Wrap(
-      spacing: ShortStoryReadStyle.tag_spacing,
-      runSpacing: ShortStoryReadStyle.tag_spacing,
-      children: List<Widget>.generate(tags.length, (int index) {
-        /// 从 tagColorList 取色，使用 story_id 和 index 生成固定的颜色索引。
-        final Color tag_color =
-            ColorConstants.tagColorList[(story_id * 7 + index * 3) %
-                ColorConstants.tagColorList.length];
-
-        /// 标签背景色（使用 12% 透明度）。
-        final Color tag_bg = tag_color.withValues(alpha: 0.12);
-
-        return Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: is_cjk ? 6 : 8,
-            vertical: ShortStoryReadStyle.tag_vertical_padding,
-          ),
-          decoration: BoxDecoration(
-            color: tag_bg,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            tags[index],
-            style: TextStyle(
-              fontSize: ShortStoryReadStyle.tag_font_size,
-              color: tag_color,
-            ),
-          ),
-        );
-      }),
-    );
-  }
-
-  /// 构建当前篇和下一篇之间的衔接装饰。
-  ///
-  /// 用细线、胶囊和小圆点做轻量分割，比单条横线更像章节切换入口。
-  Widget _buildStoryBridgeDivider({
-    required bool is_dark,
-    required bool is_cjk,
-  }) {
-    final Color line_color = is_dark
-        ? Colors.white.withValues(alpha: 0.10)
-        : Colors.black.withValues(alpha: 0.08);
-    final Color dot_color = is_dark
-        ? Colors.white.withValues(alpha: 0.28)
-        : Colors.black.withValues(alpha: 0.18);
-    final Color pill_bg = is_dark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.035);
-    final Color text_color = is_dark
-        ? ShortStoryReadStyle.secondary_dark_color
-        : ShortStoryReadStyle.secondary_light_color;
-
-    Widget line() {
-      return Expanded(
-        child: Container(
-          height: 1,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: <Color>[
-                line_color.withValues(alpha: 0.0),
-                line_color,
-                line_color.withValues(alpha: 0.0),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    Widget dot(double size, double opacity) {
-      return Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: dot_color.withValues(alpha: opacity),
-        ),
-      );
-    }
-
-    return Row(
-      children: <Widget>[
-        line(),
-        const SizedBox(width: 12),
-        Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: is_cjk ? 14 : 16,
-            vertical: 7,
-          ),
-          decoration: BoxDecoration(
-            color: pill_bg,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: line_color),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              dot(4, 0.55),
-              const SizedBox(width: 7),
-              Text(
-                _readerText('next_story'),
-                style: TextStyle(
-                  fontSize: is_cjk ? 12 : 11,
-                  fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                  letterSpacing: is_cjk ? 0.2 : 0.8,
-                  color: text_color,
-                  height: 1.1,
-                ),
-              ),
-              const SizedBox(width: 7),
-              dot(4, 0.55),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        line(),
-      ],
-    );
-  }
-
   /// 构建贯穿屏幕底部的下一篇渐变遮罩和固定提示。
   Widget _buildNextStoryBottomOverlay({
     required bool is_dark,
@@ -2373,109 +2240,25 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
                     /// 下一篇小说预览（固定显示在正文下方）。
                     if (has_next_preview)
-                      SizedBox(
-                        width: double.infinity,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            const SizedBox(height: 42),
-                            _buildStoryBridgeDivider(
-                              is_dark: is_dark,
-                              is_cjk: is_cjk,
-                            ),
-                            const SizedBox(height: 30),
-                            // 下一篇小说标题（有封面时左侧显示封面缩略图）。
-                            if (_logic.next_story_item!.cover_url.isNotEmpty)
-                              Row(
-                                key: _next_story_title_key,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  NovelCover(
-                                    image_url:
-                                        _logic.next_story_item!.cover_url,
-                                    width: 48,
-                                    height: 64,
-                                    border_radius: 6,
-                                    is_dark: is_dark,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      _logic.next_story_item!.title,
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: title_font_size,
-                                        fontWeight: FontConfig.adjustedWeight(
-                                          FontWeight.w500,
-                                        ),
-                                        color: title_color,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            else
-                              Text(
-                                _logic.next_story_item!.title,
-                                key: _next_story_title_key,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: title_font_size,
-                                  fontWeight: FontConfig.adjustedWeight(
-                                    FontWeight.w500,
-                                  ),
-                                  color: title_color,
-                                  height: 1.4,
-                                ),
-                              ),
-                            // 下一篇小说标签列表。
-                            if (_logic.next_story_item!.tags.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              _buildNextStoryTags(
-                                tags: _logic.next_story_item!.tags,
-                                story_id: _logic.next_story_item!.id,
-                                is_dark: is_dark,
-                                is_cjk: is_cjk,
-                              ),
-                            ],
-                            const SizedBox(height: 18),
-                            // 下一篇简介。
-                            //
-                            // 目录接口的简介会立即展示；简介缺失时，
-                            // 再使用后台预加载的下一篇正文开头兜底。
-                            SizedBox(
-                              width: double.infinity,
-                              // 预览高度跟真实上拉距离走，不再用固定行数裁剪。
-                              // 手指上拉越高，下一篇预览就露出越多；底部只保留渐变条做阅读过渡。
-                              height: next_preview_body_height,
-                              child: ClipRect(
-                                child: Align(
-                                  alignment: Alignment.topLeft,
-                                  child: Text(
-                                    next_story_preview_content,
-                                    softWrap: true,
-                                    maxLines: next_preview_max_lines,
-                                    overflow: TextOverflow.fade,
-                                    style: TextStyle(
-                                      fontSize: _logic.body_font_size.value,
-                                      fontWeight: FontConfig.adjustedWeight(
-                                        FontWeight.w400,
-                                      ),
-                                      color: is_dark
-                                          ? ShortStoryReadStyle.body_dark_color
-                                          : ShortStoryReadStyle
-                                                .body_light_color,
-                                      height: next_preview_line_height,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      NextStoryPreview(
+                        next_story: _logic.next_story_item!,
+                        body_font_size: _logic.body_font_size.value,
+                        is_dark: is_dark,
+                        is_cjk: is_cjk,
+                        title_font_size: title_font_size,
+                        title_color: title_color,
+                        body_color: is_dark
+                            ? ShortStoryReadStyle.body_dark_color
+                            : ShortStoryReadStyle.body_light_color,
+                        secondary_color: is_dark
+                            ? ShortStoryReadStyle.secondary_dark_color
+                            : ShortStoryReadStyle.secondary_light_color,
+                        preview_body_height: next_preview_body_height,
+                        preview_max_lines: next_preview_max_lines,
+                        preview_line_height: next_preview_line_height,
+                        preview_content: next_story_preview_content,
+                        title_key: _next_story_title_key,
+                        reader_text: _readerText,
                       ),
                   ],
                 ),
@@ -2498,111 +2281,45 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
             next_pull_ready: next_pull_ready,
           ),
 
-        /// 顶部渐变过渡遮罩（内容滚动时提供柔和的视觉过渡）。
-        PageTopGradientOverlay(background_color: bg_color),
-
-        /// 完整导航栏（使用 Obx 监听可见性，带滑入/滑出动画）。
-        Obx(() {
-          final bool is_visible = _logic.is_appbar_visible.value;
-          return AnimatedPositioned(
-            duration: ShortStoryReadStyle.bar_animation_duration,
-            curve: ShortStoryReadStyle.bar_animation_curve,
-            // 可见时位于顶部，隐藏时滑动到状态栏上方。
-            top: is_visible
-                ? 0
-                : -(status_bar_height + ShortStoryReadStyle.appbar_height),
-            left: 0,
-            right: 0,
-            child: FullAppbar(
-              is_dark: is_dark,
-              on_back: _on_back,
-              on_favorite_tap: _on_favorite_tap,
-              on_share: _on_share,
-              is_favorited: _logic.is_favorited,
-              is_favorite_loading: _logic.is_favorite_loading.value,
-              status_bar_height: status_bar_height,
-            ),
-          );
-        }),
-
-        /// 底部评论栏（带滑入/滑出动画，包含进度条）。
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: SlideTransition(
-            position: _bottom_bar_slide_animation,
-            child: Obx(
-              () => BottomCommentBar(
-                is_dark: is_dark,
-                comment_count: _logic.comment_count,
-                like_count: _logic.like_count,
-                is_liked: _logic.is_liked,
-                is_like_loading: _logic.is_like_loading.value,
-                on_catalog_tap: _on_catalog_tap,
-                on_comment_tap: _on_comment_tap,
-                on_like_tap: _on_like_tap,
-                on_setting_tap: _on_setting_tap,
-                show_progress_bar:
-                    !_logic.is_loading.value && !_logic.is_error.value,
-                catalog_loaded:
-                    !_logic.is_catalog_loading.value &&
-                    _logic.catalog_list.isNotEmpty,
-                progress: _logic.reading_progress.value,
-                has_previous: _logic.has_previous_story,
-                has_next: _logic.has_next_story,
-                on_previous_tap: _on_previous_tap,
-                on_next_tap: _on_next_tap,
-                on_progress_changed: _on_progress_changed,
-                on_progress_change_end: _on_progress_change_end,
-              ),
-            ),
-          ),
+        /// 覆盖层（导航栏+评论栏+浮动按钮+渐变遮罩）。
+        ReaderOverlayLayer(
+          is_dark: is_dark,
+          status_bar_height: status_bar_height,
+          bottom_padding: bottom_padding,
+          bg_color: bg_color,
+          is_appbar_visible: _logic.is_appbar_visible.value,
+          bottom_bar_slide_animation: _bottom_bar_slide_animation,
+          floating_button_fade_animation: _floating_button_fade_animation,
+          show_floating_button: _has_floating_button,
+          show_progress_bar: !_logic.is_loading.value && !_logic.is_error.value,
+          catalog_loaded: !_logic.is_catalog_loading.value &&
+              _logic.catalog_list.isNotEmpty,
+          is_favorited: _logic.is_favorited,
+          is_favorite_loading: _logic.is_favorite_loading.value,
+          comment_count: _logic.comment_count,
+          like_count: _logic.like_count,
+          is_liked: _logic.is_liked,
+          is_like_loading: _logic.is_like_loading.value,
+          reading_progress: _logic.reading_progress.value,
+          has_previous: _logic.has_previous_story,
+          has_next: _logic.has_next_story,
+          is_bottom_bar_visible: _logic.is_bottom_bar_visible.value,
+          is_auto_reading: _logic.is_auto_reading.value,
+          on_back: _on_back,
+          on_favorite_tap: _on_favorite_tap,
+          on_share: _on_share,
+          on_catalog_tap: _on_catalog_tap,
+          on_comment_tap: _on_comment_tap,
+          on_like_tap: _on_like_tap,
+          on_setting_tap: _on_setting_tap,
+          on_previous_tap: _on_previous_tap,
+          on_next_tap: _on_next_tap,
+          on_progress_changed: _on_progress_changed,
+          on_progress_change_end: _on_progress_change_end,
+          on_scroll_to_bottom: _showNextStory,
+          on_auto_read_settings_tap: _on_auto_read_settings_tap,
         ),
-
-        /// 右下角浮动按钮（目录有下一篇小说时显示，与顶部/底部栏同步淡入淡出）。
-        if (_has_floating_button)
-          Positioned(
-            right: 16,
-            bottom:
-                (!_logic.is_loading.value && !_logic.is_error.value
-                    ? ShortStoryReadStyle.bottom_bar_height +
-                          ShortStoryReadStyle.progress_bar_height
-                    : ShortStoryReadStyle.bottom_bar_height) +
-                bottom_padding +
-                16,
-            child: FadeTransition(
-              opacity: _floating_button_fade_animation,
-              child: IgnorePointer(
-                ignoring: !_logic.is_bottom_bar_visible.value,
-                child: ScrollToBottomButton(
-                  is_dark: is_dark,
-                  opacity: 1.0,
-                  on_tap: _showNextStory,
-                ),
-              ),
-            ),
-          ),
-
-        /// 自动阅读设置浮动按钮（自动阅读时显示在底部居中）。
-        if (_logic.is_auto_reading.value)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: bottom_padding + 16,
-            child: Center(
-              child: _buildAutoReadSettingsButton(is_dark: is_dark),
-            ),
-          ),
       ],
-    );
-  }
-
-  /// 构建自动阅读设置浮动按钮。
-  Widget _buildAutoReadSettingsButton({required bool is_dark}) {
-    return AutoReadSettingsButton(
-      is_dark: is_dark,
-      on_tap: _on_auto_read_settings_tap,
     );
   }
 

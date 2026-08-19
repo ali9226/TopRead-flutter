@@ -101,7 +101,7 @@ class Logic {
     await StorageUtil.saveData(Constant.tokenKey, token);
 
     // TODO 保存 userInfo
-    final userController = Get.put(UserInformation());
+    final userController = Get.find<UserInformation>();
     if (results.content?.userInfo != null) {
       userController.saveUserInfo(results.content!.userInfo);
     }
