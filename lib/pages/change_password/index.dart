@@ -312,6 +312,7 @@ class _ChangePasswordState extends State<ChangePassword> {
                     child: LanguageSelection(
                       title: '',
                       showLeftIcon: true,
+                      showRightLanguageEntry: false,
                       useSafeAreaTop: true,
                       topOffset: 0,
                       horizontalPadding: Style.pageHorizontalPadding,
