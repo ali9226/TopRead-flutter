@@ -9,7 +9,7 @@ class WebsocketConfig {
     //   return "ws://192.168.31.120:5008";
     // }
     // TODO 生产环境地址，需要根据实际部署修改
-    // return "wss://websocket.read.top";
+    return "wss://websocket.read.top";
     return "ws://192.168.31.120:5008";
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart' as easy;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
@@ -237,8 +238,11 @@ class _AboutTopReadState extends State<AboutTopRead> {
 
   /// 打开应用商店评分页面。
   Future<void> _openRateUs() async {
+    final bool isIOS = defaultTargetPlatform == TargetPlatform.iOS;
     final Uri uri = Uri.parse(
-      'https://play.google.com/store/apps/details?id=com.topread.novel',
+      isIOS
+          ? 'https://apps.apple.com/us/app/topread/id6787079131'
+          : 'https://play.google.com/store/apps/details?id=com.topread.novel',
     );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);

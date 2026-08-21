@@ -91,32 +91,6 @@ class _OperationListState extends State<OperationList> {
     );
   }
 
-  /// 处理删除账户操作，弹出确认对话框后调用接口。
-  void _handleDeleteAccount() {
-    showMessage(
-      message:
-          '${easy.tr('UserInfo.delete_account_confirm_title')}\n\n${easy.tr('UserInfo.delete_account_confirm_message')}',
-      leftButtonText: easy.tr('UserInfo.delete_account_cancel_button'),
-      rightButtonText: easy.tr('UserInfo.delete_account_confirm_button'),
-      rightButtonColor: ColorConstants.dangerColor,
-      iconColor: ColorConstants.dangerColor,
-      onRightPressed: () async {
-        final bool success = await logic.deleteAccount();
-        if (!success) return;
-
-        if (!mounted) return;
-        showMessage(
-          message: easy.tr('UserInfo.delete_account_success_message'),
-          rightButtonText: easy.tr('UserInfo.yes'),
-          allowMaskDismiss: false,
-          onRightPressed: () async {
-            routerUtil(path: '/', type: 'replace');
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     /// 读取当前语种，语种变化时触发组件重建，确保多语种文字即时刷新。
@@ -301,24 +275,6 @@ class _OperationListState extends State<OperationList> {
                   await logic.logout();
                 },
               );
-            },
-          ),
-        );
-      }
-
-      // 删除账号（仅 iOS 审核模式下显示）
-      if (isLoggedIn && projectConfigStore.current.is_apple_review_mode) {
-        group3Children.add(
-          OperationLi(
-            icon: "delete",
-            title: easy.tr('UserInfo.delete_account'),
-            type: 1,
-            showDivider: false,
-            titleColor: ColorConstants.dangerColor,
-            iconColor: ColorConstants.dangerColor,
-            arrowColor: ColorConstants.dangerColor,
-            onTap: () {
-              _handleDeleteAccount();
             },
           ),
         );

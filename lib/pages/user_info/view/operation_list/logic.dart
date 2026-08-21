@@ -110,33 +110,4 @@ class Logic {
     showBottomTip(easy.tr('UserInfo.success_03'));
     return true;
   }
-
-  /// 删除当前账户。
-  ///
-  /// 调用 user/delete 接口，成功后清除本地登录状态并切换为访客模式。
-  Future<bool> deleteAccount() async {
-    final results = await postRequest<dynamic>(
-      path: 'user/delete',
-      showTips: false,
-    );
-    if (!results.status) return false;
-
-    /// 删除成功，执行退出登录清理。
-    final UserInformation user_information = Get.find<UserInformation>();
-    final MessageStore message_store = Get.find<MessageStore>();
-    final BookshelfStore bookshelf_store = Get.find<BookshelfStore>();
-
-    /// 递增会话版本，确保所有退出前发出的异步响应立即失效。
-    final int logout_revision = user_information.begin_logout();
-    message_store.clear();
-    bookshelf_store.clear();
-
-    /// 移除本地 token。
-    await StorageUtil.removeData(Constant.tokenKey);
-
-    /// 后台任务：切换为访客 WebSocket 和解绑 FCM。
-    unawaited(_complete_logout_cleanup(logout_revision));
-
-    return true;
-  }
 }
