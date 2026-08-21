@@ -47,6 +47,7 @@ import 'package:app/config/font_config.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/models/ad_verify_result.dart';
 import 'package:app/util/rewarded_ad_util.dart';
+import 'package:app/util/ad_display_policy.dart';
 import 'package:app/pages/short_story_read/widgets/native_ad_banner.dart';
 
 /// 短篇小说阅读页面。
@@ -182,6 +183,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 底部栏可见性监听器。
   Worker? _bottom_bar_visibility_worker;
 
+  /// 项目广告开关变更监听器。
+  Worker? _ad_policy_worker;
+
   /// 自动阅读滚动 Ticker（每帧调用，实现平滑滚动）。
   Ticker? _auto_read_ticker;
 
@@ -213,11 +217,14 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 当前短篇的激励视频广告是否正在加载或展示。
   bool _is_rewarded_ad_loading = false;
 
-  /// 原生高级广告横幅组件（在正文 1/4 位置展示）。
+  /// 原生高级广告横幅组件（在正文 1/3 位置展示）。
   ///
   /// 页面初始化时从 ads/short_story_read_show_ads 接口获取广告配置后创建。
   /// 未获取到有效配置时保持 null，正文不插入广告。
   Widget? _native_ad_widget;
+
+  /// 是否正在请求短篇正文原生广告配置。
+  bool _is_native_ad_config_loading = false;
 
   /// 正在保存进度的小说 ID；不同小说允许并行，同一小说按顺序提交。
   final Set<int> _progress_save_in_flight_ids = <int>{};
@@ -311,6 +318,10 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       story_id: has_valid_story_id ? widget.story_id : 1,
     );
     _logic_generation = 1;
+    _ad_policy_worker = ever(
+      Get.find<ProjectConfigStore>().config_revision,
+      (_) => _on_ad_policy_changed(),
+    );
     _bind_bottom_bar_visibility();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !has_valid_story_id) return;
@@ -351,6 +362,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     _auto_read_ticker?.dispose();
     _comment_navigation_worker?.dispose();
     _bottom_bar_visibility_worker?.dispose();
+    _ad_policy_worker?.dispose();
     _scroll_controller.removeListener(_on_scroll);
     _scroll_controller.dispose();
     _bottom_bar_animation_controller.dispose();
@@ -443,9 +455,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       return;
     }
 
-    // 广告开关开启时才加载原生广告配置。
-    final ProjectConfigStore projectConfigStore = Get.find<ProjectConfigStore>();
-    if (projectConfigStore.current.is_ads_enabled) {
+    // 公共广告策略允许时才加载原生广告配置。
+    if (AdDisplayPolicy.can_show_ads()) {
       // 后台加载原生高级广告配置（不阻塞页面展示和位置恢复）。
       unawaited(_load_native_ad_config(logic: logic, generation: generation));
     }
@@ -494,6 +505,10 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     required int generation,
   }) async {
     const String log_prefix = '[NativeAdConfig]';
+    if (!AdDisplayPolicy.can_show_ads() || _is_native_ad_config_loading) {
+      return;
+    }
+    _is_native_ad_config_loading = true;
     try {
       logUtil(msg: '$log_prefix 开始请求广告配置, source_id=${logic.story_id}');
 
@@ -505,28 +520,29 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       );
 
       // 页面已切换或已销毁，丢弃结果。
-      if (_logic_generation != generation || !mounted) {
+      if (_logic_generation != generation ||
+          !mounted ||
+          !AdDisplayPolicy.can_show_ads()) {
         logUtil(msg: '$log_prefix 页面已切换或销毁，丢弃结果');
         return;
       }
 
       logUtil(
-        msg: '$log_prefix 接口响应: status=${result.status}, '
+        msg:
+            '$log_prefix 接口响应: status=${result.status}, '
             'message=${result.message}, '
             'content=${result.content != null}',
       );
 
       if (!result.status || result.content == null) {
-        logUtil(
-          msg: '$log_prefix 接口返回失败或内容为空，跳过',
-          type: 'w',
-        );
+        logUtil(msg: '$log_prefix 接口返回失败或内容为空，跳过', type: 'w');
         return;
       }
 
       final AdConfig ad_config = result.content!;
       logUtil(
-        msg: '$log_prefix 广告配置: '
+        msg:
+            '$log_prefix 广告配置: '
             'id=${ad_config.id}, '
             'adsId=${ad_config.adsId}, '
             'advertisers=${ad_config.advertisers}, '
@@ -539,7 +555,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       // advertisers=1 表示谷歌 AdMob，且 ads_id 必须有值。
       if (ad_config.advertisers != 1 || ad_config.adsId.isEmpty) {
         logUtil(
-          msg: '$log_prefix 广告商不是谷歌或adsId为空，跳过: '
+          msg:
+              '$log_prefix 广告商不是谷歌或adsId为空，跳过: '
               'advertisers=${ad_config.advertisers}, '
               'adsId="${ad_config.adsId}"',
           type: 'w',
@@ -547,9 +564,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         return;
       }
 
-      logUtil(
-        msg: '$log_prefix 创建NativeAdBanner, adUnitId=${ad_config.adsId}',
-      );
+      logUtil(msg: '$log_prefix 创建NativeAdBanner, adUnitId=${ad_config.adsId}');
 
       setState(() {
         _native_ad_widget = NativeAdBanner(
@@ -560,11 +575,28 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         );
       });
     } catch (e, stack_trace) {
-      logUtil(
-        msg: '$log_prefix 广告配置加载异常: $e\n$stack_trace',
-        type: 'e',
+      logUtil(msg: '$log_prefix 广告配置加载异常: $e\n$stack_trace', type: 'e');
+    } finally {
+      _is_native_ad_config_loading = false;
+    }
+  }
+
+  /// 将远端广告平台开关同步到当前短篇的正文与广告位。
+  void _on_ad_policy_changed() {
+    _logic.sync_ad_access_policy();
+    if (!AdDisplayPolicy.can_show_ads()) {
+      _native_ad_widget = null;
+      _is_rewarded_ad_loading = false;
+      if (mounted) setState(() {});
+      return;
+    }
+
+    if (_is_initialization_complete && _native_ad_widget == null) {
+      unawaited(
+        _load_native_ad_config(logic: _logic, generation: _logic_generation),
       );
     }
+    if (mounted) setState(() {});
   }
 
   /// 退出页面时保存阅读进度。
@@ -1074,6 +1106,16 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   Future<void> _on_unlock_story_tap() async {
     if (_is_rewarded_ad_loading || _logic.is_story_unlocked.value) return;
 
+    if (!AdDisplayPolicy.can_show_ads()) {
+      _logic.sync_ad_access_policy();
+      _native_ad_widget = null;
+      if (mounted) setState(() {});
+      if (!AdDisplayPolicy.should_bypass_ads()) {
+        showBottomTip(easy.tr('short_story_read.ad_not_available'));
+      }
+      return;
+    }
+
     _stop_auto_read();
     final ShortStoryReadLogic action_logic = _logic;
     final int action_generation = _logic_generation;
@@ -1088,6 +1130,14 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         fromJson: (json) => AdConfig.fromJson(json),
       );
       if (!_is_current_logic(action_logic, action_generation)) return;
+
+      // 后端广告配置请求期间开关可能被远程更新，调用 SDK 前再次校验。
+      if (!AdDisplayPolicy.can_show_ads()) {
+        action_logic.sync_ad_access_policy();
+        _native_ad_widget = null;
+        if (mounted) setState(() {});
+        return;
+      }
 
       if (!adConfigResult.status || adConfigResult.content == null) {
         showBottomTip(easy.tr('short_story_read.ad_not_available'));
@@ -1109,6 +1159,13 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       if (!_is_current_logic(action_logic, action_generation)) return;
 
       switch (result) {
+        case GoogleRewardedAdResult.disabled:
+          action_logic.sync_ad_access_policy();
+          _native_ad_widget = null;
+          if (!AdDisplayPolicy.should_bypass_ads()) {
+            showBottomTip(easy.tr('short_story_read.ad_not_available'));
+          }
+          break;
         case GoogleRewardedAdResult.rewarded:
           // 广告播放完成，直接解锁全文（后台异步验证，不阻塞用户）。
           unawaited(
@@ -2205,7 +2262,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                         _logic.title,
                         style: TextStyle(
                           fontSize: title_font_size,
-                          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                          fontWeight: FontConfig.adjustedWeight(
+                            FontWeight.w500,
+                          ),
                           color: title_color,
                           height: 1.4,
                         ),
@@ -2292,7 +2351,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
           floating_button_fade_animation: _floating_button_fade_animation,
           show_floating_button: _has_floating_button,
           show_progress_bar: !_logic.is_loading.value && !_logic.is_error.value,
-          catalog_loaded: !_logic.is_catalog_loading.value &&
+          catalog_loaded:
+              !_logic.is_catalog_loading.value &&
               _logic.catalog_list.isNotEmpty,
           is_favorited: _logic.is_favorited,
           is_favorite_loading: _logic.is_favorite_loading.value,

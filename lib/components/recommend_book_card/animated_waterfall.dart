@@ -16,7 +16,9 @@ import 'package:app/components/load_more_footer/index.dart';
 import 'package:app/models/recommend_ranking_item.dart';
 import 'package:app/services/masonry_native_ad_pool.dart';
 import 'package:app/stores/home_store.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'package:app/stores/recommend_waterfall_store.dart';
+import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/novel_navigation/index.dart';
 
@@ -85,6 +87,12 @@ class AnimatedRecommendWaterfallState
   /// 语种刷新任务订阅。
   late final LanguageRefreshSubscription _language_refresh_subscription;
 
+  /// 项目广告开关变更监听器。
+  late final Worker _ad_policy_worker;
+
+  /// 上一次已应用到瀑布流会话的广告展示状态。
+  late bool _can_show_ads;
+
   /// 标签颜色池。
   static const List<Color> _tag_color_pool = <Color>[
     Color(0xFF2FBF9B),
@@ -99,6 +107,11 @@ class AnimatedRecommendWaterfallState
   void initState() {
     super.initState();
     _attach_session();
+    _can_show_ads = AdDisplayPolicy.can_show_ads();
+    _ad_policy_worker = ever(
+      Get.find<ProjectConfigStore>().config_revision,
+      (_) => _on_ad_policy_changed(),
+    );
     _language_refresh_subscription =
         LanguageChangeHandler.register_refresh_task(
           phase: LanguageRefreshPhase.content,
@@ -128,6 +141,7 @@ class AnimatedRecommendWaterfallState
   @override
   void dispose() {
     _session.removeListener(_on_session_changed);
+    _ad_policy_worker.dispose();
     _language_refresh_subscription.dispose();
     super.dispose();
   }
@@ -142,6 +156,44 @@ class AnimatedRecommendWaterfallState
   void _on_session_changed() {
     if (!mounted) return;
     setState(() {});
+  }
+
+  /// 同步远端广告平台开关到当前瀑布流会话。
+  ///
+  /// 关闭时立即移除并释放全部广告槽位；开启时为已经加载的小说批次补充
+  /// 一个新广告槽位，后续分页仍按每批一个广告槽位处理。
+  void _on_ad_policy_changed() {
+    final bool can_show_ads = AdDisplayPolicy.can_show_ads();
+    if (_can_show_ads == can_show_ads) return;
+    _can_show_ads = can_show_ads;
+
+    if (!can_show_ads) {
+      final List<String> ad_slot_ids = _session.items
+          .where((BookListItem item) => item.is_ad)
+          .map((BookListItem item) => item.id)
+          .toList();
+      MasonryNativeAdPool.remove_all(ad_slot_ids);
+      _update_session(() {
+        _session.items.removeWhere((BookListItem item) => item.is_ad);
+        for (final String slot_id in ad_slot_ids) {
+          _session.item_heights.remove(slot_id);
+        }
+      });
+      return;
+    }
+
+    if (_session.items.any((BookListItem item) => item.is_ad)) return;
+    final List<BookListItem> books = _session.items
+        .where((BookListItem item) => item.is_book)
+        .toList();
+    if (books.isEmpty) return;
+    _update_session(() {
+      _session.items
+        ..clear()
+        ..addAll(
+          _insert_fresh_ad_in_batch_middle(books, target_session: _session),
+        );
+    });
   }
 
   /// 原子更新当前会话并通知所有挂载页面。
@@ -302,6 +354,9 @@ class AnimatedRecommendWaterfallState
     List<BookListItem> batch, {
     required RecommendWaterfallSession target_session,
   }) {
+    if (!AdDisplayPolicy.can_show_ads()) {
+      return List<BookListItem>.of(batch);
+    }
     final String slot_id = target_session.create_ad_slot_id();
     target_session.item_heights[slot_id] = 0;
     return RecommendBookCardLogic.insert_ad_in_batch_middle(

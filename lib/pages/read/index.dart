@@ -30,7 +30,9 @@ import 'package:app/stores/comment_navigation.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/stores/novel_reading_store.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'package:app/util/router/router_util.dart';
+import 'package:app/util/ad_display_policy.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/components/login_required_dialog/index.dart';
 import 'package:app/components/comment_list/index.dart';
@@ -94,6 +96,9 @@ class _ReadPageState extends State<ReadPage>
   /// 详情加载失败监听器。
   Worker? _error_worker;
 
+  /// 项目广告开关变更监听器。
+  Worker? _ad_policy_worker;
+
   /// 页面首次数据与阅读进度初始化任务。
   late final Future<void> _initialization_future;
 
@@ -108,6 +113,9 @@ class _ReadPageState extends State<ReadPage>
 
   /// 广告配置的唯一标识，用于服务器端验证。
   String _ad_uuid = '';
+
+  /// 是否正在请求正文原生广告配置。
+  bool _is_ad_config_loading = false;
 
   /// 是否进入正文区域的展示通知器。
   final ValueNotifier<bool> _has_started_reading_notifier = ValueNotifier<bool>(
@@ -211,8 +219,12 @@ class _ReadPageState extends State<ReadPage>
     // 进入页面时请求接口，有阅读进度时静默加载目标章节。
     _initialization_future = _init_with_progress_restore();
 
-    // 后台加载原生高级广告配置（不阻塞页面展示）。
-    unawaited(_load_native_ad_config());
+    // 项目配置异步到达或更新时统一同步正文广告状态。
+    _ad_policy_worker = ever(
+      Get.find<ProjectConfigStore>().config_revision,
+      (_) => _sync_ad_policy(),
+    );
+    _sync_ad_policy();
 
     // 从消息页跳转时，等待阅读页初始化完成后再打开评论区，避免两个路由动画
     // 与初始进度定位同时执行。
@@ -245,6 +257,8 @@ class _ReadPageState extends State<ReadPage>
   /// 加载失败不影响页面正常展示。
   Future<void> _load_native_ad_config() async {
     const String log_prefix = '[ReadNativeAdConfig]';
+    if (!AdDisplayPolicy.can_show_ads() || _is_ad_config_loading) return;
+    _is_ad_config_loading = true;
     try {
       logUtil(msg: '$log_prefix 开始请求广告配置, novel_id=${widget.story_id}');
 
@@ -255,10 +269,11 @@ class _ReadPageState extends State<ReadPage>
         fromJson: (json) => AdConfig.fromJson(json),
       );
 
-      if (!mounted) return;
+      if (!mounted || !AdDisplayPolicy.can_show_ads()) return;
 
       logUtil(
-        msg: '$log_prefix 接口响应: status=${result.status}, '
+        msg:
+            '$log_prefix 接口响应: status=${result.status}, '
             'content=${result.content != null}',
       );
 
@@ -271,26 +286,35 @@ class _ReadPageState extends State<ReadPage>
 
       // advertisers=1 表示谷歌 AdMob，且 ads_id 必须有值。
       if (ad_config.advertisers != 1 || ad_config.adsId.isEmpty) {
-        logUtil(
-          msg: '$log_prefix 广告商不是谷歌或adsId为空，跳过',
-          type: 'w',
-        );
+        logUtil(msg: '$log_prefix 广告商不是谷歌或adsId为空，跳过', type: 'w');
         return;
       }
 
-      logUtil(
-        msg: '$log_prefix 广告配置加载成功, adUnitId=${ad_config.adsId}',
-      );
+      logUtil(msg: '$log_prefix 广告配置加载成功, adUnitId=${ad_config.adsId}');
 
       setState(() {
         _ad_unit_id = ad_config.adsId;
         _ad_uuid = ad_config.uuid;
       });
     } catch (e, stack_trace) {
-      logUtil(
-        msg: '$log_prefix 广告配置加载异常: $e\n$stack_trace',
-        type: 'e',
-      );
+      logUtil(msg: '$log_prefix 广告配置加载异常: $e\n$stack_trace', type: 'e');
+    } finally {
+      _is_ad_config_loading = false;
+    }
+  }
+
+  /// 按公共平台策略加载或清理长篇正文广告。
+  void _sync_ad_policy() {
+    if (!AdDisplayPolicy.can_show_ads()) {
+      if (_ad_unit_id.isEmpty && _ad_uuid.isEmpty) return;
+      setState(() {
+        _ad_unit_id = '';
+        _ad_uuid = '';
+      });
+      return;
+    }
+    if (_ad_unit_id.isEmpty && !_is_ad_config_loading) {
+      unawaited(_load_native_ad_config());
     }
   }
 
@@ -533,6 +557,7 @@ class _ReadPageState extends State<ReadPage>
     _auto_read_ticker?.dispose();
     _comment_navigation_worker?.dispose();
     _error_worker?.dispose();
+    _ad_policy_worker?.dispose();
     logic.wait_until_chapter_mutation_allowed = null;
     logic.preserve_chapter_anchor = null;
     final Completer<void>? idle_completer = _scroll_idle_completer;
@@ -1302,9 +1327,7 @@ class _ReadPageState extends State<ReadPage>
       enableDrag: true,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width,
-      ),
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
       builder: (BuildContext sheet_context) {
         return ReadSettingsSheet(
           body_font_size: logic.body_font_size,
@@ -1448,9 +1471,7 @@ class _ReadPageState extends State<ReadPage>
       enableDrag: true,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width,
-      ),
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
       builder: (BuildContext sheet_context) {
         return AutoReadSettingsSheet(
           auto_read_speed: logic.auto_read_speed,

@@ -47,10 +47,6 @@ class ReadTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    /// 分享开关。
-    final bool isShareEnabled =
-        Get.find<ProjectConfigStore>().current.is_share_enabled;
-
     final double status_bar_height = MediaQuery.viewPaddingOf(context).top;
 
     /// 导航栏高度（不含状态栏）。
@@ -128,15 +124,9 @@ class ReadTopBar extends StatelessWidget {
                         child: TweenAnimationBuilder<double>(
                           duration: const Duration(milliseconds: 400),
                           curve: Curves.elasticOut,
-                          tween: Tween<double>(
-                            begin: 0.6,
-                            end: 1.0,
-                          ),
+                          tween: Tween<double>(begin: 0.6, end: 1.0),
                           builder: (context, scale, child) {
-                            return Transform.scale(
-                              scale: scale,
-                              child: child,
-                            );
+                            return Transform.scale(scale: scale, child: child);
                           },
                           key: ValueKey(is_favorited),
                           child: SvgIcon(
@@ -146,16 +136,24 @@ class ReadTopBar extends StatelessWidget {
                             width: 22,
                             height: 22,
                             color: is_favorited
-                                ? (is_dark ? const Color(0xFFD0D4DB).withValues(alpha: 0.82) : null)
+                                ? (is_dark
+                                      ? const Color(
+                                          0xFFD0D4DB,
+                                        ).withValues(alpha: 0.82)
+                                      : null)
                                 : right_icon_color,
                           ),
                         ),
                       ),
                     ),
 
-              /// 分享按钮（加载时显示骨架屏，完成后显示真实图标）。
-              if (isShareEnabled)
-                is_loading
+              /// 分享按钮随远端项目配置实时显示或隐藏。
+              Obx(() {
+                final bool is_share_enabled =
+                    Get.find<ProjectConfigStore>().current.is_share_enabled;
+                if (!is_share_enabled) return const SizedBox.shrink();
+
+                return is_loading
                     ? Padding(
                         padding: const EdgeInsets.only(right: 16),
                         child: _IconSkeleton(
@@ -173,10 +171,15 @@ class ReadTopBar extends StatelessWidget {
                             name: 'share',
                             width: 20,
                             height: 20,
-                            color: is_dark ? const Color(0xFFD0D4DB).withValues(alpha: 0.82) : right_icon_color,
+                            color: is_dark
+                                ? const Color(
+                                    0xFFD0D4DB,
+                                  ).withValues(alpha: 0.82)
+                                : right_icon_color,
                           ),
                         ),
-                      ),
+                      );
+              }),
             ],
           ),
         ),

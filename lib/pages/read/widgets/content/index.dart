@@ -4,6 +4,7 @@ import 'package:app/pages/read/logic.dart' as read_logic;
 import 'package:app/pages/read/widgets/introduction_section/index.dart';
 import 'package:app/pages/short_story_read/widgets/native_ad_banner.dart';
 import 'package:app/stores/novel_reading_store.dart';
+import 'package:app/util/ad_display_policy.dart';
 import './style.dart';
 
 /// 阅读页正文内容组件。
@@ -106,7 +107,9 @@ class ReadContent extends StatelessWidget {
                   // 记录已插入广告的章节索引，避免重复插入。
                   final Set<int> ad_inserted_chapters = {};
                   final bool has_ad =
-                      ad_unit_id.isNotEmpty && ad_uuid.isNotEmpty;
+                      AdDisplayPolicy.can_show_ads() &&
+                      ad_unit_id.isNotEmpty &&
+                      ad_uuid.isNotEmpty;
 
                   final List<Widget> widgets = <Widget>[];
                   for (final ReadingContentItem item in reading_items) {

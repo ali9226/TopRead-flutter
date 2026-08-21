@@ -76,7 +76,7 @@ class StoryContent extends StatelessWidget {
         .where((String p) => p.trim().isNotEmpty)
         .toList();
 
-    // 计算原生广告插入位置（正文 1/4 处的段落下标）。
+    // 计算原生广告插入位置（正文 1/3 处的段落下标）。
     final int? ad_insert_index = _get_ad_insert_index(
       paragraph_count: paragraphs.length,
       has_native_ad: native_ad_widget != null,
@@ -135,7 +135,7 @@ class StoryContent extends StatelessWidget {
     required bool has_native_ad,
   }) {
     if (!has_native_ad || paragraph_count < 4) return null;
-    // 在正文 1/4 处的段落之后插入广告。
+    // 在正文 1/3 处的段落之后插入广告。
     return (paragraph_count * ShortStoryReadStyle.native_ad_display_ratio)
         .ceil()
         .clamp(1, paragraph_count);

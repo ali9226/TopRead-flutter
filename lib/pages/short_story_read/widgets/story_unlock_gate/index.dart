@@ -46,7 +46,7 @@ class StoryUnlockGate extends StatelessWidget {
 
   /// 原生广告横幅组件（可选）。
   ///
-  /// 非空时在正文 1/4 位置插入原生广告。
+  /// 非空时在正文 1/3 位置插入原生广告。
   final Widget? native_ad_widget;
 
   @override

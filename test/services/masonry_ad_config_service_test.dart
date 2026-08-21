@@ -1,11 +1,25 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/models/ad_config.dart';
+import 'package:app/models/project_config.dart';
 import 'package:app/services/masonry_ad_config_service.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
 
 void main() {
-  tearDown(MasonryAdConfigService.reset_for_test);
+  setUp(() {
+    Get.testMode = true;
+    Get.reset();
+    Get.put<ProjectConfigStore>(
+      ProjectConfigStore(),
+    ).save_config(_build_project_config(ads_switch: SwitchValue.on));
+  });
+
+  tearDown(() {
+    MasonryAdConfigService.reset_for_test();
+    Get.reset();
+  });
 
   test('每个广告槽位都独立获取配置', () async {
     int fetch_count = 0;
@@ -44,6 +58,20 @@ void main() {
 
     expect(await MasonryAdConfigService.get_google_ad_config(), isNull);
   });
+
+  test('公共广告策略关闭时不请求后端配置', () async {
+    int fetch_count = 0;
+    Get.find<ProjectConfigStore>().save_config(
+      _build_project_config(ads_switch: SwitchValue.off),
+    );
+    MasonryAdConfigService.set_fetcher_for_test(() async {
+      fetch_count += 1;
+      return _build_config();
+    });
+
+    expect(await MasonryAdConfigService.get_google_ad_config(), isNull);
+    expect(fetch_count, 0);
+  });
 }
 
 AdConfig _build_config({int advertisers = 1, String ads_id = 'native-unit'}) {
@@ -58,5 +86,21 @@ AdConfig _build_config({int advertisers = 1, String ads_id = 'native-unit'}) {
     adsTypeStr: '原生高级广告',
     advertisersStr: 'Google AdMob',
     uuid: 'masonry-config-uuid',
+  );
+}
+
+ProjectConfig _build_project_config({required int ads_switch}) {
+  return ProjectConfig(
+    id: 1,
+    ads_switch: ads_switch,
+    authorized_login_switch: SwitchValue.on,
+    comment_switch: SwitchValue.on,
+    online_customer_service_switch: SwitchValue.on,
+    rating_switch: SwitchValue.on,
+    creator_switch: SwitchValue.on,
+    share_switch: SwitchValue.on,
+    contact_customer_service_switch: SwitchValue.on,
+    famous_quote: '',
+    app_review_status: 2,
   );
 }

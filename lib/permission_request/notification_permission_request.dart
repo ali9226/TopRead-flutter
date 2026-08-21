@@ -2,6 +2,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:app/permission_request/admob_consent_permission_request.dart';
+import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/device/app_environment.dart';
 import 'package:app/util/log_util.dart';
 
@@ -87,7 +88,10 @@ class NotificationPermissionRequest {
 
   static Future<void> _request_on_mobile_if_needed_internal() async {
     // 所有通知入口都排在 UMP 法规消息、IDFA 铺垫消息和 ATT 之后。
-    await AdMobConsentPermissionRequest.request_before_ad();
+    // 当前平台禁用广告时不存在 UMP 广告前置流程，直接检查通知权限。
+    if (AdDisplayPolicy.can_show_ads()) {
+      await AdMobConsentPermissionRequest.request_before_ad();
+    }
     if (isAndroidApp) {
       await _request_on_android_if_needed_internal();
     } else {

@@ -105,10 +105,6 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
 
   @override
   Widget build(BuildContext context) {
-    /// 评论开关。
-    final bool isCommentEnabled =
-        Get.find<ProjectConfigStore>().current.is_comment_enabled;
-
     /// 底部安全区域高度。
     final double bottom_padding = MediaQuery.viewPaddingOf(context).bottom;
 
@@ -170,16 +166,23 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
                     ),
                   ),
 
-                  /// 3. 评论。
-                  if (isCommentEnabled)
-                    Expanded(
+                  /// 3. 评论，随远端项目配置实时显示或隐藏。
+                  Obx(() {
+                    final bool is_comment_enabled =
+                        Get.find<ProjectConfigStore>()
+                            .current
+                            .is_comment_enabled;
+                    if (!is_comment_enabled) return const SizedBox.shrink();
+
+                    return Expanded(
                       child: _buildActionItem(
                         icon: 'message',
                         label: '${widget.comment_count}',
                         icon_color: icon_color,
                         onTap: widget.on_comment_tap,
                       ),
-                    ),
+                    );
+                  }),
 
                   /// 4. 喜欢。
                   Expanded(child: _buildLikeItem(icon_color: icon_color)),

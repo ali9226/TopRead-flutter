@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'package:app/permission_request/admob_consent_permission_request.dart';
+import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/device/app_environment.dart';
 import 'package:app/util/log_util.dart';
 
@@ -30,12 +31,19 @@ class GoogleMobileAdsUtil {
   ///
   /// 返回 false 时广告位必须保持隐藏，不得直接调用任何广告 load API。
   Future<bool> ensure_initialized() async {
-    if (!is_supported) return false;
+    if (!is_supported || !AdDisplayPolicy.can_show_ads()) {
+      _log('当前平台广告开关未开启，跳过 SDK 初始化', type: 'w');
+      return false;
+    }
 
     final bool can_request_ads =
         await AdMobConsentPermissionRequest.request_before_ad();
     if (!can_request_ads) {
       _log('UMP 未允许请求广告，跳过 SDK 初始化', type: 'w');
+      return false;
+    }
+    if (!AdDisplayPolicy.can_show_ads()) {
+      _log('UMP 完成后广告开关已关闭，跳过 SDK 初始化', type: 'w');
       return false;
     }
 

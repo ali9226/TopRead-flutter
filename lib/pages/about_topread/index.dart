@@ -1,7 +1,8 @@
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart' as easy;
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
@@ -15,6 +16,7 @@ import 'package:app/permission_request/admob_consent_permission_request.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/language_store.dart';
 import 'package:app/stores/project_config_store.dart';
+import 'package:app/util/ad_display_policy.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/dialog/show_message.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
@@ -53,11 +55,24 @@ class _AboutTopReadState extends State<AboutTopRead> {
   /// 是否正在展示 UMP 隐私选项表单，防止用户重复点击。
   bool _is_opening_ad_privacy_options = false;
 
+  /// 项目广告开关变更监听器。
+  late final Worker _ad_policy_worker;
+
   @override
   void initState() {
     super.initState();
     logic = Logic(context);
+    _ad_policy_worker = ever(
+      projectConfigStore.config_revision,
+      (_) => unawaited(_refresh_ad_privacy_options_requirement()),
+    );
     unawaited(_refresh_ad_privacy_options_requirement());
+  }
+
+  @override
+  void dispose() {
+    _ad_policy_worker.dispose();
+    super.dispose();
   }
 
   @override
@@ -252,7 +267,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
   /// 刷新 UMP 对“隐私选项”入口的法规要求，并仅在需要时展示列表项。
   Future<void> _refresh_ad_privacy_options_requirement() async {
     // 广告开关关闭时不显示广告隐私选项。
-    if (!projectConfigStore.current.is_ads_enabled) {
+    if (!AdDisplayPolicy.can_show_ads()) {
       if (mounted && _show_ad_privacy_options) {
         setState(() => _show_ad_privacy_options = false);
       }
@@ -269,6 +284,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
   /// 展示 UMP 隐私选项表单，让用户修改或撤回广告隐私选择。
   Future<void> _open_ad_privacy_options() async {
     if (_is_opening_ad_privacy_options) return;
+    if (!AdDisplayPolicy.can_show_ads()) return;
 
     setState(() => _is_opening_ad_privacy_options = true);
     try {

@@ -20,7 +20,7 @@ import 'package:app/permission_request/admob_consent_permission_request.dart';
 import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/stores/bottom_navigation_info.dart';
 import 'package:app/stores/device_info.dart';
-import 'package:app/stores/project_config_store.dart';
+import 'package:app/util/ad_display_policy.dart';
 
 /// AppWrapper 是整个应用的根容器。
 ///
@@ -108,9 +108,10 @@ class _AppWrapperState extends State<AppWrapper> {
   }
 
   Future<void> _run_startup_permission_flow() async {
-    // 广告开关关闭时跳过 UMP 初始化。
-    final ProjectConfigStore projectConfigStore = Get.find<ProjectConfigStore>();
-    if (!projectConfigStore.current.is_ads_enabled) {
+    // 等待远端广告平台开关；关闭或超时时均跳过 UMP 初始化。
+    final bool can_show_ads = await AdDisplayPolicy.wait_until_resolved();
+    if (!mounted) return;
+    if (!can_show_ads) {
       // 仅检查通知权限。
       await NotificationPermissionRequest.request_on_app_start_if_needed();
       return;

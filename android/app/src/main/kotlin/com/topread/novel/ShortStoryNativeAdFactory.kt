@@ -2,6 +2,8 @@ package com.topread.novel
 
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -11,11 +13,14 @@ import com.google.android.gms.ads.nativead.AdChoicesView
 import com.google.android.gms.ads.nativead.MediaView
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdView
+import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugins.googlemobileads.NativeAdFactory
+import kotlin.math.roundToInt
 
 /** 短篇正文中接近沉浸式视频卡片的原生高级广告。 */
 class ShortStoryNativeAdFactory(
     private val layoutInflater: LayoutInflater,
+    private val layoutChannel: MethodChannel,
 ) : NativeAdFactory {
     /**
      * 创建原生高级广告视图。
@@ -37,8 +42,16 @@ class ShortStoryNativeAdFactory(
         ) as NativeAdView
         // 从 Flutter 端获取夜间模式标志。
         val isDark = customOptions?.get("isDark") as? Boolean ?: false
+        // 本地化广告归因文案，缺失时使用 Google 认可的默认值。
+        val advertisementLabel =
+            customOptions?.get("advertisementLabel") as? String ?: "Ad"
+        // 原生端按 Flutter 卡片宽度测量真实高度所需的布局参数。
+        val slotId = customOptions?.get("slotId") as? String
+        val cardWidth = (customOptions?.get("cardWidth") as? Number)?.toDouble()
+        val layoutToken = (customOptions?.get("layoutToken") as? Number)?.toInt()
         // 根据日间/夜间模式设置广告卡片颜色。
         applyTheme(adView, isDark)
+        adView.findViewById<TextView>(R.id.ad_attribution).text = advertisementLabel
 
         // 获取广告布局中的各视图组件。
         val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
@@ -70,7 +83,44 @@ class ShortStoryNativeAdFactory(
 
         // 将广告数据绑定到视图（必须调用，否则点击和展示追踪不生效）。
         adView.setNativeAd(nativeAd)
+        reportMeasuredHeight(
+            adView = adView,
+            cardWidthDp = cardWidth,
+            slotId = slotId,
+            layoutToken = layoutToken,
+        )
         return adView
+    }
+
+    /** 使用实际标题行数测量卡片高度，并回传 Flutter 更新平台视图尺寸。 */
+    private fun reportMeasuredHeight(
+        adView: NativeAdView,
+        cardWidthDp: Double?,
+        slotId: String?,
+        layoutToken: Int?,
+    ) {
+        val resolvedCardWidth = cardWidthDp?.takeIf { it.isFinite() && it > 0 } ?: return
+        if (slotId == null || layoutToken == null) return
+
+        val density = adView.resources.displayMetrics.density
+        val widthPx = (resolvedCardWidth * density).roundToInt().coerceAtLeast(1)
+        adView.measure(
+            View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+        )
+        val measuredHeightDp = adView.measuredHeight.toDouble() / density.toDouble()
+        if (!measuredHeightDp.isFinite() || measuredHeightDp <= 0) return
+
+        Handler(Looper.getMainLooper()).post {
+            layoutChannel.invokeMethod(
+                "onNativeAdLayout",
+                mapOf(
+                    "slotId" to slotId,
+                    "viewHeight" to measuredHeightDp,
+                    "layoutToken" to layoutToken,
+                ),
+            )
+        }
     }
 
     /**
@@ -111,6 +161,15 @@ class ShortStoryNativeAdFactory(
         }
         // 标题文字颜色。
         adView.findViewById<TextView>(R.id.ad_headline).setTextColor(primaryColor)
+        // 广告归因标识：独立放在媒体区域上方，不能与任何广告素材重叠。
+        adView.findViewById<TextView>(R.id.ad_attribution).apply {
+            setTextColor(Color.rgb(95, 139, 255))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 10f * density
+                setColor(Color.argb(41, 95, 139, 255))
+            }
+        }
         // 广告主文字颜色。
         adView.findViewById<TextView>(R.id.ad_advertiser).setTextColor(secondaryColor)
         // Open 按钮：背景色对应 ColorConstants.themeColor (#F8D02D)，

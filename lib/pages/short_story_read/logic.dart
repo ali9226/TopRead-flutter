@@ -13,7 +13,7 @@ import 'package:app/models/short_story_read_data.dart';
 import 'package:app/models/short_story_item.dart';
 import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/stores/short_story_catalog_store.dart';
-import 'package:app/stores/project_config_store.dart';
+import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/device/save_body_font_size.dart';
 import 'package:app/pages/short_story_read/utils/short_story_content_cache.dart';
 
@@ -141,13 +141,8 @@ class ShortStoryReadLogic {
     final double? saved_speed = load_auto_read_speed();
     auto_read_speed = (saved_speed ?? 0.2).obs;
 
-    // 广告开关关闭时直接解锁所有内容。
-    final ProjectConfigStore projectConfigStore = Get.find<ProjectConfigStore>();
-    final bool ads_disabled = !projectConfigStore.current.is_ads_enabled;
-    if (ads_disabled) {
-      _unlocked_story_ids.add(story_id);
-    }
-    is_story_unlocked = (_unlocked_story_ids.contains(story_id) || ads_disabled).obs;
+    is_story_unlocked = _unlocked_story_ids.contains(story_id).obs;
+    sync_ad_access_policy();
   }
 
   /// 增加正文字号（步长 2，最大 36），并持久化。
@@ -278,8 +273,6 @@ class ShortStoryReadLogic {
       _story_detail_memory_cache_capacity,
     );
   }
-
-
 
   /// 加载正文文本，优先走内存缓存，其次磁盘缓存，最后网络。
   Future<String> _fetch_content_text_with_cache(String content_url) async {
@@ -729,6 +722,16 @@ class ShortStoryReadLogic {
   void unlock_current_story() {
     _unlocked_story_ids.add(story_id);
     is_story_unlocked.value = true;
+  }
+
+  /// 按全局广告平台策略同步当前短篇的正文访问状态。
+  ///
+  /// 平台明确禁用广告时直接开放全文，但不会写入激励广告解锁记录；以后
+  /// 若平台重新启用广告，只有真正完成过激励广告的短篇会继续保持解锁。
+  void sync_ad_access_policy() {
+    is_story_unlocked.value =
+        _unlocked_story_ids.contains(story_id) ||
+        AdDisplayPolicy.should_bypass_ads();
   }
 
   /// 处理滚动事件。

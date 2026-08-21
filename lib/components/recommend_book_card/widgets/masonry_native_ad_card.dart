@@ -2,10 +2,12 @@
 
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'package:app/components/recommend_book_card/style.dart';
 import 'package:app/services/masonry_native_ad_pool.dart';
+import 'package:app/util/ad_display_policy.dart';
 
 /// 推荐瀑布流内的 Google AdMob 原生高级广告卡片。
 ///
@@ -65,42 +67,48 @@ class _MasonryNativeAdCardState extends State<MasonryNativeAdCard> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final String advertisement_label = easy.tr(
-          'recommend_card.advertisement',
-        );
-        _controller.ensure_loaded(
-          card_width: constraints.maxWidth,
-          is_dark: widget.is_dark,
-          advertisement_label: advertisement_label,
-        );
+    return Obx(() {
+      if (!AdDisplayPolicy.can_show_ads()) {
+        return const SizedBox.shrink();
+      }
 
-        final NativeAd? native_ad = _controller.native_ad;
-        if (native_ad == null) {
-          return const SizedBox.shrink();
-        }
+      return LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final String advertisement_label = easy.tr(
+            'recommend_card.advertisement',
+          );
+          _controller.ensure_loaded(
+            card_width: constraints.maxWidth,
+            is_dark: widget.is_dark,
+            advertisement_label: advertisement_label,
+          );
 
-        return Semantics(
-          label: advertisement_label,
-          container: true,
-          child: SizedBox(
-            width: double.infinity,
-            height: _controller.native_view_height,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(
-                RecommendBookCardStyle.card_radius,
-              ),
-              child: AdWidget(
-                key: ValueKey<String>(
-                  '${widget.slot_id}_${_controller.load_generation}',
+          final NativeAd? native_ad = _controller.native_ad;
+          if (native_ad == null) {
+            return const SizedBox.shrink();
+          }
+
+          return Semantics(
+            label: advertisement_label,
+            container: true,
+            child: SizedBox(
+              width: double.infinity,
+              height: _controller.native_view_height,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(
+                  RecommendBookCardStyle.card_radius,
                 ),
-                ad: native_ad,
+                child: AdWidget(
+                  key: ValueKey<String>(
+                    '${widget.slot_id}_${_controller.load_generation}',
+                  ),
+                  ad: native_ad,
+                ),
               ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    });
   }
 }

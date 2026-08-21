@@ -122,8 +122,8 @@ class ShortStoryReadStyle {
   /// 解锁前可以阅读的正文比例。
   static const double locked_content_preview_ratio = 1 / 2;
 
-  /// 原生高级广告在正文中的展示位置比例（1/4 处）。
-  static const double native_ad_display_ratio = 1 / 4;
+  /// 原生高级广告在正文中的展示位置比例（1/3 处）。
+  static const double native_ad_display_ratio = 1 / 3;
 
   /// CJK 语系解锁区域高度。
   static const double unlock_gate_height_cjk = 160.0;

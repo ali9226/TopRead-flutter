@@ -12,6 +12,8 @@ class MainActivity : FlutterActivity() {
         private const val SET_BADGE_COUNT_METHOD = "setBadgeCount"
         private const val MASONRY_NATIVE_AD_LAYOUT_CHANNEL_NAME =
             "com.topread.novel/masonry_native_ad_layout"
+        private const val SHORT_STORY_NATIVE_AD_LAYOUT_CHANNEL_NAME =
+            "com.topread.novel/short_story_native_ad_layout"
         private const val MASONRY_NATIVE_AD_FACTORY_ID = "masonryNativeAdCard"
         private const val SHORT_STORY_NATIVE_AD_FACTORY_ID = "shortStoryNativeAdCard"
     }
@@ -35,7 +37,13 @@ class MainActivity : FlutterActivity() {
         GoogleMobileAdsPlugin.registerNativeAdFactory(
             flutterEngine,
             SHORT_STORY_NATIVE_AD_FACTORY_ID,
-            ShortStoryNativeAdFactory(layoutInflater),
+            ShortStoryNativeAdFactory(
+                layoutInflater,
+                MethodChannel(
+                    flutterEngine.dartExecutor.binaryMessenger,
+                    SHORT_STORY_NATIVE_AD_LAYOUT_CHANNEL_NAME,
+                ),
+            ),
         )
 
         advertisingInfoChannel = AdvertisingInfoChannel(

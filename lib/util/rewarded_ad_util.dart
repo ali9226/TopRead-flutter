@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:app/permission_request/admob_consent_permission_request.dart';
+import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/google_mobile_ads_util.dart';
 import 'package:app/util/log_util.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +9,9 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// 谷歌激励视频广告的最终展示结果。
 enum GoogleRewardedAdResult {
+  /// 当前平台的项目广告开关未开启。
+  disabled,
+
   /// 用户完整观看并获得了奖励。
   rewarded,
 
@@ -69,6 +73,10 @@ class GoogleRewardedAdUtil {
     String? custom_data,
     bool Function()? can_show,
   }) async {
+    if (!AdDisplayPolicy.can_show_ads()) {
+      _log('当前平台广告开关未开启，跳过激励广告', type: 'w');
+      return GoogleRewardedAdResult.disabled;
+    }
     if (!is_supported) {
       _log('当前平台不支持激励视频广告', type: 'w');
       return GoogleRewardedAdResult.unsupported;
@@ -88,10 +96,20 @@ class GoogleRewardedAdUtil {
         _log('UMP 未允许请求广告，本次不初始化广告 SDK', type: 'w');
         return GoogleRewardedAdResult.consent_unavailable;
       }
+      if (!AdDisplayPolicy.can_show_ads()) {
+        _log('UMP 完成后广告开关已关闭，取消激励广告', type: 'w');
+        return GoogleRewardedAdResult.disabled;
+      }
 
       rewarded_ad = await _load_rewarded_ad(adUnitId);
       if (rewarded_ad == null) {
         return GoogleRewardedAdResult.load_failed;
+      }
+
+      if (!AdDisplayPolicy.can_show_ads()) {
+        await rewarded_ad.dispose();
+        _log('广告加载完成前平台开关已关闭，释放广告', type: 'w');
+        return GoogleRewardedAdResult.disabled;
       }
 
       if (can_show != null && !can_show()) {

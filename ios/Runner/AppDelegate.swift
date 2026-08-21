@@ -7,7 +7,7 @@ import UserNotifications
 import google_mobile_ads
 
 /// 为广告分类标签提供与 Flutter 小说标签一致的水平、垂直内边距。
-private final class MasonryInsetLabel: UILabel {
+private final class NativeAdInsetLabel: UILabel {
   private let textInsets = UIEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
 
   override func drawText(in rect: CGRect) {
@@ -81,7 +81,7 @@ private final class MasonryNativeAdFactory: NSObject, FLTNativeAdFactory {
     adView.addSubview(adChoicesView)
     adView.adChoicesView = adChoicesView
 
-    let attributionLabel = MasonryInsetLabel(frame: .zero)
+    let attributionLabel = NativeAdInsetLabel(frame: .zero)
     attributionLabel.translatesAutoresizingMaskIntoConstraints = false
     attributionLabel.text = advertisementLabel
     attributionLabel.font = .systemFont(ofSize: 11, weight: .regular)
@@ -121,7 +121,7 @@ private final class MasonryNativeAdFactory: NSObject, FLTNativeAdFactory {
     adView.addSubview(bodyLabel)
     adView.bodyView = bodyLabel
 
-    let advertiserLabel = MasonryInsetLabel(frame: .zero)
+    let advertiserLabel = NativeAdInsetLabel(frame: .zero)
     advertiserLabel.translatesAutoresizingMaskIntoConstraints = false
     advertiserLabel.text = nativeAd.advertiser
     advertiserLabel.font = .systemFont(ofSize: 11, weight: .regular)
@@ -273,6 +273,8 @@ private final class MasonryNativeAdFactory: NSObject, FLTNativeAdFactory {
 
 /// 短篇正文中接近效果图沉浸式视频卡片的原生高级广告工厂。
 private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
+  weak var layoutChannel: FlutterMethodChannel?
+
   func createNativeAd(
     _ nativeAd: NativeAd,
     customOptions: [AnyHashable: Any]?
@@ -282,6 +284,11 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     // - Android: android/app/.../ShortStoryNativeAdFactory.kt
 
     let isDark = customOptions?["isDark"] as? Bool ?? false
+    let advertisementLabel =
+      customOptions?["advertisementLabel"] as? String ?? "Ad"
+    let slotID = customOptions?["slotId"] as? String
+    let cardWidth = (customOptions?["cardWidth"] as? NSNumber)?.doubleValue
+    let layoutToken = (customOptions?["layoutToken"] as? NSNumber)?.intValue
     // 广告卡片背景色：夜间 #1E2430，日间对应 ColorConstants.whiteColor (white)。
     let cardBackground = isDark
       ? UIColor(red: 30 / 255, green: 36 / 255, blue: 48 / 255, alpha: 1)
@@ -296,10 +303,44 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
       : UIColor(red: 126 / 255, green: 118 / 255, blue: 96 / 255, alpha: 1)
 
     // 广告卡片容器（圆角 16pt，裁剪内容）。
-    let adView = NativeAdView(frame: .zero)
+    let resolvedCardWidth = cardWidth.flatMap { width in
+      width.isFinite && width > 0 ? width : nil
+    } ?? 320
+    let adView = NativeAdView(
+      frame: CGRect(x: 0, y: 0, width: resolvedCardWidth, height: 1)
+    )
     adView.backgroundColor = cardBackground
     adView.layer.cornerRadius = 16
     adView.clipsToBounds = true
+
+    // 广告归因栏独立占据顶部空间，避免任何注册素材覆盖媒体区域。
+    let attributionHeader = UIView(frame: .zero)
+    attributionHeader.translatesAutoresizingMaskIntoConstraints = false
+    attributionHeader.backgroundColor = cardBackground
+    adView.addSubview(attributionHeader)
+
+    let attributionLabel = NativeAdInsetLabel(frame: .zero)
+    attributionLabel.translatesAutoresizingMaskIntoConstraints = false
+    attributionLabel.text = advertisementLabel
+    attributionLabel.font = .systemFont(ofSize: 11, weight: .regular)
+    attributionLabel.textColor = UIColor(
+      red: 95 / 255,
+      green: 139 / 255,
+      blue: 1,
+      alpha: 0.96
+    )
+    attributionLabel.backgroundColor = UIColor(
+      red: 95 / 255,
+      green: 139 / 255,
+      blue: 1,
+      alpha: 0.16
+    )
+    attributionLabel.textAlignment = .center
+    attributionLabel.numberOfLines = 1
+    attributionLabel.lineBreakMode = .byTruncatingTail
+    attributionLabel.layer.cornerRadius = 10
+    attributionLabel.clipsToBounds = true
+    attributionHeader.addSubview(attributionLabel)
 
     // 视频/图片媒体区域。
     let mediaView = MediaView(frame: .zero)
@@ -318,15 +359,15 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     // AdChoices 广告标识（右上角）。
     let adChoicesView = AdChoicesView(frame: .zero)
     adChoicesView.translatesAutoresizingMaskIntoConstraints = false
-    adView.addSubview(adChoicesView)
+    attributionHeader.addSubview(adChoicesView)
     adView.adChoicesView = adChoicesView
 
-    // 广告标题（居中，最多 2 行）。
+    // 广告标题（居中，最多 3 行）。
     let headlineLabel = makeLabel(
       text: nativeAd.headline,
-      font: .systemFont(ofSize: 20, weight: .semibold),
+      font: .systemFont(ofSize: 16, weight: .semibold),
       color: primaryText,
-      lines: 2
+      lines: 3
     )
     headlineLabel.textAlignment = .center
     adView.addSubview(headlineLabel)
@@ -341,6 +382,10 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     )
     advertiserLabel.textAlignment = .center
     advertiserLabel.isHidden = nativeAd.advertiser == nil
+    let advertiserTopSpacing: CGFloat = nativeAd.advertiser == nil ? 0 : 5
+    let advertiserHeightConstraint = nativeAd.advertiser == nil
+      ? advertiserLabel.heightAnchor.constraint(equalToConstant: 0)
+      : nil
     adView.addSubview(advertiserLabel)
     adView.advertiserView = advertiserLabel
 
@@ -362,44 +407,109 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     callToActionLabel.layer.cornerRadius = 23
     callToActionLabel.clipsToBounds = true
     callToActionLabel.isHidden = nativeAd.callToAction == nil
+    let callToActionHeight: CGFloat = nativeAd.callToAction == nil ? 0 : 46
+    let callToActionTopSpacing: CGFloat = nativeAd.callToAction == nil ? 0 : 12
     adView.addSubview(callToActionLabel)
     adView.callToActionView = callToActionLabel
 
     // 布局约束：媒体区域 → 标题 → 广告主 → Open 按钮。
     NSLayoutConstraint.activate([
-      // 媒体区域：顶部撑满，固定高度 260pt。
-      mediaView.topAnchor.constraint(equalTo: adView.topAnchor),
+      // 顶部广告归因栏：广告标识在左，AdChoices 在右，二者均不覆盖媒体。
+      attributionHeader.topAnchor.constraint(equalTo: adView.topAnchor),
+      attributionHeader.leadingAnchor.constraint(equalTo: adView.leadingAnchor),
+      attributionHeader.trailingAnchor.constraint(equalTo: adView.trailingAnchor),
+      attributionHeader.heightAnchor.constraint(greaterThanOrEqualToConstant: 32),
+
+      attributionLabel.leadingAnchor.constraint(
+        equalTo: attributionHeader.leadingAnchor,
+        constant: 10
+      ),
+      attributionLabel.centerYAnchor.constraint(equalTo: attributionHeader.centerYAnchor),
+      attributionLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 20),
+      attributionLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 20),
+
+      adChoicesView.trailingAnchor.constraint(
+        equalTo: attributionHeader.trailingAnchor,
+        constant: -10
+      ),
+      adChoicesView.centerYAnchor.constraint(equalTo: attributionHeader.centerYAnchor),
+      adChoicesView.topAnchor.constraint(greaterThanOrEqualTo: attributionHeader.topAnchor),
+      adChoicesView.bottomAnchor.constraint(lessThanOrEqualTo: attributionHeader.bottomAnchor),
+      attributionLabel.trailingAnchor.constraint(
+        lessThanOrEqualTo: adChoicesView.leadingAnchor,
+        constant: -8
+      ),
+
+      // 媒体区域：位于归因栏下方，固定高度 260pt。
+      mediaView.topAnchor.constraint(equalTo: attributionHeader.bottomAnchor),
       mediaView.leadingAnchor.constraint(equalTo: adView.leadingAnchor),
       mediaView.trailingAnchor.constraint(equalTo: adView.trailingAnchor),
       mediaView.heightAnchor.constraint(equalToConstant: 260),
-
-      // AdChoices 标识：右上角。
-      adChoicesView.topAnchor.constraint(equalTo: adView.topAnchor, constant: 8),
-      adChoicesView.trailingAnchor.constraint(equalTo: adView.trailingAnchor, constant: -10),
 
       // 标题：媒体下方 14pt，左右各 14pt。
       headlineLabel.topAnchor.constraint(equalTo: mediaView.bottomAnchor, constant: 14),
       headlineLabel.leadingAnchor.constraint(equalTo: adView.leadingAnchor, constant: 14),
       headlineLabel.trailingAnchor.constraint(equalTo: adView.trailingAnchor, constant: -14),
 
-      // 广告主名称：标题下方 5pt。
-      advertiserLabel.topAnchor.constraint(equalTo: headlineLabel.bottomAnchor, constant: 5),
+      // 广告主名称：标题下方 5pt；素材为空时不保留空白。
+      advertiserLabel.topAnchor.constraint(
+        equalTo: headlineLabel.bottomAnchor,
+        constant: advertiserTopSpacing
+      ),
       advertiserLabel.leadingAnchor.constraint(equalTo: headlineLabel.leadingAnchor),
       advertiserLabel.trailingAnchor.constraint(equalTo: headlineLabel.trailingAnchor),
 
-      // Open 按钮：广告主下方至少 12pt，固定高度 46pt，底部 14pt。
+      // Open 按钮：始终位于标题和广告主下方，避免任何素材相互覆盖。
       callToActionLabel.topAnchor.constraint(
         greaterThanOrEqualTo: advertiserLabel.bottomAnchor,
-        constant: 12
+        constant: callToActionTopSpacing
       ),
       callToActionLabel.leadingAnchor.constraint(equalTo: headlineLabel.leadingAnchor),
       callToActionLabel.trailingAnchor.constraint(equalTo: headlineLabel.trailingAnchor),
-      callToActionLabel.heightAnchor.constraint(equalToConstant: 46),
+      callToActionLabel.heightAnchor.constraint(equalToConstant: callToActionHeight),
       callToActionLabel.bottomAnchor.constraint(equalTo: adView.bottomAnchor, constant: -14),
     ])
+    advertiserHeightConstraint?.isActive = true
 
     adView.nativeAd = nativeAd
+    reportMeasuredHeight(
+      adView: adView,
+      cardWidth: resolvedCardWidth,
+      slotID: slotID,
+      layoutToken: layoutToken
+    )
     return adView
+  }
+
+  /// 按实际标题、广告主和按钮内容测量卡片高度并通知 Flutter。
+  private func reportMeasuredHeight(
+    adView: NativeAdView,
+    cardWidth: Double,
+    slotID: String?,
+    layoutToken: Int?
+  ) {
+    guard let slotID, let layoutToken else { return }
+    let targetSize = CGSize(
+      width: cardWidth,
+      height: UIView.layoutFittingCompressedSize.height
+    )
+    let measuredSize = adView.systemLayoutSizeFitting(
+      targetSize,
+      withHorizontalFittingPriority: .required,
+      verticalFittingPriority: .fittingSizeLevel
+    )
+    guard measuredSize.height.isFinite, measuredSize.height > 0 else { return }
+
+    DispatchQueue.main.async { [weak self] in
+      self?.layoutChannel?.invokeMethod(
+        "onNativeAdLayout",
+        arguments: [
+          "slotId": slotID,
+          "viewHeight": measuredSize.height,
+          "layoutToken": layoutToken,
+        ]
+      )
+    }
   }
 
   /// 创建 UILabel 快捷方法。
@@ -434,6 +544,8 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
   private static let advertisingInfoChannelName = "com.topread.novel/advertising_info"
   private static let masonryNativeAdLayoutChannelName =
     "com.topread.novel/masonry_native_ad_layout"
+  private static let shortStoryNativeAdLayoutChannelName =
+    "com.topread.novel/short_story_native_ad_layout"
   private static let getAdvertisingIdMethod = "getAdvertisingId"
   private static let isLimitAdTrackingEnabledMethod = "isLimitAdTrackingEnabled"
   private static let getTrackingAuthorizationStatusMethod = "getTrackingAuthorizationStatus"
@@ -442,6 +554,7 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
   private var badgeChannel: FlutterMethodChannel?
   private var advertisingInfoChannel: FlutterMethodChannel?
   private var masonryNativeAdLayoutChannel: FlutterMethodChannel?
+  private var shortStoryNativeAdLayoutChannel: FlutterMethodChannel?
   private let masonryNativeAdFactory = MasonryNativeAdFactory()
   private let shortStoryNativeAdFactory = ShortStoryNativeAdFactory()
 
@@ -472,6 +585,13 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     )
     masonryNativeAdFactory.layoutChannel = masonryLayoutChannel
     masonryNativeAdLayoutChannel = masonryLayoutChannel
+
+    let shortStoryLayoutChannel = FlutterMethodChannel(
+      name: Self.shortStoryNativeAdLayoutChannelName,
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    shortStoryNativeAdFactory.layoutChannel = shortStoryLayoutChannel
+    shortStoryNativeAdLayoutChannel = shortStoryLayoutChannel
 
     let channel = FlutterMethodChannel(
       name: Self.badgeChannelName,

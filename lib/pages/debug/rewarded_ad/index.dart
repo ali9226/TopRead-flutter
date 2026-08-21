@@ -1,5 +1,6 @@
 import 'package:app/api/post_request.dart';
 import 'package:app/models/ad_config.dart';
+import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/rewarded_ad_util.dart';
@@ -25,6 +26,11 @@ class _RewardedAdDebugItemState extends State<RewardedAdDebugItem> {
 
   Future<void> _handleTap() async {
     _log('用户点击"播放谷歌激励视频广告"按钮');
+    if (!AdDisplayPolicy.can_show_ads()) {
+      _log('当前平台广告开关未开启', type: 'w');
+      showBottomTip('当前平台未开启广告');
+      return;
+    }
     if (!GoogleRewardedAdUtil.instance.is_supported) {
       _log('当前平台不支持激励视频广告', type: 'w');
       showBottomTip('当前设备不是安卓或苹果设备');
@@ -79,6 +85,9 @@ class _RewardedAdDebugItemState extends State<RewardedAdDebugItem> {
       if (!mounted) return;
 
       switch (result) {
+        case GoogleRewardedAdResult.disabled:
+          showBottomTip('当前平台未开启广告');
+          break;
         case GoogleRewardedAdResult.rewarded:
           showBottomTip('激励视频已看完，获得奖励');
           break;

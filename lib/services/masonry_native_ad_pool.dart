@@ -10,6 +10,7 @@ import 'package:app/components/recommend_book_card/style.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/permission_request/admob_consent_permission_request.dart';
 import 'package:app/services/masonry_ad_config_service.dart';
+import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/google_mobile_ads_util.dart';
 import 'package:app/util/log_util.dart';
 
@@ -98,7 +99,12 @@ class MasonryNativeAdController extends ChangeNotifier {
     required bool is_dark,
     required String advertisement_label,
   }) {
-    if (_is_disposed || !card_width.isFinite || card_width <= 0) return;
+    if (_is_disposed ||
+        !AdDisplayPolicy.can_show_ads() ||
+        !card_width.isFinite ||
+        card_width <= 0) {
+      return;
+    }
 
     final bool presentation_unchanged =
         _requested_card_width != null &&
@@ -150,10 +156,18 @@ class MasonryNativeAdController extends ChangeNotifier {
     final int generation = ++_load_generation;
 
     try {
+      if (!AdDisplayPolicy.can_show_ads()) {
+        _finish_without_ad(generation);
+        return;
+      }
       // 每个新槽位独立请求后端配置，不共享上一批数据的结果。
       final AdConfig? ad_config =
           await MasonryAdConfigService.get_google_ad_config();
       if (!_is_current(generation) || ad_config == null) {
+        _finish_without_ad(generation);
+        return;
+      }
+      if (!AdDisplayPolicy.can_show_ads()) {
         _finish_without_ad(generation);
         return;
       }
@@ -162,6 +176,10 @@ class MasonryNativeAdController extends ChangeNotifier {
           .ensure_initialized();
       if (!_is_current(generation) || !is_initialized) {
         _log('UMP 未允许广告请求或槽位已失效，跳过加载');
+        _finish_without_ad(generation);
+        return;
+      }
+      if (!AdDisplayPolicy.can_show_ads()) {
         _finish_without_ad(generation);
         return;
       }

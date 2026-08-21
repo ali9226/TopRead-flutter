@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:app/api/post_request.dart';
 import 'package:app/models/ad_config.dart';
+import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/log_util.dart';
 
 typedef MasonryAdConfigFetcher = Future<AdConfig?> Function();
@@ -29,8 +30,13 @@ class MasonryAdConfigService {
       _load_and_validate_config();
 
   static Future<AdConfig?> _load_and_validate_config() async {
+    if (!AdDisplayPolicy.can_show_ads()) {
+      logUtil(msg: '$_log_prefix 当前平台广告开关未开启，跳过配置请求');
+      return null;
+    }
     try {
       final AdConfig? ad_config = await _fetcher();
+      if (!AdDisplayPolicy.can_show_ads()) return null;
       if (ad_config == null) {
         logUtil(msg: '$_log_prefix 接口未返回可用配置', type: 'w');
         return null;
