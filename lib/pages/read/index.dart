@@ -262,7 +262,17 @@ class _ReadPageState extends State<ReadPage>
   /// 加载失败不影响页面正常展示。
   Future<void> _load_native_ad_config() async {
     const String log_prefix = '[ReadNativeAdConfig]';
-    if (!AdDisplayPolicy.can_show_ads() || _has_requested_native_ad_config) {
+    if (!AdDisplayPolicy.can_show_ads()) {
+      logUtil(msg: '$log_prefix can_show_ads=false，跳过加载广告配置', type: 'w');
+      return;
+    }
+    if (_has_requested_native_ad_config) {
+      logUtil(
+        msg:
+            '$log_prefix 已请求过广告配置, '
+            'native_ad_config=${_native_ad_config != null}, '
+            'adsId=${_native_ad_config?.adsId}',
+      );
       return;
     }
     _has_requested_native_ad_config = true;
@@ -293,9 +303,25 @@ class _ReadPageState extends State<ReadPage>
 
       final AdConfig ad_config = result.content!;
 
+      logUtil(
+        msg:
+            '$log_prefix 广告配置详情: '
+            'advertisers=${ad_config.advertisers}, '
+            'adsId="${ad_config.adsId}", '
+            'adsType=${ad_config.adsType}, '
+            'uuid="${ad_config.uuid}", '
+            'id=${ad_config.id}',
+      );
+
       // advertisers=1 表示谷歌 AdMob，且 ads_id 必须有值。
       if (ad_config.advertisers != 1 || ad_config.adsId.isEmpty) {
-        logUtil(msg: '$log_prefix 广告商不是谷歌或adsId为空，跳过', type: 'w');
+        logUtil(
+          msg:
+              '$log_prefix 广告商不是谷歌或adsId为空，跳过: '
+              'advertisers=${ad_config.advertisers} (期望1), '
+              'adsId="${ad_config.adsId}" (期望非空)',
+          type: 'w',
+        );
         return;
       }
 
@@ -351,17 +377,51 @@ class _ReadPageState extends State<ReadPage>
 
   /// 章节正文进入阅读窗口时完成该章唯一一次广告概率判断。
   void _on_chapter_loaded(int chapter_index) {
-    if (!AdDisplayPolicy.can_show_ads()) return;
+    const String log_prefix = '[ReadNativeAd]';
+
+    if (!AdDisplayPolicy.can_show_ads()) {
+      final ProjectConfigStore? store = Get.isRegistered<ProjectConfigStore>()
+          ? Get.find<ProjectConfigStore>()
+          : null;
+      logUtil(
+        msg:
+            '$log_prefix can_show_ads=false, '
+            'config_loaded=${store?.is_config_loaded.value}, '
+            'ads_switch=${store?.current.ads_switch}, '
+            'is_ads_enabled=${store?.current.is_ads_enabled}',
+        type: 'w',
+      );
+      return;
+    }
 
     final ProjectConfigStore config_store = Get.find<ProjectConfigStore>();
-    if (!config_store.is_config_loaded.value) return;
+    if (!config_store.is_config_loaded.value) {
+      logUtil(msg: '$log_prefix config未加载完成，跳过章节 $chapter_index', type: 'w');
+      return;
+    }
 
     final bool should_show = logic.resolve_chapter_native_ad_decision(
       chapter_index: chapter_index,
       probability:
           config_store.current.ads_read_show_interstitial_ads_probability,
     );
-    if (!should_show) return;
+    if (!should_show) {
+      logUtil(
+        msg:
+            '$log_prefix 概率未命中, chapter=$chapter_index, '
+            'probability=${config_store.current.ads_read_show_interstitial_ads_probability}',
+      );
+      return;
+    }
+
+    logUtil(
+      msg:
+          '$log_prefix 概率命中, chapter=$chapter_index, '
+          'probability=${config_store.current.ads_read_show_interstitial_ads_probability}, '
+          'native_ad_config=${_native_ad_config != null}, '
+          'is_loading=$_is_native_ad_config_loading, '
+          'has_requested=$_has_requested_native_ad_config',
+    );
 
     if (mounted) setState(() {});
     unawaited(_load_native_ad_config());
@@ -387,12 +447,19 @@ class _ReadPageState extends State<ReadPage>
 
   /// 按公共平台策略同步长篇正文广告状态。
   void _sync_ad_policy() {
+    const String log_prefix = '[ReadNativeAd]';
     if (!AdDisplayPolicy.can_show_ads()) {
+      logUtil(msg: '$log_prefix _sync_ad_policy: can_show_ads=false', type: 'w');
       if (mounted) setState(() {});
       return;
     }
     final Set<int> native_ad_chapter_indexes =
         _resolve_loaded_chapter_native_ad_decisions();
+    logUtil(
+      msg:
+          '$log_prefix _sync_ad_policy: 命中章节数=${native_ad_chapter_indexes.length}, '
+          'indexes=$native_ad_chapter_indexes',
+    );
     if (native_ad_chapter_indexes.isNotEmpty) {
       unawaited(_load_native_ad_config());
     }

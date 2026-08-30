@@ -6,6 +6,7 @@ import 'package:app/pages/read/logic.dart' as read_logic;
 import 'package:app/pages/read/widgets/introduction_section/index.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/util/ad_display_policy.dart';
+import 'package:app/util/log_util.dart';
 import 'package:app/util/native_ad_insert_index.dart';
 
 import './style.dart';
@@ -119,20 +120,38 @@ class ReadContent extends StatelessWidget {
   Map<int, int> _resolve_native_ad_insert_indexes() {
     if (!AdDisplayPolicy.can_show_ads()) return <int, int>{};
 
+    const String log_prefix = '[ReadNativeAd]';
     final Map<int, int> insert_indexes = <int, int>{};
     final Map<int, List<int>> paragraph_lengths =
         _resolve_chapter_paragraph_lengths();
     for (final MapEntry<int, List<int>> entry in paragraph_lengths.entries) {
+      final bool should_show = logic.should_show_native_ad_for_chapter(
+        entry.key,
+      );
+      final bool has_native_ad =
+          should_show &&
+          (native_ad_config != null || is_native_ad_config_loading);
       final int? insert_index =
           resolve_native_ad_insert_index_by_paragraph_lengths(
             paragraph_lengths: entry.value,
-            has_native_ad:
-                logic.should_show_native_ad_for_chapter(entry.key) &&
-                (native_ad_config != null || is_native_ad_config_loading),
+            has_native_ad: has_native_ad,
             display_ratio: ContentStyle.native_ad_display_ratio,
             minimum_paragraph_count:
                 ContentStyle.native_ad_minimum_paragraph_count,
           );
+      if (should_show && insert_index == null) {
+        logUtil(
+          msg:
+              '$log_prefix 广告未渲染, chapter=${entry.key}, '
+              'should_show=$should_show, '
+              'native_ad_config=${native_ad_config != null}, '
+              'is_loading=$is_native_ad_config_loading, '
+              'has_native_ad=$has_native_ad, '
+              'paragraph_count=${entry.value.length}, '
+              'min_paragraph=${ContentStyle.native_ad_minimum_paragraph_count}',
+          type: 'w',
+        );
+      }
       if (insert_index != null) {
         insert_indexes[entry.key] = insert_index;
       }
