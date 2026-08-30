@@ -65,6 +65,9 @@ private final class MasonryNativeAdFactory: NSObject, FLTNativeAdFactory {
     mediaView.translatesAutoresizingMaskIntoConstraints = false
     mediaView.mediaContent = nativeAd.mediaContent
     mediaView.contentMode = .scaleAspectFit
+    // 禁用媒体区域内所有 UIScrollView 的滚动指示器，
+    // 避免 iOS 在广告卡片上方显示多余的空白滚动条。
+    disableScrollIndicators(in: mediaView)
     adView.addSubview(mediaView)
     adView.mediaView = mediaView
 #if DEBUG
@@ -198,10 +201,8 @@ private final class MasonryNativeAdFactory: NSObject, FLTNativeAdFactory {
 
       adChoicesView.topAnchor.constraint(equalTo: bodyLabel.bottomAnchor, constant: 4),
       adChoicesView.trailingAnchor.constraint(equalTo: adView.trailingAnchor, constant: -10),
-      adChoicesView.bottomAnchor.constraint(
-        lessThanOrEqualTo: attributionLabel.bottomAnchor,
-        constant: 4
-      ),
+      adChoicesView.widthAnchor.constraint(equalToConstant: 24),
+      adChoicesView.heightAnchor.constraint(equalToConstant: 24),
 
       callToActionLabel.leadingAnchor.constraint(equalTo: headlineLabel.leadingAnchor),
       callToActionLabel.trailingAnchor.constraint(equalTo: headlineLabel.trailingAnchor),
@@ -269,11 +270,89 @@ private final class MasonryNativeAdFactory: NSObject, FLTNativeAdFactory {
     label.lineBreakMode = .byTruncatingTail
     return label
   }
+
+  /// 递归禁用媒体视图内部滚动容器的指示器。
+  private func disableScrollIndicators(in view: UIView) {
+    for subview in view.subviews {
+      if let scrollView = subview as? UIScrollView {
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.showsHorizontalScrollIndicator = false
+      }
+      disableScrollIndicators(in: subview)
+    }
+  }
+}
+
+/// 将短篇原生广告的真实视频播放事件回传 Flutter。
+private final class ShortStoryNativeVideoObserver: NSObject, VideoControllerDelegate {
+  weak var layoutChannel: FlutterMethodChannel?
+  let slotID: String
+  let layoutToken: Int
+
+  init(layoutChannel: FlutterMethodChannel?, slotID: String, layoutToken: Int) {
+    self.layoutChannel = layoutChannel
+    self.slotID = slotID
+    self.layoutToken = layoutToken
+  }
+
+  func videoControllerDidPlayVideo(_ videoController: VideoController) {
+    report(playbackState: "playing", isMuted: videoController.isMuted)
+  }
+
+  func videoControllerDidPauseVideo(_ videoController: VideoController) {
+    report(playbackState: "paused", isMuted: videoController.isMuted)
+  }
+
+  func videoControllerDidEndVideoPlayback(_ videoController: VideoController) {
+    report(playbackState: "ended", isMuted: videoController.isMuted)
+  }
+
+  func videoControllerDidMuteVideo(_ videoController: VideoController) {
+    report(playbackState: "muted", isMuted: true)
+  }
+
+  func videoControllerDidUnmuteVideo(_ videoController: VideoController) {
+    report(playbackState: "unmuted", isMuted: false)
+  }
+
+  /// 将视频播放状态回传 Flutter 日志层。
+  private func report(playbackState: String, isMuted: Bool) {
+    layoutChannel?.invokeMethod(
+      "onNativeAdVideoPlayback",
+      arguments: [
+        "slotId": slotID,
+        "playbackState": playbackState,
+        "isMuted": isMuted,
+        "layoutToken": layoutToken,
+      ]
+    )
+  }
 }
 
 /// 短篇正文中接近效果图沉浸式视频卡片的原生高级广告工厂。
 private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
-  weak var layoutChannel: FlutterMethodChannel?
+  private struct NativeAdMediaState {
+    let layoutToken: Int
+    let hasVideoContent: Bool
+  }
+
+  weak var layoutChannel: FlutterMethodChannel? {
+    didSet {
+      layoutChannel?.setMethodCallHandler { [weak self] call, result in
+        guard let self else {
+          result(nil)
+          return
+        }
+        self.handleLayoutMethodCall(call, result: result)
+      }
+    }
+  }
+
+  /// 供 Flutter 主动查询的媒体素材状态，解决平台视图回调时序竞争。
+  private var mediaStateBySlotID: [String: NativeAdMediaState] = [:]
+
+  /// 强引用视频事件监听器，因为 Google SDK 的 delegate 属性为弱引用。
+  private var videoObserversBySlotID: [String: ShortStoryNativeVideoObserver] = [:]
 
   func createNativeAd(
     _ nativeAd: NativeAd,
@@ -290,22 +369,26 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     let cardWidth = (customOptions?["cardWidth"] as? NSNumber)?.doubleValue
     let layoutToken = (customOptions?["layoutToken"] as? NSNumber)?.intValue
     // 广告卡片背景色：夜间 #1E2430，日间对应 ColorConstants.whiteColor (white)。
-    let cardBackground = isDark
+    let cardBackground =
+      isDark
       ? UIColor(red: 30 / 255, green: 36 / 255, blue: 48 / 255, alpha: 1)
       : UIColor.white
     // 主要文字颜色：夜间白色，日间对应 ColorConstants.lightTextColor (#222222)。
-    let primaryText = isDark
+    let primaryText =
+      isDark
       ? UIColor.white
       : UIColor(red: 34 / 255, green: 34 / 255, blue: 34 / 255, alpha: 1)
     // 次要文字颜色：夜间 #B0B5C0，日间 #7E7660。
-    let secondaryText = isDark
+    let secondaryText =
+      isDark
       ? UIColor(red: 176 / 255, green: 181 / 255, blue: 192 / 255, alpha: 1)
       : UIColor(red: 126 / 255, green: 118 / 255, blue: 96 / 255, alpha: 1)
 
     // 广告卡片容器（圆角 16pt，裁剪内容）。
-    let resolvedCardWidth = cardWidth.flatMap { width in
-      width.isFinite && width > 0 ? width : nil
-    } ?? 320
+    let resolvedCardWidth =
+      cardWidth.flatMap { width in
+        width.isFinite && width > 0 ? width : nil
+      } ?? 320
     let adView = NativeAdView(
       frame: CGRect(x: 0, y: 0, width: resolvedCardWidth, height: 1)
     )
@@ -313,11 +396,21 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     adView.layer.cornerRadius = 16
     adView.clipsToBounds = true
 
-    // 广告归因栏独立占据顶部空间，避免任何注册素材覆盖媒体区域。
-    let attributionHeader = UIView(frame: .zero)
-    attributionHeader.translatesAutoresizingMaskIntoConstraints = false
-    attributionHeader.backgroundColor = cardBackground
-    adView.addSubview(attributionHeader)
+    // 使用单一纵向栈确保归因栏、媒体和信息区域物理隔离。
+    let contentStackView = UIStackView(frame: .zero)
+    contentStackView.translatesAutoresizingMaskIntoConstraints = false
+    contentStackView.axis = .vertical
+    contentStackView.alignment = .fill
+    contentStackView.distribution = .fill
+    contentStackView.spacing = 0
+    adView.addSubview(contentStackView)
+
+    // Google SDK 根据 NativeAdOptions 把 AdChoices 自动放在
+    // NativeAdView 右上角，归因栏右半部分不放置其他素材。
+    let attributionHeaderView = UIView(frame: .zero)
+    attributionHeaderView.translatesAutoresizingMaskIntoConstraints = false
+    attributionHeaderView.backgroundColor = cardBackground
+    contentStackView.addArrangedSubview(attributionHeaderView)
 
     let attributionLabel = NativeAdInsetLabel(frame: .zero)
     attributionLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -340,27 +433,50 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     attributionLabel.lineBreakMode = .byTruncatingTail
     attributionLabel.layer.cornerRadius = 10
     attributionLabel.clipsToBounds = true
-    attributionHeader.addSubview(attributionLabel)
+    attributionHeaderView.addSubview(attributionLabel)
 
-    // 视频/图片媒体区域。
+    // 媒体外再增加一层强制裁剪容器。图片素材的内部 UIImageView
+    // 与视频素材的内部层级不同，只修改 MediaView 本身不足以
+    // 保证图片不越界覆盖归因栏、标题和按钮。
+    let mediaClipView = UIView(frame: .zero)
+    mediaClipView.translatesAutoresizingMaskIntoConstraints = false
+    mediaClipView.backgroundColor = cardBackground
+    mediaClipView.clipsToBounds = true
+    mediaClipView.layer.masksToBounds = true
+    contentStackView.addArrangedSubview(mediaClipView)
+
     let mediaView = MediaView(frame: .zero)
     mediaView.translatesAutoresizingMaskIntoConstraints = false
     mediaView.mediaContent = nativeAd.mediaContent
-    mediaView.contentMode = .scaleAspectFill
-    adView.addSubview(mediaView)
+    let hasVideoContent = nativeAd.mediaContent.hasVideoContent
+    mediaView.contentMode = hasVideoContent ? .scaleAspectFill : .scaleAspectFit
+    mediaView.clipsToBounds = true
+    mediaView.layer.masksToBounds = true
+    // 禁用媒体区域内所有 UIScrollView 的滚动指示器，
+    // 避免 iOS 在广告卡片上方显示多余的空白滚动条。
+    disableScrollIndicators(in: mediaView)
+    mediaClipView.addSubview(mediaView)
     adView.mediaView = mediaView
-#if DEBUG
-    print(
-      "[ShortStoryNativeAd] media hasVideoContent="
-        + "\(nativeAd.mediaContent.hasVideoContent)"
+    reportMediaType(
+      hasVideoContent: hasVideoContent,
+      slotID: slotID,
+      layoutToken: layoutToken
     )
-#endif
+    monitorVideoPlayback(
+      nativeAd: nativeAd,
+      hasVideoContent: hasVideoContent,
+      slotID: slotID,
+      layoutToken: layoutToken
+    )
+    #if DEBUG
+      let mediaType = hasVideoContent ? "视频广告" : "图片广告"
+      print("[ShortStoryNativeAd] 广告素材类型: \(mediaType)")
+    #endif
 
-    // AdChoices 广告标识（右上角）。
-    let adChoicesView = AdChoicesView(frame: .zero)
-    adChoicesView.translatesAutoresizingMaskIntoConstraints = false
-    attributionHeader.addSubview(adChoicesView)
-    adView.adChoicesView = adChoicesView
+    let informationView = UIView(frame: .zero)
+    informationView.translatesAutoresizingMaskIntoConstraints = false
+    informationView.backgroundColor = cardBackground
+    contentStackView.addArrangedSubview(informationView)
 
     // 广告标题（居中，最多 3 行）。
     let headlineLabel = makeLabel(
@@ -370,7 +486,8 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
       lines: 3
     )
     headlineLabel.textAlignment = .center
-    adView.addSubview(headlineLabel)
+    headlineLabel.setContentCompressionResistancePriority(.required, for: .vertical)
+    informationView.addSubview(headlineLabel)
     adView.headlineView = headlineLabel
 
     // 广告主名称（居中，单行）。
@@ -382,11 +499,15 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     )
     advertiserLabel.textAlignment = .center
     advertiserLabel.isHidden = nativeAd.advertiser == nil
+    if nativeAd.advertiser != nil {
+      advertiserLabel.setContentCompressionResistancePriority(.required, for: .vertical)
+    }
     let advertiserTopSpacing: CGFloat = nativeAd.advertiser == nil ? 0 : 5
-    let advertiserHeightConstraint = nativeAd.advertiser == nil
+    let advertiserHeightConstraint =
+      nativeAd.advertiser == nil
       ? advertiserLabel.heightAnchor.constraint(equalToConstant: 0)
       : nil
-    adView.addSubview(advertiserLabel)
+    informationView.addSubview(advertiserLabel)
     adView.advertiserView = advertiserLabel
 
     // Open 按钮：背景色对应 ColorConstants.themeColor (#F8D02D)，
@@ -407,51 +528,48 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     callToActionLabel.layer.cornerRadius = 23
     callToActionLabel.clipsToBounds = true
     callToActionLabel.isHidden = nativeAd.callToAction == nil
+    if nativeAd.callToAction != nil {
+      callToActionLabel.setContentCompressionResistancePriority(.required, for: .vertical)
+    }
     let callToActionHeight: CGFloat = nativeAd.callToAction == nil ? 0 : 46
     let callToActionTopSpacing: CGFloat = nativeAd.callToAction == nil ? 0 : 12
-    adView.addSubview(callToActionLabel)
+    informationView.addSubview(callToActionLabel)
     adView.callToActionView = callToActionLabel
 
-    // 布局约束：媒体区域 → 标题 → 广告主 → Open 按钮。
+    // 布局约束：根栈 → 归因栏 → 媒体裁剪容器 → 信息区域。
     NSLayoutConstraint.activate([
-      // 顶部广告归因栏：广告标识在左，AdChoices 在右，二者均不覆盖媒体。
-      attributionHeader.topAnchor.constraint(equalTo: adView.topAnchor),
-      attributionHeader.leadingAnchor.constraint(equalTo: adView.leadingAnchor),
-      attributionHeader.trailingAnchor.constraint(equalTo: adView.trailingAnchor),
-      attributionHeader.heightAnchor.constraint(greaterThanOrEqualToConstant: 32),
+      contentStackView.topAnchor.constraint(equalTo: adView.topAnchor),
+      contentStackView.leadingAnchor.constraint(equalTo: adView.leadingAnchor),
+      contentStackView.trailingAnchor.constraint(equalTo: adView.trailingAnchor),
+      contentStackView.bottomAnchor.constraint(equalTo: adView.bottomAnchor),
 
+      // 归因栏：左侧仅放置自有 Ad 标签，右侧留给 SDK 的 AdChoices。
+      attributionHeaderView.heightAnchor.constraint(equalToConstant: 36),
       attributionLabel.leadingAnchor.constraint(
-        equalTo: attributionHeader.leadingAnchor,
+        equalTo: attributionHeaderView.leadingAnchor,
         constant: 10
       ),
-      attributionLabel.centerYAnchor.constraint(equalTo: attributionHeader.centerYAnchor),
+      attributionLabel.centerYAnchor.constraint(equalTo: attributionHeaderView.centerYAnchor),
       attributionLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 20),
       attributionLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 20),
-
-      adChoicesView.trailingAnchor.constraint(
-        equalTo: attributionHeader.trailingAnchor,
-        constant: -10
-      ),
-      adChoicesView.centerYAnchor.constraint(equalTo: attributionHeader.centerYAnchor),
-      adChoicesView.topAnchor.constraint(greaterThanOrEqualTo: attributionHeader.topAnchor),
-      adChoicesView.bottomAnchor.constraint(lessThanOrEqualTo: attributionHeader.bottomAnchor),
       attributionLabel.trailingAnchor.constraint(
-        lessThanOrEqualTo: adChoicesView.leadingAnchor,
-        constant: -8
+        lessThanOrEqualTo: attributionHeaderView.centerXAnchor
       ),
 
-      // 媒体区域：位于归因栏下方，固定高度 260pt。
-      mediaView.topAnchor.constraint(equalTo: attributionHeader.bottomAnchor),
-      mediaView.leadingAnchor.constraint(equalTo: adView.leadingAnchor),
-      mediaView.trailingAnchor.constraint(equalTo: adView.trailingAnchor),
-      mediaView.heightAnchor.constraint(equalToConstant: 260),
+      // 媒体裁剪容器和 MediaView 始终等尺寸。
+      mediaClipView.heightAnchor.constraint(equalToConstant: 260),
+      mediaView.topAnchor.constraint(equalTo: mediaClipView.topAnchor),
+      mediaView.leadingAnchor.constraint(equalTo: mediaClipView.leadingAnchor),
+      mediaView.trailingAnchor.constraint(equalTo: mediaClipView.trailingAnchor),
+      mediaView.bottomAnchor.constraint(equalTo: mediaClipView.bottomAnchor),
 
-      // 标题：媒体下方 14pt，左右各 14pt。
-      headlineLabel.topAnchor.constraint(equalTo: mediaView.bottomAnchor, constant: 14),
-      headlineLabel.leadingAnchor.constraint(equalTo: adView.leadingAnchor, constant: 14),
-      headlineLabel.trailingAnchor.constraint(equalTo: adView.trailingAnchor, constant: -14),
+      // 信息区内使用严格纵向约束，不允许标题或按钮向上压入媒体区。
+      headlineLabel.topAnchor.constraint(equalTo: informationView.topAnchor, constant: 14),
+      headlineLabel.leadingAnchor.constraint(equalTo: informationView.leadingAnchor, constant: 14),
+      headlineLabel.trailingAnchor.constraint(
+        equalTo: informationView.trailingAnchor, constant: -14),
 
-      // 广告主名称：标题下方 5pt；素材为空时不保留空白。
+      // 广告主名称：标题下方；素材为空时不保留空白。
       advertiserLabel.topAnchor.constraint(
         equalTo: headlineLabel.bottomAnchor,
         constant: advertiserTopSpacing
@@ -459,36 +577,146 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
       advertiserLabel.leadingAnchor.constraint(equalTo: headlineLabel.leadingAnchor),
       advertiserLabel.trailingAnchor.constraint(equalTo: headlineLabel.trailingAnchor),
 
-      // Open 按钮：始终位于标题和广告主下方，避免任何素材相互覆盖。
+      // Open 按钮：广告主名称下方，底部固定 14pt。
       callToActionLabel.topAnchor.constraint(
-        greaterThanOrEqualTo: advertiserLabel.bottomAnchor,
+        equalTo: advertiserLabel.bottomAnchor,
         constant: callToActionTopSpacing
       ),
       callToActionLabel.leadingAnchor.constraint(equalTo: headlineLabel.leadingAnchor),
       callToActionLabel.trailingAnchor.constraint(equalTo: headlineLabel.trailingAnchor),
       callToActionLabel.heightAnchor.constraint(equalToConstant: callToActionHeight),
-      callToActionLabel.bottomAnchor.constraint(equalTo: adView.bottomAnchor, constant: -14),
+      callToActionLabel.bottomAnchor.constraint(
+        equalTo: informationView.bottomAnchor,
+        constant: -14
+      ),
     ])
     advertiserHeightConstraint?.isActive = true
 
-    adView.nativeAd = nativeAd
-    reportMeasuredHeight(
+    // 程序化创建的 NativeAdView 初始高度只有 1pt。先测量并完成布局，
+    // 再绑定 nativeAd，避免 SDK 在首次校验时看到所有素材重叠在原点。
+    let measuredHeight = resolveMeasuredHeight(
       adView: adView,
-      cardWidth: resolvedCardWidth,
+      cardWidth: resolvedCardWidth
+    )
+    adView.frame = CGRect(
+      x: 0,
+      y: 0,
+      width: resolvedCardWidth,
+      height: measuredHeight
+    )
+    adView.setNeedsLayout()
+    adView.layoutIfNeeded()
+    adView.nativeAd = nativeAd
+    // nativeAd 绑定时 SDK 才可能创建图片/视频内部视图，
+    // 再次禁用内部滚动指示器，外层 mediaClipView 始终负责硬裁剪。
+    disableScrollIndicators(in: mediaView)
+    #if DEBUG
+      let attributionFrame = attributionLabel.convert(attributionLabel.bounds, to: adView)
+      let mediaFrame = mediaClipView.convert(mediaClipView.bounds, to: adView)
+      let headlineFrame = headlineLabel.convert(headlineLabel.bounds, to: adView)
+      let advertiserFrame = advertiserLabel.convert(advertiserLabel.bounds, to: adView)
+      let callToActionFrame = callToActionLabel.convert(callToActionLabel.bounds, to: adView)
+      let hasAssetOverlap =
+        mediaFrame.intersects(headlineFrame)
+        || (!advertiserLabel.isHidden && mediaFrame.intersects(advertiserFrame))
+        || (!callToActionLabel.isHidden && mediaFrame.intersects(callToActionFrame))
+      print(
+        "[ShortStoryNativeAd] 布局校验: "
+          + "height=\(measuredHeight), "
+          + "ad=\(NSStringFromCGRect(attributionFrame)), "
+          + "media=\(NSStringFromCGRect(mediaFrame)), "
+          + "headline=\(NSStringFromCGRect(headlineFrame)), "
+          + "advertiser=\(NSStringFromCGRect(advertiserFrame)), "
+          + "cta=\(NSStringFromCGRect(callToActionFrame)), "
+          + "overlap=\(hasAssetOverlap)"
+      )
+    #endif
+    reportMeasuredHeight(
+      measuredHeight: measuredHeight,
       slotID: slotID,
       layoutToken: layoutToken
     )
     return adView
   }
 
-  /// 按实际标题、广告主和按钮内容测量卡片高度并通知 Flutter。
-  private func reportMeasuredHeight(
-    adView: NativeAdView,
-    cardWidth: Double,
+  /// 将广告的媒体素材类型回传 Flutter 日志层。
+  private func reportMediaType(
+    hasVideoContent: Bool,
     slotID: String?,
     layoutToken: Int?
   ) {
     guard let slotID, let layoutToken else { return }
+    mediaStateBySlotID[slotID] = NativeAdMediaState(
+      layoutToken: layoutToken,
+      hasVideoContent: hasVideoContent
+    )
+    DispatchQueue.main.async { [weak self] in
+      self?.layoutChannel?.invokeMethod(
+        "onNativeAdMediaType",
+        arguments: [
+          "slotId": slotID,
+          "hasVideoContent": hasVideoContent,
+          "layoutToken": layoutToken,
+        ]
+      )
+    }
+  }
+
+  /// 监听视频真实的播放、暂停、结束和静音状态。
+  private func monitorVideoPlayback(
+    nativeAd: NativeAd,
+    hasVideoContent: Bool,
+    slotID: String?,
+    layoutToken: Int?
+  ) {
+    guard hasVideoContent, let slotID, let layoutToken else { return }
+    let observer = ShortStoryNativeVideoObserver(
+      layoutChannel: layoutChannel,
+      slotID: slotID,
+      layoutToken: layoutToken
+    )
+    videoObserversBySlotID[slotID] = observer
+    nativeAd.mediaContent.videoController.delegate = observer
+  }
+
+  /// 处理 Flutter 对媒体素材状态的主动查询和释放请求。
+  private func handleLayoutMethodCall(
+    _ call: FlutterMethodCall,
+    result: @escaping FlutterResult
+  ) {
+    let arguments = call.arguments as? [String: Any]
+    let slotID = arguments?["slotId"] as? String
+
+    switch call.method {
+    case "getNativeAdMediaType":
+      let layoutToken = (arguments?["layoutToken"] as? NSNumber)?.intValue
+      guard
+        let slotID,
+        let layoutToken,
+        let mediaState = mediaStateBySlotID[slotID],
+        mediaState.layoutToken == layoutToken
+      else {
+        result(nil)
+        return
+      }
+      result(mediaState.hasVideoContent)
+    case "clearNativeAdMediaState":
+      if let slotID {
+        mediaStateBySlotID.removeValue(forKey: slotID)
+        videoObserversBySlotID.removeValue(forKey: slotID)
+      }
+      result(nil)
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  /// 按实际标题、广告主和按钮内容测量卡片高度。
+  private func resolveMeasuredHeight(
+    adView: NativeAdView,
+    cardWidth: Double
+  ) -> CGFloat {
+    let fallbackHeight: CGFloat = 460
     let targetSize = CGSize(
       width: cardWidth,
       height: UIView.layoutFittingCompressedSize.height
@@ -498,14 +726,25 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
       withHorizontalFittingPriority: .required,
       verticalFittingPriority: .fittingSizeLevel
     )
-    guard measuredSize.height.isFinite, measuredSize.height > 0 else { return }
+    guard measuredSize.height.isFinite, measuredSize.height > 0 else {
+      return fallbackHeight
+    }
+    return measuredSize.height.rounded(.up)
+  }
 
+  /// 将绑定广告前已确定的卡片高度通知 Flutter。
+  private func reportMeasuredHeight(
+    measuredHeight: CGFloat,
+    slotID: String?,
+    layoutToken: Int?
+  ) {
+    guard let slotID, let layoutToken else { return }
     DispatchQueue.main.async { [weak self] in
       self?.layoutChannel?.invokeMethod(
         "onNativeAdLayout",
         arguments: [
           "slotId": slotID,
-          "viewHeight": measuredSize.height,
+          "viewHeight": measuredHeight,
           "layoutToken": layoutToken,
         ]
       )
@@ -534,6 +773,21 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     label.numberOfLines = lines
     label.lineBreakMode = .byTruncatingTail
     return label
+  }
+
+  /// 递归禁用视图层级中所有 UIScrollView 的滚动指示器。
+  ///
+  /// Google AdMob 的 MediaView 内部可能包含 WKWebView 或其他
+  /// 嵌套滚动容器，iOS 默认显示滚动指示器会在广告卡片上方产生
+  /// 一条空白滚动条。递归遍历确保所有层级的滚动指示器都被禁用。
+  private func disableScrollIndicators(in view: UIView) {
+    for subview in view.subviews {
+      if let scrollView = subview as? UIScrollView {
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.showsHorizontalScrollIndicator = false
+      }
+      disableScrollIndicators(in: subview)
+    }
   }
 }
 

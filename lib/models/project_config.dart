@@ -59,6 +59,18 @@ class ProjectConfig {
   /// 苹果审核状态。1 = 审核中，2 = 审核通过。
   final int app_review_status;
 
+  /// 长篇小说每一章展示插屏广告的概率（0~100）。
+  final int ads_read_show_interstitial_ads_probability;
+
+  /// 短篇小说展示插屏广告的概率（0~100）。
+  final int ads_short_story_show_interstitial_ads_probability;
+
+  /// 长篇小说视频广告展示概率（0~100）。
+  final int ads_read_video_ad_probability;
+
+  /// 短篇小说视频广告展示概率（0~100）。
+  final int ads_short_story_video_ad_probability;
+
   const ProjectConfig({
     required this.id,
     required this.ads_switch,
@@ -71,6 +83,10 @@ class ProjectConfig {
     required this.contact_customer_service_switch,
     required this.famous_quote,
     required this.app_review_status,
+    required this.ads_read_show_interstitial_ads_probability,
+    required this.ads_short_story_show_interstitial_ads_probability,
+    required this.ads_read_video_ad_probability,
+    required this.ads_short_story_video_ad_probability,
   });
 
   /// 空配置兜底。
@@ -85,7 +101,11 @@ class ProjectConfig {
       share_switch = SwitchValue.on,
       contact_customer_service_switch = SwitchValue.on,
       famous_quote = '',
-      app_review_status = 2;
+      app_review_status = 2,
+      ads_read_show_interstitial_ads_probability = 100,
+      ads_short_story_show_interstitial_ads_probability = 100,
+      ads_read_video_ad_probability = 100,
+      ads_short_story_video_ad_probability = 100;
 
   /// 从 JSON 解析。
   factory ProjectConfig.from_json(Map<String, dynamic> json) {
@@ -105,6 +125,18 @@ class ProjectConfig {
       ),
       famous_quote: _parse_string(json['famous_quote']),
       app_review_status: _parse_int(json['app_review_status']),
+      ads_read_show_interstitial_ads_probability: _parse_probability(
+        json['ads_read_show_interstitial_ads_probability'],
+      ),
+      ads_short_story_show_interstitial_ads_probability: _parse_probability(
+        json['ads_short_story_show_interstitial_ads_probability'],
+      ),
+      ads_read_video_ad_probability: _parse_probability(
+        json['ads_read_video_ad_probability'],
+      ),
+      ads_short_story_video_ad_probability: _parse_probability(
+        json['ads_short_story_video_ad_probability'],
+      ),
     );
   }
 
@@ -120,6 +152,14 @@ class ProjectConfig {
   static String _parse_string(dynamic value) {
     if (value == null) return '';
     return value.toString();
+  }
+
+  /// 安全解析概率值（0~100）。
+  ///
+  /// 超出范围时自动钳制到 0 或 100。
+  static int _parse_probability(dynamic value) {
+    final int parsed = _parse_int(value);
+    return parsed.clamp(0, 100);
   }
 
   /// 判断指定开关是否在当前平台启用。

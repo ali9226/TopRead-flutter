@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import com.google.android.gms.ads.VideoController
 import com.google.android.gms.ads.nativead.AdChoicesView
 import com.google.android.gms.ads.nativead.MediaView
 import com.google.android.gms.ads.nativead.NativeAd
@@ -22,6 +23,39 @@ class ShortStoryNativeAdFactory(
     private val layoutInflater: LayoutInflater,
     private val layoutChannel: MethodChannel,
 ) : NativeAdFactory {
+    /** 原生广告槽位最近一次加载的媒体素材状态。 */
+    private data class NativeAdMediaState(
+        val layoutToken: Int,
+        val hasVideoContent: Boolean,
+    )
+
+    /** 供 Flutter 主动查询的媒体素材状态，解决平台视图回调时序竞争。 */
+    private val mediaStateBySlotId = mutableMapOf<String, NativeAdMediaState>()
+
+    init {
+        layoutChannel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getNativeAdMediaType" -> {
+                    val slotId = call.argument<String>("slotId")
+                    val layoutToken = call.argument<Number>("layoutToken")?.toInt()
+                    val mediaState = slotId?.let(mediaStateBySlotId::get)
+                    result.success(
+                        mediaState
+                            ?.takeIf { it.layoutToken == layoutToken }
+                            ?.hasVideoContent,
+                    )
+                }
+
+                "clearNativeAdMediaState" -> {
+                    call.argument<String>("slotId")?.let(mediaStateBySlotId::remove)
+                    result.success(null)
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+    }
+
     /**
      * 创建原生高级广告视图。
      *
@@ -73,11 +107,29 @@ class ShortStoryNativeAdFactory(
         bindOptionalText(advertiserView, nativeAd.advertiser)
         bindOptionalText(callToActionView, nativeAd.callToAction)
 
-        // Debug 模式下输出视频信息日志。
+        val hasVideoContent = nativeAd.mediaContent?.hasVideoContent() == true
+        reportMediaType(
+            hasVideoContent = hasVideoContent,
+            slotId = slotId,
+            layoutToken = layoutToken,
+        )
+        monitorVideoPlayback(
+            nativeAd = nativeAd,
+            hasVideoContent = hasVideoContent,
+            slotId = slotId,
+            layoutToken = layoutToken,
+        )
+
+        // Debug 模式下同步保留原生端日志，便于排查平台视图问题。
         if (BuildConfig.DEBUG) {
+            val mediaType = if (hasVideoContent) {
+                "视频广告"
+            } else {
+                "图片广告"
+            }
             Log.d(
                 "ShortStoryNativeAd",
-                "media hasVideoContent=${nativeAd.mediaContent?.hasVideoContent() == true}",
+                "广告素材类型: $mediaType",
             )
         }
 
@@ -90,6 +142,106 @@ class ShortStoryNativeAdFactory(
             layoutToken = layoutToken,
         )
         return adView
+    }
+
+    /** 将广告的媒体素材类型回传 Flutter 日志层。 */
+    private fun reportMediaType(
+        hasVideoContent: Boolean,
+        slotId: String?,
+        layoutToken: Int?,
+    ) {
+        if (slotId == null || layoutToken == null) return
+        mediaStateBySlotId[slotId] = NativeAdMediaState(
+            layoutToken = layoutToken,
+            hasVideoContent = hasVideoContent,
+        )
+        Handler(Looper.getMainLooper()).post {
+            layoutChannel.invokeMethod(
+                "onNativeAdMediaType",
+                mapOf(
+                    "slotId" to slotId,
+                    "hasVideoContent" to hasVideoContent,
+                    "layoutToken" to layoutToken,
+                ),
+            )
+        }
+    }
+
+    /** 监听视频真实的播放、暂停、结束和静音状态。 */
+    private fun monitorVideoPlayback(
+        nativeAd: NativeAd,
+        hasVideoContent: Boolean,
+        slotId: String?,
+        layoutToken: Int?,
+    ) {
+        if (!hasVideoContent || slotId == null || layoutToken == null) return
+        val videoController = nativeAd.mediaContent?.videoController ?: return
+        videoController.setVideoLifecycleCallbacks(
+            object : VideoController.VideoLifecycleCallbacks() {
+                override fun onVideoStart() {
+                    reportVideoPlayback(
+                        playbackState = "started",
+                        isMuted = videoController.isMuted,
+                        slotId = slotId,
+                        layoutToken = layoutToken,
+                    )
+                }
+
+                override fun onVideoPlay() {
+                    reportVideoPlayback(
+                        playbackState = "playing",
+                        isMuted = videoController.isMuted,
+                        slotId = slotId,
+                        layoutToken = layoutToken,
+                    )
+                }
+
+                override fun onVideoPause() {
+                    reportVideoPlayback(
+                        playbackState = "paused",
+                        isMuted = videoController.isMuted,
+                        slotId = slotId,
+                        layoutToken = layoutToken,
+                    )
+                }
+
+                override fun onVideoEnd() {
+                    reportVideoPlayback(
+                        playbackState = "ended",
+                        isMuted = videoController.isMuted,
+                        slotId = slotId,
+                        layoutToken = layoutToken,
+                    )
+                }
+
+                override fun onVideoMute(isMuted: Boolean) {
+                    reportVideoPlayback(
+                        playbackState = if (isMuted) "muted" else "unmuted",
+                        isMuted = isMuted,
+                        slotId = slotId,
+                        layoutToken = layoutToken,
+                    )
+                }
+            },
+        )
+    }
+
+    /** 将视频播放状态回传 Flutter 日志层。 */
+    private fun reportVideoPlayback(
+        playbackState: String,
+        isMuted: Boolean,
+        slotId: String,
+        layoutToken: Int,
+    ) {
+        layoutChannel.invokeMethod(
+            "onNativeAdVideoPlayback",
+            mapOf(
+                "slotId" to slotId,
+                "playbackState" to playbackState,
+                "isMuted" to isMuted,
+                "layoutToken" to layoutToken,
+            ),
+        )
     }
 
     /** 使用实际标题行数测量卡片高度，并回传 Flutter 更新平台视图尺寸。 */

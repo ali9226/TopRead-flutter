@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -29,25 +31,53 @@ class DeviceInfo extends GetxController {
    */
   var networkStatus = 0.obs;
 
-  // TODO 设置网络状态
+  /// 网络状态变更流订阅。
+  ///
+  /// 监听系统级网络切换事件，实时更新 [networkStatus]。
+  StreamSubscription<List<ConnectivityResult>>? _connectivity_subscription;
+
+  @override
+  void onInit() {
+    super.onInit();
+    // 初始化时先查询一次当前网络状态。
+    setNetworkStatus();
+    // 订阅网络状态变更流，实时响应断网/恢复。
+    _connectivity_subscription = Connectivity()
+        .onConnectivityChanged
+        .listen((List<ConnectivityResult> results) {
+      _apply_connectivity_results(results);
+    });
+  }
+
+  @override
+  void onClose() {
+    _connectivity_subscription?.cancel();
+    super.onClose();
+  }
+
+  // TODO 设置网络状态（手动调用，用于初始化或需要主动刷新时）。
   Future<void> setNetworkStatus() async {
     logUtil(msg: "设置网络状态");
     final List<ConnectivityResult> connectivityResult = await (Connectivity()
         .checkConnectivity());
+    _apply_connectivity_results(connectivityResult);
+  }
 
-    if (connectivityResult.contains(ConnectivityResult.mobile)) {
+  /// 将连接性检测结果应用到 [networkStatus]。
+  void _apply_connectivity_results(List<ConnectivityResult> results) {
+    if (results.contains(ConnectivityResult.mobile)) {
       networkStatus.value = 1;
-    } else if (connectivityResult.contains(ConnectivityResult.wifi)) {
+    } else if (results.contains(ConnectivityResult.wifi)) {
       networkStatus.value = 2;
-    } else if (connectivityResult.contains(ConnectivityResult.ethernet)) {
+    } else if (results.contains(ConnectivityResult.ethernet)) {
       networkStatus.value = 3;
-    } else if (connectivityResult.contains(ConnectivityResult.vpn)) {
+    } else if (results.contains(ConnectivityResult.vpn)) {
       networkStatus.value = 4;
-    } else if (connectivityResult.contains(ConnectivityResult.bluetooth)) {
+    } else if (results.contains(ConnectivityResult.bluetooth)) {
       networkStatus.value = 5;
-    } else if (connectivityResult.contains(ConnectivityResult.other)) {
+    } else if (results.contains(ConnectivityResult.other)) {
       networkStatus.value = 6;
-    } else if (connectivityResult.contains(ConnectivityResult.none)) {
+    } else if (results.contains(ConnectivityResult.none)) {
       networkStatus.value = 0;
     }
   }

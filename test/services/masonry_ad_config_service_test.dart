@@ -102,5 +102,9 @@ ProjectConfig _build_project_config({required int ads_switch}) {
     contact_customer_service_switch: SwitchValue.on,
     famous_quote: '',
     app_review_status: 2,
+    ads_read_show_interstitial_ads_probability: 100,
+    ads_short_story_show_interstitial_ads_probability: 100,
+    ads_read_video_ad_probability: 100,
+    ads_short_story_video_ad_probability: 100,
   );
 }

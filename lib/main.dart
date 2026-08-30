@@ -130,6 +130,8 @@ void main() async {
   unawaited(Constant.getAppVersion());
   unawaited(initHyphenation());
 
+  // 优先从本地缓存恢复 redis/get 数据，再发起网络请求覆盖。
+  await redisRequestStore.restore_from_cache();
   redisRequestStore.fetch_redis_data();
 
   // TODO 检查 App 版本更新（浏览器环境自动跳过）

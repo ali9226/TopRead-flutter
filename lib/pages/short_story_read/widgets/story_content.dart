@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 
 import 'package:app/pages/short_story_read/style.dart';
+import 'package:app/pages/short_story_read/utils/resolve_native_ad_insert_index.dart';
 import 'package:app/util/language_util/index.dart';
 
 /// 正文内容组件。
@@ -28,8 +29,11 @@ class StoryContent extends StatelessWidget {
 
   /// 原生广告横幅组件（可选）。
   ///
-  /// 非空时在正文 [ShortStoryReadStyle.native_ad_display_ratio] 位置插入。
+  /// 非空时在正文 [native_ad_display_ratio] 位置插入。
   final Widget? native_ad_widget;
+
+  /// 原生广告在当前 [content] 中的插入比例。
+  final double native_ad_display_ratio;
 
   const StoryContent({
     super.key,
@@ -38,6 +42,7 @@ class StoryContent extends StatelessWidget {
     this.is_loading = false,
     this.font_size = 17.0,
     this.native_ad_widget,
+    this.native_ad_display_ratio = ShortStoryReadStyle.native_ad_display_ratio,
   });
 
   @override
@@ -134,11 +139,11 @@ class StoryContent extends StatelessWidget {
     required int paragraph_count,
     required bool has_native_ad,
   }) {
-    if (!has_native_ad || paragraph_count < 4) return null;
-    // 在正文 1/3 处的段落之后插入广告。
-    return (paragraph_count * ShortStoryReadStyle.native_ad_display_ratio)
-        .ceil()
-        .clamp(1, paragraph_count);
+    return resolve_native_ad_insert_index(
+      paragraph_count: paragraph_count,
+      has_native_ad: has_native_ad,
+      display_ratio: native_ad_display_ratio,
+    );
   }
 
   /// 构建段落列表，可在指定位置插入原生广告。

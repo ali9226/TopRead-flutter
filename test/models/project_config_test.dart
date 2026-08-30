@@ -119,4 +119,30 @@ void main() {
       );
     });
   });
+
+  group('ProjectConfig 广告概率解析', () {
+    test('字符串和数字概率均可解析', () {
+      final ProjectConfig config = ProjectConfig.from_json(<String, dynamic>{
+        'ads_short_story_show_interstitial_ads_probability': '35',
+        'ads_short_story_video_ad_probability': 60.8,
+      });
+
+      expect(config.ads_short_story_show_interstitial_ads_probability, 35);
+      expect(config.ads_short_story_video_ad_probability, 60);
+    });
+
+    test('越界概率会限制在 0～100', () {
+      final ProjectConfig config = ProjectConfig.from_json(<String, dynamic>{
+        'ads_read_show_interstitial_ads_probability': -20,
+        'ads_short_story_show_interstitial_ads_probability': 120,
+        'ads_read_video_ad_probability': -1,
+        'ads_short_story_video_ad_probability': 101,
+      });
+
+      expect(config.ads_read_show_interstitial_ads_probability, 0);
+      expect(config.ads_short_story_show_interstitial_ads_probability, 100);
+      expect(config.ads_read_video_ad_probability, 0);
+      expect(config.ads_short_story_video_ad_probability, 100);
+    });
+  });
 }

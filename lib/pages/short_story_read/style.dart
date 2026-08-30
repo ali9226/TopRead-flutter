@@ -125,6 +125,12 @@ class ShortStoryReadStyle {
   /// 原生高级广告在正文中的展示位置比例（1/3 处）。
   static const double native_ad_display_ratio = 1 / 3;
 
+  /// 计算广告可视区域时，阅读视口顶部的额外安全间距。
+  static const double native_ad_viewport_top_spacing = 12.0;
+
+  /// 广告顶部进入屏幕底部该高度后立即挂载平台视图。
+  static const double native_ad_minimum_visible_extent = 24.0;
+
   /// CJK 语系解锁区域高度。
   static const double unlock_gate_height_cjk = 160.0;
 
