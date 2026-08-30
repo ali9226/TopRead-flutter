@@ -36,12 +36,13 @@ import 'package:app/pages/short_story_read/widgets/reading_settings_sheet.dart';
 import 'package:app/pages/short_story_read/widgets/auto_read_settings_sheet.dart';
 import 'package:app/components/no_internet/index.dart';
 import 'package:app/components/share_sheet/index.dart';
+import 'package:app/components/inline_native_ad/index.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/log_util.dart';
-import 'package:app/pages/short_story_read/utils/native_ad_visibility.dart';
+import 'package:app/util/native_ad_visibility.dart';
 import 'package:app/pages/short_story_read/utils/resolve_next_story_preview_content.dart';
-import 'package:app/pages/short_story_read/utils/resolve_native_ad_insert_index.dart';
+import 'package:app/util/native_ad_insert_index.dart';
 import 'package:app/pages/short_story_read/widgets/next_story_preview.dart';
 import 'package:app/pages/short_story_read/widgets/reader_overlay_layer.dart';
 import 'package:app/pages/short_story_read/widgets/previous_pull_header.dart';
@@ -51,7 +52,6 @@ import 'package:app/models/ad_verify_result.dart';
 import 'package:app/util/rewarded_ad_util.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/percentage_probability.dart';
-import 'package:app/pages/short_story_read/widgets/native_ad_banner.dart';
 
 /// 短篇小说阅读页面。
 ///
@@ -949,7 +949,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     final AdConfig? ad_config = _native_ad_config;
     return KeyedSubtree(
       key: _native_ad_slot_key,
-      child: NativeAdBanner(
+      child: InlineNativeAdBanner(
         ad_unit_id: ad_config?.adsId ?? '',
         uuid: ad_config?.uuid ?? '',
         on_unlock: _on_unlock_story_tap,

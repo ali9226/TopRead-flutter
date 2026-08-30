@@ -108,14 +108,16 @@ class _ReadPageState extends State<ReadPage>
   final ValueNotifier<double> _reading_progress_notifier =
       ValueNotifier<double>(0);
 
-  /// 原生广告单元 ID（从后端接口加载，为空时不展示广告）。
-  String _ad_unit_id = '';
+  /// 当前小说唯一的原生广告配置，所有命中概率的章节共同复用。
+  AdConfig? _native_ad_config;
 
-  /// 广告配置的唯一标识，用于服务器端验证。
-  String _ad_uuid = '';
+  /// 当前小说是否正在请求原生广告配置。
+  bool _is_native_ad_config_loading = false;
 
-  /// 是否正在请求正文原生广告配置。
-  bool _is_ad_config_loading = false;
+  /// 当前小说是否已经请求过原生广告配置。
+  ///
+  /// 无论接口成功或失败，整个阅读页面生命周期内都只请求一次。
+  bool _has_requested_native_ad_config = false;
 
   /// 是否进入正文区域的展示通知器。
   final ValueNotifier<bool> _has_started_reading_notifier = ValueNotifier<bool>(
@@ -204,6 +206,7 @@ class _ReadPageState extends State<ReadPage>
     logic.show_navigation.value = false;
     logic.wait_until_chapter_mutation_allowed = _wait_until_scroll_idle;
     logic.preserve_chapter_anchor = _preserve_chapter_anchor;
+    logic.on_chapter_loaded = _on_chapter_loaded;
 
     // 路由参数非法时回退首页，避免渲染异常状态页面。
     if (!logic.has_valid_story_id) {
@@ -252,24 +255,30 @@ class _ReadPageState extends State<ReadPage>
 
   /// 后台加载原生高级广告配置。
   ///
-  /// 请求 ads/short_story_read_show_ads 接口获取广告单元 ID，
-  /// 成功且广告商为谷歌 AdMob 时存储配置，供正文区域 10% 概率插入广告使用。
+  /// 请求 ads/read_show_ads 接口获取长篇正文专用广告单元 ID。
+  ///
+  /// [source_id] 使用路由传入的长篇小说 ID。整个小说阅读页面生命周期内
+  /// 只请求一次，命中概率的不同章节共同复用返回的广告配置。
   /// 加载失败不影响页面正常展示。
   Future<void> _load_native_ad_config() async {
     const String log_prefix = '[ReadNativeAdConfig]';
-    if (!AdDisplayPolicy.can_show_ads() || _is_ad_config_loading) return;
-    _is_ad_config_loading = true;
+    if (!AdDisplayPolicy.can_show_ads() || _has_requested_native_ad_config) {
+      return;
+    }
+    _has_requested_native_ad_config = true;
+    _is_native_ad_config_loading = true;
+    if (mounted) setState(() {});
     try {
-      logUtil(msg: '$log_prefix 开始请求广告配置, novel_id=${widget.story_id}');
+      logUtil(msg: '$log_prefix 开始请求广告配置, source_id=${widget.story_id}');
 
       final ResultsType<AdConfig> result = await postRequest<AdConfig>(
-        path: 'ads/short_story_read_show_ads',
+        path: 'ads/read_show_ads',
         parameter: <String, dynamic>{'source_id': widget.story_id},
         showTips: false,
         fromJson: (json) => AdConfig.fromJson(json),
       );
 
-      if (!mounted || !AdDisplayPolicy.can_show_ads()) return;
+      if (!mounted) return;
 
       logUtil(
         msg:
@@ -290,32 +299,104 @@ class _ReadPageState extends State<ReadPage>
         return;
       }
 
-      logUtil(msg: '$log_prefix 广告配置加载成功, adUnitId=${ad_config.adsId}');
+      logUtil(
+        msg:
+            '$log_prefix 广告配置加载成功, '
+            'adsType=${ad_config.adsType}, '
+            'adUnitId=${ad_config.adsId}',
+      );
 
-      setState(() {
-        _ad_unit_id = ad_config.adsId;
-        _ad_uuid = ad_config.uuid;
-      });
+      _native_ad_config = ad_config;
     } catch (e, stack_trace) {
       logUtil(msg: '$log_prefix 广告配置加载异常: $e\n$stack_trace', type: 'e');
     } finally {
-      _is_ad_config_loading = false;
+      _is_native_ad_config_loading = false;
+      if (mounted) setState(() {});
     }
   }
 
-  /// 按公共平台策略加载或清理长篇正文广告。
+  /// 在 AdMob 确认原生广告产生真实展示后记录一次长篇小说广告统计。
+  Future<void> _record_native_ad_impression() async {
+    const String log_prefix = '[ReadNativeAdRecord]';
+    final AdConfig? ad_config = _native_ad_config;
+    if (ad_config == null || ad_config.adsId.isEmpty) return;
+
+    try {
+      final ResultsType<void> result = await postRequest<void>(
+        path: 'ads/read_record_count',
+        parameter: <String, dynamic>{
+          'ads_id': ad_config.adsId,
+          'source_id': widget.story_id,
+        },
+        showTips: false,
+      );
+      if (!result.status) {
+        logUtil(
+          msg:
+              '$log_prefix 展示统计失败, source_id=${widget.story_id}, '
+              'adUnitId=${ad_config.adsId}, message=${result.message}',
+          type: 'w',
+        );
+        return;
+      }
+      logUtil(
+        msg:
+            '$log_prefix 展示统计成功, source_id=${widget.story_id}, '
+            'adUnitId=${ad_config.adsId}',
+      );
+    } catch (e, stack_trace) {
+      logUtil(msg: '$log_prefix 展示统计异常: $e\n$stack_trace', type: 'e');
+    }
+  }
+
+  /// 章节正文进入阅读窗口时完成该章唯一一次广告概率判断。
+  void _on_chapter_loaded(int chapter_index) {
+    if (!AdDisplayPolicy.can_show_ads()) return;
+
+    final ProjectConfigStore config_store = Get.find<ProjectConfigStore>();
+    if (!config_store.is_config_loaded.value) return;
+
+    final bool should_show = logic.resolve_chapter_native_ad_decision(
+      chapter_index: chapter_index,
+      probability:
+          config_store.current.ads_read_show_interstitial_ads_probability,
+    );
+    if (!should_show) return;
+
+    if (mounted) setState(() {});
+    unawaited(_load_native_ad_config());
+  }
+
+  /// 为项目配置到达前已经加载的章节补齐一次性概率判断。
+  Set<int> _resolve_loaded_chapter_native_ad_decisions() {
+    if (!AdDisplayPolicy.can_show_ads()) return <int>{};
+
+    final int probability = Get.find<ProjectConfigStore>()
+        .current
+        .ads_read_show_interstitial_ads_probability;
+    final Set<int> native_ad_chapter_indexes = <int>{};
+    for (final int chapter_index in logic.loaded_chapter_indexes) {
+      final bool should_show = logic.resolve_chapter_native_ad_decision(
+        chapter_index: chapter_index,
+        probability: probability,
+      );
+      if (should_show) native_ad_chapter_indexes.add(chapter_index);
+    }
+    return native_ad_chapter_indexes;
+  }
+
+  /// 按公共平台策略同步长篇正文广告状态。
   void _sync_ad_policy() {
     if (!AdDisplayPolicy.can_show_ads()) {
-      if (_ad_unit_id.isEmpty && _ad_uuid.isEmpty) return;
-      setState(() {
-        _ad_unit_id = '';
-        _ad_uuid = '';
-      });
+      if (mounted) setState(() {});
       return;
     }
-    if (_ad_unit_id.isEmpty && !_is_ad_config_loading) {
+    final Set<int> native_ad_chapter_indexes =
+        _resolve_loaded_chapter_native_ad_decisions();
+    if (native_ad_chapter_indexes.isNotEmpty) {
       unawaited(_load_native_ad_config());
     }
+    if (mounted) setState(() {});
   }
 
   /// 初始化页面，有阅读进度时静默加载目标章节。
@@ -560,6 +641,7 @@ class _ReadPageState extends State<ReadPage>
     _ad_policy_worker?.dispose();
     logic.wait_until_chapter_mutation_allowed = null;
     logic.preserve_chapter_anchor = null;
+    logic.on_chapter_loaded = null;
     final Completer<void>? idle_completer = _scroll_idle_completer;
     if (idle_completer != null && !idle_completer.isCompleted) {
       idle_completer.complete();
@@ -1571,9 +1653,11 @@ class _ReadPageState extends State<ReadPage>
                     reading_items: reading_items,
                     reading_section_key: reading_section_key,
                     on_reading_tap_down: _handle_reading_tap_down,
-                    novel_id: widget.story_id,
-                    ad_unit_id: _ad_unit_id,
-                    ad_uuid: _ad_uuid,
+                    native_ad_config: _native_ad_config,
+                    is_native_ad_config_loading: _is_native_ad_config_loading,
+                    on_native_ad_impression: () {
+                      unawaited(_record_native_ad_impression());
+                    },
                   ),
                 ),
               ),

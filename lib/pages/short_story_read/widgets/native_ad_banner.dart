@@ -25,7 +25,7 @@ enum NativeAdLoadStatus { idle, loading, loaded, failed }
 ///
 /// 夜间模式通过 [DeviceInfo.dark] 响应式读取，切换主题时容器背景色自动更新。
 class NativeAdBanner extends StatefulWidget {
-  /// 广告单元 ID（由后端接口 ads/short_story_read_show_ads 返回）。
+  /// 广告单元 ID（由对应阅读场景的广告配置接口返回）。
   final String ad_unit_id;
 
   /// 广告配置的唯一标识，用于服务器端验证。
@@ -42,7 +42,7 @@ class NativeAdBanner extends StatefulWidget {
 
   /// 是否允许把已加载的原生广告视图挂载到 Flutter 视图树。
   ///
-  /// 短篇阅读页会先预加载素材，到达广告位置后才设为 true，
+  /// 阅读页会先预加载素材，到达广告位置后才设为 true，
   /// 防止平台视图首次挂载时已经位于屏幕外。
   final bool attach_ad;
 
@@ -660,14 +660,23 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               const SizedBox(height: _spacing_top),
-              // iOS 的平台视图不叠加外阴影，避免圆角边缘出现
-              // 黑色投影被 PlatformView 的矩形边界突兀裁断。
+              // iOS 使用负扩散、向下偏移的柔和阴影，阴影不进入
+              // PlatformView 圆角内部，避免左右出现被裁断的黑边。
               Container(
                 height: _ad_height,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16.0),
                   boxShadow: is_ios
-                      ? const <BoxShadow>[]
+                      ? <BoxShadow>[
+                          BoxShadow(
+                            color: Colors.black.withValues(
+                              alpha: is_dark ? 0.22 : 0.09,
+                            ),
+                            blurRadius: 20,
+                            spreadRadius: -5,
+                            offset: const Offset(0, 8),
+                          ),
+                        ]
                       : <BoxShadow>[
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.06),

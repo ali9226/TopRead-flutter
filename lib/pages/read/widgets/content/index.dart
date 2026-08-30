@@ -1,17 +1,19 @@
-import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
+import 'package:app/components/inline_native_ad/index.dart';
+import 'package:app/config/font_config.dart';
+import 'package:app/models/ad_config.dart';
 import 'package:app/pages/read/logic.dart' as read_logic;
 import 'package:app/pages/read/widgets/introduction_section/index.dart';
-import 'package:app/pages/short_story_read/widgets/native_ad_banner.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/util/ad_display_policy.dart';
+import 'package:app/util/native_ad_insert_index.dart';
+
 import './style.dart';
 
 /// 阅读页正文内容组件。
 ///
-/// 负责展示小说正文内容，包括标题、提示信息以及逐段渲染的正文文本。
-/// 同时集成了点击分区翻页的交互逻辑。
-/// 以 10% 的稳定概率在章节标题后插入原生高级广告。
+/// 负责展示小说正文内容，并在命中当前会话概率的章节正文中部插入
+/// 与短篇阅读页一致的原生高级广告。
 class ReadContent extends StatelessWidget {
   /// 页面逻辑层。
   final read_logic.Logic logic;
@@ -25,6 +27,9 @@ class ReadContent extends StatelessWidget {
   /// 正文内容项列表。
   final List<ReadingContentItem> reading_items;
 
+  /// 主阅读列表滚动控制器，用于延迟挂载屏幕外的平台广告视图。
+  final ScrollController scroll_controller;
+
   /// 正文区块的锚点 key，用于点击底部胶囊后快速定位到正文。
   final GlobalKey? reading_section_key;
 
@@ -34,14 +39,14 @@ class ReadContent extends StatelessWidget {
   /// 关注状态变更回调。
   final ValueChanged<bool>? on_focus_changed;
 
-  /// 小说 ID（用于稳定随机决定哪些章节插入广告）。
-  final int novel_id;
+  /// 当前小说唯一的原生广告配置。
+  final AdConfig? native_ad_config;
 
-  /// 原生广告单元 ID（为空时不展示广告）。
-  final String ad_unit_id;
+  /// 当前小说是否正在请求原生广告配置。
+  final bool is_native_ad_config_loading;
 
-  /// 广告配置的唯一标识。
-  final String ad_uuid;
+  /// 原生广告产生真实展示后的统计回调。
+  final VoidCallback? on_native_ad_impression;
 
   const ReadContent({
     super.key,
@@ -49,26 +54,17 @@ class ReadContent extends StatelessWidget {
     required this.is_dark,
     required this.detail,
     required this.reading_items,
+    required this.scroll_controller,
     required this.on_reading_tap_down,
     this.reading_section_key,
     this.on_focus_changed,
-    this.novel_id = 0,
-    this.ad_unit_id = '',
-    this.ad_uuid = '',
+    this.native_ad_config,
+    this.is_native_ad_config_loading = false,
+    this.on_native_ad_impression,
   });
-
-  /// 使用小说 ID 和章节索引生成稳定的 10% 随机判断。
-  ///
-  /// 同一本小说的同一章节每次打开都会得到相同结果，
-  /// 避免刷新页面时广告位置跳变。
-  bool _should_show_ad_for_chapter(int chapter_index) {
-    final int hash = (novel_id * 31 + chapter_index * 17) & 0x7FFFFFFF;
-    return hash % 100 < 10;
-  }
 
   @override
   Widget build(BuildContext context) {
-    // 正文主文字颜色根据主题切换，夜间提高透明度避免刺眼。
     final Color reading_text_color = is_dark
         ? ContentStyle.reading_text_color_dark
         : ContentStyle.reading_text_color_light;
@@ -76,8 +72,7 @@ class ReadContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        // 阅读列表包含第一章时展示头部介绍区；目录跳转到中间章节时隐藏（跳转场景）。
-        if (logic.should_show_introduction) ...[
+        if (logic.should_show_introduction) ...<Widget>[
           ReadIntroductionSection(
             is_dark: is_dark,
             detail: detail,
@@ -85,7 +80,6 @@ class ReadContent extends StatelessWidget {
           ),
           SizedBox(height: ContentStyle.reading_top_spacing),
         ],
-        // 正文容器：作为"开始阅读"定位锚点，并承载全文段落。
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: on_reading_tap_down,
@@ -99,77 +93,113 @@ class ReadContent extends StatelessWidget {
             padding: ContentStyle.reading_padding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // 逐项渲染正文，每项都支持点击分区翻页交互。
-                // 记录已分配 GlobalKey 的章节索引，避免重复 key 导致报错。
-                ...() {
-                  final Set<int> assigned_chapter_keys = {};
-                  // 记录已插入广告的章节索引，避免重复插入。
-                  final Set<int> ad_inserted_chapters = {};
-                  final bool has_ad =
-                      AdDisplayPolicy.can_show_ads() &&
-                      ad_unit_id.isNotEmpty &&
-                      ad_uuid.isNotEmpty;
-
-                  final List<Widget> widgets = <Widget>[];
-                  for (final ReadingContentItem item in reading_items) {
-                    GlobalKey? item_key;
-                    if (item.is_title &&
-                        !assigned_chapter_keys.contains(item.chapter_index)) {
-                      item_key = logic.get_chapter_key(item.chapter_index);
-                      assigned_chapter_keys.add(item.chapter_index);
-                    }
-
-                    widgets.add(
-                      Container(
-                        key: item_key,
-                        padding: EdgeInsets.only(
-                          bottom: item.is_title
-                              ? ContentStyle.reading_paragraph_bottom_spacing *
-                                    1.5
-                              : ContentStyle.reading_paragraph_bottom_spacing,
-                          top: item.is_title
-                              ? ContentStyle.reading_paragraph_top_spacing * 2
-                              : 0,
-                        ),
-                        child: _ReaderParagraphItem(
-                          text: item.text,
-                          is_title: item.is_title,
-                          body_font_size: logic.body_font_size.value,
-                          text_color: item.is_title
-                              ? (is_dark
-                                    ? ContentStyle.reading_title_color_dark
-                                    : ContentStyle.reading_title_color_light)
-                              : reading_text_color,
-                        ),
-                      ),
-                    );
-
-                    // 章节标题后以 10% 概率插入原生广告（每章最多一次）。
-                    if (has_ad &&
-                        item.is_title &&
-                        !ad_inserted_chapters.contains(item.chapter_index) &&
-                        _should_show_ad_for_chapter(item.chapter_index)) {
-                      ad_inserted_chapters.add(item.chapter_index);
-                      widgets.add(
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12, bottom: 4),
-                          child: NativeAdBanner(
-                            ad_unit_id: ad_unit_id,
-                            uuid: ad_uuid,
-                            badge_text_key: 'short_story_read.ad_free',
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                  return widgets;
-                }(),
-              ],
+              children: _build_reading_widgets(
+                reading_text_color: reading_text_color,
+              ),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  /// 按章节收集正文段落长度，用于寻找正文内容 50% 后的完整段落边界。
+  Map<int, List<int>> _resolve_chapter_paragraph_lengths() {
+    final Map<int, List<int>> paragraph_lengths = <int, List<int>>{};
+    for (final ReadingContentItem item in reading_items) {
+      if (item.is_title) continue;
+      paragraph_lengths
+          .putIfAbsent(item.chapter_index, () => <int>[])
+          .add(item.text.trim().runes.length);
+    }
+    return paragraph_lengths;
+  }
+
+  /// 为当前阅读窗口计算每个命中章节的广告段落位置。
+  Map<int, int> _resolve_native_ad_insert_indexes() {
+    if (!AdDisplayPolicy.can_show_ads()) return <int, int>{};
+
+    final Map<int, int> insert_indexes = <int, int>{};
+    final Map<int, List<int>> paragraph_lengths =
+        _resolve_chapter_paragraph_lengths();
+    for (final MapEntry<int, List<int>> entry in paragraph_lengths.entries) {
+      final int? insert_index =
+          resolve_native_ad_insert_index_by_paragraph_lengths(
+            paragraph_lengths: entry.value,
+            has_native_ad:
+                logic.should_show_native_ad_for_chapter(entry.key) &&
+                (native_ad_config != null || is_native_ad_config_loading),
+            display_ratio: ContentStyle.native_ad_display_ratio,
+            minimum_paragraph_count:
+                ContentStyle.native_ad_minimum_paragraph_count,
+          );
+      if (insert_index != null) {
+        insert_indexes[entry.key] = insert_index;
+      }
+    }
+    return insert_indexes;
+  }
+
+  /// 构建正文标题、段落与各章唯一的原生广告卡片。
+  List<Widget> _build_reading_widgets({required Color reading_text_color}) {
+    final Set<int> assigned_chapter_keys = <int>{};
+    final Map<int, int> rendered_paragraph_counts = <int, int>{};
+    final Map<int, int> ad_insert_indexes = _resolve_native_ad_insert_indexes();
+    final List<Widget> widgets = <Widget>[];
+
+    for (final ReadingContentItem item in reading_items) {
+      GlobalKey? item_key;
+      if (item.is_title && assigned_chapter_keys.add(item.chapter_index)) {
+        item_key = logic.get_chapter_key(item.chapter_index);
+      }
+
+      widgets.add(
+        Container(
+          key: item_key,
+          padding: EdgeInsets.only(
+            bottom: item.is_title
+                ? ContentStyle.reading_paragraph_bottom_spacing * 1.5
+                : ContentStyle.reading_paragraph_bottom_spacing,
+            top: item.is_title
+                ? ContentStyle.reading_paragraph_top_spacing * 2
+                : 0,
+          ),
+          child: _ReaderParagraphItem(
+            text: item.text,
+            is_title: item.is_title,
+            body_font_size: logic.body_font_size.value,
+            text_color: item.is_title
+                ? (is_dark
+                      ? ContentStyle.reading_title_color_dark
+                      : ContentStyle.reading_title_color_light)
+                : reading_text_color,
+          ),
+        ),
+      );
+
+      if (!item.is_title) {
+        final int rendered_count =
+            (rendered_paragraph_counts[item.chapter_index] ?? 0) + 1;
+        rendered_paragraph_counts[item.chapter_index] = rendered_count;
+        if (rendered_count == ad_insert_indexes[item.chapter_index]) {
+          widgets.add(_build_native_ad(item.chapter_index));
+        }
+      }
+    }
+
+    return widgets;
+  }
+
+  /// 构建单章正文中部的安全可视挂载广告位。
+  Widget _build_native_ad(int chapter_index) {
+    return ViewportAwareInlineNativeAdBanner(
+      key: ValueKey<String>('read-native-ad-$chapter_index'),
+      scroll_controller: scroll_controller,
+      ad_unit_id: native_ad_config?.adsId ?? '',
+      uuid: native_ad_config?.uuid ?? '',
+      badge_text_key: 'short_story_read.ad_free',
+      show_continue_hint: false,
+      on_ad_impression: on_native_ad_impression,
     );
   }
 }
@@ -188,7 +218,6 @@ class _ReaderParagraphItem extends StatelessWidget {
   /// 段落文字颜色。
   final Color text_color;
 
-  /// 构造函数，注入段落渲染与交互依赖。
   const _ReaderParagraphItem({
     required this.text,
     this.is_title = false,

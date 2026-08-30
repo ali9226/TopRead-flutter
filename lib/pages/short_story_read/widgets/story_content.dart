@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 
 import 'package:app/pages/short_story_read/style.dart';
-import 'package:app/pages/short_story_read/utils/resolve_native_ad_insert_index.dart';
+import 'package:app/util/native_ad_insert_index.dart';
 import 'package:app/util/language_util/index.dart';
 
 /// 正文内容组件。

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:app/models/ad_config.dart';
 import 'package:app/pages/read/logic.dart';
 import 'package:app/pages/read/widgets/content/index.dart';
 import 'package:app/stores/novel_reading_store.dart';
@@ -34,14 +35,14 @@ class ReadMainList extends StatelessWidget {
   /// 正文点击回调。
   final GestureTapDownCallback on_reading_tap_down;
 
-  /// 小说 ID（用于稳定随机决定哪些章节插入广告）。
-  final int novel_id;
+  /// 当前小说唯一的原生广告配置。
+  final AdConfig? native_ad_config;
 
-  /// 原生广告单元 ID（为空时不展示广告）。
-  final String ad_unit_id;
+  /// 当前小说是否正在请求原生广告配置。
+  final bool is_native_ad_config_loading;
 
-  /// 广告配置的唯一标识。
-  final String ad_uuid;
+  /// 原生广告产生真实展示后的统计回调。
+  final VoidCallback? on_native_ad_impression;
 
   const ReadMainList({
     super.key,
@@ -53,9 +54,9 @@ class ReadMainList extends StatelessWidget {
     required this.reading_items,
     required this.reading_section_key,
     required this.on_reading_tap_down,
-    this.novel_id = 0,
-    this.ad_unit_id = '',
-    this.ad_uuid = '',
+    this.native_ad_config,
+    this.is_native_ad_config_loading = false,
+    this.on_native_ad_impression,
   });
 
   @override
@@ -88,11 +89,12 @@ class ReadMainList extends StatelessWidget {
               is_dark: is_dark,
               detail: detail,
               reading_items: reading_items,
+              scroll_controller: scroll_controller,
               reading_section_key: reading_section_key,
               on_reading_tap_down: on_reading_tap_down,
-              novel_id: novel_id,
-              ad_unit_id: ad_unit_id,
-              ad_uuid: ad_uuid,
+              native_ad_config: native_ad_config,
+              is_native_ad_config_loading: is_native_ad_config_loading,
+              on_native_ad_impression: on_native_ad_impression,
             ),
           ],
         ),

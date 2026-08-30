@@ -103,6 +103,60 @@ void main() {
     });
   });
 
+  group('长篇章节原生广告概率', () {
+    late Logic logic;
+
+    setUp(() {
+      logic = Logic(
+        story_id: 1,
+        story_title: '测试小说',
+        initial_body_font_size: 18,
+        initial_auto_read_speed: 0.2,
+      );
+    });
+
+    tearDown(() {
+      logic.onClose();
+    });
+
+    test('概率 0 和 100 严格对应不展示和展示', () {
+      expect(
+        logic.resolve_chapter_native_ad_decision(
+          chapter_index: 0,
+          probability: 0,
+        ),
+        isFalse,
+      );
+      expect(
+        logic.resolve_chapter_native_ad_decision(
+          chapter_index: 1,
+          probability: 100,
+        ),
+        isTrue,
+      );
+    });
+
+    test('同一章节在阅读会话内只判断一次', () {
+      expect(
+        logic.resolve_chapter_native_ad_decision(
+          chapter_index: 8,
+          probability: 50,
+          roll: 49,
+        ),
+        isTrue,
+      );
+      expect(
+        logic.resolve_chapter_native_ad_decision(
+          chapter_index: 8,
+          probability: 0,
+          roll: 99,
+        ),
+        isTrue,
+      );
+      expect(logic.should_show_native_ad_for_chapter(8), isTrue);
+    });
+  });
+
   test('跳转到中间章节时上一章首次失败会重试并进入阅读窗口', () async {
     final NovelReadingStore reading_store = NovelReadingStore();
     final String cache_namespace =

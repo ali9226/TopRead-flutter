@@ -11,6 +11,7 @@ import 'package:app/models/novel_info.dart';
 import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/util/device/save_body_font_size.dart';
+import 'package:app/util/percentage_probability.dart';
 
 import 'style.dart';
 import 'utils/read_models.dart';
@@ -101,6 +102,12 @@ class Logic extends GetxController {
   Future<void> Function(VoidCallback mutation, int anchor_chapter_index)?
   preserve_chapter_anchor;
 
+  /// 章节正文进入当前阅读窗口后的回调。
+  ///
+  /// 页面层通过该回调按项目配置完成一次性广告概率判断，并在首次命中时
+  /// 请求长篇原生广告配置。
+  ValueChanged<int>? on_chapter_loaded;
+
   /// 等待到滚动空闲后再修改正文列表。
   ///
   /// 章节内容可以提前请求和缓存，但真正 append/prepend 到 reading_items 必须避开
@@ -111,6 +118,11 @@ class Logic extends GetxController {
 
   /// 章节锚点 key 映射，用于精确滚动到指定章节。
   final Map<int, GlobalKey> _chapter_keys = {};
+
+  /// 当前阅读会话内每章的原生广告概率判断结果。
+  ///
+  /// 同一章节在组件重建、上下章拼接和目录跳转时不会重复抽取概率。
+  final Map<int, bool> _chapter_native_ad_decisions = <int, bool>{};
 
   /// 是否显示导航栏（顶部和底部）。
   var show_navigation = false.obs;
@@ -303,6 +315,40 @@ class Logic extends GetxController {
   /// 目录列表。
   List<NovelChapterInfo> get chapter_list => _store.chapter_list;
 
+  /// 当前已进入阅读窗口的章节索引。
+  Set<int> get loaded_chapter_indexes => _store.reading_items
+      .map((ReadingContentItem item) => item.chapter_index)
+      .where((int chapter_index) => chapter_index >= 0)
+      .toSet();
+
+  /// 为指定章节完成一次性原生广告概率判断。
+  ///
+  /// [roll] 仅用于测试概率边界；生产环境不传时使用公共随机数生成器。
+  bool resolve_chapter_native_ad_decision({
+    required int chapter_index,
+    required int probability,
+    int? roll,
+  }) {
+    final bool? existing_decision = _chapter_native_ad_decisions[chapter_index];
+    if (existing_decision != null) return existing_decision;
+
+    final bool should_show = PercentageProbability.is_hit(
+      probability,
+      roll: roll,
+    );
+    _chapter_native_ad_decisions[chapter_index] = should_show;
+    debugPrint(
+      '📢 [ReadNativeAd] 章节概率判断: chapter_index=$chapter_index, '
+      'probability=${probability.clamp(0, 100)}, show=$should_show',
+    );
+    return should_show;
+  }
+
+  /// 查询指定章节已经固定的原生广告展示结果。
+  bool should_show_native_ad_for_chapter(int chapter_index) {
+    return _chapter_native_ad_decisions[chapter_index] ?? false;
+  }
+
   /// 更新总字数，基于目录列表。
   void _update_total_word_count() {
     int total = 0;
@@ -343,6 +389,7 @@ class Logic extends GetxController {
   @override
   void onClose() {
     _chapter_window_generation++;
+    _chapter_native_ad_decisions.clear();
     _chapter_fetch_in_flight.clear();
     scroll_controller.dispose();
     super.onClose();
@@ -547,8 +594,6 @@ class Logic extends GetxController {
     }
   }
 
-
-
   /// 请求书籍详情接口，用于页面进入时拉取最新小说数据。
   ///
   /// [force] 是否强制刷新，默认为 false。
@@ -569,6 +614,7 @@ class Logic extends GetxController {
     is_loading.value = show_loading || !has_existing_content;
     is_error.value = false;
     _chapter_window_generation++;
+    _chapter_native_ad_decisions.clear();
     _loaded_chapter_index = 0;
     _min_loaded_chapter_index = 0;
     current_chapter_index.value = 0;
@@ -614,6 +660,7 @@ class Logic extends GetxController {
           first_chapter.word_count,
           content,
         );
+        on_chapter_loaded?.call(0);
         _loaded_chapter_index = 0;
         _min_loaded_chapter_index = 0;
         current_chapter_index.value = 0;
@@ -709,6 +756,7 @@ class Logic extends GetxController {
         next_chapter.word_count,
         content,
       );
+      on_chapter_loaded?.call(next_index);
 
       // 更新已加载索引。
       _loaded_chapter_index = next_index;
@@ -796,6 +844,7 @@ class Logic extends GetxController {
           content,
         );
         _min_loaded_chapter_index = prev_index;
+        on_chapter_loaded?.call(prev_index);
       }
 
       final preserve_anchor = preserve_chapter_anchor;
@@ -959,6 +1008,13 @@ class Logic extends GetxController {
       actual_end_index,
       _store.chapter_list,
     );
+    for (
+      int chapter_index = actual_start_index;
+      chapter_index <= actual_end_index;
+      chapter_index++
+    ) {
+      on_chapter_loaded?.call(chapter_index);
+    }
 
     // 只把连续成功加载的章节计入窗口；相邻章节请求失败时，后续自然滚动
     // 仍可重新请求，避免目录跳转后永久跨过一章。
@@ -1023,9 +1079,7 @@ class Logic extends GetxController {
 
     // 磁盘缓存命中，回写内存缓存后返回。
     if (!force) {
-      final String? disk_cached = await ChapterCache.read(
-        content_url,
-      );
+      final String? disk_cached = await ChapterCache.read(content_url);
       if (disk_cached != null && disk_cached.isNotEmpty) {
         _store.cache_chapter_content(index, disk_cached);
         return disk_cached;
@@ -1218,7 +1272,9 @@ class Logic extends GetxController {
 
   /// 根据全书阅读百分比推算所在章节索引。
   int find_chapter_index_by_progress(double progress_percent) {
-    return _progress_calculator.find_chapter_index_by_progress(progress_percent);
+    return _progress_calculator.find_chapter_index_by_progress(
+      progress_percent,
+    );
   }
 
   /// 根据全书阅读进度换算指定章节内部的阅读百分比。

@@ -29,6 +29,12 @@ class ContentStyle {
   /// 正文段落底部间距
   static const double reading_paragraph_bottom_spacing = 18;
 
+  /// 原生广告在单章正文中的插入比例。
+  static const double native_ad_display_ratio = 0.5;
+
+  /// 允许插入原生广告的最少正文段落数。
+  static const int native_ad_minimum_paragraph_count = 4;
+
   /// 阅读提示标题与副标题的垂直间距
   static const double reading_hint_top_spacing = 6;
 
