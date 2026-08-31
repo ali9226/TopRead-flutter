@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/inline_native_ad/index.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/pages/read/logic.dart' as read_logic;
+import 'package:app/pages/read/widgets/ad_free_time_hint/index.dart';
 import 'package:app/pages/read/widgets/introduction_section/index.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/util/ad_display_policy.dart';
@@ -49,6 +51,17 @@ class ReadContent extends StatelessWidget {
   /// 原生广告产生真实展示后的统计回调。
   final VoidCallback? on_native_ad_impression;
 
+  /// 长篇小说展示视频广告的概率（0~100），控制"看视频免广告"提示是否展示。
+  final int ads_read_video_ad_probability;
+
+  /// 点击"看视频免广告"提示的回调。
+  final VoidCallback? on_video_ad_hint_tap;
+
+  /// 当前免广告到期时间监听器。
+  ///
+  /// 每个章节底部插槽直接监听该值，异步状态到达时可立即刷新。
+  final ValueListenable<DateTime?> ad_free_expire_time_listenable;
+
   const ReadContent({
     super.key,
     required this.logic,
@@ -62,6 +75,9 @@ class ReadContent extends StatelessWidget {
     this.native_ad_config,
     this.is_native_ad_config_loading = false,
     this.on_native_ad_impression,
+    this.ads_read_video_ad_probability = 0,
+    required this.ad_free_expire_time_listenable,
+    this.on_video_ad_hint_tap,
   });
 
   @override
@@ -159,14 +175,33 @@ class ReadContent extends StatelessWidget {
     return insert_indexes;
   }
 
+  /// 判断是否展示"看视频免广告"提示。
+  ///
+  /// 基于 project_config 中的 [ads_read_video_ad_probability] 概率值判断，
+  /// 0 表示不展示，100 表示必定展示，其余值按百分比随机。
+  bool _should_show_video_ad_hint(int chapter_index) {
+    if (ads_read_video_ad_probability <= 0) return false;
+    if (ads_read_video_ad_probability >= 100) return true;
+    return logic.resolve_chapter_video_ad_hint_decision(
+      chapter_index: chapter_index,
+      probability: ads_read_video_ad_probability,
+    );
+  }
+
   /// 构建正文标题、段落与各章唯一的原生广告卡片。
+  ///
+  /// 每个章节如果命中广告概率，在广告下方展示"看视频免30分钟广告"提示；
+  /// 如果该章节未命中广告概率，则在章节末尾展示该提示。
   List<Widget> _build_reading_widgets({required Color reading_text_color}) {
     final Set<int> assigned_chapter_keys = <int>{};
     final Map<int, int> rendered_paragraph_counts = <int, int>{};
     final Map<int, int> ad_insert_indexes = _resolve_native_ad_insert_indexes();
+    final Set<int> ad_shown_for_chapter = <int>{};
     final List<Widget> widgets = <Widget>[];
 
-    for (final ReadingContentItem item in reading_items) {
+    for (int i = 0; i < reading_items.length; i++) {
+      final ReadingContentItem item = reading_items[i];
+
       GlobalKey? item_key;
       if (item.is_title && assigned_chapter_keys.add(item.chapter_index)) {
         item_key = logic.get_chapter_key(item.chapter_index);
@@ -201,12 +236,60 @@ class ReadContent extends StatelessWidget {
             (rendered_paragraph_counts[item.chapter_index] ?? 0) + 1;
         rendered_paragraph_counts[item.chapter_index] = rendered_count;
         if (rendered_count == ad_insert_indexes[item.chapter_index]) {
+          ad_shown_for_chapter.add(item.chapter_index);
           widgets.add(_build_native_ad(item.chapter_index));
+          if (_should_show_video_ad_hint(item.chapter_index)) {
+            widgets.add(
+              AdFreeTimeHint(is_dark: is_dark, on_tap: on_video_ad_hint_tap),
+            );
+          }
+        }
+      }
+
+      // 章节边界检测：当前段落属于新章节时，为上一个章节补末尾提示。
+      if (i + 1 < reading_items.length) {
+        final int next_chapter_index = reading_items[i + 1].chapter_index;
+        if (next_chapter_index != item.chapter_index && !item.is_title) {
+          final Widget footer_hint = _build_chapter_footer_hint(
+            chapter_index: item.chapter_index,
+            has_native_ad: ad_shown_for_chapter.contains(item.chapter_index),
+          );
+          widgets.add(footer_hint);
         }
       }
     }
 
+    // 为最后一个章节补底部免广告状态或概率提示。
+    if (reading_items.isNotEmpty) {
+      final ReadingContentItem last_item = reading_items.last;
+      if (!last_item.is_title) {
+        final Widget footer_hint = _build_chapter_footer_hint(
+          chapter_index: last_item.chapter_index,
+          has_native_ad: ad_shown_for_chapter.contains(last_item.chapter_index),
+        );
+        widgets.add(footer_hint);
+      }
+    }
+
     return widgets;
+  }
+
+  /// 构建单个章节底部的免广告提示。
+  ///
+  /// 免广告已生效时，每章固定展示到期时间和“再看一个”入口。
+  /// 未生效时保留原有的概率提示规则，且章节内已展示过提示时不重复展示。
+  Widget _build_chapter_footer_hint({
+    required int chapter_index,
+    required bool has_native_ad,
+  }) {
+    final bool show_inactive_hint =
+        !has_native_ad && _should_show_video_ad_hint(chapter_index);
+    return AdFreeTimeHintSlot(
+      is_dark: is_dark,
+      expire_time_listenable: ad_free_expire_time_listenable,
+      show_inactive_hint: show_inactive_hint,
+      on_tap: on_video_ad_hint_tap,
+    );
   }
 
   /// 构建单章正文中部的安全可视挂载广告位。

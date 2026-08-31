@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/pages/read/logic.dart';
@@ -44,6 +45,17 @@ class ReadMainList extends StatelessWidget {
   /// 原生广告产生真实展示后的统计回调。
   final VoidCallback? on_native_ad_impression;
 
+  /// 长篇小说展示视频广告的概率（0~100），控制"看视频免广告"提示是否展示。
+  final int ads_read_video_ad_probability;
+
+  /// 点击"看视频免广告"提示的回调。
+  final VoidCallback? on_video_ad_hint_tap;
+
+  /// 当前免广告到期时间监听器。
+  ///
+  /// 有效时在每个章节底部展示到期时间和继续叠加入口。
+  final ValueListenable<DateTime?> ad_free_expire_time_listenable;
+
   const ReadMainList({
     super.key,
     required this.logic,
@@ -57,6 +69,9 @@ class ReadMainList extends StatelessWidget {
     this.native_ad_config,
     this.is_native_ad_config_loading = false,
     this.on_native_ad_impression,
+    this.ads_read_video_ad_probability = 0,
+    required this.ad_free_expire_time_listenable,
+    this.on_video_ad_hint_tap,
   });
 
   @override
@@ -95,6 +110,9 @@ class ReadMainList extends StatelessWidget {
               native_ad_config: native_ad_config,
               is_native_ad_config_loading: is_native_ad_config_loading,
               on_native_ad_impression: on_native_ad_impression,
+              ads_read_video_ad_probability: ads_read_video_ad_probability,
+              ad_free_expire_time_listenable: ad_free_expire_time_listenable,
+              on_video_ad_hint_tap: on_video_ad_hint_tap,
             ),
           ],
         ),

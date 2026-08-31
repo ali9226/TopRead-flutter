@@ -65,11 +65,23 @@ class ProjectConfig {
   /// 短篇小说展示插屏广告的概率（0~100）。
   final int ads_short_story_show_interstitial_ads_probability;
 
-  /// 长篇小说视频广告展示概率（0~100）。
+  /// 长篇小说解锁30分钟免广告概率（0~100）。
   final int ads_read_video_ad_probability;
 
   /// 短篇小说视频广告展示概率（0~100）。
   final int ads_short_story_video_ad_probability;
+
+  /// 长篇小说解锁1个小时免广告概率（0~100）。
+  final int read_ads_unlock_an_hour;
+
+  /// 长篇小说解锁3个小时免广告概率（0~100）。
+  final int read_ads_unlock_three_hour;
+
+  /// 解锁6小时免长篇小说广告时长概率（0~100）。
+  final int read_ads_unlock_six_hour;
+
+  /// 瀑布流列表展示广告的概率（0~100）。
+  final int waterfall_ad;
 
   const ProjectConfig({
     required this.id,
@@ -87,6 +99,10 @@ class ProjectConfig {
     required this.ads_short_story_show_interstitial_ads_probability,
     required this.ads_read_video_ad_probability,
     required this.ads_short_story_video_ad_probability,
+    required this.read_ads_unlock_an_hour,
+    required this.read_ads_unlock_three_hour,
+    required this.read_ads_unlock_six_hour,
+    required this.waterfall_ad,
   });
 
   /// 空配置兜底。
@@ -105,7 +121,11 @@ class ProjectConfig {
       ads_read_show_interstitial_ads_probability = 100,
       ads_short_story_show_interstitial_ads_probability = 100,
       ads_read_video_ad_probability = 100,
-      ads_short_story_video_ad_probability = 100;
+      ads_short_story_video_ad_probability = 100,
+      read_ads_unlock_an_hour = 0,
+      read_ads_unlock_three_hour = 0,
+      read_ads_unlock_six_hour = 0,
+      waterfall_ad = 0;
 
   /// 从 JSON 解析。
   factory ProjectConfig.from_json(Map<String, dynamic> json) {
@@ -136,6 +156,18 @@ class ProjectConfig {
       ),
       ads_short_story_video_ad_probability: _parse_probability(
         json['ads_short_story_video_ad_probability'],
+      ),
+      read_ads_unlock_an_hour: _parse_probability(
+        json['read_ads_unlock_an_hour'],
+      ),
+      read_ads_unlock_three_hour: _parse_probability(
+        json['read_ads_unlock_three_hour'],
+      ),
+      read_ads_unlock_six_hour: _parse_probability(
+        json['read_ads_unlock_six_hour'],
+      ),
+      waterfall_ad: _parse_probability(
+        json['waterfall_ad'],
       ),
     );
   }

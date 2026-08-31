@@ -125,10 +125,16 @@ void main() {
       final ProjectConfig config = ProjectConfig.from_json(<String, dynamic>{
         'ads_short_story_show_interstitial_ads_probability': '35',
         'ads_short_story_video_ad_probability': 60.8,
+        'read_ads_unlock_an_hour': '75',
+        'read_ads_unlock_three_hour': 50.5,
+        'read_ads_unlock_six_hour': '90',
       });
 
       expect(config.ads_short_story_show_interstitial_ads_probability, 35);
       expect(config.ads_short_story_video_ad_probability, 60);
+      expect(config.read_ads_unlock_an_hour, 75);
+      expect(config.read_ads_unlock_three_hour, 50);
+      expect(config.read_ads_unlock_six_hour, 90);
     });
 
     test('越界概率会限制在 0～100', () {
@@ -137,12 +143,18 @@ void main() {
         'ads_short_story_show_interstitial_ads_probability': 120,
         'ads_read_video_ad_probability': -1,
         'ads_short_story_video_ad_probability': 101,
+        'read_ads_unlock_an_hour': -5,
+        'read_ads_unlock_three_hour': 150,
+        'read_ads_unlock_six_hour': -10,
       });
 
       expect(config.ads_read_show_interstitial_ads_probability, 0);
       expect(config.ads_short_story_show_interstitial_ads_probability, 100);
       expect(config.ads_read_video_ad_probability, 0);
       expect(config.ads_short_story_video_ad_probability, 100);
+      expect(config.read_ads_unlock_an_hour, 0);
+      expect(config.read_ads_unlock_three_hour, 100);
+      expect(config.read_ads_unlock_six_hour, 0);
     });
   });
 }

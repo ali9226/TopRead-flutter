@@ -357,6 +357,13 @@ class AnimatedRecommendWaterfallState
     if (!AdDisplayPolicy.can_show_ads()) {
       return List<BookListItem>.of(batch);
     }
+    // 按概率决定本批次是否展示广告。
+    final int probability = Get.find<ProjectConfigStore>().current.waterfall_ad;
+    if (probability <= 0) return List<BookListItem>.of(batch);
+    if (probability < 100) {
+      final int roll = DateTime.now().millisecondsSinceEpoch % 100;
+      if (roll >= probability) return List<BookListItem>.of(batch);
+    }
     final String slot_id = target_session.create_ad_slot_id();
     target_session.item_heights[slot_id] = 0;
     return RecommendBookCardLogic.insert_ad_in_batch_middle(

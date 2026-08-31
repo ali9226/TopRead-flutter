@@ -3,7 +3,7 @@ description: "TopRead"
 
 
 # + 符号后面的数字，每一次打包只增不减，保持递增状态
-version: 1.1.7+7
+version: 1.1.8+8
 
 environment:
     sdk: ^3.11.5

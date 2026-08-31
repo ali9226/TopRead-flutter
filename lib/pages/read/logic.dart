@@ -124,6 +124,11 @@ class Logic extends GetxController {
   /// 同一章节在组件重建、上下章拼接和目录跳转时不会重复抽取概率。
   final Map<int, bool> _chapter_native_ad_decisions = <int, bool>{};
 
+  /// 当前阅读会话内每章的"看视频免广告"提示概率判断结果。
+  ///
+  /// 同一章节不会重复抽取概率。
+  final Map<int, bool> _chapter_video_ad_hint_decisions = <int, bool>{};
+
   /// 是否显示导航栏（顶部和底部）。
   var show_navigation = false.obs;
 
@@ -349,6 +354,31 @@ class Logic extends GetxController {
     return _chapter_native_ad_decisions[chapter_index] ?? false;
   }
 
+  /// 为指定章节完成一次性"看视频免广告"提示概率判断。
+  ///
+  /// [chapter_index] 章节索引。
+  /// [probability] 概率值（0~100）。
+  /// [roll] 仅用于测试概率边界；生产环境不传时使用公共随机数生成器。
+  bool resolve_chapter_video_ad_hint_decision({
+    required int chapter_index,
+    required int probability,
+    int? roll,
+  }) {
+    final bool? existing_decision = _chapter_video_ad_hint_decisions[chapter_index];
+    if (existing_decision != null) return existing_decision;
+
+    final bool should_show = PercentageProbability.is_hit(
+      probability,
+      roll: roll,
+    );
+    _chapter_video_ad_hint_decisions[chapter_index] = should_show;
+    debugPrint(
+      '📢 [ReadVideoAdHint] 章节概率判断: chapter_index=$chapter_index, '
+      'probability=${probability.clamp(0, 100)}, show=$should_show',
+    );
+    return should_show;
+  }
+
   /// 更新总字数，基于目录列表。
   void _update_total_word_count() {
     int total = 0;
@@ -390,6 +420,7 @@ class Logic extends GetxController {
   void onClose() {
     _chapter_window_generation++;
     _chapter_native_ad_decisions.clear();
+    _chapter_video_ad_hint_decisions.clear();
     _chapter_fetch_in_flight.clear();
     scroll_controller.dispose();
     super.onClose();
@@ -615,6 +646,7 @@ class Logic extends GetxController {
     is_error.value = false;
     _chapter_window_generation++;
     _chapter_native_ad_decisions.clear();
+    _chapter_video_ad_hint_decisions.clear();
     _loaded_chapter_index = 0;
     _min_loaded_chapter_index = 0;
     current_chapter_index.value = 0;

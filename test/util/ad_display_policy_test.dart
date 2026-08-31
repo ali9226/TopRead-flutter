@@ -77,5 +77,8 @@ ProjectConfig _build_project_config({required int ads_switch}) {
     ads_short_story_show_interstitial_ads_probability: 100,
     ads_read_video_ad_probability: 100,
     ads_short_story_video_ad_probability: 100,
+    read_ads_unlock_an_hour: 100,
+    read_ads_unlock_three_hour: 100,
+    read_ads_unlock_six_hour: 100,
   );
 }
