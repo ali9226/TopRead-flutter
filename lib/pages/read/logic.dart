@@ -22,7 +22,7 @@ import 'utils/detail_builder.dart';
 export 'utils/read_models.dart';
 
 /// 章节正文加载器。
-typedef ChapterContentLoader = Future<String> Function(String url);
+typedef ChapterContentLoader = Future<String> Function(String chapter_id);
 
 /// 阅读页占位逻辑层。
 class Logic extends GetxController {
@@ -364,7 +364,8 @@ class Logic extends GetxController {
     required int probability,
     int? roll,
   }) {
-    final bool? existing_decision = _chapter_video_ad_hint_decisions[chapter_index];
+    final bool? existing_decision =
+        _chapter_video_ad_hint_decisions[chapter_index];
     if (existing_decision != null) return existing_decision;
 
     final bool should_show = PercentageProbability.is_hit(
@@ -1099,7 +1100,7 @@ class Logic extends GetxController {
   /// 执行单个章节的真实缓存读取与网络请求。
   Future<String> _load_chapter_content(int index, {required bool force}) async {
     final NovelChapterInfo chapter = _store.chapter_list[index];
-    final String content_url = chapter.content_url;
+    final String chapter_id = chapter.id;
 
     // 内存缓存命中，直接返回。
     if (!force) {
@@ -1111,7 +1112,7 @@ class Logic extends GetxController {
 
     // 磁盘缓存命中，回写内存缓存后返回。
     if (!force) {
-      final String? disk_cached = await ChapterCache.read(content_url);
+      final String? disk_cached = await ChapterCache.read(chapter_id);
       if (disk_cached != null && disk_cached.isNotEmpty) {
         _store.cache_chapter_content(index, disk_cached);
         return disk_cached;
@@ -1119,10 +1120,10 @@ class Logic extends GetxController {
     }
 
     // 缓存未命中，发起网络请求。
-    final String content = await _chapter_content_loader(chapter.content_url);
+    final String content = await _chapter_content_loader(chapter_id);
     if (content.isNotEmpty) {
       _store.cache_chapter_content(index, content);
-      await ChapterCache.write(content_url, content);
+      await ChapterCache.write(chapter_id, content);
     }
     return content;
   }

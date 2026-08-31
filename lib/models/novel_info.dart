@@ -14,8 +14,6 @@ class NovelInfo {
   // TODO 小说评分
   final int score;
 
-
-
   /// 作者 id。
   final String author_id;
 
@@ -129,9 +127,7 @@ class NovelInfo {
       title: json['title']?.toString() ?? '',
       subtitle: json['subtitle']?.toString() ?? '',
       author_id: json['author_id']?.toString() ?? '',
-      focus_on: json['focus_on'] is bool
-          ? json['focus_on']
-          : false,
+      focus_on: json['focus_on'] is bool ? json['focus_on'] : false,
       is_liked: json['like'] == true,
       is_favorited: json['favorite'] == true,
       score: _parse_int(json['score']),
@@ -153,14 +149,16 @@ class NovelInfo {
       author_name: json['author_name']?.toString() ?? '',
       author_avatar: json['author_avatar']?.toString() ?? '',
       language_info: NovelLanguageInfo.from_json(
-          Map<String, dynamic>.from(json['language_info'] ?? {})),
+        Map<String, dynamic>.from(json['language_info'] ?? {}),
+      ),
       category_list: List<String>.from(json['category_list'] ?? []),
       comment_list: (json['comment_list'] as List? ?? [])
           .map((e) => NovelComment.from_json(Map<String, dynamic>.from(e)))
           .toList(),
       chapter_info: json['chapter_info'] != null
           ? NovelChapterInfo.from_json(
-              Map<String, dynamic>.from(json['chapter_info']))
+              Map<String, dynamic>.from(json['chapter_info']),
+            )
           : null,
     );
   }
@@ -281,7 +279,6 @@ class NovelChapterInfo {
   final int chapter_no;
   final String title;
   final int sorting;
-  final String content_url;
   final int word_count;
   final int is_vip;
   final String? publish_time;
@@ -295,7 +292,6 @@ class NovelChapterInfo {
     required this.chapter_no,
     required this.title,
     required this.sorting,
-    required this.content_url,
     required this.word_count,
     required this.is_vip,
     this.publish_time,
@@ -311,7 +307,6 @@ class NovelChapterInfo {
       chapter_no: _parse_int(json['chapter_no']),
       title: json['title']?.toString() ?? '',
       sorting: _parse_int(json['sorting']),
-      content_url: json['content_url']?.toString() ?? '',
       word_count: _parse_int(json['word_count']),
       is_vip: _parse_int(json['is_vip']),
       publish_time: json['publish_time']?.toString(),

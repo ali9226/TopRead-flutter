@@ -46,9 +46,6 @@ class ShortStoryItem {
   /// 是否已点赞（接口字段 like）。
   final bool is_liked;
 
-  /// 正文内容文件地址。
-  final String content_url;
-
   /// 是否展开（默认收起状态）。
   final bool is_expanded;
 
@@ -67,7 +64,6 @@ class ShortStoryItem {
     this.favorite_count = 0,
     this.score = '',
     this.is_liked = false,
-    this.content_url = '',
     this.is_expanded = false,
   });
 
@@ -92,7 +88,6 @@ class ShortStoryItem {
       favorite_count: favorite_count,
       score: score,
       is_liked: is_liked ?? this.is_liked,
-      content_url: content_url,
       is_expanded: is_expanded ?? this.is_expanded,
     );
   }
@@ -114,7 +109,6 @@ class ShortStoryItem {
       favorite_count: _to_int(json['favorite_count']),
       score: _to_string(json['score']),
       is_liked: json['like'] == true || json['like'] == 1,
-      content_url: _to_string(json['content_url']),
     );
   }
 

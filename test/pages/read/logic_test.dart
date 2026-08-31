@@ -183,10 +183,9 @@ void main() {
       List<NovelChapterInfo>.generate(
         100,
         (int index) => _chapter(
-          id: '${index + 1}',
+          id: '$cache_namespace/$index',
           chapter_no: index + 1,
           word_count: 100,
-          content_url: '$cache_namespace/$index',
         ),
       ),
     );
@@ -211,7 +210,6 @@ NovelChapterInfo _chapter({
   required String id,
   required int chapter_no,
   required int word_count,
-  String content_url = '',
 }) {
   return NovelChapterInfo(
     id: id,
@@ -219,7 +217,6 @@ NovelChapterInfo _chapter({
     chapter_no: chapter_no,
     title: '第 $chapter_no 章',
     sorting: chapter_no,
-    content_url: content_url,
     word_count: word_count,
     is_vip: 0,
     create_time: '',

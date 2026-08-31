@@ -38,9 +38,6 @@ class RecommendRankingItem {
   /// 该语种的标题。
   final String title;
 
-  /// 内容URL。
-  final String content_url;
-
   /// 封面URL。
   final String cover_url;
 
@@ -76,7 +73,6 @@ class RecommendRankingItem {
     required this.favorite_count,
     required this.score,
     required this.title,
-    required this.content_url,
     required this.cover_url,
     required this.introduction,
     required this.word_count,
@@ -103,7 +99,6 @@ class RecommendRankingItem {
       favorite_count: _parse_int(json['favorite_count']),
       score: _parse_double(json['score']),
       title: json['title'] as String? ?? '',
-      content_url: json['content_url'] as String? ?? '',
       cover_url: json['cover_url'] as String? ?? '',
       introduction: json['introduction'] as String? ?? '',
       word_count: _parse_int(json['word_count']),
@@ -124,9 +119,8 @@ class RecommendRankingItem {
     return raw
         .whereType<Map>()
         .map(
-          (dynamic item) => RecommendRankingItem.from_json(
-            Map<String, dynamic>.from(item),
-          ),
+          (dynamic item) =>
+              RecommendRankingItem.from_json(Map<String, dynamic>.from(item)),
         )
         .toList();
   }
@@ -144,7 +138,6 @@ class RecommendRankingItem {
       'favorite_count': favorite_count,
       'score': score,
       'title': title,
-      'content_url': content_url,
       'cover_url': cover_url,
       'introduction': introduction,
       'word_count': word_count,
@@ -164,9 +157,8 @@ class RecommendRankingItem {
     return raw
         .whereType<Map>()
         .map(
-          (dynamic item) => RecommendRankingItem.from_json(
-            Map<String, dynamic>.from(item),
-          ),
+          (dynamic item) =>
+              RecommendRankingItem.from_json(Map<String, dynamic>.from(item)),
         )
         .toList();
   }

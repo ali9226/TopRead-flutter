@@ -1,13 +1,12 @@
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:dio/dio.dart' as dio_lib;
-import 'package:app/api/dio_client.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:app/api/post_request.dart';
+import 'package:app/api/get_novel_content.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/models/short_story_read_data.dart';
 import 'package:app/models/short_story_item.dart';
@@ -224,12 +223,6 @@ class ShortStoryReadLogic {
   /// 切换上下篇或重新进入页面时保留解锁状态，应用重启后重置。
   static final Set<int> _unlocked_story_ids = <int>{};
 
-  /// 正文文件连接超时。
-  static const Duration _content_connect_timeout = Duration(seconds: 12);
-
-  /// 正文文件接收超时。
-  static const Duration _content_receive_timeout = Duration(seconds: 25);
-
   /// 从 LRU 缓存读取数据，并把命中的条目移动到队尾。
   static T? _read_memory_cache<T>(LinkedHashMap<String, T> cache, String key) {
     final T? value = cache.remove(key);
@@ -275,61 +268,55 @@ class ShortStoryReadLogic {
   }
 
   /// 加载正文文本，优先走内存缓存，其次磁盘缓存，最后网络。
-  Future<String> _fetch_content_text_with_cache(String content_url) async {
-    if (content_url.isEmpty) return '';
+  Future<String> _fetch_content_text_with_cache(
+    String novel_language_id,
+  ) async {
+    if (novel_language_id.isEmpty) return '';
 
     final String? memory_text = _read_memory_cache<String>(
       _content_memory_cache,
-      content_url,
+      novel_language_id,
     );
     if (memory_text != null) return memory_text;
 
-    final Future<String>? existing_future = _content_load_futures[content_url];
+    final Future<String>? existing_future =
+        _content_load_futures[novel_language_id];
     if (existing_future != null) return existing_future;
 
-    final Future<String> load_future = _load_content_text(content_url);
-    _content_load_futures[content_url] = load_future;
+    final Future<String> load_future = _load_content_text(novel_language_id);
+    _content_load_futures[novel_language_id] = load_future;
     try {
       return await load_future;
     } finally {
-      if (identical(_content_load_futures[content_url], load_future)) {
-        _content_load_futures.remove(content_url);
+      if (identical(_content_load_futures[novel_language_id], load_future)) {
+        _content_load_futures.remove(novel_language_id);
       }
     }
   }
 
-  Future<String> _load_content_text(String content_url) async {
-    final String? disk_text = await ShortStoryContentCache.read(content_url);
+  Future<String> _load_content_text(String novel_language_id) async {
+    final String? disk_text = await ShortStoryContentCache.read(
+      novel_language_id,
+    );
     if (disk_text != null) {
       _write_memory_cache<String>(
         _content_memory_cache,
-        content_url,
+        novel_language_id,
         disk_text,
         _content_memory_cache_capacity,
       );
       return disk_text;
     }
 
-    /// 复用全局 Dio 单例，超时通过单次请求 Options 覆盖。
-    final dio_lib.Dio dio = DioClient().instance;
-    final dio_lib.Response<String> response = await dio.get<String>(
-      content_url,
-      options: dio_lib.Options(
-        responseType: dio_lib.ResponseType.plain,
-        connectTimeout: _content_connect_timeout,
-        receiveTimeout: _content_receive_timeout,
-      ),
-    );
-
-    if (response.statusCode == 200 && response.data != null) {
-      final String text = response.data!;
+    final String text = await get_short_story_content(novel_language_id);
+    if (text.isNotEmpty) {
       _write_memory_cache<String>(
         _content_memory_cache,
-        content_url,
+        novel_language_id,
         text,
         _content_memory_cache_capacity,
       );
-      await ShortStoryContentCache.write(content_url, text);
+      await ShortStoryContentCache.write(novel_language_id, text);
       return text;
     }
 
@@ -490,7 +477,9 @@ class ShortStoryReadLogic {
       story_data.value = detail;
 
       // 加载正文内容（优先内存/磁盘缓存，其次远程 txt）。
-      final bool content_loaded = await _load_story_content(detail.content_url);
+      final bool content_loaded = await _load_story_content(
+        detail.novel_language_id,
+      );
 
       if (_is_disposed) return false;
 
@@ -522,10 +511,10 @@ class ShortStoryReadLogic {
 
   /// 加载小说正文内容。
   ///
-  /// 从 [content_url] 下载 txt 文件并解析内容。
+  /// 根据 [novel_language_id] 请求服务端正文代理并解密内容。
   /// 加载失败时 content 设为空字符串，不影响页面展示。
-  Future<bool> _load_story_content(String content_url) async {
-    if (content_url.isEmpty) {
+  Future<bool> _load_story_content(String novel_language_id) async {
+    if (novel_language_id.isEmpty) {
       content.value = '';
       is_content_loading.value = false;
       return false;
@@ -535,7 +524,7 @@ class ShortStoryReadLogic {
 
     try {
       final String loaded_content = await _fetch_content_text_with_cache(
-        content_url,
+        novel_language_id,
       );
       if (_is_disposed) return false;
       content.value = loaded_content;
@@ -678,7 +667,7 @@ class ShortStoryReadLogic {
       }
 
       final String text = await _fetch_content_text_with_cache(
-        detail.content_url,
+        detail.novel_language_id,
       );
 
       if (_is_disposed) return;

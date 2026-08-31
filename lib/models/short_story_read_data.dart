@@ -16,8 +16,8 @@ class ShortStoryReadData {
   /// 封面图片URL。
   final String cover_url;
 
-  /// 正文内容文件地址。
-  final String content_url;
+  /// 正文对应的小说语种数据库 ID。
+  final String novel_language_id;
 
   /// 阅读数。
   final int read_count;
@@ -48,7 +48,7 @@ class ShortStoryReadData {
     required this.title,
     required this.introduction,
     this.cover_url = '',
-    required this.content_url,
+    required this.novel_language_id,
     this.read_count = 0,
     this.comment_count = 0,
     this.like_count = 0,
@@ -72,7 +72,7 @@ class ShortStoryReadData {
       title: title,
       introduction: introduction,
       cover_url: cover_url,
-      content_url: content_url,
+      novel_language_id: novel_language_id,
       read_count: read_count,
       comment_count: comment_count ?? this.comment_count,
       like_count: like_count ?? this.like_count,
@@ -91,7 +91,7 @@ class ShortStoryReadData {
       title: _to_string(json['title']),
       introduction: _to_string(json['introduction']),
       cover_url: _to_string(json['cover_url']),
-      content_url: _to_string(json['content_url']),
+      novel_language_id: _to_string(json['novel_language_id']),
       read_count: _to_int(json['read_count']),
       comment_count: _to_int(json['comment_count']),
       like_count: _to_int(json['like_count']),
