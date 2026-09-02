@@ -434,6 +434,8 @@ class AnimatedRecommendWaterfallState
         title: item.title,
         description: item.introduction,
         cover_url: item.cover_url,
+        cover_width: item.cover_width,
+        cover_height: item.cover_height,
         cover_badge: item.publish_status == 2
             ? easy.tr('bookshelf.tags.completed')
             : '',

@@ -261,6 +261,10 @@ class _FocusTabContentState extends State<FocusTabContent>
       rightButtonColor: ColorConstants.dangerColor,
       onRightPressed: () async {
         if (!mounted) return;
+        final bool removed = await remove_focus_author(
+          author_id: int.tryParse(author_item.author_id) ?? 0,
+        );
+        if (!mounted || !removed) return;
         _store.remove_focus_item(author_item.id);
       },
     );

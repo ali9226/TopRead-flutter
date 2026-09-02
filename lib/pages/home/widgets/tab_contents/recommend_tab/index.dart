@@ -164,7 +164,7 @@ class _RecommendTabContentState extends State<RecommendTabContent>
   // ==================== 滚动处理 ====================
 
   /// 距离底部多少像素时触发自动加载更多。
-  static const double _load_more_trigger_distance = 300;
+  static const double _load_more_trigger_distance = 800;
 
   /// 处理滚动事件：控制返回顶部按钮显隐、关闭推荐弹窗、触发加载更多。
   void _handle_scroll() {

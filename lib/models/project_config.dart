@@ -83,6 +83,9 @@ class ProjectConfig {
   /// 瀑布流列表展示广告的概率（0~100）。
   final int waterfall_ad;
 
+  /// 短篇小说列表展示广告的概率（0~100）。
+  final int short_story_tab_ad;
+
   const ProjectConfig({
     required this.id,
     required this.ads_switch,
@@ -103,6 +106,7 @@ class ProjectConfig {
     required this.read_ads_unlock_three_hour,
     required this.read_ads_unlock_six_hour,
     required this.waterfall_ad,
+    required this.short_story_tab_ad,
   });
 
   /// 空配置兜底。
@@ -125,7 +129,8 @@ class ProjectConfig {
       read_ads_unlock_an_hour = 0,
       read_ads_unlock_three_hour = 0,
       read_ads_unlock_six_hour = 0,
-      waterfall_ad = 0;
+      waterfall_ad = 0,
+      short_story_tab_ad = 0;
 
   /// 从 JSON 解析。
   factory ProjectConfig.from_json(Map<String, dynamic> json) {
@@ -168,6 +173,9 @@ class ProjectConfig {
       ),
       waterfall_ad: _parse_probability(
         json['waterfall_ad'],
+      ),
+      short_story_tab_ad: _parse_probability(
+        json['short_story_tab_ad'],
       ),
     );
   }

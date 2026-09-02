@@ -46,10 +46,16 @@ class BookListItem {
   /// 封面图片地址。
   final String cover_url;
 
+  /// 后端返回的封面原始宽度。
+  final int cover_width;
+
+  /// 后端返回的封面原始高度。
+  final int cover_height;
+
   /// 封面宽高比（width / height）。
   ///
-  /// 由图片预解析阶段赋值，渲染前必须确保已填充。
-  /// 若未填充则使用默认值。
+  /// 仅作为旧接口没有返回有效 [cover_width]、[cover_height] 时的回退值。
+  /// 新数据通过后端宽高直接计算精确比例。
   final double cover_aspect_ratio;
 
   /// 封面左上角的小角标。
@@ -77,6 +83,8 @@ class BookListItem {
     required this.title,
     required this.description,
     required this.cover_url,
+    this.cover_width = 0,
+    this.cover_height = 0,
     this.cover_aspect_ratio = 0.74,
     required this.cover_badge,
     required this.cover_meta_text,
@@ -113,6 +121,8 @@ class BookListItem {
       title: title,
       description: description,
       cover_url: cover_url,
+      cover_width: cover_width,
+      cover_height: cover_height,
       cover_aspect_ratio: ratio,
       cover_badge: cover_badge,
       cover_meta_text: cover_meta_text,
@@ -124,6 +134,17 @@ class BookListItem {
 
   /// 判断当前是否为普通书籍项。
   bool get is_book => type == BookListItemType.book;
+
+  /// 后端是否已经返回可直接用于首帧布局的有效封面尺寸。
+  bool get has_known_cover_dimensions => cover_width > 0 && cover_height > 0;
+
+  /// 是否需要通过图片网络数据补充封面尺寸。
+  bool get should_resolve_cover_dimensions => !has_known_cover_dimensions;
+
+  /// 首帧应使用的封面宽高比（width / height）。
+  double get effective_cover_aspect_ratio => has_known_cover_dimensions
+      ? cover_width / cover_height
+      : cover_aspect_ratio;
 
   /// 判断当前是否为广告项。
   bool get is_ad => type == BookListItemType.ad;

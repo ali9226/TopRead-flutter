@@ -13,10 +13,14 @@ import 'package:app/components/login_required_dialog/index.dart';
 import 'package:app/models/short_story_item.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/home_store.dart';
+import 'package:app/stores/project_config_store.dart';
+import 'package:app/services/short_story_tab_ad_pool.dart';
+import 'package:app/util/ad_display_policy.dart';
 import 'package:app/pages/home/widgets/tab_contents/short_story_tab/logic.dart';
 import 'package:app/pages/home/widgets/tab_contents/short_story_tab/style.dart';
 import 'package:app/pages/home/widgets/tab_contents/short_story_tab/widgets/dislike_reason_sheet.dart';
 import 'package:app/pages/home/widgets/tab_contents/short_story_tab/widgets/short_story_card.dart';
+import 'package:app/pages/home/widgets/tab_contents/short_story_tab/widgets/short_story_native_ad_card.dart';
 import 'package:app/pages/interest_preference/index.dart';
 import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/router/router_util.dart';
@@ -54,7 +58,13 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
   /// 本组件请求版本，用于丢弃语种切换前的旧响应。
   int _request_generation = 0;
 
-  static const double _load_more_trigger_distance = 300;
+  /// 广告槽位自增序列号，用于生成全局唯一的广告槽位 ID。
+  int _ad_slot_sequence = 0;
+
+  /// 已插入的广告槽位 ID 集合，用于释放资源。
+  final Set<String> _ad_slot_ids = <String>{};
+
+  static const double _load_more_trigger_distance = 800;
   static const int _skeleton_count = 5;
 
   @override
@@ -69,10 +79,10 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
           on_refresh: _refresh_for_language,
         );
 
-    /// 如果全局仓库已有数据，直接恢复，不重新请求。
+    /// 如果全局仓库已有数据，直接恢复并插入广告，不重新请求。
     final HomeBannerStore home_store = Get.find<HomeBannerStore>();
     if (home_store.short_story_list.isNotEmpty) {
-      _display_list.addAll(home_store.short_story_list);
+      _display_list.addAll(_insert_ad_in_batch(home_store.short_story_list));
     } else {
       _load_initial_data();
     }
@@ -84,12 +94,82 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
     _scroll_controller.removeListener(_handle_scroll);
     _scroll_controller.dispose();
     _category_scroll_controller.dispose();
+    // 不在 dispose 时释放广告槽位，广告由全局池管理
+    // 切换 Tab 返回时可以复用已加载的广告
     super.dispose();
+  }
+
+  /// 生成全局唯一的广告槽位 ID。
+  String _create_ad_slot_id() {
+    _ad_slot_sequence += 1;
+    return 'short_story_ad_$_ad_slot_sequence';
+  }
+
+  /// 释放所有已创建的广告槽位。
+  void _release_ad_slots() {
+    if (_ad_slot_ids.isEmpty) return;
+    ShortStoryTabAdPool.remove_all(_ad_slot_ids);
+    _ad_slot_ids.clear();
+  }
+
+  /// 根据概率判断是否应该在本批数据中插入广告。
+  ///
+  /// 概率值来源于 `project_config.short_story_tab_ad`（0~100）。
+  /// - 0：不展示广告
+  /// - 100：每批必展示广告
+  /// - 其他值：按百分比概率展示
+  bool _should_insert_ad() {
+    if (!AdDisplayPolicy.can_show_ads()) return false;
+
+    final int probability =
+        Get.find<ProjectConfigStore>().current.short_story_tab_ad;
+    if (probability <= 0) return false;
+    if (probability >= 100) return true;
+
+    final int roll = DateTime.now().millisecondsSinceEpoch % 100;
+    return roll < probability;
+  }
+
+  /// 在本批数据的中间位置插入广告槽位。
+  List<ShortStoryItem> _insert_ad_in_batch(List<ShortStoryItem> batch) {
+    if (batch.isEmpty || !_should_insert_ad()) return batch;
+
+    final String slot_id = _create_ad_slot_id();
+    _ad_slot_ids.add(slot_id);
+
+    final List<ShortStoryItem> result = List<ShortStoryItem>.of(batch);
+    final int insert_index = (result.length + 1) ~/ 2;
+
+    // 创建一个特殊的 ShortStoryItem 作为广告占位符
+    result.insert(
+      insert_index,
+      ShortStoryItem(
+        id: -_ad_slot_sequence, // 负数 ID 表示广告占位符
+        title: '',
+        description: '',
+        tags: [],
+        like_count: 0,
+      ),
+    );
+
+    return result;
+  }
+
+  /// 判断指定索引的数据是否为广告占位符。
+  bool _is_ad_placeholder(int index) {
+    return index < _display_list.length && _display_list[index].id < 0;
+  }
+
+  /// 获取广告占位符对应的槽位 ID。
+  String _get_ad_slot_id(int index) {
+    final int sequence = -_display_list[index].id;
+    return 'short_story_ad_$sequence';
   }
 
   /// Locale 切换前清空旧语种内容并让旧请求失效。
   void _prepare_language_refresh(LanguageRefreshContext refresh_context) {
     _request_generation++;
+    _release_ad_slots();
     if (!mounted) return;
     setState(() {
       _display_list.clear();
@@ -137,12 +217,12 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
     }
 
     setState(() {
-      _display_list.addAll(items);
+      _display_list.addAll(_insert_ad_in_batch(items));
       _has_more = items.isNotEmpty;
       _is_loading = false;
     });
 
-    /// 同步到全局仓库。
+    /// 同步到全局仓库（不含广告占位符）。
     Get.find<HomeBannerStore>().short_story_list.assignAll(items);
   }
 
@@ -176,7 +256,9 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
       _is_loading_more = true;
     });
 
+    // 排除广告占位符的负数 ID
     final List<int> no_ids = _display_list
+        .where((ShortStoryItem item) => item.id > 0)
         .map((ShortStoryItem item) => item.id)
         .toList();
 
@@ -192,7 +274,7 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
     }
 
     setState(() {
-      _display_list.addAll(new_items);
+      _display_list.addAll(_insert_ad_in_batch(new_items));
       _has_more = new_items.isNotEmpty;
       _is_loading_more = false;
     });
@@ -203,12 +285,14 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
   /// 清空当前列表展示骨架屏，重新请求首屏数据。
   Future<void> _on_refresh() async {
     if (_is_loading) return;
+    _release_ad_slots();
     await _load_initial_data();
   }
 
   /// 分类切换回调。
   void _on_category_changed(int? category_id) {
     if (_is_loading) return;
+    _release_ad_slots();
     _logic.selected_category_id.value = category_id;
     _load_initial_data();
   }
@@ -217,6 +301,9 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
   ///
   /// 立即切换本地 UI 状态，后台发请求，失败时回退。
   Future<void> _on_like_tap(int index) async {
+    // 广告占位符不处理点赞
+    if (_is_ad_placeholder(index)) return;
+
     final bool is_logged_in = await showLoginRequiredDialog(
       title: easy.tr('short_story_read.login_required'),
     );
@@ -262,8 +349,10 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
       _like_loading_ids.remove(item.id);
     });
 
-    /// 同步到全局仓库。
-    Get.find<HomeBannerStore>().short_story_list.assignAll(_display_list);
+    /// 同步到全局仓库（不含广告占位符）。
+    Get.find<HomeBannerStore>().short_story_list.assignAll(
+      _display_list.where((ShortStoryItem item) => item.id > 0).toList(),
+    );
   }
 
   void _scroll_to_top() {
@@ -367,6 +456,20 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
                                   on_load_more: _try_load_more,
                                 );
                               }
+
+                              // 广告占位符渲染广告卡片
+                              if (_is_ad_placeholder(index)) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: ShortStoryTabStyle.card_spacing,
+                                  ),
+                                  child: ShortStoryNativeAdCard(
+                                    slot_id: _get_ad_slot_id(index),
+                                    is_dark: is_dark,
+                                  ),
+                                );
+                              }
+
                               return Padding(
                                 padding: const EdgeInsets.only(
                                   bottom: ShortStoryTabStyle.card_spacing,

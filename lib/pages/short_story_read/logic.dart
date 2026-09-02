@@ -15,6 +15,7 @@ import 'package:app/stores/short_story_catalog_store.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/device/save_body_font_size.dart';
 import 'package:app/pages/short_story_read/utils/short_story_content_cache.dart';
+import 'package:app/services/bookshelf_sync_service.dart';
 
 /// 短篇小说阅读页面逻辑层。
 ///
@@ -473,6 +474,11 @@ class ShortStoryReadLogic {
       }
       _write_story_detail_cache(story_id, detail);
 
+      if (results.status && results.content != null) {
+        // TODO 后端已写入最近浏览记录，立即同步已加载的书架历史。
+        unawaited(BookshelfSyncService.history_changed());
+      }
+
       if (_is_disposed) return false;
       story_data.value = detail;
 
@@ -587,6 +593,8 @@ class ShortStoryReadLogic {
             title: detail.title,
             description: detail.introduction,
             cover_url: detail.cover_url,
+            cover_width: detail.cover_width,
+            cover_height: detail.cover_height,
             tags: detail.category_list,
             like_count: detail.like_count,
             is_liked: detail.is_liked,
@@ -949,6 +957,7 @@ class ShortStoryReadLogic {
       if (server_status) {
         unawaited(NotificationPermissionRequest.request_after_novel_favorite());
       }
+      unawaited(BookshelfSyncService.favorite_changed());
       return story_data.value?.is_favorited;
     } catch (_) {
       // 异常时回退状态。

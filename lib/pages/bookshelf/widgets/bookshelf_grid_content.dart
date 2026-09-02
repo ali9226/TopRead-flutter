@@ -23,7 +23,7 @@ enum BookshelfContentType { history, favorite }
 /// 历史和收藏 Tab 共用此组件，通过 [type] 区分行为差异：
 /// - 长按弹窗：历史→删除历史记录，收藏→取消收藏
 /// - 数据由外部通过 [items] 传入，组件不负责请求
-/// - 删除操作为乐观模式：先移除再后台请求，带位置动画
+/// - 删除操作等待服务端确认后再移除，失败时保留原数据
 ///
 /// 使用 Stack + AnimatedPositioned 实现删除动画，
 /// 删除卡片后所有剩余卡片会平滑移动到新位置。
@@ -452,7 +452,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
 
   /// 展示操作弹窗（历史→删除，收藏→取消收藏）。
   ///
-  /// 乐观模式：确认后立即标记删除并播放动画，后台静默调用 API。
+  /// 服务端确认成功后标记删除并播放动画。
   void _show_action_dialog(BookshelfBookItem book_item) {
     final String message = widget.type == BookshelfContentType.history
         ? easy.tr(
@@ -480,13 +480,14 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
       onRightPressed: () async {
         if (!mounted) return;
 
+        final bool removed =
+            await widget.on_delete?.call(book_item.novel_id) ?? false;
+        if (!mounted || !removed) return;
+
         // 标记为正在移除，触发位置重排动画 + 淡出动画。
         setState(() {
           _removing_ids.add(book_item.id);
         });
-
-        // 后台静默调用 API，不等待结果。
-        widget.on_delete?.call(book_item.novel_id);
 
         // 动画完成后从列表中真正移除。
         Future<void>.delayed(

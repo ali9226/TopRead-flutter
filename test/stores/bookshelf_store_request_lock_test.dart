@@ -148,6 +148,52 @@ void main() {
     expect(store.focus_list, hasLength(1));
     expect(store.focus_list.single.id, '1');
   });
+
+  test('历史变化通知只刷新已访问列表', () async {
+    int request_count = 0;
+    final BookshelfStore store = BookshelfStore(
+      fetch_history_list: ({required int page, required int page_size}) async {
+        request_count++;
+        return _history_result(
+          page: page,
+          items: <ReadRecordItem>[_history_item(request_count)],
+        );
+      },
+    );
+    addTearDown(store.onClose);
+
+    await store.refresh_history_if_requested();
+    expect(request_count, 0);
+
+    await store.load_history_if_needed();
+    expect(request_count, 1);
+    expect(store.history_list.single.id, '1');
+
+    await store.refresh_history_if_requested();
+    expect(request_count, 2);
+    expect(store.history_list.single.id, '2');
+  });
+
+  test('静默刷新失败时保留已有历史列表', () async {
+    int request_count = 0;
+    final BookshelfStore store = BookshelfStore(
+      fetch_history_list: ({required int page, required int page_size}) async {
+        request_count++;
+        if (request_count > 1) return null;
+        return _history_result(
+          page: page,
+          items: <ReadRecordItem>[_history_item(7)],
+        );
+      },
+    );
+    addTearDown(store.onClose);
+
+    await store.load_history_if_needed();
+    await store.refresh_history_if_requested();
+
+    expect(request_count, 2);
+    expect(store.history_list.single.id, '7');
+  });
 }
 
 BookshelfListResult<ReadRecordItem> _history_result({

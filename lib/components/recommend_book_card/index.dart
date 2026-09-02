@@ -90,13 +90,16 @@ class _RecommendBookCardState extends State<RecommendBookCard>
       ),
     );
 
-    _scale_animation = Tween<double>(
-      begin: 1.0,
-      end: RecommendBookCardStyle.long_press_text_scale,
-    ).animate(CurvedAnimation(
-      parent: _scale_animation_controller,
-      curve: Curves.easeOutCubic,
-    ));
+    _scale_animation =
+        Tween<double>(
+          begin: 1.0,
+          end: RecommendBookCardStyle.long_press_text_scale,
+        ).animate(
+          CurvedAnimation(
+            parent: _scale_animation_controller,
+            curve: Curves.easeOutCubic,
+          ),
+        );
   }
 
   @override
@@ -202,9 +205,7 @@ class _RecommendBookCardState extends State<RecommendBookCard>
       onPointerCancel: _on_pointer_cancel,
       child: Material(
         color: card_bg,
-        borderRadius: BorderRadius.circular(
-          RecommendBookCardStyle.card_radius,
-        ),
+        borderRadius: BorderRadius.circular(RecommendBookCardStyle.card_radius),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: widget.show_overlay ? null : widget.on_tap,
@@ -245,24 +246,32 @@ class _RecommendBookCardState extends State<RecommendBookCard>
                               color: title_color,
                               fontSize: RecommendBookCardStyle.title_font_size,
                               height: RecommendBookCardStyle.title_height,
-                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
+                              ),
                             ),
                           ),
 
                           /// 简介。
                           if (widget.item.has_description) ...<Widget>[
                             const SizedBox(
-                              height: RecommendBookCardStyle.description_top_spacing,
+                              height: RecommendBookCardStyle
+                                  .description_top_spacing,
                             ),
                             Text(
                               widget.item.description,
-                              maxLines: RecommendBookCardStyle.description_max_lines,
+                              maxLines:
+                                  RecommendBookCardStyle.description_max_lines,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: description_color,
-                                fontSize: RecommendBookCardStyle.description_font_size,
-                                height: RecommendBookCardStyle.description_height,
-                                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                                fontSize: RecommendBookCardStyle
+                                    .description_font_size,
+                                height:
+                                    RecommendBookCardStyle.description_height,
+                                fontWeight: FontConfig.adjustedWeight(
+                                  FontWeight.w400,
+                                ),
                               ),
                             ),
                           ],
@@ -274,7 +283,8 @@ class _RecommendBookCardState extends State<RecommendBookCard>
                             ),
                             Wrap(
                               spacing: RecommendBookCardStyle.tag_spacing,
-                              runSpacing: RecommendBookCardStyle.tag_run_spacing,
+                              runSpacing:
+                                  RecommendBookCardStyle.tag_run_spacing,
                               children: widget.item.tag_list
                                   .map(
                                     (BookListTagItem tag_item) =>
@@ -327,7 +337,9 @@ class _RecommendBookCardState extends State<RecommendBookCard>
             max_height: RecommendBookCardStyle.cover_max_height,
             border_radius: 0,
             is_dark: widget.is_dark,
-            default_aspect_ratio: widget.item.cover_aspect_ratio,
+            default_aspect_ratio: widget.item.effective_cover_aspect_ratio,
+            resolve_image_dimensions:
+                widget.item.should_resolve_cover_dimensions,
             error_text: '封面',
           ),
         ),
@@ -393,7 +405,9 @@ class _RecommendBookCardState extends State<RecommendBookCard>
       tag_item.color.withValues(
         alpha: RecommendBookCardStyle.tag_background_opacity,
       ),
-      is_dark ? RecommendBookCardStyle.card_dark_bg : RecommendBookCardStyle.card_light_bg,
+      is_dark
+          ? RecommendBookCardStyle.card_dark_bg
+          : RecommendBookCardStyle.card_light_bg,
     );
 
     return Container(

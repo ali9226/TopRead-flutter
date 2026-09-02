@@ -9,6 +9,7 @@ import 'package:app/api/results_type.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/models/novel_info.dart';
 import 'package:app/permission_request/notification_permission_request.dart';
+import 'package:app/services/bookshelf_sync_service.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/util/device/save_body_font_size.dart';
 import 'package:app/util/percentage_probability.dart';
@@ -320,6 +321,10 @@ class Logic extends GetxController {
   /// 目录列表。
   List<NovelChapterInfo> get chapter_list => _store.chapter_list;
 
+  /// 当前详情对应的 novel_main_language.id。
+  int get current_novel_language_id =>
+      int.tryParse(_store.novel_info.value?.language_info.id ?? '') ?? 0;
+
   /// 当前已进入阅读窗口的章节索引。
   Set<int> get loaded_chapter_indexes => _store.reading_items
       .map((ReadingContentItem item) => item.chapter_index)
@@ -497,8 +502,8 @@ class Logic extends GetxController {
   /// 立即切换本地状态，然后发起请求。
   /// 请求失败时回退状态，请求成功时保持不变。
   /// 请求期间通过 is_favorite_loading 防止重复点击。
-  Future<void> toggle_favorite() async {
-    if (is_favorite_loading.value) return;
+  Future<bool?> toggle_favorite() async {
+    if (is_favorite_loading.value) return null;
 
     is_favorite_loading.value = true;
 
@@ -559,10 +564,12 @@ class Logic extends GetxController {
       if (!results.status || results.content == null) {
         // 请求失败，回退状态。
         _revert_favorite(previous_status, previous_info);
-        return;
+        return null;
       }
 
-      final bool server_status = results.content!['favorite'] == true;
+      final dynamic raw_server_status = results.content!['favorite'];
+      final bool server_status =
+          raw_server_status == true || raw_server_status == 1;
       // 服务端状态与乐观更新不一致时，以服务端为准。
       if (server_status != optimistic_status) {
         is_favorited.value = server_status;
@@ -606,13 +613,17 @@ class Logic extends GetxController {
         }
       }
 
+      unawaited(BookshelfSyncService.favorite_changed());
+
       // 只在服务端确认小说已加入收藏后申请系统通知权限。
       if (server_status) {
         unawaited(NotificationPermissionRequest.request_after_novel_favorite());
       }
+      return server_status;
     } catch (_) {
       // 异常时回退状态。
       _revert_favorite(previous_status, previous_info);
+      return null;
     } finally {
       is_favorite_loading.value = false;
     }
@@ -667,6 +678,8 @@ class Logic extends GetxController {
     if (results.status && results.content != null) {
       // 请求成功，保存到 Store。
       _store.set_novel_info(results.content!);
+      // TODO 后端已完成“进入即记录”，同步可能早已加载的书架历史。
+      unawaited(BookshelfSyncService.history_changed());
       _total_word_count = results.content!.language_info.word_count;
 
       // TODO 初始化点赞状态、点赞数、收藏状态。

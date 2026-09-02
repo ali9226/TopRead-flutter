@@ -53,6 +53,12 @@ class ReadRecordItem {
   /// 封面URL。
   final String cover_url;
 
+  /// 封面原始宽度。
+  final int cover_width;
+
+  /// 封面原始高度。
+  final int cover_height;
+
   /// 章节数。
   final int chapter_count;
 
@@ -75,6 +81,8 @@ class ReadRecordItem {
     required this.language_title,
     required this.introduction,
     required this.cover_url,
+    this.cover_width = 0,
+    this.cover_height = 0,
     required this.chapter_count,
     required this.category_names,
   });
@@ -96,6 +104,8 @@ class ReadRecordItem {
       language_title: json['language_title']?.toString() ?? '',
       introduction: json['introduction']?.toString() ?? '',
       cover_url: json['cover_url']?.toString() ?? '',
+      cover_width: _parse_int(json['cover_width']),
+      cover_height: _parse_int(json['cover_height']),
       chapter_count: _parse_int(json['chapter_count']),
       category_names: json['category_names']?.toString() ?? '',
     );
@@ -165,6 +175,12 @@ class FavoriteItem {
   /// 封面URL。
   final String cover_url;
 
+  /// 封面原始宽度。
+  final int cover_width;
+
+  /// 封面原始高度。
+  final int cover_height;
+
   /// 章节数。
   final int chapter_count;
 
@@ -194,6 +210,8 @@ class FavoriteItem {
     required this.latest_chapter_no,
     required this.latest_update_time,
     required this.cover_url,
+    this.cover_width = 0,
+    this.cover_height = 0,
     required this.chapter_count,
     required this.introduction,
     required this.read_progress,
@@ -218,6 +236,8 @@ class FavoriteItem {
       latest_chapter_no: _parse_int(json['latest_chapter_no']),
       latest_update_time: json['latest_update_time']?.toString() ?? '',
       cover_url: json['cover_url']?.toString() ?? '',
+      cover_width: _parse_int(json['cover_width']),
+      cover_height: _parse_int(json['cover_height']),
       chapter_count: _parse_int(json['chapter_count']),
       introduction: json['introduction']?.toString() ?? '',
       read_progress: _parse_double(json['read_progress']),
@@ -318,18 +338,16 @@ Future<BookshelfListResult<ReadRecordItem>?> inquire_read_record_list({
 }) async {
   final ResultsType<Map<String, dynamic>> results =
       await postRequest<Map<String, dynamic>>(
-    path: 'novel_read_record/inquire',
-    parameter: {
-      'page': page,
-      'page_size': page_size,
-    },
-    showTips: false,
-    fromJson: (json) => json,
-  );
+        path: 'novel_read_record/inquire',
+        parameter: {'page': page, 'page_size': page_size},
+        showTips: false,
+        fromJson: (json) => json,
+      );
 
   if (!results.status || results.content == null) {
     debugPrint(
-        'TODO inquire_read_record_list 失败: status=${results.status}, message=${results.message}');
+      'TODO inquire_read_record_list 失败: status=${results.status}, message=${results.message}',
+    );
     return null;
   }
 
@@ -355,18 +373,16 @@ Future<BookshelfListResult<FavoriteItem>?> inquire_favorite_list({
 }) async {
   final ResultsType<Map<String, dynamic>> results =
       await postRequest<Map<String, dynamic>>(
-    path: 'novel_favorite/inquire',
-    parameter: {
-      'page': page,
-      'page_size': page_size,
-    },
-    showTips: false,
-    fromJson: (json) => json,
-  );
+        path: 'novel_favorite/inquire',
+        parameter: {'page': page, 'page_size': page_size},
+        showTips: false,
+        fromJson: (json) => json,
+      );
 
   if (!results.status || results.content == null) {
     debugPrint(
-        'TODO inquire_favorite_list 失败: status=${results.status}, message=${results.message}');
+      'TODO inquire_favorite_list 失败: status=${results.status}, message=${results.message}',
+    );
     return null;
   }
 
@@ -392,18 +408,16 @@ Future<BookshelfListResult<FocusAuthorItem>?> inquire_focus_author_list({
 }) async {
   final ResultsType<Map<String, dynamic>> results =
       await postRequest<Map<String, dynamic>>(
-    path: 'novel_focus_on/inquire',
-    parameter: {
-      'page': page,
-      'page_size': page_size,
-    },
-    showTips: false,
-    fromJson: (json) => json,
-  );
+        path: 'novel_focus_on/inquire',
+        parameter: {'page': page, 'page_size': page_size},
+        showTips: false,
+        fromJson: (json) => json,
+      );
 
   if (!results.status || results.content == null) {
     debugPrint(
-        'TODO inquire_focus_author_list 失败: status=${results.status}, message=${results.message}');
+      'TODO inquire_focus_author_list 失败: status=${results.status}, message=${results.message}',
+    );
     return null;
   }
 
@@ -437,25 +451,41 @@ class FocusToggleResult {
 ///
 /// [author_id] 作者ID（必传）。
 /// 返回关注结果（包含最新关注状态），失败时返回 null。
-Future<FocusToggleResult?> toggle_focus_author({
-  required int author_id,
-}) async {
+Future<FocusToggleResult?> toggle_focus_author({required int author_id}) async {
   final ResultsType<Map<String, dynamic>> results =
       await postRequest<Map<String, dynamic>>(
-    path: 'novel_focus_on/click',
-    parameter: {
-      'author_id': author_id,
-    },
-    showTips: true,
-    fromJson: (json) => json,
-  );
+        path: 'novel_focus_on/click',
+        parameter: {'author_id': author_id},
+        showTips: true,
+        fromJson: (json) => json,
+      );
 
   if (!results.status || results.content == null) {
     debugPrint(
-        'TODO toggle_focus_author 失败: status=${results.status}, message=${results.message}');
+      'TODO toggle_focus_author 失败: status=${results.status}, message=${results.message}',
+    );
     return null;
   }
   return FocusToggleResult.from_json(results.content!);
+}
+
+/// 幂等取消关注作者接口。
+///
+/// [author_id] 作者ID（必传）。
+/// 返回服务端是否确认当前为未关注状态。
+Future<bool> remove_focus_author({required int author_id}) async {
+  if (author_id <= 0) return false;
+
+  final ResultsType<Map<String, dynamic>> results =
+      await postRequest<Map<String, dynamic>>(
+        path: 'novel_focus_on/remove',
+        parameter: <String, dynamic>{'author_id': author_id},
+        showTips: true,
+        fromJson: (Map<String, dynamic> json) => json,
+      );
+  if (!results.status || results.content == null) return false;
+  final dynamic focus = results.content!['focus'];
+  return focus == false || focus == 0;
 }
 
 /// 最后阅读记录数据模型。
@@ -506,41 +536,51 @@ Future<bool> save_read_progress({
 }) async {
   final ResultsType<Map<String, dynamic>> results =
       await postRequest<Map<String, dynamic>>(
-    path: 'novel_read_record/save_progress',
-    parameter: {
-      'novel_id': novel_id,
-      if (novel_language_id != null) 'novel_language_id': novel_language_id,
-      if (chapter_id != null) 'chapter_id': chapter_id,
-      'chapter_offset': chapter_offset,
-      'read_progress': read_progress,
-    },
-    showTips: false,
-    fromJson: (json) => json,
-  );
+        path: 'novel_read_record/save_progress',
+        parameter: {
+          'novel_id': novel_id,
+          if (novel_language_id != null) 'novel_language_id': novel_language_id,
+          if (chapter_id != null) 'chapter_id': chapter_id,
+          'chapter_offset': chapter_offset,
+          'read_progress': read_progress,
+        },
+        showTips: false,
+        fromJson: (json) => json,
+      );
 
   return results.status;
+}
+
+/// 删除当前用户指定小说的阅读记录。
+Future<bool> remove_read_record({required int novel_id}) async {
+  if (novel_id <= 0) return false;
+
+  final ResultsType<Map<String, dynamic>> results =
+      await postRequest<Map<String, dynamic>>(
+        path: 'novel_read_record/remove',
+        parameter: <String, dynamic>{'novel_id': novel_id},
+        showTips: true,
+        fromJson: (Map<String, dynamic> json) => json,
+      );
+  return results.status && results.content?['removed'] == true;
 }
 
 /// 查询用户对指定小说的最后阅读记录。
 ///
 /// [novel_id] 小说ID（必传）。
 /// 返回最后阅读记录，未登录或失败时返回 null。
-Future<LastReadRecord?> get_last_read_record({
-  required int novel_id,
-}) async {
+Future<LastReadRecord?> get_last_read_record({required int novel_id}) async {
   // 未登录不请求接口
   final token = await StorageUtil.getData(Constant.tokenKey);
   if (token == null || token.isEmpty) return null;
 
   final ResultsType<Map<String, dynamic>> results =
       await postRequest<Map<String, dynamic>>(
-    path: 'novel_read_record/get_last_record',
-    parameter: {
-      'novel_id': novel_id,
-    },
-    showTips: false,
-    fromJson: (json) => json,
-  );
+        path: 'novel_read_record/get_last_record',
+        parameter: {'novel_id': novel_id},
+        showTips: false,
+        fromJson: (json) => json,
+      );
 
   if (!results.status || results.content == null) {
     return null;
@@ -570,25 +610,38 @@ class FavoriteToggleResult {
 ///
 /// [novel_id] 小说ID（必传）。
 /// 返回收藏结果（包含最新收藏状态），失败时返回 null。
-Future<FavoriteToggleResult?> toggle_favorite({
-  required int novel_id,
-}) async {
+Future<FavoriteToggleResult?> toggle_favorite({required int novel_id}) async {
   final ResultsType<Map<String, dynamic>> results =
       await postRequest<Map<String, dynamic>>(
-    path: 'novel_favorite/click',
-    parameter: {
-      'novel_id': novel_id,
-    },
-    showTips: true,
-    fromJson: (json) => json,
-  );
+        path: 'novel_favorite/click',
+        parameter: {'novel_id': novel_id},
+        showTips: true,
+        fromJson: (json) => json,
+      );
 
   if (!results.status || results.content == null) {
     debugPrint(
-        'TODO toggle_favorite 失败: status=${results.status}, message=${results.message}');
+      'TODO toggle_favorite 失败: status=${results.status}, message=${results.message}',
+    );
     return null;
   }
   return FavoriteToggleResult.from_json(results.content!);
+}
+
+/// 幂等取消收藏小说接口。
+Future<bool> remove_favorite({required int novel_id}) async {
+  if (novel_id <= 0) return false;
+
+  final ResultsType<Map<String, dynamic>> results =
+      await postRequest<Map<String, dynamic>>(
+        path: 'novel_favorite/remove',
+        parameter: <String, dynamic>{'novel_id': novel_id},
+        showTips: true,
+        fromJson: (Map<String, dynamic> json) => json,
+      );
+  if (!results.status || results.content == null) return false;
+  final dynamic favorite = results.content!['favorite'];
+  return favorite == false || favorite == 0;
 }
 
 /// 解析整数，兼容字符串和数字类型。

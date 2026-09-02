@@ -87,7 +87,7 @@ class _SearchPageState extends State<SearchPage> {
   static const int _page_size = 20;
 
   /// 距离底部多少像素时触发自动加载更多。
-  static const double _load_more_trigger_distance = 300;
+  static const double _load_more_trigger_distance = 800;
 
   /// 返回顶部按钮是否可见。
   bool _is_back_to_top_visible = false;
@@ -399,6 +399,8 @@ class _SearchPageState extends State<SearchPage> {
         title: item.title,
         description: item.introduction,
         cover_url: item.cover_url,
+        cover_width: item.cover_width,
+        cover_height: item.cover_height,
         cover_badge: item.publish_status == 2 ? '完结' : '',
         cover_meta_text: meta_text,
         tag_list: tags,

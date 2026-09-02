@@ -42,7 +42,7 @@ class _DefaultTabContentState extends State<DefaultTabContent>
   final HomeBannerStore _home_store = Get.find<HomeBannerStore>();
 
   /// 距离底部多少像素时触发自动加载更多。
-  static const double _load_more_trigger_distance = 300;
+  static const double _load_more_trigger_distance = 800;
 
   @override
   void initState() {

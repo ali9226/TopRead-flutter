@@ -358,284 +358,178 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     _ nativeAd: NativeAd,
     customOptions: [AnyHashable: Any]?
   ) -> NativeAdView? {
-    // 颜色与 Flutter 端 ColorConstants 保持一致，修改时需同步更新：
-    // - Flutter: lib/config/color_config.dart
-    // - Android: android/app/.../ShortStoryNativeAdFactory.kt
-
     let isDark = customOptions?["isDark"] as? Bool ?? false
     let advertisementLabel =
       customOptions?["advertisementLabel"] as? String ?? "Ad"
     let slotID = customOptions?["slotId"] as? String
     let cardWidth = (customOptions?["cardWidth"] as? NSNumber)?.doubleValue
     let layoutToken = (customOptions?["layoutToken"] as? NSNumber)?.intValue
-    // 广告卡片背景色：夜间 #1E2430，日间对应 ColorConstants.whiteColor (white)。
-    let cardBackground =
-      isDark
-      ? UIColor(red: 30 / 255, green: 36 / 255, blue: 48 / 255, alpha: 1)
-      : UIColor.white
-    // 主要文字颜色：夜间白色，日间对应 ColorConstants.lightTextColor (#222222)。
-    let primaryText =
-      isDark
-      ? UIColor.white
-      : UIColor(red: 34 / 255, green: 34 / 255, blue: 34 / 255, alpha: 1)
-    // 次要文字颜色：夜间 #B0B5C0，日间 #7E7660。
-    let secondaryText =
-      isDark
-      ? UIColor(red: 176 / 255, green: 181 / 255, blue: 192 / 255, alpha: 1)
-      : UIColor(red: 126 / 255, green: 118 / 255, blue: 96 / 255, alpha: 1)
 
-    // 广告卡片容器（圆角 16pt，裁剪内容）。
     let resolvedCardWidth =
       cardWidth.flatMap { width in
         width.isFinite && width > 0 ? width : nil
       } ?? 320
+
+    // 颜色定义 - 遮罩层统一使用半透明黑色
+    let overlayColor = UIColor(white: 0, alpha: 0.8)
+    let headlineColor = UIColor.white
+    let advertiserColor = UIColor(red: 204 / 255, green: 204 / 255, blue: 204 / 255, alpha: 1)
+
     let adView = NativeAdView(
       frame: CGRect(x: 0, y: 0, width: resolvedCardWidth, height: 1)
     )
-    adView.backgroundColor = cardBackground
+    adView.backgroundColor = .black
     adView.layer.cornerRadius = 16
     adView.clipsToBounds = true
 
-    // 使用单一纵向栈确保归因栏、媒体和信息区域物理隔离。
-    let contentStackView = UIStackView(frame: .zero)
-    contentStackView.translatesAutoresizingMaskIntoConstraints = false
-    contentStackView.axis = .vertical
-    contentStackView.alignment = .fill
-    contentStackView.distribution = .fill
-    contentStackView.spacing = 0
-    adView.addSubview(contentStackView)
-
-    // Google SDK 根据 NativeAdOptions 把 AdChoices 自动放在
-    // NativeAdView 右上角，归因栏右半部分不放置其他素材。
-    let attributionHeaderView = UIView(frame: .zero)
-    attributionHeaderView.translatesAutoresizingMaskIntoConstraints = false
-    attributionHeaderView.backgroundColor = cardBackground
-    contentStackView.addArrangedSubview(attributionHeaderView)
-
-    let attributionLabel = NativeAdInsetLabel(frame: .zero)
-    attributionLabel.translatesAutoresizingMaskIntoConstraints = false
-    attributionLabel.text = advertisementLabel
-    attributionLabel.font = .systemFont(ofSize: 11, weight: .regular)
-    attributionLabel.textColor = UIColor(
-      red: 95 / 255,
-      green: 139 / 255,
-      blue: 1,
-      alpha: 0.96
-    )
-    attributionLabel.backgroundColor = UIColor(
-      red: 95 / 255,
-      green: 139 / 255,
-      blue: 1,
-      alpha: 0.16
-    )
-    attributionLabel.textAlignment = .center
-    attributionLabel.numberOfLines = 1
-    attributionLabel.lineBreakMode = .byTruncatingTail
-    attributionLabel.layer.cornerRadius = 10
-    attributionLabel.clipsToBounds = true
-    attributionHeaderView.addSubview(attributionLabel)
-
-    // 媒体外再增加一层强制裁剪容器。图片素材的内部 UIImageView
-    // 与视频素材的内部层级不同，只修改 MediaView 本身不足以
-    // 保证图片不越界覆盖归因栏、标题和按钮。
-    let mediaClipView = UIView(frame: .zero)
-    mediaClipView.translatesAutoresizingMaskIntoConstraints = false
-    mediaClipView.backgroundColor = cardBackground
-    mediaClipView.clipsToBounds = true
-    mediaClipView.layer.masksToBounds = true
-    contentStackView.addArrangedSubview(mediaClipView)
-
+    // 媒体区域
     let mediaView = MediaView(frame: .zero)
     mediaView.translatesAutoresizingMaskIntoConstraints = false
     mediaView.mediaContent = nativeAd.mediaContent
-    let hasVideoContent = nativeAd.mediaContent.hasVideoContent
-    mediaView.contentMode = hasVideoContent ? .scaleAspectFill : .scaleAspectFit
+    mediaView.contentMode = .scaleAspectFill
     mediaView.clipsToBounds = true
-    mediaView.layer.masksToBounds = true
-    // 禁用媒体区域内所有 UIScrollView 的滚动指示器，
-    // 避免 iOS 在广告卡片上方显示多余的空白滚动条。
     disableScrollIndicators(in: mediaView)
-    mediaClipView.addSubview(mediaView)
+    adView.addSubview(mediaView)
     adView.mediaView = mediaView
-    reportMediaType(
-      hasVideoContent: hasVideoContent,
-      slotID: slotID,
-      layoutToken: layoutToken
-    )
-    monitorVideoPlayback(
-      nativeAd: nativeAd,
-      hasVideoContent: hasVideoContent,
-      slotID: slotID,
-      layoutToken: layoutToken
-    )
-    #if DEBUG
-      let mediaType = hasVideoContent ? "视频广告" : "图片广告"
-      print("[ShortStoryNativeAd] 广告素材类型: \(mediaType)")
-    #endif
 
-    let informationView = UIView(frame: .zero)
-    informationView.translatesAutoresizingMaskIntoConstraints = false
-    informationView.backgroundColor = cardBackground
-    contentStackView.addArrangedSubview(informationView)
+    // 底部信息遮罩层
+    let overlayView = UIView(frame: .zero)
+    overlayView.translatesAutoresizingMaskIntoConstraints = false
+    overlayView.backgroundColor = overlayColor
+    adView.addSubview(overlayView)
 
-    // 广告标题（居中，最多 3 行）。
-    let headlineLabel = makeLabel(
-      text: nativeAd.headline,
-      font: .systemFont(ofSize: 16, weight: .semibold),
-      color: primaryText,
-      lines: 3
-    )
-    headlineLabel.textAlignment = .center
-    headlineLabel.setContentCompressionResistancePriority(.required, for: .vertical)
-    informationView.addSubview(headlineLabel)
+    // 标题
+    let headlineLabel = UILabel(frame: .zero)
+    headlineLabel.translatesAutoresizingMaskIntoConstraints = false
+    headlineLabel.text = nativeAd.headline
+    headlineLabel.font = .systemFont(ofSize: 14, weight: .semibold)
+    headlineLabel.textColor = headlineColor
+    headlineLabel.numberOfLines = 2
+    overlayView.addSubview(headlineLabel)
     adView.headlineView = headlineLabel
 
-    // 广告主名称（居中，单行）。
-    let advertiserLabel = makeLabel(
-      text: nativeAd.advertiser,
-      font: .systemFont(ofSize: 12, weight: .regular),
-      color: secondaryText,
-      lines: 1
-    )
-    advertiserLabel.textAlignment = .center
-    advertiserLabel.isHidden = nativeAd.advertiser == nil
-    if nativeAd.advertiser != nil {
-      advertiserLabel.setContentCompressionResistancePriority(.required, for: .vertical)
-    }
-    let advertiserTopSpacing: CGFloat = nativeAd.advertiser == nil ? 0 : 5
-    let advertiserHeightConstraint =
-      nativeAd.advertiser == nil
-      ? advertiserLabel.heightAnchor.constraint(equalToConstant: 0)
-      : nil
-    informationView.addSubview(advertiserLabel)
-    adView.advertiserView = advertiserLabel
+    // 广告主 + Ad标签 + AdChoices 同一行
+    let infoRow = UIView(frame: .zero)
+    infoRow.translatesAutoresizingMaskIntoConstraints = false
+    overlayView.addSubview(infoRow)
 
-    // Open 按钮：背景色对应 ColorConstants.themeColor (#F8D02D)，
-    // 文字色对应 ColorConstants.lightTextColor (#222222)。
-    let callToActionLabel = makeLabel(
-      text: nativeAd.callToAction,
-      font: .systemFont(ofSize: 16, weight: .semibold),
-      color: UIColor(red: 34 / 255, green: 34 / 255, blue: 34 / 255, alpha: 1),
-      lines: 1
-    )
-    callToActionLabel.backgroundColor = UIColor(
-      red: 248 / 255,
-      green: 208 / 255,
-      blue: 45 / 255,
+    // 从 Flutter 端获取随机颜色
+    let tagColorRed = (customOptions?["tagColorRed"] as? NSNumber)?.doubleValue ?? 255
+    let tagColorGreen = (customOptions?["tagColorGreen"] as? NSNumber)?.doubleValue ?? 77
+    let tagColorBlue = (customOptions?["tagColorBlue"] as? NSNumber)?.doubleValue ?? 77
+
+    let attributionLabel = UILabel(frame: .zero)
+    attributionLabel.translatesAutoresizingMaskIntoConstraints = false
+    attributionLabel.text = advertisementLabel
+    attributionLabel.font = .systemFont(ofSize: 10, weight: .regular)
+    attributionLabel.textColor = UIColor(
+      red: tagColorRed / 255,
+      green: tagColorGreen / 255,
+      blue: tagColorBlue / 255,
       alpha: 1
     )
+    attributionLabel.textAlignment = .center
+    attributionLabel.backgroundColor = UIColor(
+      red: tagColorRed / 255,
+      green: tagColorGreen / 255,
+      blue: tagColorBlue / 255,
+      alpha: 0.15
+    )
+    attributionLabel.layer.cornerRadius = 4
+    attributionLabel.clipsToBounds = true
+    infoRow.addSubview(attributionLabel)
+
+    let advertiserLabel = UILabel(frame: .zero)
+    advertiserLabel.translatesAutoresizingMaskIntoConstraints = false
+    advertiserLabel.text = nativeAd.advertiser
+    advertiserLabel.font = .systemFont(ofSize: 11, weight: .regular)
+    advertiserLabel.textColor = advertiserColor
+    advertiserLabel.numberOfLines = 1
+    advertiserLabel.isHidden = nativeAd.advertiser == nil
+    infoRow.addSubview(advertiserLabel)
+    adView.advertiserView = advertiserLabel
+
+    let adChoicesView = AdChoicesView(frame: .zero)
+    adChoicesView.translatesAutoresizingMaskIntoConstraints = false
+    infoRow.addSubview(adChoicesView)
+    adView.adChoicesView = adChoicesView
+
+    // CTA 按钮
+    let callToActionLabel = UILabel(frame: .zero)
+    callToActionLabel.translatesAutoresizingMaskIntoConstraints = false
+    callToActionLabel.text = nativeAd.callToAction
+    callToActionLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+    callToActionLabel.textColor = UIColor(red: 34 / 255, green: 34 / 255, blue: 34 / 255, alpha: 1)
+    callToActionLabel.backgroundColor = UIColor(red: 248 / 255, green: 208 / 255, blue: 45 / 255, alpha: 1)
     callToActionLabel.textAlignment = .center
-    callToActionLabel.layer.cornerRadius = 23
+    callToActionLabel.layer.cornerRadius = 19
     callToActionLabel.clipsToBounds = true
     callToActionLabel.isHidden = nativeAd.callToAction == nil
-    if nativeAd.callToAction != nil {
-      callToActionLabel.setContentCompressionResistancePriority(.required, for: .vertical)
-    }
-    let callToActionHeight: CGFloat = nativeAd.callToAction == nil ? 0 : 46
-    let callToActionTopSpacing: CGFloat = nativeAd.callToAction == nil ? 0 : 12
-    informationView.addSubview(callToActionLabel)
+    overlayView.addSubview(callToActionLabel)
     adView.callToActionView = callToActionLabel
 
-    // 布局约束：根栈 → 归因栏 → 媒体裁剪容器 → 信息区域。
+    // 视频静音播放
+    nativeAd.mediaContent.videoController.mute(true)
+
+    let hasVideoContent = nativeAd.mediaContent.hasVideoContent
+    reportMediaType(hasVideoContent: hasVideoContent, slotID: slotID, layoutToken: layoutToken)
+    monitorVideoPlayback(nativeAd: nativeAd, hasVideoContent: hasVideoContent, slotID: slotID, layoutToken: layoutToken)
+
+    // 布局约束
     NSLayoutConstraint.activate([
-      contentStackView.topAnchor.constraint(equalTo: adView.topAnchor),
-      contentStackView.leadingAnchor.constraint(equalTo: adView.leadingAnchor),
-      contentStackView.trailingAnchor.constraint(equalTo: adView.trailingAnchor),
-      contentStackView.bottomAnchor.constraint(equalTo: adView.bottomAnchor),
+      // 媒体区域
+      mediaView.topAnchor.constraint(equalTo: adView.topAnchor),
+      mediaView.leadingAnchor.constraint(equalTo: adView.leadingAnchor),
+      mediaView.trailingAnchor.constraint(equalTo: adView.trailingAnchor),
+      mediaView.bottomAnchor.constraint(equalTo: adView.bottomAnchor),
 
-      // 归因栏：左侧仅放置自有 Ad 标签，右侧留给 SDK 的 AdChoices。
-      attributionHeaderView.heightAnchor.constraint(equalToConstant: 36),
-      attributionLabel.leadingAnchor.constraint(
-        equalTo: attributionHeaderView.leadingAnchor,
-        constant: 10
-      ),
-      attributionLabel.centerYAnchor.constraint(equalTo: attributionHeaderView.centerYAnchor),
-      attributionLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 20),
-      attributionLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 20),
-      attributionLabel.trailingAnchor.constraint(
-        lessThanOrEqualTo: attributionHeaderView.centerXAnchor
-      ),
+      // 遮罩层在底部
+      overlayView.leadingAnchor.constraint(equalTo: adView.leadingAnchor),
+      overlayView.trailingAnchor.constraint(equalTo: adView.trailingAnchor),
+      overlayView.bottomAnchor.constraint(equalTo: adView.bottomAnchor),
 
-      // 媒体裁剪容器和 MediaView 始终等尺寸。
-      mediaClipView.heightAnchor.constraint(equalToConstant: 260),
-      mediaView.topAnchor.constraint(equalTo: mediaClipView.topAnchor),
-      mediaView.leadingAnchor.constraint(equalTo: mediaClipView.leadingAnchor),
-      mediaView.trailingAnchor.constraint(equalTo: mediaClipView.trailingAnchor),
-      mediaView.bottomAnchor.constraint(equalTo: mediaClipView.bottomAnchor),
+      // 标题
+      headlineLabel.topAnchor.constraint(equalTo: overlayView.topAnchor, constant: 8),
+      headlineLabel.leadingAnchor.constraint(equalTo: overlayView.leadingAnchor, constant: 12),
+      headlineLabel.trailingAnchor.constraint(equalTo: overlayView.trailingAnchor, constant: -12),
 
-      // 信息区内使用严格纵向约束，不允许标题或按钮向上压入媒体区。
-      headlineLabel.topAnchor.constraint(equalTo: informationView.topAnchor, constant: 14),
-      headlineLabel.leadingAnchor.constraint(equalTo: informationView.leadingAnchor, constant: 14),
-      headlineLabel.trailingAnchor.constraint(
-        equalTo: informationView.trailingAnchor, constant: -14),
+      // 信息行（广告主 + Ad + AdChoices）
+      infoRow.topAnchor.constraint(equalTo: headlineLabel.bottomAnchor, constant: 4),
+      infoRow.leadingAnchor.constraint(equalTo: headlineLabel.leadingAnchor),
+      infoRow.trailingAnchor.constraint(equalTo: headlineLabel.trailingAnchor),
+      infoRow.heightAnchor.constraint(equalToConstant: 18),
 
-      // 广告主名称：标题下方；素材为空时不保留空白。
-      advertiserLabel.topAnchor.constraint(
-        equalTo: headlineLabel.bottomAnchor,
-        constant: advertiserTopSpacing
-      ),
-      advertiserLabel.leadingAnchor.constraint(equalTo: headlineLabel.leadingAnchor),
-      advertiserLabel.trailingAnchor.constraint(equalTo: headlineLabel.trailingAnchor),
+      attributionLabel.leadingAnchor.constraint(equalTo: infoRow.leadingAnchor),
+      attributionLabel.centerYAnchor.constraint(equalTo: infoRow.centerYAnchor),
 
-      // Open 按钮：广告主名称下方，底部固定 14pt。
-      callToActionLabel.topAnchor.constraint(
-        equalTo: advertiserLabel.bottomAnchor,
-        constant: callToActionTopSpacing
-      ),
-      callToActionLabel.leadingAnchor.constraint(equalTo: headlineLabel.leadingAnchor),
-      callToActionLabel.trailingAnchor.constraint(equalTo: headlineLabel.trailingAnchor),
-      callToActionLabel.heightAnchor.constraint(equalToConstant: callToActionHeight),
-      callToActionLabel.bottomAnchor.constraint(
-        equalTo: informationView.bottomAnchor,
-        constant: -14
-      ),
+      advertiserLabel.leadingAnchor.constraint(equalTo: attributionLabel.trailingAnchor, constant: 6),
+      advertiserLabel.centerYAnchor.constraint(equalTo: infoRow.centerYAnchor),
+      advertiserLabel.trailingAnchor.constraint(lessThanOrEqualTo: adChoicesView.leadingAnchor, constant: -4),
+
+      adChoicesView.trailingAnchor.constraint(equalTo: infoRow.trailingAnchor),
+      adChoicesView.centerYAnchor.constraint(equalTo: infoRow.centerYAnchor),
+
+      // CTA 按钮
+      callToActionLabel.topAnchor.constraint(equalTo: infoRow.bottomAnchor, constant: 8),
+      callToActionLabel.leadingAnchor.constraint(equalTo: overlayView.leadingAnchor, constant: 12),
+      callToActionLabel.trailingAnchor.constraint(equalTo: overlayView.trailingAnchor, constant: -12),
+      callToActionLabel.heightAnchor.constraint(equalToConstant: 38),
+      callToActionLabel.bottomAnchor.constraint(equalTo: overlayView.bottomAnchor, constant: -10),
     ])
-    advertiserHeightConstraint?.isActive = true
 
-    // 程序化创建的 NativeAdView 初始高度只有 1pt。先测量并完成布局，
-    // 再绑定 nativeAd，避免 SDK 在首次校验时看到所有素材重叠在原点。
-    let measuredHeight = resolveMeasuredHeight(
-      adView: adView,
-      cardWidth: resolvedCardWidth
-    )
-    adView.frame = CGRect(
-      x: 0,
-      y: 0,
-      width: resolvedCardWidth,
-      height: measuredHeight
-    )
+    // 测量并设置高度
+    let measuredHeight = resolveMeasuredHeight(adView: adView, cardWidth: resolvedCardWidth)
+    adView.frame = CGRect(x: 0, y: 0, width: resolvedCardWidth, height: measuredHeight)
     adView.setNeedsLayout()
     adView.layoutIfNeeded()
     adView.nativeAd = nativeAd
-    // nativeAd 绑定时 SDK 才可能创建图片/视频内部视图，
-    // 再次禁用内部滚动指示器，外层 mediaClipView 始终负责硬裁剪。
-    disableScrollIndicators(in: mediaView)
-    #if DEBUG
-      let attributionFrame = attributionLabel.convert(attributionLabel.bounds, to: adView)
-      let mediaFrame = mediaClipView.convert(mediaClipView.bounds, to: adView)
-      let headlineFrame = headlineLabel.convert(headlineLabel.bounds, to: adView)
-      let advertiserFrame = advertiserLabel.convert(advertiserLabel.bounds, to: adView)
-      let callToActionFrame = callToActionLabel.convert(callToActionLabel.bounds, to: adView)
-      let hasAssetOverlap =
-        mediaFrame.intersects(headlineFrame)
-        || (!advertiserLabel.isHidden && mediaFrame.intersects(advertiserFrame))
-        || (!callToActionLabel.isHidden && mediaFrame.intersects(callToActionFrame))
-      print(
-        "[ShortStoryNativeAd] 布局校验: "
-          + "height=\(measuredHeight), "
-          + "ad=\(NSStringFromCGRect(attributionFrame)), "
-          + "media=\(NSStringFromCGRect(mediaFrame)), "
-          + "headline=\(NSStringFromCGRect(headlineFrame)), "
-          + "advertiser=\(NSStringFromCGRect(advertiserFrame)), "
-          + "cta=\(NSStringFromCGRect(callToActionFrame)), "
-          + "overlap=\(hasAssetOverlap)"
-      )
-    #endif
-    reportMeasuredHeight(
-      measuredHeight: measuredHeight,
-      slotID: slotID,
-      layoutToken: layoutToken
-    )
+
+    // 视频自动播放（nativeAd 绑定后调用）
+    if hasVideoContent {
+      nativeAd.mediaContent.videoController.play()
+    }
+
+    reportMeasuredHeight(measuredHeight: measuredHeight, slotID: slotID, layoutToken: layoutToken)
     return adView
   }
 

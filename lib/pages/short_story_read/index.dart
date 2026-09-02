@@ -38,6 +38,7 @@ import 'package:app/components/no_internet/index.dart';
 import 'package:app/components/share_sheet/index.dart';
 import 'package:app/components/inline_native_ad/index.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
+import 'package:app/services/bookshelf_sync_service.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/native_ad_visibility.dart';
@@ -257,9 +258,15 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   final Set<int> _progress_save_in_flight_ids = <int>{};
 
   /// 同一小说保存期间只保留最新进度快照，避免旧请求覆盖新进度。
-  final Map<int, ({int chapter_offset, double read_progress})>
+  final Map<
+    int,
+    ({int chapter_offset, double read_progress, bool notify_bookshelf})
+  >
   _queued_progress_snapshots =
-      <int, ({int chapter_offset, double read_progress})>{};
+      <
+        int,
+        ({int chapter_offset, double read_progress, bool notify_bookshelf})
+      >{};
 
   /// 当前逻辑实例的版本号，用于丢弃切换小说前发起的异步结果。
   int _logic_generation = 0;
@@ -709,7 +716,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 退出页面时保存阅读进度。
   void _save_current_progress_on_exit() {
     if (!_is_initialization_complete || !_has_user_engaged) return;
-    unawaited(_save_progress_snapshot(_logic));
+    unawaited(_save_progress_snapshot(_logic, notify_bookshelf: true));
   }
 
   /// 保存当前阅读进度到服务器。
@@ -719,15 +726,23 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   }
 
   /// 保存指定逻辑实例对应的进度快照。
-  Future<void> _save_progress_snapshot(ShortStoryReadLogic logic) async {
+  Future<void> _save_progress_snapshot(
+    ShortStoryReadLogic logic, {
+    bool notify_bookshelf = false,
+  }) async {
     if (!_scroll_controller.hasClients || !user_information.isLoggedIn.value) {
       return;
     }
 
     final int novel_id = logic.story_id;
+    final int novel_language_id =
+        int.tryParse(logic.story_data.value?.novel_language_id ?? '') ?? 0;
+    final previous_snapshot = _queued_progress_snapshots[novel_id];
     _queued_progress_snapshots[novel_id] = (
       chapter_offset: _scroll_controller.offset.round(),
       read_progress: logic.reading_progress.value * 100,
+      notify_bookshelf:
+          notify_bookshelf || (previous_snapshot?.notify_bookshelf ?? false),
     );
     if (!_progress_save_in_flight_ids.add(novel_id)) return;
 
@@ -735,11 +750,15 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       while (_queued_progress_snapshots.containsKey(novel_id)) {
         final snapshot = _queued_progress_snapshots.remove(novel_id)!;
         try {
-          await save_read_progress(
+          final bool saved = await save_read_progress(
             novel_id: novel_id,
+            novel_language_id: novel_language_id > 0 ? novel_language_id : null,
             chapter_offset: snapshot.chapter_offset,
             read_progress: snapshot.read_progress,
           );
+          if (saved && snapshot.notify_bookshelf) {
+            await BookshelfSyncService.history_changed();
+          }
         } catch (_) {
           // 保存失败不影响阅读；下一次定时保存会提交更新后的快照。
         }

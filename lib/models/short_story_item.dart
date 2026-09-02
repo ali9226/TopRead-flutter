@@ -25,6 +25,12 @@ class ShortStoryItem {
   /// 封面图片URL。
   final String cover_url;
 
+  /// 封面原始宽度。
+  final int cover_width;
+
+  /// 封面原始高度。
+  final int cover_height;
+
   /// 分类标签列表（接口字段 category_list）。
   final List<String> tags;
 
@@ -57,6 +63,8 @@ class ShortStoryItem {
     required this.title,
     required this.description,
     this.cover_url = '',
+    this.cover_width = 0,
+    this.cover_height = 0,
     required this.tags,
     this.read_count = 0,
     this.comment_count = 0,
@@ -81,6 +89,8 @@ class ShortStoryItem {
       title: title,
       description: description,
       cover_url: cover_url,
+      cover_width: cover_width,
+      cover_height: cover_height,
       tags: tags,
       read_count: read_count,
       comment_count: comment_count,
@@ -102,6 +112,8 @@ class ShortStoryItem {
       title: _to_string(json['title']),
       description: _to_string(json['introduction']),
       cover_url: _to_string(json['cover_url']),
+      cover_width: _to_int(json['cover_width']),
+      cover_height: _to_int(json['cover_height']),
       tags: _parse_string_list(json['category_list']),
       read_count: _to_int(json['read_count']),
       comment_count: _to_int(json['comment_count']),

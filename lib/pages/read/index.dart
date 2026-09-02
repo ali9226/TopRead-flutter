@@ -34,6 +34,7 @@ import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/stores/project_config_store.dart';
+import 'package:app/services/bookshelf_sync_service.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/percentage_probability.dart';
@@ -1385,38 +1386,11 @@ class _ReadPageState extends State<ReadPage>
 
   /// 退出页面时保存阅读进度（同步执行，确保数据不丢失）。
   void _save_current_progress_on_exit() {
-    if (!scroll_controller.hasClients ||
-        logic.is_loading.value ||
-        _is_restoring_progress ||
-        _is_chapter_transaction_active ||
-        !_has_stable_progress ||
-        !_has_user_engaged) {
-      return;
-    }
-
-    final double progress = reading_progress_percent;
-    final int chapter_id = logic.current_chapter_db_id;
-
-    // 章节内百分比：用缓存的字数算法结果（与目录显示一致）。
-    final double chapter_progress = _cached_chapter_progress;
-
-    debugPrint(
-      '💾 [长篇保存-退出] progress=${progress.toStringAsFixed(1)}, '
-      'chapter_id=$chapter_id, chapter_progress=${chapter_progress.toStringAsFixed(1)}%',
-    );
-
-    if (!user_information.isLoggedIn.value) return;
-
-    save_read_progress(
-      novel_id: widget.story_id,
-      chapter_id: chapter_id > 0 ? chapter_id : null,
-      chapter_offset: chapter_progress.round(),
-      read_progress: progress,
-    );
+    unawaited(_save_current_progress(notify_bookshelf: true));
   }
 
   /// 保存当前阅读进度到服务器。
-  Future<void> _save_current_progress() async {
+  Future<void> _save_current_progress({bool notify_bookshelf = false}) async {
     if (!mounted ||
         !scroll_controller.hasClients ||
         logic.is_loading.value ||
@@ -1440,12 +1414,17 @@ class _ReadPageState extends State<ReadPage>
 
     if (!user_information.isLoggedIn.value) return;
 
-    await save_read_progress(
+    final int novel_language_id = logic.current_novel_language_id;
+    final bool saved = await save_read_progress(
       novel_id: widget.story_id,
+      novel_language_id: novel_language_id > 0 ? novel_language_id : null,
       chapter_id: chapter_id > 0 ? chapter_id : null,
       chapter_offset: chapter_progress.round(),
       read_progress: progress,
     );
+    if (saved && notify_bookshelf) {
+      await BookshelfSyncService.history_changed();
+    }
   }
 
   /// 按当前记录的位置或比例恢复滚动位置，避免主题切换或横竖屏切换后阅读位置重置。
@@ -2421,13 +2400,13 @@ class _ReadPageState extends State<ReadPage>
                     title: easy.tr('short_story_read.login_required'),
                   );
                   if (!is_logged_in) return;
-                  final bool was_favorited = logic.is_favorited.value;
-                  logic.toggle_favorite();
+                  final bool? is_favorited = await logic.toggle_favorite();
+                  if (!mounted || is_favorited == null) return;
                   showBottomTip(
                     easy.tr(
-                      was_favorited
-                          ? 'favorite.remove_success'
-                          : 'favorite.add_success',
+                      is_favorited
+                          ? 'favorite.add_success'
+                          : 'favorite.remove_success',
                     ),
                   );
                 },

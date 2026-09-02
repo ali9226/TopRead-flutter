@@ -6,8 +6,8 @@ import 'package:app/components/novel_cover/style.dart';
 
 /// 自适应宽高比的小说封面组件。
 ///
-/// 根据网络图片的实际尺寸自动计算宽高比，
-/// 宽度固定，高度自适应，适用于瀑布流布局。
+/// 优先使用调用方提供的宽高比完成首帧布局；调用方没有可靠尺寸时，
+/// 再根据网络图片的实际尺寸计算宽高比。宽度固定、高度自适应，适用于瀑布流布局。
 ///
 /// 使用方式：
 /// ```dart
@@ -42,6 +42,12 @@ class AdaptiveNovelCover extends StatefulWidget {
   /// 默认宽高比（图片加载失败或无URL时使用）。
   final double default_aspect_ratio;
 
+  /// 是否需要通过网络图片解析真实尺寸。
+  ///
+  /// 列表接口已经返回有效宽高时应传 false，直接使用
+  /// [default_aspect_ratio] 完成首帧布局，避免为尺寸重复等待图片解码。
+  final bool resolve_image_dimensions;
+
   /// 图片填充方式。
   final BoxFit fit;
 
@@ -58,6 +64,7 @@ class AdaptiveNovelCover extends StatefulWidget {
     this.border_radius,
     this.is_dark,
     this.default_aspect_ratio = 0.72,
+    this.resolve_image_dimensions = true,
     this.fit = BoxFit.cover,
     this.error_text,
   });
@@ -76,7 +83,9 @@ class _AdaptiveNovelCoverState extends State<AdaptiveNovelCover> {
   @override
   void initState() {
     super.initState();
-    _resolve_image_dimensions();
+    if (widget.resolve_image_dimensions) {
+      _resolve_image_dimensions();
+    }
   }
 
   @override
@@ -84,9 +93,13 @@ class _AdaptiveNovelCoverState extends State<AdaptiveNovelCover> {
     super.didUpdateWidget(oldWidget);
     final String old_url = (oldWidget.image_url ?? '').trim();
     final String new_url = (widget.image_url ?? '').trim();
-    if (old_url != new_url) {
+    if (old_url != new_url ||
+        oldWidget.resolve_image_dimensions != widget.resolve_image_dimensions) {
       _image_aspect_ratio = null;
-      _resolve_image_dimensions();
+      _loading_url = null;
+      if (widget.resolve_image_dimensions) {
+        _resolve_image_dimensions();
+      }
     }
   }
 
@@ -95,6 +108,7 @@ class _AdaptiveNovelCoverState extends State<AdaptiveNovelCover> {
   /// 通过 CachedNetworkImage 的缓存机制获取图片信息，
   /// 避免重复网络请求。
   void _resolve_image_dimensions() {
+    if (!widget.resolve_image_dimensions) return;
     final String url = (widget.image_url ?? '').trim();
     if (url.isEmpty) return;
 
@@ -107,7 +121,10 @@ class _AdaptiveNovelCoverState extends State<AdaptiveNovelCover> {
     late ImageStreamListener listener;
     listener = ImageStreamListener(
       (ImageInfo image, bool synchronousCall) {
-        if (!mounted || _loading_url != url) return;
+        if (!mounted || _loading_url != url) {
+          stream.removeListener(listener);
+          return;
+        }
         final double image_width = image.image.width.toDouble();
         final double image_height = image.image.height.toDouble();
         if (image_height > 0) {

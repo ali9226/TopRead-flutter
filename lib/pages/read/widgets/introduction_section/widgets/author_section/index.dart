@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/api/bookshelf.dart';
+import 'package:app/components/login_required_dialog/index.dart';
 import 'package:app/pages/read/logic.dart';
+import 'package:app/services/bookshelf_sync_service.dart';
 import './style.dart';
 
 /// 阅读页作者信息组件。
@@ -79,18 +81,16 @@ class _ReadAuthorSectionState extends State<ReadAuthorSection> {
   /// 构建关注标签。
   Widget _build_follow_tag() {
     // 夜间模式使用主题色，日间模式使用品牌蓝色。
-    final Color accent_color =
-        widget.is_dark ? ColorConstants.themeColor : AuthorStyle.brand_color;
+    final Color accent_color = widget.is_dark
+        ? ColorConstants.themeColor
+        : AuthorStyle.brand_color;
 
     return GestureDetector(
       onTap: _is_loading ? null : _handle_focus_toggle,
       child: TweenAnimationBuilder<double>(
         duration: const Duration(milliseconds: 560),
         curve: Curves.elasticOut,
-        tween: Tween<double>(
-          begin: 0.6,
-          end: _is_focused ? 1.0 : 1.0,
-        ),
+        tween: Tween<double>(begin: 0.6, end: _is_focused ? 1.0 : 1.0),
         builder: (context, scale, child) {
           return Transform.scale(scale: scale, child: child);
         },
@@ -135,6 +135,11 @@ class _ReadAuthorSectionState extends State<ReadAuthorSection> {
   Future<void> _handle_focus_toggle() async {
     if (_is_loading) return;
 
+    final bool is_logged_in = await showLoginRequiredDialog(
+      title: easy.tr('short_story_read.login_required'),
+    );
+    if (!is_logged_in) return;
+
     _is_loading = true;
 
     // 乐观更新：立即切换状态。
@@ -147,6 +152,10 @@ class _ReadAuthorSectionState extends State<ReadAuthorSection> {
     final result = await toggle_focus_author(
       author_id: widget.detail.author_id,
     );
+
+    if (result != null) {
+      await BookshelfSyncService.focus_changed();
+    }
 
     if (!mounted) return;
 
@@ -199,14 +208,13 @@ class _ReaderAuthorAvatarState extends State<_ReaderAuthorAvatar> {
               width: AuthorStyle.author_avatar_size,
               height: AuthorStyle.author_avatar_size,
               fit: BoxFit.cover,
-              errorWidget:
-                  (BuildContext context, String url, Object error) {
-                    return SvgPicture.asset(
-                      'assets/svg/avatar_${_random_avatar_index.toString().padLeft(2, '0')}.svg',
-                      width: AuthorStyle.author_avatar_size,
-                      height: AuthorStyle.author_avatar_size,
-                    );
-                  },
+              errorWidget: (BuildContext context, String url, Object error) {
+                return SvgPicture.asset(
+                  'assets/svg/avatar_${_random_avatar_index.toString().padLeft(2, '0')}.svg',
+                  width: AuthorStyle.author_avatar_size,
+                  height: AuthorStyle.author_avatar_size,
+                );
+              },
             )
           : SvgPicture.asset(
               'assets/svg/avatar_${_random_avatar_index.toString().padLeft(2, '0')}.svg',

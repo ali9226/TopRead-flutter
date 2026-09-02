@@ -8,6 +8,7 @@ import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/read/logic.dart';
 import 'package:app/pages/read/widgets/read_directory_sheet/style.dart';
+import 'package:app/services/bookshelf_sync_service.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -170,8 +171,14 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
                             ? ClipOval(
                                 child: CachedNetworkImage(
                                   imageUrl: widget.detail.author_avatar_url,
-                                  width: ReadDirectorySheetStyle.author_avatar_radius * 2,
-                                  height: ReadDirectorySheetStyle.author_avatar_radius * 2,
+                                  width:
+                                      ReadDirectorySheetStyle
+                                          .author_avatar_radius *
+                                      2,
+                                  height:
+                                      ReadDirectorySheetStyle
+                                          .author_avatar_radius *
+                                      2,
                                   fit: BoxFit.cover,
                                   errorWidget: (context, url, error) =>
                                       _buildFallbackAvatar(),
@@ -224,8 +231,9 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
   /// 构建作者关注按钮，文案遵循当前语种。
   Widget _buildFollowButton({required bool is_cjk}) {
     // 夜间模式使用主题色，日间模式使用品牌蓝色。
-    final Color accent_color =
-        widget.is_dark ? ColorConstants.themeColor : const Color(0xFF3D7DFF);
+    final Color accent_color = widget.is_dark
+        ? ColorConstants.themeColor
+        : const Color(0xFF3D7DFF);
     final String follow_text = _is_focused
         ? tr('read.followed')
         : tr('read.follow');
@@ -238,10 +246,7 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
       child: TweenAnimationBuilder<double>(
         duration: const Duration(milliseconds: 560),
         curve: Curves.elasticOut,
-        tween: Tween<double>(
-          begin: 0.6,
-          end: _is_focused ? 1.0 : 1.0,
-        ),
+        tween: Tween<double>(begin: 0.6, end: _is_focused ? 1.0 : 1.0),
         builder: (context, scale, child) {
           return Transform.scale(scale: scale, child: child);
         },
@@ -253,7 +258,10 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
                 ? Colors.transparent
                 : accent_color.withValues(alpha: 0.16),
             border: _is_focused
-                ? Border.all(color: accent_color.withValues(alpha: 0.4), width: 1)
+                ? Border.all(
+                    color: accent_color.withValues(alpha: 0.4),
+                    width: 1,
+                  )
                 : null,
             borderRadius: BorderRadius.circular(
               ReadDirectorySheetStyle.follow_button_radius,
@@ -301,6 +309,10 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
     final result = await toggle_focus_author(
       author_id: widget.detail.author_id,
     );
+
+    if (result != null) {
+      await BookshelfSyncService.focus_changed();
+    }
 
     if (!mounted) return;
 

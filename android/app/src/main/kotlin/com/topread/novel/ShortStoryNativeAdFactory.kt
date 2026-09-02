@@ -1,7 +1,6 @@
 package com.topread.novel
 
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -83,9 +82,18 @@ class ShortStoryNativeAdFactory(
         val slotId = customOptions?.get("slotId") as? String
         val cardWidth = (customOptions?.get("cardWidth") as? Number)?.toDouble()
         val layoutToken = (customOptions?.get("layoutToken") as? Number)?.toInt()
-        // 根据日间/夜间模式设置广告卡片颜色。
-        applyTheme(adView, isDark)
-        adView.findViewById<TextView>(R.id.ad_attribution).text = advertisementLabel
+        // 从 Flutter 端获取随机颜色
+        val tagColorRed = (customOptions?.get("tagColorRed") as? Number)?.toInt() ?: 255
+        val tagColorGreen = (customOptions?.get("tagColorGreen") as? Number)?.toInt() ?: 77
+        val tagColorBlue = (customOptions?.get("tagColorBlue") as? Number)?.toInt() ?: 77
+
+        adView.findViewById<TextView>(R.id.ad_attribution).apply {
+            text = advertisementLabel
+            setTextColor(Color.rgb(tagColorRed, tagColorGreen, tagColorBlue))
+            (background as? android.graphics.drawable.GradientDrawable)?.setColor(
+                Color.argb(38, tagColorRed, tagColorGreen, tagColorBlue)
+            )
+        }
 
         // 获取广告布局中的各视图组件。
         val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
@@ -106,6 +114,15 @@ class ShortStoryNativeAdFactory(
         headlineView.text = nativeAd.headline
         bindOptionalText(advertiserView, nativeAd.advertiser)
         bindOptionalText(callToActionView, nativeAd.callToAction)
+
+        // 遮罩层统一使用半透明黑色
+        val overlayColor = Color.argb(204, 0, 0, 0)
+        headlineView.setTextColor(Color.WHITE)
+        advertiserView.setTextColor(Color.rgb(204, 204, 204))
+        adView.findViewById<View>(R.id.ad_overlay).setBackgroundColor(overlayColor)
+
+        // 视频静音播放
+        nativeAd.mediaContent?.videoController?.mute(true)
 
         val hasVideoContent = nativeAd.mediaContent?.hasVideoContent() == true
         reportMediaType(
@@ -135,6 +152,12 @@ class ShortStoryNativeAdFactory(
 
         // 将广告数据绑定到视图（必须调用，否则点击和展示追踪不生效）。
         adView.setNativeAd(nativeAd)
+
+        // 视频自动播放（setNativeAd 后调用）
+        if (hasVideoContent) {
+            nativeAd.mediaContent?.videoController?.play()
+        }
+
         reportMeasuredHeight(
             adView = adView,
             cardWidthDp = cardWidth,
@@ -286,53 +309,4 @@ class ShortStoryNativeAdFactory(
         view.visibility = if (value.isNullOrBlank()) View.GONE else View.VISIBLE
     }
 
-    /**
-     * 根据日间/夜间模式应用广告卡片主题色。
-     *
-     * 颜色与 Flutter 端 [ColorConstants] 保持一致，修改时需同步更新：
-     * - Flutter: lib/config/color_config.dart
-     * - iOS: ios/Runner/AppDelegate.swift (ShortStoryNativeAdFactory)
-     *
-     * @param adView 广告视图容器。
-     * @param isDark 是否为夜间模式。
-     */
-    private fun applyTheme(adView: NativeAdView, isDark: Boolean) {
-        // 广告卡片背景色：夜间 #1E2430，日间对应 ColorConstants.whiteColor (#FFFFFF)。
-        val cardColor = if (isDark) Color.rgb(30, 36, 48) else Color.WHITE
-        // 主要文字颜色：夜间白色，日间对应 ColorConstants.lightTextColor (#222222)。
-        val primaryColor = if (isDark) Color.WHITE else Color.rgb(34, 34, 34)
-        // 次要文字颜色：夜间 #B0B5C0，日间 #7E7660。
-        val secondaryColor = if (isDark) Color.rgb(176, 181, 192) else Color.rgb(126, 118, 96)
-        val density = adView.resources.displayMetrics.density
-
-        // 卡片整体圆角背景。
-        adView.background = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 16f * density
-            setColor(cardColor)
-        }
-        // 标题文字颜色。
-        adView.findViewById<TextView>(R.id.ad_headline).setTextColor(primaryColor)
-        // 广告归因标识：独立放在媒体区域上方，不能与任何广告素材重叠。
-        adView.findViewById<TextView>(R.id.ad_attribution).apply {
-            setTextColor(Color.rgb(95, 139, 255))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = 10f * density
-                setColor(Color.argb(41, 95, 139, 255))
-            }
-        }
-        // 广告主文字颜色。
-        adView.findViewById<TextView>(R.id.ad_advertiser).setTextColor(secondaryColor)
-        // Open 按钮：背景色对应 ColorConstants.themeColor (#F8D02D)，
-        // 文字色对应 ColorConstants.lightTextColor (#222222)。
-        adView.findViewById<TextView>(R.id.ad_call_to_action).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = 23f * density
-                setColor(Color.rgb(248, 208, 45))
-            }
-            setTextColor(Color.rgb(34, 34, 34))
-        }
-    }
 }

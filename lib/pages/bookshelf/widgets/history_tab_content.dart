@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:app/api/bookshelf.dart';
 import 'package:app/pages/bookshelf/widgets/bookshelf_grid_content.dart';
 import 'package:app/stores/bookshelf_store.dart';
 
@@ -61,7 +62,6 @@ class _HistoryTabContentState extends State<HistoryTabContent>
 
   /// 调用删除历史记录API。
   Future<bool> _handle_delete(String novel_id) async {
-    // TODO 调用后端删除阅读记录接口，当前先返回 true
-    return true;
+    return remove_read_record(novel_id: int.tryParse(novel_id) ?? 0);
   }
 }

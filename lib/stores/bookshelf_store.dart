@@ -370,6 +370,12 @@ class BookshelfStore extends GetxController {
     await _fetch_history(reset: true);
   }
 
+  /// 阅读记录变化后，仅在历史列表已经请求过时静默刷新。
+  Future<void> refresh_history_if_requested() async {
+    if (!_history_requested && !_history_loaded) return;
+    await refresh_history();
+  }
+
   /// 加载历史列表更多数据。
   Future<void> load_more_history() async {
     if (!history_has_more.value ||
@@ -453,7 +459,7 @@ class BookshelfStore extends GetxController {
         : null;
     final int? auth_revision = user_information?.auth_revision;
     final int request_page = reset ? 1 : _history_page + 1;
-    if (reset) {
+    if (reset && history_list.isEmpty) {
       history_is_loading.value = true;
     } else {
       history_is_loading_more.value = true;
@@ -472,8 +478,8 @@ class BookshelfStore extends GetxController {
       }
 
       if (result == null) {
-        if (reset) history_list.clear();
-        history_has_more.value = false;
+        // TODO 静默刷新失败时保留旧列表，避免网络波动把书架瞬间清空。
+        if (history_list.isEmpty) history_has_more.value = false;
         _history_loaded = true;
         return;
       }
@@ -578,6 +584,12 @@ class BookshelfStore extends GetxController {
     await _fetch_favorite(reset: true);
   }
 
+  /// 收藏关系变化后，仅在收藏列表已经请求过时静默刷新。
+  Future<void> refresh_favorite_if_requested() async {
+    if (!_favorite_requested && !_favorite_loaded) return;
+    await refresh_favorite();
+  }
+
   /// 加载收藏列表更多数据。
   Future<void> load_more_favorite() async {
     if (!favorite_has_more.value ||
@@ -661,7 +673,7 @@ class BookshelfStore extends GetxController {
         : null;
     final int? auth_revision = user_information?.auth_revision;
     final int request_page = reset ? 1 : _favorite_page + 1;
-    if (reset) {
+    if (reset && favorite_list.isEmpty) {
       favorite_is_loading.value = true;
     } else {
       favorite_is_loading_more.value = true;
@@ -680,8 +692,8 @@ class BookshelfStore extends GetxController {
       }
 
       if (result == null) {
-        if (reset) favorite_list.clear();
-        favorite_has_more.value = false;
+        // TODO 静默刷新失败时保留旧收藏数据。
+        if (favorite_list.isEmpty) favorite_has_more.value = false;
         _favorite_loaded = true;
         return;
       }
@@ -783,6 +795,23 @@ class BookshelfStore extends GetxController {
     await _fetch_focus(reset: true);
   }
 
+  /// 关注关系变化后，仅在关注列表已经加载时静默刷新。
+  Future<void> refresh_focus_if_loaded() async {
+    if (!_focus_loaded) return;
+    await refresh_focus();
+  }
+
+  /// 书架重新成为前台时刷新当前账号已经访问过的数据。
+  Future<void> refresh_on_activation() async {
+    if (!Get.find<UserInformation>().isLoggedIn.value) return;
+
+    await Future.wait<void>(<Future<void>>[
+      refresh_history(),
+      if (_favorite_requested || _favorite_loaded) refresh_favorite(),
+      if (_focus_loaded) refresh_focus(),
+    ]);
+  }
+
   /// 加载关注列表更多数据。
   Future<void> load_more_focus() async {
     if (!focus_has_more.value || _focus_request != null) return;
@@ -874,7 +903,7 @@ class BookshelfStore extends GetxController {
         : null;
     final int? auth_revision = user_information?.auth_revision;
     final int request_page = reset ? 1 : _focus_page + 1;
-    if (reset) {
+    if (reset && focus_list.isEmpty) {
       focus_is_loading.value = true;
     } else {
       focus_is_loading_more.value = true;
@@ -889,8 +918,8 @@ class BookshelfStore extends GetxController {
       }
 
       if (result == null) {
-        if (reset) focus_list.clear();
-        focus_has_more.value = false;
+        // TODO 静默刷新失败时保留旧关注数据。
+        if (focus_list.isEmpty) focus_has_more.value = false;
         _focus_loaded = true;
         return;
       }

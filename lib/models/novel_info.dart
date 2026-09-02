@@ -180,6 +180,8 @@ class NovelLanguageInfo {
   final int word_count;
   final int chapter_count;
   final String cover_url;
+  final int cover_width;
+  final int cover_height;
   final String seo_keywords;
   final String seo_description;
   final String create_time;
@@ -194,6 +196,8 @@ class NovelLanguageInfo {
     required this.word_count,
     required this.chapter_count,
     required this.cover_url,
+    this.cover_width = 0,
+    this.cover_height = 0,
     required this.seo_keywords,
     required this.seo_description,
     required this.create_time,
@@ -210,6 +214,8 @@ class NovelLanguageInfo {
       word_count: _parse_int(json['word_count']),
       chapter_count: _parse_int(json['chapter_count']),
       cover_url: json['cover_url']?.toString() ?? '',
+      cover_width: _parse_int(json['cover_width']),
+      cover_height: _parse_int(json['cover_height']),
       seo_keywords: json['seo_keywords']?.toString() ?? '',
       seo_description: json['seo_description']?.toString() ?? '',
       create_time: json['create_time']?.toString() ?? '',

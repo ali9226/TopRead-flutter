@@ -41,6 +41,12 @@ class RecommendRankingItem {
   /// 封面URL。
   final String cover_url;
 
+  /// 封面原始宽度。
+  final int cover_width;
+
+  /// 封面原始高度。
+  final int cover_height;
+
   /// 该语种的简介。
   final String introduction;
 
@@ -74,6 +80,8 @@ class RecommendRankingItem {
     required this.score,
     required this.title,
     required this.cover_url,
+    this.cover_width = 0,
+    this.cover_height = 0,
     required this.introduction,
     required this.word_count,
     required this.chapter_count,
@@ -100,6 +108,8 @@ class RecommendRankingItem {
       score: _parse_double(json['score']),
       title: json['title'] as String? ?? '',
       cover_url: json['cover_url'] as String? ?? '',
+      cover_width: _parse_int(json['cover_width']),
+      cover_height: _parse_int(json['cover_height']),
       introduction: json['introduction'] as String? ?? '',
       word_count: _parse_int(json['word_count']),
       chapter_count: _parse_int(json['chapter_count']),
@@ -139,6 +149,8 @@ class RecommendRankingItem {
       'score': score,
       'title': title,
       'cover_url': cover_url,
+      'cover_width': cover_width,
+      'cover_height': cover_height,
       'introduction': introduction,
       'word_count': word_count,
       'chapter_count': chapter_count,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:app/config/font_config.dart';
 
@@ -15,6 +16,8 @@ import 'package:app/pages/bookshelf/widgets/favorite_tab_content.dart';
 import 'package:app/pages/bookshelf/widgets/history_tab_content.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
+import 'package:app/stores/bookshelf_store.dart';
+import 'package:app/stores/shell_tab_info.dart';
 
 /// 书架页面。
 ///
@@ -38,17 +41,35 @@ class _BookshelfPageState extends State<BookshelfPage>
   /// 书架页 Tab 控制器。
   late final TabController _tab_controller;
 
+  /// 书架常驻数据仓库。
+  final BookshelfStore _bookshelf_store = Get.find<BookshelfStore>();
+
+  /// Shell Tab 激活状态。
+  final ShellTabInfo _shell_tab_info = Get.find<ShellTabInfo>();
+
+  /// 书架重新成为前台的监听器。
+  Worker? _activation_worker;
+
   @override
   void initState() {
     super.initState();
     _tab_controller = BookshelfLogic.create_tab_controller(vsync: this)
       ..addListener(_on_tab_change);
+    _activation_worker = ever<int>(_shell_tab_info.bookshelfActivationTick, (
+      _,
+    ) {
+      if (!mounted || _shell_tab_info.activePath.value != '/bookshelf') {
+        return;
+      }
+      unawaited(_bookshelf_store.refresh_on_activation());
+    });
   }
 
   @override
   void dispose() {
     _tab_controller.removeListener(_on_tab_change);
     _tab_controller.dispose();
+    _activation_worker?.dispose();
     super.dispose();
   }
 
@@ -120,7 +141,9 @@ class _BookshelfPageState extends State<BookshelfPage>
                               style: TextStyle(
                                 color: title_color,
                                 fontSize: Style.title_font_size,
-                                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                                fontWeight: FontConfig.adjustedWeight(
+                                  FontWeight.w500,
+                                ),
                               ),
                             ),
                             const SizedBox(height: Style.no_login_top_spacing),
