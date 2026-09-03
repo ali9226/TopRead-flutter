@@ -126,6 +126,19 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     _tab_controller.addListener(_on_tab_index_changed);
   }
 
+  /// 测量文本在给定宽度下的实际行数。
+  static int _measure_line_count(
+    String text,
+    TextStyle style,
+    double maxWidth,
+  ) {
+    final TextPainter painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: maxWidth);
+    return painter.computeLineMetrics().length;
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -133,8 +146,34 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     _header_min_extent = status_bar +
         AuthorStyle.header_toolbar_height +
         AuthorStyle.header_tab_bar_height;
-    _header_max_extent = status_bar + 360;
+
+    // 测量标题和副标题行数，动态计算高度。
+    // 基础360 = 单行标题 + 2行副标题。
+    // 标题每多一行 +30，副标题超过2行每多一行 +15。
+    final bool is_cjk = LanguageUtil.is_cjk_language(context.locale.languageCode);
+    final String title_text = easy.tr('creator_center.hero_title');
+    final String subtitle_text = easy.tr('creator_center.hero_subtitle');
+    final TextStyle title_style = TextStyle(
+      fontSize: is_cjk ? AuthorStyle.hero_title_size_cjk : AuthorStyle.hero_title_size_alphabetic,
+      height: is_cjk ? 1.24 : 1.28,
+      fontWeight: AuthorStyle.title_weight,
+      letterSpacing: is_cjk ? 0.2 : -0.2,
+    );
+    final TextStyle subtitle_style = TextStyle(
+      fontSize: is_cjk ? 12.5 : 11.5,
+      height: is_cjk ? 1.42 : 1.48,
+      fontWeight: AuthorStyle.body_weight,
+    );
+    final double content_width = MediaQuery.sizeOf(context).width -
+        AuthorStyle.header_content_padding * 2;
+    final int title_lines = _measure_line_count(title_text, title_style, content_width);
+    final int subtitle_lines = _measure_line_count(subtitle_text, subtitle_style, content_width);
+    final int title_extra = title_lines - 1;
+    final int subtitle_extra = subtitle_lines - 2;
+    _header_max_extent = status_bar + 360 + title_extra * 30 + subtitle_extra * 15;
     _header_collapse_range = _header_max_extent - _header_min_extent;
+
+    debugPrint('[AuthorView] title_lines=$title_lines, title_extra=$title_extra, subtitle_lines=$subtitle_lines, subtitle_extra=$subtitle_extra, _header_max_extent=$_header_max_extent');
   }
 
   @override

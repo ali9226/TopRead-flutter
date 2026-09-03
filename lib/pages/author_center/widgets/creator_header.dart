@@ -67,10 +67,45 @@ class CreatorHeaderOverlay extends StatelessWidget {
     required this.on_open_guide,
   });
 
+  /// 测量文本在给定宽度下的实际行数。
+  static int _measure_line_count(
+    String text,
+    TextStyle style,
+    double maxWidth,
+  ) {
+    final TextPainter painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: maxWidth);
+    return painter.computeLineMetrics().length;
+  }
+
   @override
   Widget build(BuildContext context) {
     final double status_bar_height = MediaQuery.paddingOf(context).top;
-    final double expanded_height = AuthorStyle.header_expanded_height_initial;
+
+    // 动态计算展开高度：基础360 + 标题多出行×30 + 副标题多出行×15。
+    final String title_text = easy.tr('creator_center.hero_title');
+    final String subtitle_text = easy.tr('creator_center.hero_subtitle');
+    final TextStyle title_style = TextStyle(
+      fontSize: is_cjk ? AuthorStyle.hero_title_size_cjk : AuthorStyle.hero_title_size_alphabetic,
+      height: is_cjk ? 1.24 : 1.28,
+      fontWeight: AuthorStyle.title_weight,
+      letterSpacing: is_cjk ? 0.2 : -0.2,
+    );
+    final TextStyle subtitle_style = TextStyle(
+      fontSize: is_cjk ? 12.5 : 11.5,
+      height: is_cjk ? 1.42 : 1.48,
+      fontWeight: AuthorStyle.body_weight,
+    );
+    final double content_width = MediaQuery.sizeOf(context).width -
+        AuthorStyle.header_content_padding * 2;
+    final int title_lines = _measure_line_count(title_text, title_style, content_width);
+    final int subtitle_lines = _measure_line_count(subtitle_text, subtitle_style, content_width);
+    final int title_extra = title_lines - 1;
+    final int subtitle_extra = subtitle_lines - 2;
+    final double expanded_height = 360 + title_extra * 30 + subtitle_extra * 15;
+
     final double maximum_extent = status_bar_height + expanded_height;
     final double minimum_extent =
         status_bar_height +
@@ -108,20 +143,18 @@ class CreatorHeaderOverlay extends StatelessWidget {
           clipBehavior: Clip.hardEdge,
           children: <Widget>[
             Positioned.fill(
-              child: IgnorePointer(
-                child: _CreatorFlexibleHeader(
-                  expanded_height: expanded_height,
-                  is_dark: is_dark,
-                  is_cjk: is_cjk,
-                  author_name: author_name,
-                  works_count: works_count,
-                  favorites_count: favorites_count,
-                  comments_count: comments_count,
-                  on_back: on_back,
-                  on_create_work: on_create_work,
-                  on_continue_writing: on_continue_writing,
-                  on_open_guide: on_open_guide,
-                ),
+              child: _CreatorFlexibleHeader(
+                expanded_height: expanded_height,
+                is_dark: is_dark,
+                is_cjk: is_cjk,
+                author_name: author_name,
+                works_count: works_count,
+                favorites_count: favorites_count,
+                comments_count: comments_count,
+                on_back: on_back,
+                on_create_work: on_create_work,
+                on_continue_writing: on_continue_writing,
+                on_open_guide: on_open_guide,
               ),
             ),
             Positioned(
