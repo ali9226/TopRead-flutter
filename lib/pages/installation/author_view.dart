@@ -1,20 +1,53 @@
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
-import 'package:app/config/color_config.dart';
-import 'package:app/config/font_config.dart';
-import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/installation/author_style.dart';
 import 'package:app/pages/installation/chapter_editor/index.dart';
 import 'package:app/pages/installation/models/creator_work.dart';
-import 'package:app/pages/installation/widgets/author_work_card.dart';
+import 'package:app/pages/installation/widgets/creator_header.dart';
+import 'package:app/pages/installation/widgets/creator_work_tab.dart';
 import 'package:app/pages/installation/work_editor/index.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/language_util/index.dart';
+import 'package:app/util/router/router_back.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
+/// 支持在首次创建 ScrollPosition 前更新初始偏移的控制器。
+class _CreatorTabScrollController extends ScrollController {
+  double _prepared_initial_scroll_offset = 0;
+  bool _has_created_position = false;
+
+  _CreatorTabScrollController({required super.debugLabel});
+
+  /// 仅在目标 Tab 从未布局时设置首帧偏移。
+  void prepare_initial_scroll_offset(double offset) {
+    if (_has_created_position) return;
+    _prepared_initial_scroll_offset = offset;
+  }
+
+  @override
+  ScrollPosition createScrollPosition(
+    ScrollPhysics physics,
+    ScrollContext context,
+    ScrollPosition? oldPosition,
+  ) {
+    final double initial_pixels = _has_created_position
+        ? initialScrollOffset
+        : _prepared_initial_scroll_offset;
+    _has_created_position = true;
+    return ScrollPositionWithSingleContext(
+      physics: physics,
+      context: context,
+      initialPixels: initial_pixels,
+      keepScrollOffset: keepScrollOffset,
+      oldPosition: oldPosition,
+      debugLabel: debugLabel,
+    );
+  }
+}
 
 /// 已认证作者的创作工作台。
 class AuthorView extends StatefulWidget {
@@ -24,45 +57,82 @@ class AuthorView extends StatefulWidget {
   State<AuthorView> createState() => _AuthorViewState();
 }
 
-class _AuthorViewState extends State<AuthorView>
-    with SingleTickerProviderStateMixin {
+class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   final DeviceInfo _device_info = Get.find<DeviceInfo>();
   final UserInformation _user_information = Get.find<UserInformation>();
 
   late List<CreatorWorkDraft> _works;
   late TabController _tab_controller;
 
-  /// 外层滚动控制器，用于追踪头部折叠状态。
-  late ScrollController _outer_scroll_controller;
+  /// 每个 Tab 独占的滚动控制器。
+  late final List<_CreatorTabScrollController> _tab_scroll_controllers;
 
-  /// 头部是否已折叠。
-  bool _header_collapsed = false;
+  /// 合并 Tab 切换动画与全部独立滚动位置，驱动共享头部绘制。
+  late final Listenable _header_listenable;
 
-  static const double _collapseThreshold = 60;
+  /// 横向切换 Tab 期间锁定的头部纵向距离。
+  late final ValueNotifier<double?> _horizontal_header_offset_lock;
+
+  /// 横向切换完成后用于平滑恢复目标 Tab 头部位置。
+  late final AnimationController _header_transition_controller;
+
+  /// 当前头部过渡的折叠距离动画。
+  Animation<double>? _header_transition_animation;
+
+  /// 用于忽略旧横向手势延迟触发的解锁回调。
+  int _horizontal_scroll_generation = 0;
+
+  /// 上一个已稳定记录的 Tab 索引。
+  int _active_tab_index = 0;
+
+  /// 目标 Tab 尚未完成布局时，临时保持共享头部吸顶。
+  bool _preserve_pinned_header_on_tab_change = false;
+
+  /// 当前语系下头部从展开到吸顶需要的滚动距离。
+  double _header_collapse_range =
+      AuthorStyle.header_expanded_height_cjk -
+      AuthorStyle.header_toolbar_height -
+      AuthorStyle.header_tab_bar_height;
+
+  /// 创作中心固定状态 Tab 数量。
+  static const int _tab_count = 6;
 
   @override
   void initState() {
     super.initState();
     _works = kDebugMode ? _build_demo_works() : <CreatorWorkDraft>[];
-    _tab_controller = TabController(length: 6, vsync: this);
-    _outer_scroll_controller = ScrollController()
-      ..addListener(_on_outer_scroll);
+    _tab_controller = TabController(length: _tab_count, vsync: this);
+    _tab_scroll_controllers = List<_CreatorTabScrollController>.generate(
+      _tab_count,
+      (int index) => _CreatorTabScrollController(
+        debugLabel: 'creator_center_content_tab_$index',
+      ),
+      growable: false,
+    );
+    _horizontal_header_offset_lock = ValueNotifier<double?>(null);
+    _header_transition_controller = AnimationController(
+      vsync: this,
+      duration: AuthorStyle.header_tab_transition_duration,
+    );
+    _header_listenable = Listenable.merge(<Listenable>[
+      _tab_controller.animation!,
+      _horizontal_header_offset_lock,
+      _header_transition_controller,
+      ..._tab_scroll_controllers,
+    ]);
+    _tab_controller.addListener(_on_tab_index_changed);
   }
 
   @override
   void dispose() {
-    _outer_scroll_controller.removeListener(_on_outer_scroll);
-    _outer_scroll_controller.dispose();
+    _tab_controller.removeListener(_on_tab_index_changed);
+    for (final ScrollController controller in _tab_scroll_controllers) {
+      controller.dispose();
+    }
+    _header_transition_controller.dispose();
+    _horizontal_header_offset_lock.dispose();
     _tab_controller.dispose();
     super.dispose();
-  }
-
-  void _on_outer_scroll() {
-    final bool collapsed =
-        _outer_scroll_controller.offset > _collapseThreshold;
-    if (collapsed != _header_collapsed) {
-      setState(() => _header_collapsed = collapsed);
-    }
   }
 
   CreatorWorkStatus? _status_for_tab(int index) {
@@ -167,637 +237,299 @@ class _AuthorViewState extends State<AuthorView>
 
     return Obx(() {
       final bool is_dark = _device_info.dark.value;
-      final Color bg = AuthorStyle.background(is_dark);
+      final Color background = AuthorStyle.background(is_dark);
+      final String author_name =
+          _user_information.userInfo.value?.name.trim().isNotEmpty == true
+          ? _user_information.userInfo.value!.name.trim()
+          : easy.tr('creator_center.author_fallback_name');
+      final int works_count = kDebugMode
+          ? _works.length
+          : _works.where((CreatorWorkDraft work) => !work.is_demo).length;
+      final double status_bar_height = MediaQuery.paddingOf(context).top;
+      final double expanded_height = is_cjk
+          ? AuthorStyle.header_expanded_height_cjk
+          : AuthorStyle.header_expanded_height_alphabetic;
+      final double maximum_header_extent = status_bar_height + expanded_height;
+      final double minimum_header_extent =
+          status_bar_height +
+          AuthorStyle.header_toolbar_height +
+          AuthorStyle.header_tab_bar_height;
+      _header_collapse_range = maximum_header_extent - minimum_header_extent;
 
       return Scaffold(
-        backgroundColor: bg,
-        floatingActionButton: _header_collapsed
-            ? _build_create_button(is_dark)
-            : const SizedBox.shrink(),
-        body: NestedScrollView(
-          controller: _outer_scroll_controller,
-          headerSliverBuilder: (
-            BuildContext context,
-            bool inner_box_is_scrolled,
-          ) {
-            return <Widget>[
-              SliverAppBar(
-                pinned: true,
-                expandedHeight: is_cjk ? 340 : 360,
-                backgroundColor: bg,
-                surfaceTintColor: Colors.transparent,
-                foregroundColor: AuthorStyle.primary_text(is_dark),
-                elevation: 0,
-                title: _build_appbar_title(is_dark),
-                actions: <Widget>[
-                  IconButton(
-                    tooltip: easy.tr('creator_center.creator_guide'),
-                    onPressed: () => _show_creator_guide(is_dark),
-                    icon: const Icon(Icons.help_outline_rounded, size: 22),
-                  ),
-                  const SizedBox(width: 4),
-                ],
-                flexibleSpace: FlexibleSpaceBar(
-                  background: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AuthorStyle.page_padding,
-                        kToolbarHeight + 12,
-                        AuthorStyle.page_padding,
-                        0,
-                      ),
-                      child: _build_unified_card(is_dark, is_cjk),
+        backgroundColor: background,
+        body: Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _on_tab_view_scroll_notification,
+                child: TabBarView(
+                  controller: _tab_controller,
+                  physics: const BouncingScrollPhysics(),
+                  children: List<Widget>.generate(
+                    _tab_count,
+                    (int tab_index) => CreatorWorkTab(
+                      key: ValueKey<String>('creator_work_tab_$tab_index'),
+                      tab_index: tab_index,
+                      works: _filtered_works(tab_index),
+                      is_dark: is_dark,
+                      is_cjk: is_cjk,
+                      scroll_controller: _tab_scroll_controllers[tab_index],
+                      header_spacer_height: maximum_header_extent,
+                      minimum_header_height: minimum_header_extent,
+                      minimum_scroll_extent:
+                          maximum_header_extent - minimum_header_extent,
+                      on_create_work: _create_work,
+                      on_edit_work: _edit_work,
+                      on_primary_action: _continue_writing,
                     ),
+                    growable: false,
                   ),
                 ),
-                bottom: _build_tab_bar(is_dark, is_cjk),
               ),
-            ];
-          },
-          body: TabBarView(
-            controller: _tab_controller,
-            children: List<Widget>.generate(
-              6,
-              (int i) => _build_tab_content(i, is_dark, is_cjk),
             ),
-          ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AnimatedBuilder(
+                animation: _header_listenable,
+                builder: (BuildContext context, Widget? child) {
+                  final double current_height = _current_header_height(
+                    maximum_extent: maximum_header_extent,
+                    minimum_extent: minimum_header_extent,
+                  );
+
+                  return CreatorHeaderOverlay(
+                    tab_controller: _tab_controller,
+                    current_height: current_height,
+                    is_dark: is_dark,
+                    is_cjk: is_cjk,
+                    author_name: author_name,
+                    works_count: works_count,
+                    favorites_count: kDebugMode ? '12.8K' : '—',
+                    comments_count: kDebugMode ? '246' : '—',
+                    on_back: () => routerBack(context),
+                    on_create_work: _create_work,
+                    on_continue_writing: _continue_latest_draft,
+                    on_open_guide: () => _show_creator_guide(is_dark),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       );
     });
   }
 
-  /// AppBar 标题：折叠时内嵌紧凑指标。
-  Widget _build_appbar_title(bool is_dark) {
-    if (!_header_collapsed) {
-      return Text(
-        easy.tr('creator_center.title'),
-        style: TextStyle(
-          fontSize: 19,
-          fontWeight: AuthorStyle.title_weight,
-        ),
-      );
+  /// 读取当前头部应该展示的纵向折叠距离。
+  ///
+  /// 横向手势期间始终使用手势开始时的固定值，不再在两个
+  /// Tab 的不同滚动位置之间插值，避免横滑带动头部纵向位移。
+  double _effective_header_scroll_offset() {
+    final double? locked_offset = _horizontal_header_offset_lock.value;
+    if (locked_offset != null) return locked_offset;
+    if (_header_transition_controller.isAnimating &&
+        _header_transition_animation != null) {
+      return _header_transition_animation!.value;
+    }
+    if (_preserve_pinned_header_on_tab_change) {
+      return _header_collapse_range;
+    }
+    return _tab_scroll_offset(_active_tab_index);
+  }
+
+  /// 监听 TabBarView 的横向滚动，切换期间锁定头部高度。
+  bool _on_tab_view_scroll_notification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.horizontal) return false;
+
+    if (notification is ScrollStartNotification) {
+      _horizontal_scroll_generation += 1;
+      _lock_horizontal_header_offset();
+    } else if (notification is ScrollEndNotification) {
+      final int completed_generation = _horizontal_scroll_generation;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || completed_generation != _horizontal_scroll_generation) {
+          return;
+        }
+        _release_horizontal_header_offset_with_transition();
+      });
+    }
+    return false;
+  }
+
+  /// 保存横向切换开始时的头部折叠位置。
+  void _lock_horizontal_header_offset() {
+    if (_horizontal_header_offset_lock.value != null) return;
+
+    final double current_offset =
+        _header_transition_controller.isAnimating &&
+            _header_transition_animation != null
+        ? _header_transition_animation!.value
+        : _preserve_pinned_header_on_tab_change
+        ? _header_collapse_range
+        : _tab_scroll_offset(_active_tab_index);
+    _header_transition_controller.stop();
+    _horizontal_header_offset_lock.value = current_offset.clamp(
+      0.0,
+      _header_collapse_range,
+    );
+    if (current_offset >=
+        _header_collapse_range - AuthorStyle.scroll_extent_tolerance) {
+      _prepare_tabs_for_pinned_header();
+    }
+  }
+
+  /// 在吸顶状态的横向手势开始时预先对齐其他 Tab。
+  ///
+  /// 未创建的 Tab 直接使用吸顶偏移创建 ScrollPosition；
+  /// 已布局的 Tab 在进入屏幕前即完成对齐，避免首帧空白。
+  void _prepare_tabs_for_pinned_header() {
+    for (int index = 0; index < _tab_count; index++) {
+      if (index == _active_tab_index) continue;
+
+      final _CreatorTabScrollController controller =
+          _tab_scroll_controllers[index];
+      controller.prepare_initial_scroll_offset(_header_collapse_range);
+      if (!controller.hasClients ||
+          !controller.position.hasContentDimensions ||
+          controller.position.maxScrollExtent +
+                  AuthorStyle.scroll_extent_tolerance <
+              _header_collapse_range ||
+          controller.offset + AuthorStyle.scroll_extent_tolerance >=
+              _header_collapse_range) {
+        continue;
+      }
+      controller.jumpTo(_header_collapse_range);
+    }
+  }
+
+  /// 从横向手势的锁定位置平滑过渡到目标 Tab 的保存位置。
+  void _release_horizontal_header_offset_with_transition() {
+    final double? begin_offset = _horizontal_header_offset_lock.value;
+    if (begin_offset == null) return;
+
+    final double target_offset =
+        (_preserve_pinned_header_on_tab_change
+                ? _header_collapse_range
+                : _tab_scroll_offset(_active_tab_index))
+            .clamp(0.0, _header_collapse_range);
+    if ((target_offset - begin_offset).abs() <=
+        AuthorStyle.scroll_extent_tolerance) {
+      _horizontal_header_offset_lock.value = null;
+      return;
     }
 
-    return Row(
-      children: <Widget>[
-        Text(
-          easy.tr('creator_center.title'),
-          style: TextStyle(
-            fontSize: 19,
-            fontWeight: AuthorStyle.title_weight,
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const NeverScrollableScrollPhysics(),
-            child: Row(
-              children: <Widget>[
-                _collapsed_stat(
-                  _works.where((w) => !w.is_demo).length.toString(),
-                  easy.tr('creator_center.stats_works'),
-                  AuthorStyle.blue,
-                  is_dark,
-                ),
-                const SizedBox(width: 12),
-                _collapsed_stat(
-                  kDebugMode ? '12.8K' : '—',
-                  easy.tr('creator_center.stats_favorites'),
-                  AuthorStyle.gold,
-                  is_dark,
-                ),
-                const SizedBox(width: 12),
-                _collapsed_stat(
-                  kDebugMode ? '246' : '—',
-                  easy.tr('creator_center.stats_comments'),
-                  AuthorStyle.coral,
-                  is_dark,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _collapsed_stat(String value, String label, Color color, bool isDark) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Container(
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
-            color: AuthorStyle.primary_text(isDark),
-          ),
-        ),
-        const SizedBox(width: 3),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: AuthorStyle.body_weight,
-            color: AuthorStyle.secondary_text(isDark),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ──────────── 统一卡片：hero + 指标 + 操作按钮 ────────────
-
-  Widget _build_unified_card(bool is_dark, bool is_cjk) {
-    final String name =
-        _user_information.userInfo.value?.name.trim().isNotEmpty == true
-        ? _user_information.userInfo.value!.name.trim()
-        : easy.tr('creator_center.author_fallback_name');
-
-    final int works_count = _works.where((w) => !w.is_demo).length;
-    final double btn_fs = is_cjk
-        ? AuthorStyle.button_font_size_cjk
-        : AuthorStyle.button_font_size_alphabetic;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: AuthorStyle.hero_gradient(is_dark),
-        borderRadius: BorderRadius.circular(AuthorStyle.section_radius),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          /// 顶部：认证徽章 + 问候语。
-          Row(
-            children: <Widget>[
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AuthorStyle.gold.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(AuthorStyle.pill_radius),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Icon(
-                      Icons.verified_rounded,
-                      color: is_dark
-                          ? AuthorStyle.gold
-                          : AuthorStyle.deep_gold,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      easy.tr('creator_center.verified'),
-                      style: TextStyle(
-                        color: is_dark
-                            ? AuthorStyle.gold
-                            : AuthorStyle.deep_gold,
-                        fontSize: is_cjk ? 11 : 10,
-                        fontWeight: AuthorStyle.emphasis_weight,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              Text(
-                easy.tr(
-                  'creator_center.greeting',
-                  namedArgs: <String, String>{'name': name},
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: AuthorStyle.secondary_text(is_dark),
-                  fontSize: 12,
-                  fontWeight: AuthorStyle.body_weight,
-                ),
-              ),
-            ],
-          ),
-
-          /// 标题 + 副标题。
-          const SizedBox(height: 14),
-          Text(
-            easy.tr('creator_center.hero_title'),
-            style: TextStyle(
-              color: AuthorStyle.primary_text(is_dark),
-              fontSize: is_cjk
-                  ? AuthorStyle.hero_title_size_cjk
-                  : AuthorStyle.hero_title_size_alphabetic,
-              height: is_cjk ? 1.25 : 1.3,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            easy.tr('creator_center.hero_subtitle'),
-            style: TextStyle(
-              color: AuthorStyle.secondary_text(is_dark),
-              fontSize: is_cjk ? 13 : 12,
-              height: is_cjk ? 1.4 : 1.5,
-              fontWeight: AuthorStyle.body_weight,
-            ),
-          ),
-
-          /// 指标行：三个统计嵌入卡片内，用分隔线分隔。
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-            decoration: BoxDecoration(
-              color: AuthorStyle.surface(is_dark).withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: Row(
-              children: <Widget>[
-                _card_stat(
-                  works_count.toString(),
-                  easy.tr('creator_center.stats_works'),
-                  AuthorStyle.blue,
-                  is_dark,
-                  onTap: () => _tab_controller.animateTo(0),
-                ),
-                _card_stat_divider(is_dark),
-                _card_stat(
-                  kDebugMode ? '12.8K' : '—',
-                  easy.tr('creator_center.stats_favorites'),
-                  AuthorStyle.gold,
-                  is_dark,
-                ),
-                _card_stat_divider(is_dark),
-                _card_stat(
-                  kDebugMode ? '246' : '—',
-                  easy.tr('creator_center.stats_comments'),
-                  AuthorStyle.coral,
-                  is_dark,
-                ),
-              ],
-            ),
-          ),
-
-          /// 操作按钮。
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: <Widget>[
-              FilledButton.icon(
-                onPressed: _create_work,
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: Text(easy.tr('creator_center.create_work')),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(120, 40),
-                  backgroundColor: AuthorStyle.gold,
-                  foregroundColor: const Color(0xFF1A1A18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  textStyle: TextStyle(
-                    fontSize: btn_fs,
-                    fontWeight: AuthorStyle.title_weight,
-                  ),
-                ),
-              ),
-              OutlinedButton.icon(
-                onPressed: _continue_latest_draft,
-                icon: const Icon(Icons.edit_note_rounded, size: 18),
-                label: Text(easy.tr('creator_center.continue_writing')),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(120, 40),
-                  foregroundColor: AuthorStyle.primary_text(is_dark),
-                  side: BorderSide(
-                    color: AuthorStyle.primary_text(
-                      is_dark,
-                    ).withValues(alpha: 0.14),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  textStyle: TextStyle(
-                    fontSize: btn_fs,
-                    fontWeight: AuthorStyle.emphasis_weight,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 卡片内单个统计项。
-  Widget _card_stat(
-    String value,
-    String label,
-    Color color,
-    bool is_dark, {
-    VoidCallback? onTap,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AuthorStyle.primary_text(is_dark),
-                fontSize: 18,
-                fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: AuthorStyle.emphasis_weight,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 卡片内统计项之间的竖线分隔符。
-  Widget _card_stat_divider(bool is_dark) {
-    return Container(
-      width: 0.5,
-      height: 28,
-      color: AuthorStyle.secondary_text(is_dark).withValues(alpha: 0.2),
-    );
-  }
-
-  // ───────────────────── tab bar ─────────────────────
-
-  PreferredSize _build_tab_bar(bool is_dark, bool is_cjk) {
-    final List<String> titles = <String>[
-      easy.tr('creator_center.filter_all'),
-      easy.tr('creator_center.filter_draft'),
-      easy.tr('creator_center.filter_reviewing'),
-      easy.tr('creator_center.filter_scheduled'),
-      easy.tr('creator_center.filter_published'),
-      easy.tr('creator_center.filter_rejected'),
-    ];
-
-    final Color unselected = is_dark
-        ? AuthorStyle.dark_secondary_text
-        : AuthorStyle.light_secondary_text;
-    final double fs = is_cjk ? 14.0 : 12.0;
-
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(44),
-      child: Container(
-        color: AuthorStyle.background(is_dark),
-        child: TabBar(
-          controller: _tab_controller,
-          isScrollable: true,
-          labelPadding: const EdgeInsets.symmetric(horizontal: 14),
-          labelStyle: TextStyle(
-            fontSize: fs,
-            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-          ),
-          unselectedLabelStyle: TextStyle(
-            fontSize: fs,
-            fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-          ),
-          labelColor: is_dark ? Colors.white : Colors.black,
-          unselectedLabelColor: unselected,
-          indicator: UnderlineTabIndicator(
-            borderSide: BorderSide(width: 3, color: ColorConstants.themeColor),
-            insets: const EdgeInsets.only(bottom: -0.5),
-          ),
-          dividerHeight: 0.5,
-          dividerColor: AuthorStyle.border(is_dark),
-          tabAlignment: TabAlignment.start,
-          splashFactory: NoSplash.splashFactory,
-          overlayColor: WidgetStateProperty.all(Colors.transparent),
-          tabs: List<Widget>.generate(
-            titles.length,
-            (int i) => Tab(text: titles[i]),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ───────────────────── tab content ─────────────────────
-
-  Widget _build_tab_content(int tab_index, bool is_dark, bool is_cjk) {
-    final List<CreatorWorkDraft> works = _filtered_works(tab_index);
-
-    if (works.isEmpty) {
-      return KeyedSubtree(
-        key: PageStorageKey<String>('creator_empty_$tab_index'),
-        child: _build_empty_state(is_dark),
-      );
-    }
-
-    return ListView.separated(
-      key: PageStorageKey<String>('creator_tab_$tab_index'),
-      padding: EdgeInsets.fromLTRB(
-        AuthorStyle.page_padding,
-        14,
-        AuthorStyle.page_padding,
-        110 + MediaQuery.paddingOf(context).bottom,
-      ),
-      itemCount: works.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (BuildContext context, int index) {
-        final CreatorWorkDraft work = works[index];
-        return Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: AuthorStyle.content_max_width,
-            ),
-            child: AuthorWorkCard(
-              work: work,
-              is_dark: is_dark,
-              is_cjk: is_cjk,
-              on_tap: () => _edit_work(work),
-              on_primary_action: () => _continue_writing(work),
-            ),
+    _header_transition_animation =
+        Tween<double>(begin: begin_offset, end: target_offset).animate(
+          CurvedAnimation(
+            parent: _header_transition_controller,
+            curve: Curves.easeOutCubic,
           ),
         );
-      },
-    );
+    _header_transition_controller.forward(from: 0);
+    _horizontal_header_offset_lock.value = null;
   }
 
-  Widget _build_empty_state(bool is_dark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 40, 24, 140),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              width: 68,
-              height: 68,
-              decoration: BoxDecoration(
-                color: AuthorStyle.gold.withValues(alpha: 0.10),
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.auto_stories_outlined,
-                size: 32,
-                color: is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              easy.tr('creator_center.empty_title'),
-              style: TextStyle(
-                color: AuthorStyle.primary_text(is_dark),
-                fontSize: 17,
-                fontWeight: AuthorStyle.title_weight,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              easy.tr('creator_center.empty_subtitle'),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AuthorStyle.secondary_text(is_dark),
-                fontSize: 13,
-                height: 1.55,
-                fontWeight: AuthorStyle.body_weight,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _create_work,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: Text(easy.tr('creator_center.create_first_work')),
-              style: FilledButton.styleFrom(
-                backgroundColor: AuthorStyle.gold,
-                foregroundColor: const Color(0xFF1A1A18),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 11,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(11),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  /// 读取指定 Tab 的滚动距离；尚未挂载的 Tab 从顶部开始。
+  double _tab_scroll_offset(int tab_index) {
+    final ScrollController controller = _tab_scroll_controllers[tab_index];
+    if (!controller.hasClients) return 0;
+    return controller.offset;
   }
 
-  // ───────────────────── FAB ─────────────────────
+  /// 在已吸顶状态下切换 Tab 时，让目标 Tab 继续保持吸顶。
+  ///
+  /// 只补齐头部折叠所需的距离，目标 Tab 原有的内容滚动距离
+  /// 若更大则完全保留，不会被覆盖。
+  void _on_tab_index_changed() {
+    final int next_index = _tab_controller.index;
+    if (next_index == _active_tab_index) return;
 
-  Widget _build_create_button(bool is_dark) {
-    const double size = 50;
-    const BorderRadius radius = BorderRadius.all(Radius.circular(25));
+    if (_tab_controller.indexIsChanging) {
+      _lock_horizontal_header_offset();
+    }
 
-    final Color fill = is_dark
-        ? ColorConstants.themeColor.withValues(alpha: 0.88)
-        : ColorConstants.themeColor;
-    final Color icon_color = Colors.black.withValues(
-      alpha: is_dark ? 0.92 : 0.88,
+    final bool keep_header_pinned =
+        _tab_scroll_offset(_active_tab_index) >=
+        _header_collapse_range - AuthorStyle.scroll_extent_tolerance;
+    _active_tab_index = next_index;
+    _preserve_pinned_header_on_tab_change = keep_header_pinned;
+
+    if (keep_header_pinned) {
+      _tab_scroll_controllers[next_index].prepare_initial_scroll_offset(
+        _header_collapse_range,
+      );
+    }
+    if (keep_header_pinned && !_try_pin_tab_header(next_index)) {
+      _restore_pinned_header(next_index, attempt: 0);
+    }
+  }
+
+  /// 在目标 Tab 已完成布局时立即对齐吸顶距离。
+  bool _try_pin_tab_header(int tab_index) {
+    final ScrollController controller = _tab_scroll_controllers[tab_index];
+    if (!controller.hasClients) return false;
+
+    final double maximum_offset = controller.position.maxScrollExtent;
+    if (maximum_offset + AuthorStyle.scroll_extent_tolerance <
+        _header_collapse_range) {
+      return false;
+    }
+
+    if (controller.offset + AuthorStyle.scroll_extent_tolerance <
+        _header_collapse_range) {
+      controller.jumpTo(_header_collapse_range);
+    }
+    _preserve_pinned_header_on_tab_change = false;
+    return true;
+  }
+
+  /// 在目标 Tab 完成布局后恢复吸顶距离。
+  void _restore_pinned_header(int tab_index, {required int attempt}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _tab_controller.index != tab_index) return;
+
+      final ScrollController controller = _tab_scroll_controllers[tab_index];
+      if (!controller.hasClients) {
+        if (attempt < AuthorStyle.pin_restore_max_attempts) {
+          _restore_pinned_header(tab_index, attempt: attempt + 1);
+        }
+        return;
+      }
+
+      if (_try_pin_tab_header(tab_index)) return;
+
+      if (attempt < AuthorStyle.pin_restore_max_attempts) {
+        _restore_pinned_header(tab_index, attempt: attempt + 1);
+        return;
+      }
+
+      final double maximum_offset = controller.position.maxScrollExtent;
+      final double target_offset = _header_collapse_range.clamp(
+        controller.position.minScrollExtent,
+        maximum_offset,
+      );
+      if (controller.offset + AuthorStyle.scroll_extent_tolerance <
+          target_offset) {
+        controller.jumpTo(target_offset);
+      }
+      _preserve_pinned_header_on_tab_change = false;
+    });
+  }
+
+  /// 将当前 Tab 的滚动距离转换为共享头部可见高度。
+  double _current_header_height({
+    required double maximum_extent,
+    required double minimum_extent,
+  }) {
+    final double collapse_range = maximum_extent - minimum_extent;
+    final double collapsed_distance = _effective_header_scroll_offset().clamp(
+      0.0,
+      collapse_range,
     );
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16, right: 4),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _create_work,
-          borderRadius: radius,
-          splashColor: Colors.white.withValues(alpha: 0.24),
-          highlightColor: Colors.white.withValues(alpha: 0.14),
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              color: fill,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: is_dark ? 0.26 : 0.42),
-                width: 1.1,
-              ),
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: ColorConstants.themeColor.withValues(
-                    alpha: is_dark ? 0.24 : 0.18,
-                  ),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-                BoxShadow(
-                  color: Colors.black.withValues(
-                    alpha: is_dark ? 0.14 : 0.08,
-                  ),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: <Widget>[
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: radius,
-                        gradient: RadialGradient(
-                          center: const Alignment(0, -0.92),
-                          radius: 1.08,
-                          colors: <Color>[
-                            Colors.white.withValues(
-                              alpha: is_dark ? 0.28 : 0.34,
-                            ),
-                            Colors.white.withValues(
-                              alpha: is_dark ? 0.08 : 0.06,
-                            ),
-                            Colors.white.withValues(alpha: 0),
-                          ],
-                          stops: const <double>[0.0, 0.46, 1.0],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Center(
-                  child: SvgIcon(
-                    name: 'add',
-                    width: 22,
-                    height: 22,
-                    color: icon_color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    return maximum_extent - collapsed_distance;
   }
 
   // ───────────────────── guide sheet ─────────────────────
@@ -988,6 +720,155 @@ class _AuthorViewState extends State<AuthorView>
         release_mode: CreatorReleaseMode.scheduled,
         scheduled_publish_time: now.add(const Duration(days: 2)),
         update_time: now.subtract(const Duration(days: 3)),
+        is_demo: true,
+      ),
+      CreatorWorkDraft(
+        local_id: 'demo_short_draft_winter',
+        title: '未寄出的冬天',
+        introduction: '一封在二十年后才找到收件人的信。',
+        work_type: CreatorWorkType.short,
+        is_completed: false,
+        language_code: 'zh',
+        categories: <String>['现代'],
+        short_content: '这是用于测试草稿列表滚动的本地正文。' * 90,
+        chapters: const <CreatorChapterDraft>[],
+        status: CreatorWorkStatus.draft,
+        release_mode: CreatorReleaseMode.immediate,
+        scheduled_publish_time: null,
+        update_time: now.subtract(const Duration(hours: 5)),
+        is_demo: true,
+      ),
+      CreatorWorkDraft(
+        local_id: 'demo_long_draft_archive',
+        title: '月下档案',
+        introduction: '城市档案馆每到月圆时就会多出一份不存在的档案。',
+        work_type: CreatorWorkType.long,
+        is_completed: false,
+        language_code: 'zh',
+        categories: <String>['悬疑'],
+        short_content: '',
+        chapters: <CreatorChapterDraft>[
+          CreatorChapterDraft(
+            local_id: 'demo_archive_chapter_1',
+            title: '第一份档案',
+            content: '闭馆铃声响起时，书架后传来了纸页翻动的声音。' * 70,
+            update_time: now.subtract(const Duration(hours: 8)),
+          ),
+        ],
+        status: CreatorWorkStatus.draft,
+        release_mode: CreatorReleaseMode.immediate,
+        scheduled_publish_time: null,
+        update_time: now.subtract(const Duration(hours: 8)),
+        is_demo: true,
+      ),
+      CreatorWorkDraft(
+        local_id: 'demo_long_reviewing_mountain',
+        title: '山城来信',
+        introduction: '每一级台阶都通往一个被遗忘的故事。',
+        work_type: CreatorWorkType.long,
+        is_completed: true,
+        language_code: 'zh',
+        categories: <String>['文艺'],
+        short_content: '',
+        chapters: <CreatorChapterDraft>[
+          CreatorChapterDraft(
+            local_id: 'demo_mountain_chapter_1',
+            title: '雨后的三百级台阶',
+            content: '雨水沿着青石板一路向下，送来很多年前的声音。' * 80,
+            update_time: now.subtract(const Duration(days: 2)),
+          ),
+        ],
+        status: CreatorWorkStatus.reviewing,
+        release_mode: CreatorReleaseMode.immediate,
+        scheduled_publish_time: null,
+        update_time: now.subtract(const Duration(days: 2)),
+        is_demo: true,
+      ),
+      CreatorWorkDraft(
+        local_id: 'demo_short_scheduled_flower',
+        title: '凌晨四点的花店',
+        introduction: '这家花店只为即将告别的人开门。',
+        work_type: CreatorWorkType.short,
+        is_completed: true,
+        language_code: 'zh',
+        categories: <String>['治愈'],
+        short_content: '凌晨四点，巷口的灯第一次亮了起来。' * 100,
+        chapters: const <CreatorChapterDraft>[],
+        status: CreatorWorkStatus.scheduled,
+        release_mode: CreatorReleaseMode.scheduled,
+        scheduled_publish_time: now.add(const Duration(hours: 16)),
+        update_time: now.subtract(const Duration(hours: 12)),
+        is_demo: true,
+      ),
+      CreatorWorkDraft(
+        local_id: 'demo_short_published_galaxy',
+        title: '纸上银河',
+        introduction: '一名绘图员在旧星图上画出了归家的路。',
+        work_type: CreatorWorkType.short,
+        is_completed: true,
+        language_code: 'zh',
+        categories: <String>['科幻'],
+        short_content: '银河从铅笔尖流出，穿过了桌面上所有无人命名的星球。' * 110,
+        chapters: const <CreatorChapterDraft>[],
+        status: CreatorWorkStatus.published,
+        release_mode: CreatorReleaseMode.immediate,
+        scheduled_publish_time: null,
+        update_time: now.subtract(const Duration(days: 4)),
+        is_demo: true,
+      ),
+      CreatorWorkDraft(
+        local_id: 'demo_long_published_station',
+        title: '旧车站',
+        introduction: '停运十年的列车，在某个夏夜重新驶入站台。',
+        work_type: CreatorWorkType.long,
+        is_completed: true,
+        language_code: 'zh',
+        categories: <String>['都市'],
+        short_content: '',
+        chapters: <CreatorChapterDraft>[
+          CreatorChapterDraft(
+            local_id: 'demo_station_chapter_1',
+            title: '末班车之后',
+            content: '钟表停在十一点四十七分，铁轨却开始轻轻震动。' * 120,
+            update_time: now.subtract(const Duration(days: 6)),
+          ),
+        ],
+        status: CreatorWorkStatus.published,
+        release_mode: CreatorReleaseMode.immediate,
+        scheduled_publish_time: null,
+        update_time: now.subtract(const Duration(days: 6)),
+        is_demo: true,
+      ),
+      CreatorWorkDraft(
+        local_id: 'demo_short_rejected_island',
+        title: '逆风岛',
+        introduction: '岛上所有的风都朝着海心吹去。',
+        work_type: CreatorWorkType.short,
+        is_completed: true,
+        language_code: 'zh',
+        categories: <String>['奇幻'],
+        short_content: '渔船离开码头后，才发现帆上的风始终来自前方。' * 80,
+        chapters: const <CreatorChapterDraft>[],
+        status: CreatorWorkStatus.rejected,
+        release_mode: CreatorReleaseMode.immediate,
+        scheduled_publish_time: null,
+        update_time: now.subtract(const Duration(days: 5)),
+        is_demo: true,
+      ),
+      CreatorWorkDraft(
+        local_id: 'demo_short_rejected_glass_rain',
+        title: '玻璃雨',
+        introduction: '一场只有镜子能看见的雨落进了城市。',
+        work_type: CreatorWorkType.short,
+        is_completed: false,
+        language_code: 'zh',
+        categories: <String>['幻想'],
+        short_content: '窗外万里无云，镜子里的行人却都撑起了伞。' * 95,
+        chapters: const <CreatorChapterDraft>[],
+        status: CreatorWorkStatus.rejected,
+        release_mode: CreatorReleaseMode.immediate,
+        scheduled_publish_time: null,
+        update_time: now.subtract(const Duration(days: 7)),
         is_demo: true,
       ),
     ];
