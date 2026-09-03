@@ -1,9 +1,12 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
 import 'dart:async';
 
 import 'package:get/get.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/stores/message_store.dart';
 import 'package:app/stores/shell_tab_info.dart';
+import 'package:app/util/router/router_util.dart';
 
 // TODO 个人中心统计模块逻辑层
 class Logic {
@@ -28,6 +31,11 @@ class Logic {
     // 消息页是 Shell 常驻 tab，必须使用 go 切换，不能重复 push 路由栈。
     shell_tab_info.updateActivePath(_message_path);
     AppRouter.go(_message_path);
+  }
+
+  /// 进入创作中心并展示作者作品列表。
+  void go_to_creator_center() {
+    routerUtil(path: '/installation');
   }
 
   /// 获取评论总数。

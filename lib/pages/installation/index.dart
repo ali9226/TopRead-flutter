@@ -36,19 +36,21 @@ class _InstallationPageState extends State<InstallationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return AuthPageScaffold(
-      backgroundBubbles: Style.pageBubbles,
-      children: [
-        Obx(() {
-          final int author = userInformation.userInfo.value?.author ?? 1;
+    return Obx(() {
+      final int author = userInformation.userInfo.value?.author ?? 1;
 
-          if (author == 2) {
-            return const AuthorView();
-          }
-          final String mail = userInformation.userInfo.value?.mail ?? '';
-          return ApplyView(onSuccess: _onApplySuccess, initialEmail: mail);
-        }),
-      ],
-    );
+      /// 已认证作者进入独立创作工作台，不复用申请页的窄表单滚动容器。
+      if (author == 2) {
+        return const AuthorView();
+      }
+
+      final String mail = userInformation.userInfo.value?.mail ?? '';
+      return AuthPageScaffold(
+        backgroundBubbles: Style.pageBubbles,
+        children: <Widget>[
+          ApplyView(onSuccess: _onApplySuccess, initialEmail: mail),
+        ],
+      );
+    });
   }
 }

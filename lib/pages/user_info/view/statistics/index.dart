@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/project_config_store.dart';
+import 'package:app/stores/user_information.dart';
 import 'package:app/util/language_util/index.dart';
 import 'logic.dart';
 import 'style.dart';
@@ -26,6 +29,12 @@ class _StatisticsState extends State<Statistics> {
 
   /// TODO 统计逻辑层。
   final logic = Logic();
+
+  /// TODO 当前登录用户资料，用于识别已认证作者。
+  final UserInformation user_information = Get.find<UserInformation>();
+
+  /// 作者作品数量颜色（清透蓝）。
+  static const Color _work_color = Color(0xFF6596FF);
 
   /// 评论颜色（清透蓝）。
   static const Color _comment_color = Color(0xFF8DB7FF);
@@ -56,6 +65,76 @@ class _StatisticsState extends State<Statistics> {
       );
 
       final bool show_comment = projectConfigStore.current.is_comment_enabled;
+
+      /// 已认证作者在个人中心优先看到作品经营数据。
+      final bool is_author = user_information.userInfo.value?.author == 2;
+
+      if (is_author) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 14),
+          color: Colors.transparent,
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: GestureDetector(
+                  onTap: logic.go_to_creator_center,
+                  child: _StatCard(
+                    value: '0',
+                    unread: 0,
+                    label: easy.tr('creator_center.stats_works'),
+                    accentColor: _work_color,
+                    startColor: isDark
+                        ? const Color(0xFF18222F)
+                        : const Color(0xFFF2F7FF),
+                    endColor: isDark
+                        ? const Color(0xFF101721)
+                        : const Color(0xFFFBFDFF),
+                    titleColor: titleColor,
+                    subtitleColor: subtitleColor,
+                    is_cjk: is_cjk,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _StatCard(
+                  value: '0',
+                  unread: 0,
+                  label: easy.tr('creator_center.stats_favorites'),
+                  accentColor: _favorite_color,
+                  startColor: isDark
+                      ? const Color(0xFF262113)
+                      : const Color(0xFFFFF4D3),
+                  endColor: isDark
+                      ? const Color(0xFF17140E)
+                      : const Color(0xFFFFFCF0),
+                  titleColor: titleColor,
+                  subtitleColor: subtitleColor,
+                  is_cjk: is_cjk,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _StatCard(
+                  value: '0',
+                  unread: 0,
+                  label: easy.tr('creator_center.stats_comments'),
+                  accentColor: _comment_color,
+                  startColor: isDark
+                      ? const Color(0xFF18222F)
+                      : const Color(0xFFF2F7FF),
+                  endColor: isDark
+                      ? const Color(0xFF101721)
+                      : const Color(0xFFFBFDFF),
+                  titleColor: titleColor,
+                  subtitleColor: subtitleColor,
+                  is_cjk: is_cjk,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
 
       return Container(
         padding: const EdgeInsets.fromLTRB(10, 10, 10, 14),
