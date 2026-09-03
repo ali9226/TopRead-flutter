@@ -31,11 +31,9 @@ class AuthorStyle {
 
   // ==================== 可折叠头部 ====================
 
-  /// CJK 语系的头部展开高度。
-  static const double header_expanded_height_cjk = 354;
-
-  /// 非 CJK 语系的头部展开高度。
-  static const double header_expanded_height_alphabetic = 382;
+  /// 头部展开高度初始预估值（含状态栏）。
+  /// 内容高度约410px，加上状态栏约47px，总计约457px。
+  static const double header_expanded_height_initial = 360;
 
   /// 折叠后的导航栏高度。
   static const double header_toolbar_height = 54;
@@ -43,8 +41,8 @@ class AuthorStyle {
   /// 状态筛选 Tab 区高度。
   static const double header_tab_bar_height = 54;
 
-  /// 头部内容水平留白。
-  static const double header_content_padding = 18;
+  /// 头部内容水平留白，与页面内容 page_padding 保持一致。
+  static const double header_content_padding = 12;
 
   /// 头部展开导航区高度。
   static const double header_expanded_navigation_height = 48;
@@ -88,11 +86,23 @@ class AuthorStyle {
   /// 头部展开内容上移距离。
   static const double expanded_content_translate_y = 18;
 
-  /// 数据条高度。
-  static const double metric_strip_height = 52;
+  /// 数据卡片高度。
+  static const double metric_strip_height = 84;
 
-  /// 头部操作按钮高度。
-  static const double header_action_height = 42;
+  /// 数据卡片圆角。
+  static const double metric_card_radius = 16;
+
+  /// 数据卡片内边距。
+  static const EdgeInsets metric_card_padding = EdgeInsets.symmetric(
+    horizontal: 14,
+    vertical: 12,
+  );
+
+  /// 数据卡片之间的间距。
+  static const double metric_card_spacing = 8;
+
+  /// 头部操作按钮高度，与作品卡片的"写新章节"按钮风格一致。
+  static const double header_action_height = 44;
 
   /// 头部操作按钮圆角。
   static const double header_action_radius = 14;
@@ -155,11 +165,23 @@ class AuthorStyle {
   /// 非 CJK 主标题字号。
   static const double hero_title_size_alphabetic = 21;
 
+  /// CJK 主标题2行高度（字号24 × 行高1.24 × 2行）。
+  static const double hero_title_height_cjk = 60;
+
+  /// 非 CJK 主标题2行高度（字号21 × 行高1.28 × 2行）。
+  static const double hero_title_height_alphabetic = 54;
+
+  /// CJK 副标题2行高度（字号12.5 × 行高1.42 × 2行）。
+  static const double hero_subtitle_height_cjk = 36;
+
+  /// 非 CJK 副标题2行高度（字号11.5 × 行高1.48 × 2行）。
+  static const double hero_subtitle_height_alphabetic = 34;
+
   /// CJK 按钮字号。
-  static const double button_font_size_cjk = 13;
+  static const double button_font_size_cjk = 15;
 
   /// 非 CJK 按钮字号。
-  static const double button_font_size_alphabetic = 11;
+  static const double button_font_size_alphabetic = 13;
 
   /// CJK 状态标签字号。
   static const double status_font_size_cjk = 12;

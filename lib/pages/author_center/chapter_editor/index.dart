@@ -2,8 +2,8 @@
 
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
-import 'package:app/pages/installation/author_style.dart';
-import 'package:app/pages/installation/models/creator_work.dart';
+import 'package:app/pages/author_center/author_style.dart';
+import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;

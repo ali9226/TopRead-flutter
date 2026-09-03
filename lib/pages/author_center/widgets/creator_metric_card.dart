@@ -1,6 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'package:app/pages/installation/author_style.dart';
+import 'package:app/pages/author_center/author_style.dart';
 import 'package:flutter/material.dart';
 
 /// TODO 创作者工作台统计卡片。

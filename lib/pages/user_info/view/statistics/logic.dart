@@ -35,7 +35,7 @@ class Logic {
 
   /// 进入创作中心并展示作者作品列表。
   void go_to_creator_center() {
-    routerUtil(path: '/installation');
+    routerUtil(path: '/author_center');
   }
 
   /// 获取评论总数。

@@ -1,11 +1,11 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
-import 'package:app/pages/installation/author_style.dart';
-import 'package:app/pages/installation/chapter_editor/index.dart';
-import 'package:app/pages/installation/models/creator_work.dart';
-import 'package:app/pages/installation/widgets/creator_header.dart';
-import 'package:app/pages/installation/widgets/creator_work_tab.dart';
-import 'package:app/pages/installation/work_editor/index.dart';
+import 'package:app/pages/author_center/author_style.dart';
+import 'package:app/pages/author_center/chapter_editor/index.dart';
+import 'package:app/pages/author_center/models/creator_work.dart';
+import 'package:app/pages/author_center/widgets/creator_header.dart';
+import 'package:app/pages/author_center/widgets/creator_work_tab.dart';
+import 'package:app/pages/author_center/work_editor/index.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/language_util/index.dart';
@@ -88,11 +88,14 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   /// 目标 Tab 尚未完成布局时，临时保持共享头部吸顶。
   bool _preserve_pinned_header_on_tab_change = false;
 
-  /// 当前语系下头部从展开到吸顶需要的滚动距离。
-  double _header_collapse_range =
-      AuthorStyle.header_expanded_height_cjk -
-      AuthorStyle.header_toolbar_height -
-      AuthorStyle.header_tab_bar_height;
+  /// 头部从展开到吸顶需要的滚动距离。
+  late final double _header_collapse_range;
+
+  /// 头部最大展开高度（含状态栏）。
+  late final double _header_max_extent;
+
+  /// 头部最小高度（折叠态）。
+  late final double _header_min_extent;
 
   /// 创作中心固定状态 Tab 数量。
   static const int _tab_count = 6;
@@ -121,6 +124,17 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       ..._tab_scroll_controllers,
     ]);
     _tab_controller.addListener(_on_tab_index_changed);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final double status_bar = MediaQuery.paddingOf(context).top;
+    _header_min_extent = status_bar +
+        AuthorStyle.header_toolbar_height +
+        AuthorStyle.header_tab_bar_height;
+    _header_max_extent = status_bar + 360;
+    _header_collapse_range = _header_max_extent - _header_min_extent;
   }
 
   @override
@@ -245,16 +259,6 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       final int works_count = kDebugMode
           ? _works.length
           : _works.where((CreatorWorkDraft work) => !work.is_demo).length;
-      final double status_bar_height = MediaQuery.paddingOf(context).top;
-      final double expanded_height = is_cjk
-          ? AuthorStyle.header_expanded_height_cjk
-          : AuthorStyle.header_expanded_height_alphabetic;
-      final double maximum_header_extent = status_bar_height + expanded_height;
-      final double minimum_header_extent =
-          status_bar_height +
-          AuthorStyle.header_toolbar_height +
-          AuthorStyle.header_tab_bar_height;
-      _header_collapse_range = maximum_header_extent - minimum_header_extent;
 
       return Scaffold(
         backgroundColor: background,
@@ -275,10 +279,9 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                       is_dark: is_dark,
                       is_cjk: is_cjk,
                       scroll_controller: _tab_scroll_controllers[tab_index],
-                      header_spacer_height: maximum_header_extent,
-                      minimum_header_height: minimum_header_extent,
-                      minimum_scroll_extent:
-                          maximum_header_extent - minimum_header_extent,
+                      header_spacer_height: _header_max_extent,
+                      minimum_header_height: _header_min_extent,
+                      minimum_scroll_extent: _header_max_extent - _header_min_extent,
                       on_create_work: _create_work,
                       on_edit_work: _edit_work,
                       on_primary_action: _continue_writing,
@@ -296,8 +299,8 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                 animation: _header_listenable,
                 builder: (BuildContext context, Widget? child) {
                   final double current_height = _current_header_height(
-                    maximum_extent: maximum_header_extent,
-                    minimum_extent: minimum_header_extent,
+                    maximum_extent: _header_max_extent,
+                    minimum_extent: _header_min_extent,
                   );
 
                   return CreatorHeaderOverlay(
@@ -525,6 +528,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     required double minimum_extent,
   }) {
     final double collapse_range = maximum_extent - minimum_extent;
+    if (collapse_range <= 0) return minimum_extent;
     final double collapsed_distance = _effective_header_scroll_offset().clamp(
       0.0,
       collapse_range,

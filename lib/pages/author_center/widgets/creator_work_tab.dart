@@ -3,9 +3,9 @@
 import 'package:app/components/floating_back_to_top/index.dart';
 import 'package:app/components/floating_back_to_top/style.dart'
     as floating_back_to_top_style;
-import 'package:app/pages/installation/author_style.dart';
-import 'package:app/pages/installation/models/creator_work.dart';
-import 'package:app/pages/installation/widgets/author_work_card.dart';
+import 'package:app/pages/author_center/author_style.dart';
+import 'package:app/pages/author_center/models/creator_work.dart';
+import 'package:app/pages/author_center/widgets/author_work_card.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show SliverConstraints;

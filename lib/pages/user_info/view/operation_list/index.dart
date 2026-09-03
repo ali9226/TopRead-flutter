@@ -154,7 +154,11 @@ class _OperationListState extends State<OperationList> {
             type: 1,
             showDivider: true,
             onTap: () {
-              routerUtil(path: '/installation');
+              final int author = userInformation.userInfo.value?.author ?? 1;
+              final String path = author == 2
+                  ? '/author_center'
+                  : '/author_apply';
+              routerUtil(path: path);
             },
           ),
         );

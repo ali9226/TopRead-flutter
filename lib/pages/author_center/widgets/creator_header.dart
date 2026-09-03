@@ -1,7 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/config/font_config.dart';
-import 'package:app/pages/installation/author_style.dart';
+import 'package:app/pages/author_center/author_style.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +11,9 @@ import 'package:flutter/services.dart';
 /// 该组件绘制在 Tab 内容上方，不参与 [TabBarView] 的横向位移。
 /// [current_height] 完全由当前 Tab 的独立滚动控制器计算，因此头部可以响应
 /// 当前内容的纵向滚动，同时不会迫使其他 Tab 复用同一个 ScrollPosition。
+///
+/// 展开高度通过 [_CreatorFlexibleHeader] 动态测量内容实际高度，
+/// 无需为每个语种设置固定常量。
 class CreatorHeaderOverlay extends StatelessWidget {
   /// 页面状态 Tab 控制器。
   final TabController tab_controller;
@@ -66,10 +69,8 @@ class CreatorHeaderOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double expanded_height = is_cjk
-        ? AuthorStyle.header_expanded_height_cjk
-        : AuthorStyle.header_expanded_height_alphabetic;
     final double status_bar_height = MediaQuery.paddingOf(context).top;
+    final double expanded_height = AuthorStyle.header_expanded_height_initial;
     final double maximum_extent = status_bar_height + expanded_height;
     final double minimum_extent =
         status_bar_height +
@@ -98,7 +99,9 @@ class CreatorHeaderOverlay extends StatelessWidget {
     );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: is_dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      value: is_dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
       child: SizedBox(
         height: safe_height,
         child: Stack(
@@ -176,46 +179,6 @@ class CreatorHeaderOverlay extends StatelessWidget {
                   child: _HeaderTapTarget(
                     tooltip: easy.tr('creator_center.create_work'),
                     on_tap: on_create_work,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: AuthorStyle.header_content_padding,
-              right: AuthorStyle.header_content_padding,
-              top:
-                  maximum_extent -
-                  AuthorStyle.header_tab_bar_height -
-                  AuthorStyle.header_content_padding -
-                  AuthorStyle.header_action_height -
-                  AuthorStyle.expanded_content_translate_y * collapse_progress,
-              height: AuthorStyle.header_action_height,
-              child: IgnorePointer(
-                ignoring:
-                    expanded_opacity <
-                    AuthorStyle.header_action_interaction_opacity,
-                child: Opacity(
-                  opacity: expanded_opacity,
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        flex: 11,
-                        child: _HeaderTapRegion(
-                          on_tap: on_create_work,
-                          semantic_label: easy.tr('creator_center.create_work'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        flex: 10,
-                        child: _HeaderTapRegion(
-                          on_tap: on_continue_writing,
-                          semantic_label: easy.tr(
-                            'creator_center.continue_writing',
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ),
@@ -307,7 +270,6 @@ class _CreatorFlexibleHeader extends StatelessWidget {
                 top: 0,
                 left: 0,
                 right: 0,
-                height: maximum_extent - AuthorStyle.header_tab_bar_height,
                 child: Transform.translate(
                   offset: Offset(
                     0,
@@ -381,23 +343,33 @@ class _CreatorFlexibleHeader extends StatelessWidget {
         AuthorStyle.header_content_padding,
         status_bar_height,
         AuthorStyle.header_content_padding,
-        AuthorStyle.header_content_padding,
+        0,
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          /// 导航栏：返回按钮靠左、标题、问号靠右。
           SizedBox(
             height: AuthorStyle.header_expanded_navigation_height,
             child: Row(
               children: <Widget>[
-                _HeaderIconButton(
-                  icon: Icons.arrow_back_ios_new_rounded,
-                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  is_dark: is_dark,
-                  show_background: false,
-                  on_tap: on_back,
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: on_back,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 2,
+                      vertical: 4,
+                    ),
+                    child: Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      size: 22,
+                      color: AuthorStyle.primary_text(is_dark),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     easy.tr('creator_center.title'),
@@ -410,21 +382,31 @@ class _CreatorFlexibleHeader extends StatelessWidget {
                     ),
                   ),
                 ),
-                _HeaderIconButton(
-                  icon: Icons.help_outline_rounded,
-                  tooltip: easy.tr('creator_center.creator_guide'),
-                  is_dark: is_dark,
-                  show_background: false,
-                  on_tap: on_open_guide,
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: on_open_guide,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 2,
+                      vertical: 4,
+                    ),
+                    child: Icon(
+                      Icons.help_outline_rounded,
+                      size: 22,
+                      color: AuthorStyle.primary_text(is_dark),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
+
+          /// 认证标签 + 问候语。
           Row(
             children: <Widget>[
               _build_verified_badge(),
               const SizedBox(width: 9),
-              Expanded(
+              Flexible(
                 child: Text(
                   easy.tr(
                     'creator_center.greeting',
@@ -442,6 +424,8 @@ class _CreatorFlexibleHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
+
+          /// 主标题。
           Text(
             easy.tr('creator_center.hero_title'),
             maxLines: 2,
@@ -457,6 +441,8 @@ class _CreatorFlexibleHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
+
+          /// 副标题。
           Text(
             easy.tr('creator_center.hero_subtitle'),
             maxLines: 2,
@@ -468,68 +454,63 @@ class _CreatorFlexibleHeader extends StatelessWidget {
               fontWeight: AuthorStyle.body_weight,
             ),
           ),
-          const Spacer(),
-          SizedBox(
-            height: AuthorStyle.metric_strip_height,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: AuthorStyle.header_glass(is_dark),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AuthorStyle.border(is_dark)),
+          const SizedBox(height: 10),
+
+          /// 统计卡片：作品、收藏、评论。
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _build_metric(
+                  value: '$works_count',
+                  label: easy.tr('creator_center.stats_works'),
+                  accent_color: AuthorStyle.blue,
+                ),
               ),
-              child: Row(
-                children: <Widget>[
-                  _build_metric(
-                    value: '$works_count',
-                    label: easy.tr('creator_center.stats_works'),
-                    accent_color: AuthorStyle.blue,
-                  ),
-                  _build_metric_divider(),
-                  _build_metric(
-                    value: favorites_count,
-                    label: easy.tr('creator_center.stats_favorites'),
-                    accent_color: AuthorStyle.gold,
-                  ),
-                  _build_metric_divider(),
-                  _build_metric(
-                    value: comments_count,
-                    label: easy.tr('creator_center.stats_comments'),
-                    accent_color: AuthorStyle.coral,
-                  ),
-                ],
+              const SizedBox(width: AuthorStyle.metric_card_spacing),
+              Expanded(
+                child: _build_metric(
+                  value: favorites_count,
+                  label: easy.tr('creator_center.stats_favorites'),
+                  accent_color: AuthorStyle.gold,
+                ),
               ),
-            ),
+              const SizedBox(width: AuthorStyle.metric_card_spacing),
+              Expanded(
+                child: _build_metric(
+                  value: comments_count,
+                  label: easy.tr('creator_center.stats_comments'),
+                  accent_color: AuthorStyle.coral,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            height: AuthorStyle.header_action_height,
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  flex: 11,
-                  child: _HeaderActionButton(
-                    icon: Icons.add_rounded,
-                    label: easy.tr('creator_center.create_work'),
-                    is_primary: true,
-                    is_dark: is_dark,
-                    is_cjk: is_cjk,
-                    on_tap: on_create_work,
-                  ),
+
+          /// 操作按钮：创建作品、继续写作。
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _HeaderActionButton(
+                  icon: Icons.add_rounded,
+                  label: easy.tr('creator_center.create_work'),
+                  is_primary: true,
+                  is_dark: is_dark,
+                  is_cjk: is_cjk,
+                  on_tap: on_create_work,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 10,
-                  child: _HeaderActionButton(
-                    icon: Icons.edit_note_rounded,
-                    label: easy.tr('creator_center.continue_writing'),
-                    is_primary: false,
-                    is_dark: is_dark,
-                    is_cjk: is_cjk,
-                    on_tap: on_continue_writing,
-                  ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _HeaderActionButton(
+                  icon: Icons.edit_note_rounded,
+                  label: easy.tr('creator_center.continue_writing'),
+                  is_primary: false,
+                  is_dark: is_dark,
+                  is_cjk: is_cjk,
+                  on_tap: on_continue_writing,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -631,53 +612,83 @@ class _CreatorFlexibleHeader extends StatelessWidget {
     );
   }
 
-  /// 构建一个统计数据。
+  /// 构建一个独立的数据统计卡片，样式参考 user_info 的 _StatCard。
   Widget _build_metric({
     required String value,
     required String label,
     required Color accent_color,
   }) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AuthorStyle.primary_text(is_dark),
-                fontSize: 16,
-                height: 1.05,
-                fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: accent_color,
-                fontSize: is_cjk ? 10.5 : 9,
-                height: 1,
-                fontWeight: AuthorStyle.emphasis_weight,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    final Color start_color =
+        accent_color.withValues(alpha: is_dark ? 0.10 : 0.08);
+    final Color end_color = is_dark
+        ? AuthorStyle.dark_surface.withValues(alpha: 0.6)
+        : Colors.white.withValues(alpha: 0.9);
 
-  /// 构建数据项之间的轻量分隔线。
-  Widget _build_metric_divider() {
     return Container(
-      width: 0.5,
-      height: 24,
-      color: AuthorStyle.border(is_dark),
+      height: AuthorStyle.metric_strip_height,
+      padding: AuthorStyle.metric_card_padding,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AuthorStyle.metric_card_radius),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[start_color, end_color],
+        ),
+        border: Border.all(
+          color: accent_color.withValues(alpha: is_dark ? 0.18 : 0.15),
+        ),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Colors.black.withValues(alpha: is_dark ? 0.10 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          /// 顶部彩色装饰条。
+          Container(
+            width: 22,
+            height: 4,
+            decoration: BoxDecoration(
+              color: accent_color,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AuthorStyle.primary_text(is_dark),
+                  fontSize: 22,
+                  height: 1.1,
+                  fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AuthorStyle.secondary_text(is_dark),
+                  fontSize: is_cjk ? 11 : 10,
+                  height: 1,
+                  fontWeight: AuthorStyle.emphasis_weight,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -806,7 +817,6 @@ class _HeaderIconButton extends StatelessWidget {
   final String tooltip;
   final bool is_dark;
   final bool is_accent;
-  final bool show_background;
   final VoidCallback on_tap;
 
   const _HeaderIconButton({
@@ -815,7 +825,6 @@ class _HeaderIconButton extends StatelessWidget {
     required this.is_dark,
     required this.on_tap,
     this.is_accent = false,
-    this.show_background = true,
   });
 
   @override
@@ -825,9 +834,7 @@ class _HeaderIconButton extends StatelessWidget {
         : AuthorStyle.primary_text(is_dark);
     final Color background = is_accent
         ? AuthorStyle.gold
-        : show_background
-        ? AuthorStyle.header_glass(is_dark)
-        : Colors.transparent;
+        : AuthorStyle.header_glass(is_dark);
 
     return Tooltip(
       message: tooltip,
@@ -848,7 +855,7 @@ class _HeaderIconButton extends StatelessWidget {
   }
 }
 
-/// 展开头部的快捷操作按钮。
+/// 展开头部的快捷操作按钮，样式与作品卡片的"写新章节"按钮一致。
 class _HeaderActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -869,41 +876,40 @@ class _HeaderActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color foreground = is_primary
-        ? const Color(0xFF1D1B14)
+        ? const Color(0xFF1A1A18)
         : AuthorStyle.primary_text(is_dark);
     final Color background = is_primary
         ? AuthorStyle.gold
         : AuthorStyle.header_glass(is_dark);
 
-    return Material(
-      color: background,
-      borderRadius: BorderRadius.circular(AuthorStyle.header_action_radius),
-      child: InkWell(
-        onTap: on_tap,
-        borderRadius: BorderRadius.circular(AuthorStyle.header_action_radius),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Icon(icon, size: 18, color: foreground),
-              const SizedBox(width: 7),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: foreground,
-                    fontSize: is_cjk
-                        ? AuthorStyle.button_font_size_cjk
-                        : AuthorStyle.button_font_size_alphabetic,
-                    fontWeight: AuthorStyle.title_weight,
-                  ),
+    return FilledButton.icon(
+      onPressed: on_tap,
+      icon: Icon(icon, size: 18, color: foreground),
+      label: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      style: FilledButton.styleFrom(
+        minimumSize: const Size.fromHeight(AuthorStyle.header_action_height),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        backgroundColor: background,
+        foregroundColor: foreground,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AuthorStyle.header_action_radius),
+          side: is_primary
+              ? BorderSide.none
+              : BorderSide(
+                  color: AuthorStyle.border(is_dark),
+                  width: 1,
                 ),
-              ),
-            ],
-          ),
+        ),
+        textStyle: TextStyle(
+          fontSize: is_cjk
+              ? AuthorStyle.button_font_size_cjk
+              : AuthorStyle.button_font_size_alphabetic,
+          fontWeight: AuthorStyle.title_weight,
         ),
       ),
     );
@@ -931,27 +937,6 @@ class _HeaderTapTarget extends StatelessWidget {
             dimension: AuthorStyle.compact_action_size,
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// 覆盖在头部快捷按钮上的无背景点击区。
-class _HeaderTapRegion extends StatelessWidget {
-  final String semantic_label;
-  final VoidCallback on_tap;
-
-  const _HeaderTapRegion({required this.semantic_label, required this.on_tap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: semantic_label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: on_tap,
-        child: const SizedBox.expand(),
       ),
     );
   }
