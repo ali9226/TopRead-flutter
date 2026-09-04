@@ -2,12 +2,14 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:app/api/post_request.dart';
 import 'package:app/models/ad_config.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/google_mobile_ads_util.dart';
 import 'package:app/util/log_util.dart';
@@ -44,6 +46,9 @@ class SplashScreenAdService extends GetxController {
   /// App Open 广告实例。
   AppOpenAd? _app_open_ad;
 
+  /// 开屏界面是否已经淡出。
+  bool _is_splash_completed = false;
+
   /// 广告配置。
   AdConfig? get ad_config => _ad_config.value;
 
@@ -58,6 +63,11 @@ class SplashScreenAdService extends GetxController {
 
   /// App Open 广告实例。
   AppOpenAd? get app_open_ad => _is_ad_loaded.value ? _app_open_ad : null;
+
+  /// 设置开屏界面是否已经淡出。
+  void set_splash_completed(bool completed) {
+    _is_splash_completed = completed;
+  }
 
   @override
   void onInit() {
@@ -153,12 +163,29 @@ class SplashScreenAdService extends GetxController {
   /// 尝试加载广告。
   ///
   /// 只有谷歌类型广告（advertisers == 1）且 ads_id 非空时才加载。
+  /// 根据 project_config 中的 splash_screen_ads 概率决定是否加载。
   void _try_load_ad() {
     if (_ad_config.value == null) return;
     if (_ad_config.value!.advertisers != 1) return;
     if (_ad_config.value!.adsId.trim().isEmpty) return;
 
+    // 获取开屏广告展示概率。
+    final int probability = _get_splash_screen_ads_probability();
+    if (probability <= 0) return;
+
+    // 根据概率决定是否加载广告。
+    if (probability < 100) {
+      final int random = Random().nextInt(100);
+      if (random >= probability) return;
+    }
+
     _load_app_open_ad();
+  }
+
+  /// 获取开屏广告展示概率。
+  int _get_splash_screen_ads_probability() {
+    if (!Get.isRegistered<ProjectConfigStore>()) return 0;
+    return Get.find<ProjectConfigStore>().current.splash_screen_ads;
   }
 
   /// 加载 App Open 广告。
@@ -219,7 +246,10 @@ class SplashScreenAdService extends GetxController {
   }
 
   /// 展示 App Open 广告。
+  ///
+  /// 如果开屏界面已经淡出，则不展示广告。
   Future<void> show_ad() async {
+    if (_is_splash_completed) return;
     final AppOpenAd? ad = _app_open_ad;
     if (ad == null || !_is_ad_loaded.value || _is_showing) return;
 

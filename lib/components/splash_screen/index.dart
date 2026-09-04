@@ -76,6 +76,8 @@ class _SplashScreenState extends State<SplashScreen>
 
     // 开始开屏流程。
     _logic.start_splash().then((_) {
+      // 标记开屏界面已淡出。
+      _ad_service.set_splash_completed(true);
       // 开屏完成后触发回调。
       widget.on_complete?.call();
     });

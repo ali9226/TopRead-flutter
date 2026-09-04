@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/models/ad_config.dart';
 import 'package:app/models/language_info.dart';
 import 'package:app/models/rotation.dart';
 import 'package:app/models/preference.dart';
@@ -41,6 +42,9 @@ class RedisGetData {
   /// 项目配置。
   final ProjectConfig project_config;
 
+  /// 广告配置列表。
+  final List<AdConfig> ads_ids;
+
   const RedisGetData({
     required this.language_list,
     required this.rotation_list,
@@ -51,6 +55,7 @@ class RedisGetData {
     required this.dislike_list,
     required this.popular_searches,
     required this.project_config,
+    required this.ads_ids,
   });
 
   /// TODO 空数据兜底。
@@ -63,7 +68,8 @@ class RedisGetData {
       search_list = const [],
       dislike_list = const [],
       popular_searches = const [],
-      project_config = const ProjectConfig.empty();
+      project_config = const ProjectConfig.empty(),
+      ads_ids = const [];
 
   /// TODO 从接口返回的原始 json 中解析业务对象。
   ///
@@ -82,6 +88,7 @@ class RedisGetData {
       dislike_list: _parse_dislike_list(json['dislike_list']),
       popular_searches: _parse_popular_searches(json['popular_searches']),
       project_config: _parse_project_config(json['project_config']),
+      ads_ids: _parse_ads_ids(json['ads_ids']),
     );
   }
 
@@ -145,5 +152,17 @@ class RedisGetData {
   static ProjectConfig _parse_project_config(dynamic raw) {
     if (raw is! Map) return const ProjectConfig.empty();
     return ProjectConfig.from_json(Map<String, dynamic>.from(raw));
+  }
+
+  /// TODO 解析广告配置列表。
+  static List<AdConfig> _parse_ads_ids(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (dynamic item) =>
+              AdConfig.fromJson(Map<String, dynamic>.from(item)),
+        )
+        .toList();
   }
 }
