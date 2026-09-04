@@ -35,8 +35,11 @@ class _SplashScreenState extends State<SplashScreen>
   /// 开屏广告服务。
   late final SplashScreenAdService _ad_service;
 
-  /// 广告状态监听器。
+  /// 广告加载状态监听器。
   Worker? _ad_worker;
+
+  /// 广告展示状态监听器。
+  Worker? _ad_impression_worker;
 
   @override
   void initState() {
@@ -74,8 +77,21 @@ class _SplashScreenState extends State<SplashScreen>
       _ad_service.show_ad();
     }
 
+    // 监听广告展示事件，广告出现时立即淡出开屏图片。
+    _ad_impression_worker = ever(_ad_service.is_ad_impression_rx, (bool is_showing) {
+      if (is_showing && mounted && !_logic.is_completed) {
+        _fade_controller.forward().then((_) {
+          _ad_service.set_splash_completed(true);
+          widget.on_complete?.call();
+        });
+        _logic.mark_completed();
+      }
+    });
+
     // 开始开屏流程。
     _logic.start_splash().then((_) {
+      // 如果已被广告中断，不重复触发回调。
+      if (_logic.is_completed_by_ad) return;
       // 标记开屏界面已淡出。
       _ad_service.set_splash_completed(true);
       // 开屏完成后触发回调。
@@ -87,6 +103,7 @@ class _SplashScreenState extends State<SplashScreen>
   void dispose() {
     // 释放广告状态监听器。
     _ad_worker?.dispose();
+    _ad_impression_worker?.dispose();
     // 释放逻辑控制器。
     Get.delete<SplashScreenLogic>();
     super.dispose();

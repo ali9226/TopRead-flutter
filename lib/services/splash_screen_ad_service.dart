@@ -41,6 +41,9 @@ class SplashScreenAdService extends GetxController {
   /// 广告是否正在展示中。
   bool _is_showing = false;
 
+  /// 广告是否已经开始展示（用于通知开屏图片淡出）。
+  final RxBool _is_ad_impression = false.obs;
+
   /// App Open 广告实例。
   AppOpenAd? _app_open_ad;
 
@@ -61,6 +64,9 @@ class SplashScreenAdService extends GetxController {
 
   /// App Open 广告实例。
   AppOpenAd? get app_open_ad => _is_ad_loaded.value ? _app_open_ad : null;
+
+  /// 广告是否已经开始展示（响应式，用于通知开屏图片淡出）。
+  RxBool get is_ad_impression_rx => _is_ad_impression;
 
   /// 设置开屏界面是否已经淡出。
   void set_splash_completed(bool completed) {
@@ -151,6 +157,7 @@ class SplashScreenAdService extends GetxController {
             // 设置广告回调。
             _app_open_ad!.fullScreenContentCallback = FullScreenContentCallback(
               onAdImpression: (AppOpenAd ad) {
+                _is_ad_impression.value = true;
                 final AdConfig? ad_config = _ad_config.value;
                 if (ad_config == null) return;
                 unawaited(

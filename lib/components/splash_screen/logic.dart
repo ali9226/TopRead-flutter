@@ -17,8 +17,14 @@ class SplashScreenLogic extends GetxController {
   /// 是否已完成开屏
   final RxBool _is_completed = false.obs;
 
+  /// 是否由广告触发完成
+  bool _completed_by_ad = false;
+
   /// 是否已完成开屏
   bool get is_completed => _is_completed.value;
+
+  /// 是否由广告触发完成
+  bool get is_completed_by_ad => _completed_by_ad;
 
   /// 获取当前开屏图片路径
   ///
@@ -40,6 +46,12 @@ class SplashScreenLogic extends GetxController {
           ? SplashScreenStyle.vertical_screen_dark_image
           : SplashScreenStyle.vertical_screen_light_image;
     }
+  }
+
+  /// 标记开屏由广告触发完成（跳过计时器等待）。
+  void mark_completed() {
+    _completed_by_ad = true;
+    _is_completed.value = true;
   }
 
   /// 初始化淡出动画控制器
