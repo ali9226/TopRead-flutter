@@ -12,7 +12,7 @@ import 'package:app/pages/home/widgets/tab_contents/short_story_tab/style.dart';
 /// 短篇小说列表内的 Google AdMob 原生广告卡片。
 ///
 /// 使用 [ShortStoryTabAdPool] 进程级管理，
-/// 广告 ID 通过 `ads/short_story_tab_ads` 接口获取（type=17 Android, type=18 iOS）。
+/// 广告 ID 从 `redis/get.ads_ids` 本地缓存获取（type=17 Android, type=18 iOS）。
 class ShortStoryNativeAdCard extends StatefulWidget {
   /// 当前广告槽位的全局唯一 ID。
   final String slot_id;
@@ -152,11 +152,7 @@ class _ShortStoryNativeAdCardState extends State<ShortStoryNativeAdCard>
                 p.clamp(0.0, 1.0),
                 (p + 0.3).clamp(0.0, 1.0),
               ],
-              colors: <Color>[
-                base_color,
-                highlight_color,
-                base_color,
-              ],
+              colors: <Color>[base_color, highlight_color, base_color],
             ),
           ),
         );

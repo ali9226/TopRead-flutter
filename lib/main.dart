@@ -24,6 +24,7 @@ import 'package:app/stores/short_story_catalog_store.dart';
 import 'package:app/stores/preference_store.dart';
 import 'package:app/stores/share_store.dart';
 import 'package:app/stores/project_config_store.dart';
+import 'package:app/stores/ad_config_store.dart';
 import 'package:app/stores/message_store.dart';
 import 'package:app/stores/bookshelf_store.dart';
 import 'package:app/stores/ranking_full_list_store.dart';
@@ -82,11 +83,11 @@ void main() async {
   Get.put(PreferenceStore());
   Get.put(ShareStore());
   Get.put(ProjectConfigStore());
+  Get.put(AdConfigStore());
   Get.put(MessageStore());
   Get.put(BookshelfStore());
   Get.put(RankingFullListStore());
   Get.put(RecommendWaterfallStore(), permanent: true);
-  Get.put(SplashScreenAdService(), permanent: true);
 
   /// TODO 注册全局语种基础配置刷新任务。
   ///
@@ -105,6 +106,11 @@ void main() async {
   // TODO 初始化主题
   await getThemeMode();
 
+  // TODO 首帧前只恢复本地配置，确保广告判断不等待网络请求。
+  // 首次安装没有缓存时广告保持关闭；网络响应仅供本次后续页面和下次启动使用。
+  await redisRequestStore.restore_from_cache();
+  Get.put(SplashScreenAdService(), permanent: true);
+
   final String fallback_language_code =
       LanguageUtil.get_fallback_language_code();
 
@@ -113,16 +119,16 @@ void main() async {
   runApp(
     ExcludeSemantics(
       child: EasyLocalization(
-          supportedLocales: LanguageUtil.supported_locales,
-          path: 'assets/i18n',
+        supportedLocales: LanguageUtil.supported_locales,
+        path: 'assets/i18n',
 
-          // TODO 启动时优先按本地已保存语种，否则按设备语种匹配结果启动。
-          startLocale: Locale(lang),
+        // TODO 启动时优先按本地已保存语种，否则按设备语种匹配结果启动。
+        startLocale: Locale(lang),
 
-          // TODO 如果无法识别语种，统一回退英文。
-          fallbackLocale: Locale(fallback_language_code),
+        // TODO 如果无法识别语种，统一回退英文。
+        fallbackLocale: Locale(fallback_language_code),
 
-          child: AppWrapper(),
+        child: AppWrapper(),
       ),
     ),
   );
@@ -132,9 +138,8 @@ void main() async {
   unawaited(Constant.getAppVersion());
   unawaited(initHyphenation());
 
-  // 优先从本地缓存恢复 redis/get 数据，再发起网络请求覆盖。
-  await redisRequestStore.restore_from_cache();
-  redisRequestStore.fetch_redis_data();
+  // TODO 后台静默刷新完整配置，并用成功响应覆盖本地缓存。
+  unawaited(redisRequestStore.fetch_redis_data());
 
   // TODO 检查 App 版本更新（浏览器环境自动跳过）
   checkAppUpdate();
@@ -142,7 +147,9 @@ void main() async {
   // TODO 初始化推送通知服务（异步，不阻塞首帧）
   final FcmService fcm_service = FcmService();
   unawaited(
-    fcm_service.init().then((_) =>
-        fcm_service.update_badge(Get.find<MessageStore>().unread_total.value)),
+    fcm_service.init().then(
+      (_) =>
+          fcm_service.update_badge(Get.find<MessageStore>().unread_total.value),
+    ),
   );
 }

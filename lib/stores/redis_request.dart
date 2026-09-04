@@ -9,6 +9,7 @@ import 'package:app/config/constant.dart';
 import 'package:app/models/redis_get_data.dart';
 import 'package:app/models/rotation.dart';
 import 'package:app/stores/authorized_login_store.dart';
+import 'package:app/stores/ad_config_store.dart';
 import 'package:app/stores/customer_service_store.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/home_store.dart';
@@ -108,8 +109,7 @@ class RedisRequestStore extends GetxController {
       final dynamic decoded = jsonDecode(cached_json_str);
       if (decoded is! Map) return;
 
-      final Map<String, dynamic> json_map =
-          Map<String, dynamic>.from(decoded);
+      final Map<String, dynamic> json_map = Map<String, dynamic>.from(decoded);
       _distribute_data(json_map, is_cache: true);
       logUtil(msg: 'redis/get 已从本地缓存恢复数据');
     } catch (e) {
@@ -210,7 +210,7 @@ class RedisRequestStore extends GetxController {
       _has_retry_scheduled = false;
 
       // 缓存原始 JSON 到本地。
-      _save_to_cache(raw_json);
+      await _save_to_cache(raw_json);
 
       // 分发数据到各子 Store。
       _distribute_data(raw_json);
@@ -299,8 +299,9 @@ class RedisRequestStore extends GetxController {
         return null;
       }
 
-      final Map<String, dynamic> dataMap =
-          Map<String, dynamic>.from(response.data as Map);
+      final Map<String, dynamic> dataMap = Map<String, dynamic>.from(
+        response.data as Map,
+      );
       if (!dataMap.containsKey('encryption')) {
         return null;
       }
@@ -315,7 +316,8 @@ class RedisRequestStore extends GetxController {
       }
 
       final Map<String, dynamic> data = responseData;
-      final bool status = data['status'] == true ||
+      final bool status =
+          data['status'] == true ||
           data['status'] == 1 ||
           data['status'] == '1';
 
@@ -378,6 +380,10 @@ class RedisRequestStore extends GetxController {
       Get.find<ProjectConfigStore>().save_config(data.project_config);
     }
 
+    if (Get.isRegistered<AdConfigStore>()) {
+      Get.find<AdConfigStore>().save_configs(data.ads_ids);
+    }
+
     if (is_cache) {
       _set_loading(false);
     }
@@ -426,9 +432,7 @@ class RedisRequestStore extends GetxController {
     if (_has_retry_scheduled) return;
     _has_retry_scheduled = true;
 
-    logUtil(
-      msg: 'redis/get 将在 $_retry_delay_seconds 秒后静默重试',
-    );
+    logUtil(msg: 'redis/get 将在 $_retry_delay_seconds 秒后静默重试');
 
     Future<void>.delayed(const Duration(seconds: _retry_delay_seconds), () {
       _has_retry_scheduled = false;

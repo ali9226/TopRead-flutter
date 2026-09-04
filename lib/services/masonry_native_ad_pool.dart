@@ -7,8 +7,10 @@ import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'package:app/components/recommend_book_card/style.dart';
+import 'package:app/config/ad_type_config.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/permission_request/admob_consent_permission_request.dart';
+import 'package:app/services/ad_impression_reporter.dart';
 import 'package:app/services/masonry_ad_config_service.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/google_mobile_ads_util.dart';
@@ -160,7 +162,7 @@ class MasonryNativeAdController extends ChangeNotifier {
         _finish_without_ad(generation);
         return;
       }
-      // 每个新槽位独立请求后端配置，不共享上一批数据的结果。
+      // 每个新槽位从 redis/get 本地缓存独立按权重选择配置。
       final AdConfig? ad_config =
           await MasonryAdConfigService.get_google_ad_config();
       if (!_is_current(generation) || ad_config == null) {
@@ -229,7 +231,15 @@ class MasonryNativeAdController extends ChangeNotifier {
           onAdClicked: (Ad ad) => _log('原生广告被点击'),
           onAdOpened: (Ad ad) => _log('原生广告打开落地页'),
           onAdClosed: (Ad ad) => _log('原生广告落地页关闭'),
-          onAdImpression: (Ad ad) => _log('原生广告展示'),
+          onAdImpression: (Ad ad) {
+            _log('原生广告展示');
+            unawaited(
+              AdImpressionReporter.report(
+                ad_config: ad_config,
+                placement: AdPlacement.masonry,
+              ),
+            );
+          },
         ),
       );
 
@@ -239,7 +249,7 @@ class MasonryNativeAdController extends ChangeNotifier {
       }
 
       _native_ad = native_ad;
-      _log('开始加载独立原生广告, configUuid=${ad_config.uuid}');
+      _log('开始加载独立原生广告, configId=${ad_config.id}');
       await native_ad.load();
     } catch (error, stack_trace) {
       _log('原生广告加载异常: $error\n$stack_trace', type: 'e');

@@ -1,30 +1,28 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:app/api/post_request.dart';
+import 'package:app/config/ad_type_config.dart';
 import 'package:app/models/ad_config.dart';
+import 'package:app/stores/ad_config_store.dart';
 import 'package:app/stores/project_config_store.dart';
+import 'package:app/services/ad_impression_reporter.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/google_mobile_ads_util.dart';
 import 'package:app/util/log_util.dart';
-import 'package:app/util/storage_util/index.dart';
 
 /// 开屏广告服务。
 ///
-/// 负责请求 `ads/splash_screen_ads` 接口获取广告配置，
-/// 缓存到本地，并在开屏期间加载和展示谷歌 App Open 广告。
+/// 只读取应用首帧前恢复的 `redis/get.ads_ids` 本地缓存，
+/// 并在开屏期间加载和展示谷歌 App Open 广告。
 class SplashScreenAdService extends GetxController {
   /// 日志前缀。
   static const String _log_prefix = '[SplashScreenAd]';
-
-  /// 缓存键名。
-  static const String _cache_key = 'splash_screen_ad_config';
 
   /// iOS 开屏广告音频输出控制通道。
   static const MethodChannel _ios_audio_channel = MethodChannel(
@@ -72,7 +70,7 @@ class SplashScreenAdService extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _fetch_ad_config();
+    _load_cached_ad_config();
   }
 
   @override
@@ -81,83 +79,21 @@ class SplashScreenAdService extends GetxController {
     super.onClose();
   }
 
-  /// 请求广告配置。
+  /// 从统一广告仓库读取本次启动可用的开屏广告配置。
   ///
-  /// 优先从缓存读取，然后请求接口更新。
-  Future<void> _fetch_ad_config() async {
-    // 等待广告配置加载完成。
-    final bool can_show_ads = await AdDisplayPolicy.wait_until_resolved();
-    if (!can_show_ads) return;
-
-    // 先从缓存读取。
-    await _load_from_cache();
-
-    // 然后请求接口更新。
-    await _fetch_from_backend();
-  }
-
-  /// 从缓存加载广告配置。
-  Future<void> _load_from_cache() async {
-    try {
-      final String? cached_json = await StorageUtil.getData(_cache_key);
-      if (cached_json == null || cached_json.isEmpty) return;
-
-      final Map<String, dynamic> json_map = Map<String, dynamic>.from(
-        jsonDecode(cached_json) as Map,
-      );
-      _ad_config.value = AdConfig.fromJson(json_map);
-
-      // 如果缓存中有配置，尝试加载广告。
-      _try_load_ad();
-    } catch (e) {
-      logUtil(msg: '$_log_prefix 缓存加载失败: $e', type: 'w');
-    }
-  }
-
-  /// 从接口请求广告配置。
-  Future<void> _fetch_from_backend() async {
-    try {
-      final result = await postRequest<AdConfig>(
-        path: 'ads/splash_screen_ads',
-        showTips: false,
-        fromJson: (Map<String, dynamic> json) => AdConfig.fromJson(json),
-      );
-
-      if (!result.status || result.content == null) return;
-
-      _ad_config.value = result.content;
-
-      // 缓存到本地。
-      await _save_to_cache();
-
-      // 尝试加载广告。
-      _try_load_ad();
-    } catch (e) {
-      logUtil(msg: '$_log_prefix 接口请求异常: $e', type: 'e');
-    }
-  }
-
-  /// 保存广告配置到缓存。
-  Future<void> _save_to_cache() async {
+  /// 首次安装或缓存中没有广告配置时直接跳过。本次网络刷新不会再触发开屏
+  /// 广告，避免等待 `redis/get` 影响启动体验。
+  void _load_cached_ad_config() {
+    if (!AdDisplayPolicy.can_show_ads()) return;
+    if (!Get.isRegistered<AdConfigStore>()) return;
+    _ad_config.value = Get.find<AdConfigStore>().select_google_config(
+      AdPlacement.splash_screen,
+    );
     if (_ad_config.value == null) return;
 
-    try {
-      final String json_str = jsonEncode({
-        'id': _ad_config.value!.id,
-        'ads_id': _ad_config.value!.adsId,
-        'show_number': _ad_config.value!.showNumber,
-        'notification_number': _ad_config.value!.notificationNumber,
-        'ads_type': _ad_config.value!.adsType,
-        'advertisers': _ad_config.value!.advertisers,
-        'weight': _ad_config.value!.weight,
-        'ads_type_str': _ad_config.value!.adsTypeStr,
-        'advertisers_str': _ad_config.value!.advertisersStr,
-        'uuid': _ad_config.value!.uuid,
-      });
-      await StorageUtil.saveData(_cache_key, json_str);
-    } catch (e) {
-      logUtil(msg: '$_log_prefix 缓存保存失败: $e', type: 'w');
-    }
+    // TODO 广告配置在首帧前确定，但广告 SDK 初始化延后到首帧完成后执行。
+    // 这样既不会让本次 redis/get 网络响应补开开屏广告，也不会阻塞首帧渲染。
+    WidgetsBinding.instance.addPostFrameCallback((_) => _try_load_ad());
   }
 
   /// 尝试加载广告。
@@ -220,6 +156,16 @@ class SplashScreenAdService extends GetxController {
 
             // 设置广告回调。
             _app_open_ad!.fullScreenContentCallback = FullScreenContentCallback(
+              onAdImpression: (AppOpenAd ad) {
+                final AdConfig? ad_config = _ad_config.value;
+                if (ad_config == null) return;
+                unawaited(
+                  AdImpressionReporter.report(
+                    ad_config: ad_config,
+                    placement: AdPlacement.splash_screen,
+                  ),
+                );
+              },
               onAdDismissedFullScreenContent: (AppOpenAd ad) {
                 _dispose_ad();
               },

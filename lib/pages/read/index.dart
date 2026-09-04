@@ -7,8 +7,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import 'package:app/api/ad_free.dart';
 import 'package:app/api/bookshelf.dart';
-import 'package:app/api/post_request.dart';
 import 'package:app/api/results_type.dart';
+import 'package:app/config/ad_type_config.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/models/ad_verify_result.dart';
@@ -34,7 +34,9 @@ import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/stores/project_config_store.dart';
+import 'package:app/stores/ad_config_store.dart';
 import 'package:app/services/bookshelf_sync_service.dart';
+import 'package:app/services/ad_impression_reporter.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/percentage_probability.dart';
@@ -333,10 +335,10 @@ class _ReadPageState extends State<ReadPage>
 
   /// 后台加载原生高级广告配置。
   ///
-  /// 请求 ads/read_show_ads 接口获取长篇正文专用广告单元 ID。
+  /// 从 `redis/get.ads_ids` 本地缓存获取长篇正文专用广告单元 ID。
   ///
   /// [source_id] 使用路由传入的长篇小说 ID。整个小说阅读页面生命周期内
-  /// 只请求一次，命中概率的不同章节共同复用返回的广告配置。
+  /// 只选择一次，命中概率的不同章节共同复用返回的广告配置。
   /// 加载失败不影响页面正常展示。
   Future<void> _load_native_ad_config() async {
     const String log_prefix = '[ReadNativeAdConfig]';
@@ -361,25 +363,18 @@ class _ReadPageState extends State<ReadPage>
     _is_native_ad_config_loading = true;
     if (mounted) setState(() {});
     try {
-      logUtil(msg: '$log_prefix 开始请求广告配置, source_id=${widget.story_id}');
+      logUtil(msg: '$log_prefix 开始读取本地广告配置, source_id=${widget.story_id}');
 
-      final ResultsType<AdConfig> result = await postRequest<AdConfig>(
-        path: 'ads/read_show_ads',
-        parameter: <String, dynamic>{'source_id': widget.story_id},
-        showTips: false,
-        fromJson: (json) => AdConfig.fromJson(json),
-      );
+      final AdConfig? ad_config = Get.isRegistered<AdConfigStore>()
+          ? Get.find<AdConfigStore>().select_google_config(
+              AdPlacement.long_story_native,
+            )
+          : null;
 
       if (!mounted) return;
 
-      logUtil(
-        msg:
-            '$log_prefix 接口响应: status=${result.status}, '
-            'content=${result.content != null}',
-      );
-
-      if (!result.status || result.content == null) {
-        logUtil(msg: '$log_prefix 接口返回失败或内容为空，跳过', type: 'w');
+      if (ad_config == null) {
+        logUtil(msg: '$log_prefix 本地缓存没有可用配置，跳过', type: 'w');
         return;
       }
 
@@ -389,8 +384,6 @@ class _ReadPageState extends State<ReadPage>
         logUtil(msg: '$log_prefix 请求返回时已在免广告期，丢弃本次配置');
         return;
       }
-
-      final AdConfig ad_config = result.content!;
 
       logUtil(
         msg:
@@ -432,36 +425,13 @@ class _ReadPageState extends State<ReadPage>
 
   /// 在 AdMob 确认原生广告产生真实展示后记录一次长篇小说广告统计。
   Future<void> _record_native_ad_impression() async {
-    const String log_prefix = '[ReadNativeAdRecord]';
     final AdConfig? ad_config = _native_ad_config;
     if (ad_config == null || ad_config.adsId.isEmpty) return;
-
-    try {
-      final ResultsType<void> result = await postRequest<void>(
-        path: 'ads/read_record_count',
-        parameter: <String, dynamic>{
-          'ads_id': ad_config.adsId,
-          'source_id': widget.story_id,
-        },
-        showTips: false,
-      );
-      if (!result.status) {
-        logUtil(
-          msg:
-              '$log_prefix 展示统计失败, source_id=${widget.story_id}, '
-              'adUnitId=${ad_config.adsId}, message=${result.message}',
-          type: 'w',
-        );
-        return;
-      }
-      logUtil(
-        msg:
-            '$log_prefix 展示统计成功, source_id=${widget.story_id}, '
-            'adUnitId=${ad_config.adsId}',
-      );
-    } catch (e, stack_trace) {
-      logUtil(msg: '$log_prefix 展示统计异常: $e\n$stack_trace', type: 'e');
-    }
+    await AdImpressionReporter.report(
+      ad_config: ad_config,
+      placement: AdPlacement.long_story_native,
+      source_id: widget.story_id,
+    );
   }
 
   /// 章节正文进入阅读窗口时完成该章唯一一次广告概率判断。

@@ -48,11 +48,14 @@ import 'package:app/pages/short_story_read/widgets/next_story_preview.dart';
 import 'package:app/pages/short_story_read/widgets/reader_overlay_layer.dart';
 import 'package:app/pages/short_story_read/widgets/previous_pull_header.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/config/ad_type_config.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/models/ad_verify_result.dart';
 import 'package:app/util/rewarded_ad_util.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/percentage_probability.dart';
+import 'package:app/stores/ad_config_store.dart';
+import 'package:app/services/ad_impression_reporter.dart';
 
 /// 短篇小说阅读页面。
 ///
@@ -532,7 +535,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 后台加载原生高级广告配置。
   ///
-  /// 请求 ads/short_story_read_show_ads 接口获取广告单元 ID，
+  /// 从 `redis/get.ads_ids` 本地缓存获取广告单元 ID，
   /// 成功且广告商为谷歌 AdMob 时创建 NativeAdBanner 组件。
   /// 加载失败不影响页面正常展示。
   Future<void> _load_native_ad_config({
@@ -547,14 +550,13 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       return;
     }
     try {
-      logUtil(msg: '$log_prefix 开始请求广告配置, source_id=${logic.story_id}');
+      logUtil(msg: '$log_prefix 开始读取本地广告配置, source_id=${logic.story_id}');
 
-      final ResultsType<AdConfig> result = await postRequest<AdConfig>(
-        path: 'ads/short_story_read_show_ads',
-        parameter: <String, dynamic>{'source_id': logic.story_id},
-        showTips: false,
-        fromJson: (json) => AdConfig.fromJson(json),
-      );
+      final AdConfig? ad_config = Get.isRegistered<AdConfigStore>()
+          ? Get.find<AdConfigStore>().select_google_config(
+              AdPlacement.short_story_native,
+            )
+          : null;
 
       // 页面已切换或已销毁，丢弃结果。
       if (_logic_generation != generation ||
@@ -566,20 +568,11 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         return;
       }
 
-      logUtil(
-        msg:
-            '$log_prefix 接口响应: status=${result.status}, '
-            'message=${result.message}, '
-            'content=${result.content != null}',
-      );
-
-      if (!result.status || result.content == null) {
-        logUtil(msg: '$log_prefix 接口返回失败或内容为空，跳过', type: 'w');
+      if (ad_config == null) {
+        logUtil(msg: '$log_prefix 本地缓存没有可用配置，跳过', type: 'w');
         _discard_native_ad_for_generation(generation);
         return;
       }
-
-      final AdConfig ad_config = result.content!;
       logUtil(
         msg:
             '$log_prefix 广告配置: '
@@ -983,6 +976,16 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
           if (mounted && generation == _logic_generation) {
             _reading_progress_max_extent = null;
           }
+        },
+        on_ad_impression: () {
+          if (ad_config == null || generation != _logic_generation) return;
+          unawaited(
+            AdImpressionReporter.report(
+              ad_config: ad_config,
+              placement: AdPlacement.short_story_native,
+              source_id: _logic.story_id,
+            ),
+          );
         },
       ),
     );

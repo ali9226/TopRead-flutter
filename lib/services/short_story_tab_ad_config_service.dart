@@ -2,8 +2,11 @@
 
 import 'package:flutter/foundation.dart';
 
-import 'package:app/api/post_request.dart';
+import 'package:get/get.dart';
+
+import 'package:app/config/ad_type_config.dart';
 import 'package:app/models/ad_config.dart';
+import 'package:app/stores/ad_config_store.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/log_util.dart';
 
@@ -12,13 +15,13 @@ typedef ShortStoryTabAdConfigFetcher = Future<AdConfig?> Function();
 /// 短篇小说列表的广告配置服务。
 ///
 /// 每次加载更多数据时，按概率判断是否需要展示广告。
-/// 如果需要，请求 `ads/short_story_tab_ads` 接口获取广告配置。
+/// 如果需要，从 `redis/get.ads_ids` 本地缓存中按平台和权重选择配置。
 class ShortStoryTabAdConfigService {
   const ShortStoryTabAdConfigService._();
 
   static const String _log_prefix = '[ShortStoryTabAdConfig]';
 
-  static ShortStoryTabAdConfigFetcher _fetcher = _fetch_from_backend;
+  static ShortStoryTabAdConfigFetcher _fetcher = _fetch_from_cache;
 
   /// 返回当前广告槽位的 Google AdMob 配置。
   ///
@@ -28,14 +31,14 @@ class ShortStoryTabAdConfigService {
 
   static Future<AdConfig?> _load_and_validate_config() async {
     if (!AdDisplayPolicy.can_show_ads()) {
-      logUtil(msg: '$_log_prefix 当前平台广告开关未开启，跳过配置请求');
+      logUtil(msg: '$_log_prefix 当前平台广告开关未开启，跳过配置读取');
       return null;
     }
     try {
       final AdConfig? ad_config = await _fetcher();
       if (!AdDisplayPolicy.can_show_ads()) return null;
       if (ad_config == null) {
-        logUtil(msg: '$_log_prefix 接口未返回可用配置', type: 'w');
+        logUtil(msg: '$_log_prefix 本地缓存没有可用配置', type: 'w');
         return null;
       }
 
@@ -65,23 +68,11 @@ class ShortStoryTabAdConfigService {
     }
   }
 
-  static Future<AdConfig?> _fetch_from_backend() async {
-    final result = await postRequest<AdConfig>(
-      path: 'ads/short_story_tab_ads',
-      showTips: false,
-      fromJson: (Map<String, dynamic> json) => AdConfig.fromJson(json),
+  static Future<AdConfig?> _fetch_from_cache() async {
+    if (!Get.isRegistered<AdConfigStore>()) return null;
+    return Get.find<AdConfigStore>().select_google_config(
+      AdPlacement.short_story_tab,
     );
-
-    if (!result.status || result.content == null) {
-      logUtil(
-        msg:
-            '$_log_prefix 接口请求失败: '
-            'status=${result.status}, message=${result.message}',
-        type: 'w',
-      );
-      return null;
-    }
-    return result.content;
   }
 
   /// 替换配置请求器，仅供单元测试验证。
@@ -93,6 +84,6 @@ class ShortStoryTabAdConfigService {
   /// 恢复默认请求器，仅供单元测试隔离用例。
   @visibleForTesting
   static void reset_for_test() {
-    _fetcher = _fetch_from_backend;
+    _fetcher = _fetch_from_cache;
   }
 }

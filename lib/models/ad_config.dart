@@ -31,7 +31,8 @@ class AdConfig {
   /// 广告商的可读描述。
   final String advertisersStr;
 
-  /// 后端返回的唯一标识，用于广告服务器端验证。
+  /// 激励视频准备接口返回的唯一标识，用于广告服务器端验证。
+  /// `redis/get.ads_ids` 中的非激励广告配置为空字符串。
   final String uuid;
 
   AdConfig({

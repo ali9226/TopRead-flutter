@@ -2,8 +2,11 @@
 
 import 'package:flutter/foundation.dart';
 
-import 'package:app/api/post_request.dart';
+import 'package:get/get.dart';
+
+import 'package:app/config/ad_type_config.dart';
 import 'package:app/models/ad_config.dart';
+import 'package:app/stores/ad_config_store.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/log_util.dart';
 
@@ -11,16 +14,14 @@ typedef MasonryAdConfigFetcher = Future<AdConfig?> Function();
 
 /// 推荐瀑布流的广告配置服务。
 ///
-/// 每个新数据批次产生的广告槽位都独立请求
-/// `ads/masonry_layout_show_ads`，使后端可以按次数、权重与当前
-/// 用户状态返回广告。页面恢复时由广告池复用已有 NativeAd，
-/// 不通过缓存这个后端响应来规避重载。
+/// 每个新数据批次产生的广告槽位都从 `redis/get.ads_ids` 本地缓存中
+/// 按平台和权重独立选择广告。页面恢复时由广告池复用已有 NativeAd。
 class MasonryAdConfigService {
   const MasonryAdConfigService._();
 
   static const String _log_prefix = '[MasonryAdConfig]';
 
-  static MasonryAdConfigFetcher _fetcher = _fetch_from_backend;
+  static MasonryAdConfigFetcher _fetcher = _fetch_from_cache;
 
   /// 返回当前广告槽位的 Google AdMob 瀑布流配置。
   ///
@@ -31,14 +32,14 @@ class MasonryAdConfigService {
 
   static Future<AdConfig?> _load_and_validate_config() async {
     if (!AdDisplayPolicy.can_show_ads()) {
-      logUtil(msg: '$_log_prefix 当前平台广告开关未开启，跳过配置请求');
+      logUtil(msg: '$_log_prefix 当前平台广告开关未开启，跳过配置读取');
       return null;
     }
     try {
       final AdConfig? ad_config = await _fetcher();
       if (!AdDisplayPolicy.can_show_ads()) return null;
       if (ad_config == null) {
-        logUtil(msg: '$_log_prefix 接口未返回可用配置', type: 'w');
+        logUtil(msg: '$_log_prefix 本地缓存没有可用配置', type: 'w');
         return null;
       }
 
@@ -68,26 +69,12 @@ class MasonryAdConfigService {
     }
   }
 
-  static Future<AdConfig?> _fetch_from_backend() async {
-    final result = await postRequest<AdConfig>(
-      path: 'ads/masonry_layout_show_ads',
-      showTips: false,
-      fromJson: (Map<String, dynamic> json) => AdConfig.fromJson(json),
-    );
-
-    if (!result.status || result.content == null) {
-      logUtil(
-        msg:
-            '$_log_prefix 接口请求失败: '
-            'status=${result.status}, message=${result.message}',
-        type: 'w',
-      );
-      return null;
-    }
-    return result.content;
+  static Future<AdConfig?> _fetch_from_cache() async {
+    if (!Get.isRegistered<AdConfigStore>()) return null;
+    return Get.find<AdConfigStore>().select_google_config(AdPlacement.masonry);
   }
 
-  /// 替换配置请求器，仅供单元测试验证全局单次请求。
+  /// 替换配置读取器，仅供单元测试验证配置选择流程。
   @visibleForTesting
   static void set_fetcher_for_test(MasonryAdConfigFetcher fetcher) {
     _fetcher = fetcher;
@@ -96,6 +83,6 @@ class MasonryAdConfigService {
   /// 恢复默认请求器，仅供单元测试隔离用例。
   @visibleForTesting
   static void reset_for_test() {
-    _fetcher = _fetch_from_backend;
+    _fetcher = _fetch_from_cache;
   }
 }
