@@ -60,13 +60,14 @@ class Constant {
   static const String prefix = "/api/";
 
   /// 为 `true` 时 [postRequest] 在 Debug 下打印成功响应的 `content` 预览；`false` 关闭（默认）。
-  static const bool enableHttpRequestVerboseLog = true;
+  static const bool enableHttpRequestVerboseLog = false;
 
   /// 为 `true` 时 [GameWebsocketService] 打印每条解密后的 WS 业务包；`false` 关闭（默认）。
   static const bool enableGameWebsocketVerboseLog = false;
 
   /// 开屏图片展示时长（毫秒）。
-  static const int splashScreenDisplayDurationMs = 1500;
+  static const int splashScreenDisplayDurationMs = 6800;
+  // static const int splashScreenDisplayDurationMs = 1800;
 
   /// 开屏淡出动画时长（毫秒）。
   static const int splashScreenFadeOutDurationMs = 300;

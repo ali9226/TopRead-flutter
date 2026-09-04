@@ -1,5 +1,6 @@
 import AdSupport
 import AppTrackingTransparency
+import AVFAudio
 import Flutter
 import GoogleMobileAds
 import UIKit
@@ -694,15 +695,18 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     "com.topread.novel/masonry_native_ad_layout"
   private static let shortStoryNativeAdLayoutChannelName =
     "com.topread.novel/short_story_native_ad_layout"
+  private static let splashAdAudioChannelName = "com.topread.novel/splash_ad_audio"
   private static let getAdvertisingIdMethod = "getAdvertisingId"
   private static let isLimitAdTrackingEnabledMethod = "isLimitAdTrackingEnabled"
   private static let getTrackingAuthorizationStatusMethod = "getTrackingAuthorizationStatus"
+  private static let setSplashAdMutedMethod = "setMuted"
   private static let masonryNativeAdFactoryID = "masonryNativeAdCard"
   private static let shortStoryNativeAdFactoryID = "shortStoryNativeAdCard"
   private var badgeChannel: FlutterMethodChannel?
   private var advertisingInfoChannel: FlutterMethodChannel?
   private var masonryNativeAdLayoutChannel: FlutterMethodChannel?
   private var shortStoryNativeAdLayoutChannel: FlutterMethodChannel?
+  private var splashAdAudioChannel: FlutterMethodChannel?
   private let masonryNativeAdFactory = MasonryNativeAdFactory()
   private let shortStoryNativeAdFactory = ShortStoryNativeAdFactory()
 
@@ -710,6 +714,11 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // 开屏广告要求始终静音。必须在 Google Mobile Ads 插件注册和 SDK
+    // 初始化前同时设置静音状态与相对音量，避免 iOS 以默认音量创建广告素材。
+    MobileAds.shared.isApplicationMuted = true
+    MobileAds.shared.applicationVolume = 0
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -758,6 +767,77 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
       self?.handleAdvertisingInfoMethodCall(call, result: result)
     }
     self.advertisingInfoChannel = advertisingInfoChannel
+
+    let splashAdAudioChannel = FlutterMethodChannel(
+      name: Self.splashAdAudioChannelName,
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    splashAdAudioChannel.setMethodCallHandler { [weak self] call, result in
+      self?.handleSplashAdAudioMethodCall(call, result: result)
+    }
+    self.splashAdAudioChannel = splashAdAudioChannel
+  }
+
+  /// 在开屏广告展示期间直接静音 iOS 应用音频输出。
+  ///
+  /// Google 的广告音量设置只保证遵守该设置的广告素材静音。
+  /// iOS 26 起通过系统音频会话将当前 App 的输出样本归零，
+  /// 广告关闭后由 Flutter 立即恢复。
+  private func handleSplashAdAudioMethodCall(
+    _ call: FlutterMethodCall,
+    result: @escaping FlutterResult
+  ) {
+    guard call.method == Self.setSplashAdMutedMethod else {
+      result(FlutterMethodNotImplemented)
+      return
+    }
+    guard
+      let arguments = call.arguments as? [String: Any],
+      let muted = arguments["muted"] as? Bool
+    else {
+      result(
+        FlutterError(
+          code: "invalid_splash_ad_audio_state",
+          message: "Splash ad muted state must be a boolean.",
+          details: nil
+        )
+      )
+      return
+    }
+
+    guard #available(iOS 26.0, *) else {
+      // 低版本 iOS 没有应用音频输出静音 API，继续使用 Google SDK 静音。
+      result(nil)
+      return
+    }
+
+    do {
+      let audioVideoManager = MobileAds.shared.audioVideoManager
+      let audioSession = AVAudioSession.sharedInstance()
+      if muted {
+        // 广告期间由 App 管理音频会话，防止 SDK 重新配置会话导致静音失效。
+        audioVideoManager.isAudioSessionApplicationManaged = true
+      }
+      try audioSession.setOutputMuted(muted)
+      if !muted {
+        audioVideoManager.isAudioSessionApplicationManaged = false
+      }
+#if DEBUG
+      print("[SplashScreenAd] iOS outputMuted=\(audioSession.isOutputMuted)")
+#endif
+      result(nil)
+    } catch {
+      if muted {
+        MobileAds.shared.audioVideoManager.isAudioSessionApplicationManaged = false
+      }
+      result(
+        FlutterError(
+          code: "splash_ad_audio_update_failed",
+          message: error.localizedDescription,
+          details: nil
+        )
+      )
+    }
   }
 
   private func handleBadgeMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {

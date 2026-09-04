@@ -28,6 +28,7 @@ import 'package:app/stores/message_store.dart';
 import 'package:app/stores/bookshelf_store.dart';
 import 'package:app/stores/ranking_full_list_store.dart';
 import 'package:app/stores/recommend_waterfall_store.dart';
+import 'package:app/services/splash_screen_ad_service.dart';
 import 'package:app/util/router/web_url_strategy.dart';
 import 'package:app/util/device/get_theme_mode.dart';
 import 'package:get_storage/get_storage.dart';
@@ -85,6 +86,7 @@ void main() async {
   Get.put(BookshelfStore());
   Get.put(RankingFullListStore());
   Get.put(RecommendWaterfallStore(), permanent: true);
+  Get.put(SplashScreenAdService(), permanent: true);
 
   /// TODO 注册全局语种基础配置刷新任务。
   ///
