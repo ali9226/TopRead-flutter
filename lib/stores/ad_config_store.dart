@@ -1,12 +1,11 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'dart:math';
-
 import 'package:get/get.dart';
 
 import 'package:app/config/ad_type_config.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/util/device/app_environment.dart';
+import 'package:app/util/select_weighted_ad_config.dart';
 
 /// 广告配置仓库。
 ///
@@ -55,19 +54,6 @@ class AdConfigStore extends GetxController {
         .toList(growable: false);
     if (candidates.isEmpty) return null;
 
-    final int total_weight = candidates.fold<int>(
-      0,
-      (int total, AdConfig config) => total + config.weight,
-    );
-    final double normalized_random = (random_value ?? Random().nextDouble())
-        .clamp(0.0, 0.999999999999)
-        .toDouble();
-    double target_weight = normalized_random * total_weight;
-
-    for (final AdConfig config in candidates) {
-      target_weight -= config.weight;
-      if (target_weight < 0) return config;
-    }
-    return candidates.last;
+    return select_weighted_ad_config(candidates, random_value: random_value);
   }
 }

@@ -396,7 +396,8 @@ class _ReadPageState extends State<ReadPage>
       );
 
       // advertisers=1 表示谷歌 AdMob，且 ads_id 必须有值。
-      if (ad_config.advertisers != 1 || ad_config.adsId.isEmpty) {
+      if (ad_config.advertisers != AdTypeConfig.google_advertiser ||
+          ad_config.adsId.isEmpty) {
         logUtil(
           msg:
               '$log_prefix 广告商不是谷歌或adsId为空，跳过: '
@@ -782,7 +783,7 @@ class _ReadPageState extends State<ReadPage>
       }
       final bool is_valid_config =
           ad_config != null &&
-          ad_config.advertisers == 1 &&
+          ad_config.advertisers == AdTypeConfig.google_advertiser &&
           ad_config.adsId.isNotEmpty &&
           ad_config.uuid.isNotEmpty &&
           reward_duration_minutes == duration_minutes;

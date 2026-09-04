@@ -66,8 +66,7 @@ class Constant {
   static const bool enableGameWebsocketVerboseLog = false;
 
   /// 开屏图片展示时长（毫秒）。
-  static const int splashScreenDisplayDurationMs = 6800;
-  // static const int splashScreenDisplayDurationMs = 1800;
+  static const int splashScreenDisplayDurationMs = 1800;
 
   /// 开屏淡出动画时长（毫秒）。
   static const int splashScreenFadeOutDurationMs = 300;

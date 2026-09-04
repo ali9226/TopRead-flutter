@@ -13,6 +13,9 @@ import 'package:app/util/log_util.dart';
 class AdImpressionReporter {
   const AdImpressionReporter._();
 
+  /// 非正文广告不携带小说来源ID。
+  static const int _no_source_id = 0;
+
   /// 将一次真实广告曝光发送到后端。
   ///
   /// [ad_config] 是本次实际加载的缓存广告配置。
@@ -21,7 +24,7 @@ class AdImpressionReporter {
   static Future<void> report({
     required AdConfig ad_config,
     required AdPlacement placement,
-    int source_id = 0,
+    int source_id = _no_source_id,
   }) async {
     if (ad_config.adsId.trim().isEmpty) return;
 
@@ -31,7 +34,7 @@ class AdImpressionReporter {
         parameter: <String, dynamic>{
           'ads_id': ad_config.adsId,
           'placement': placement.name,
-          if (source_id > 0) 'source_id': source_id,
+          if (source_id > _no_source_id) 'source_id': source_id,
         },
         showTips: false,
       );

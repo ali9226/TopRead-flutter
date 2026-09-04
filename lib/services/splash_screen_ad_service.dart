@@ -1,7 +1,6 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names
 
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -15,6 +14,7 @@ import 'package:app/services/ad_impression_reporter.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/google_mobile_ads_util.dart';
 import 'package:app/util/log_util.dart';
+import 'package:app/util/percentage_probability.dart';
 
 /// 开屏广告服务。
 ///
@@ -102,18 +102,12 @@ class SplashScreenAdService extends GetxController {
   /// 根据 project_config 中的 splash_screen_ads 概率决定是否加载。
   void _try_load_ad() {
     if (_ad_config.value == null) return;
-    if (_ad_config.value!.advertisers != 1) return;
+    if (_ad_config.value!.advertisers != AdTypeConfig.google_advertiser) return;
     if (_ad_config.value!.adsId.trim().isEmpty) return;
 
     // 获取开屏广告展示概率。
     final int probability = _get_splash_screen_ads_probability();
-    if (probability <= 0) return;
-
-    // 根据概率决定是否加载广告。
-    if (probability < 100) {
-      final int random = Random().nextInt(100);
-      if (random >= probability) return;
-    }
+    if (!PercentageProbability.is_hit(probability)) return;
 
     _load_app_open_ad();
   }

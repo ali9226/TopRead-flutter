@@ -92,6 +92,17 @@ void main() {
             ?.id,
         'heavy',
       );
+
+      expect(
+        store
+            .select_google_config(
+              AdPlacement.short_story_tab,
+              environment: AppEnvironment.android,
+              random_value: 1,
+            )
+            ?.id,
+        'heavy',
+      );
     });
 
     test('网络新列表完整覆盖旧缓存列表', () {

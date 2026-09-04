@@ -586,7 +586,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       );
 
       // advertisers=1 表示谷歌 AdMob，且 ads_id 必须有值。
-      if (ad_config.advertisers != 1 || ad_config.adsId.isEmpty) {
+      if (ad_config.advertisers != AdTypeConfig.google_advertiser ||
+          ad_config.adsId.isEmpty) {
         logUtil(
           msg:
               '$log_prefix 广告商不是谷歌或adsId为空，跳过: '
@@ -1387,7 +1388,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       }
 
       final AdConfig adConfig = adConfigResult.content!;
-      if (adConfig.advertisers != 1 || adConfig.adsId.isEmpty) {
+      if (adConfig.advertisers != AdTypeConfig.google_advertiser ||
+          adConfig.adsId.isEmpty) {
         showBottomTip(easy.tr('short_story_read.ad_not_available'));
         return;
       }
