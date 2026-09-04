@@ -389,7 +389,10 @@ class _SearchPageState extends State<SearchPage> {
 
       String meta_text = '';
       if (item.score > 0) {
-        meta_text = '${item.score.toStringAsFixed(1)}分';
+        final String scoreText = item.score.toStringAsFixed(2)
+            .replaceAll(RegExp(r'0+$'), '')
+            .replaceAll(RegExp(r'\.$'), '');
+        meta_text = '${scoreText}分';
       }
 
       return BookListItem(

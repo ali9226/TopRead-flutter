@@ -66,8 +66,9 @@ class _StatisticsState extends State<Statistics> {
 
       final bool show_comment = projectConfigStore.current.is_comment_enabled;
 
-      /// 已认证作者在个人中心优先看到作品经营数据。
-      final bool is_author = user_information.userInfo.value?.author == 2;
+      /// 已认证作者在个人中心优先看到作品经营数据（需同时满足创作者功能开启）。
+      final bool is_author = user_information.userInfo.value?.author == 2 &&
+          projectConfigStore.current.is_creator_enabled;
 
       if (is_author) {
         return Container(

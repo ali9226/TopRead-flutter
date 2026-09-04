@@ -46,7 +46,7 @@ class DetailBuilder {
       author_avatar_url: info.author_avatar,
       author_name: info.author_name,
       focus_on: info.focus_on,
-      score_major_text: info.score.toStringAsFixed(1),
+      score_major_text: _formatScore(info.score),
       score_minor_text: easy.tr('read.score_unit'),
       review_count_text: easy.tr(
         'read.review_count',
@@ -111,5 +111,15 @@ class DetailBuilder {
       chapter_title: '',
       comment_list: const <ReadComment>[],
     );
+  }
+
+  /// 格式化评分，去除尾部多余的0。
+  ///
+  /// 9 → "9"，8.98 → "8.98"，9.20 → "9.2"。
+  static String _formatScore(double score) {
+    String s = score.toStringAsFixed(2);
+    s = s.replaceAll(RegExp(r'0+$'), '');
+    s = s.replaceAll(RegExp(r'\.$'), '');
+    return s;
   }
 }

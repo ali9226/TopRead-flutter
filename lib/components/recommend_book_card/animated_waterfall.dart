@@ -421,9 +421,12 @@ class AnimatedRecommendWaterfallState
       // 封面左下角附加信息：评分或热度。
       String meta_text = '';
       if (item.score > 0) {
+        final String rating = item.score.toStringAsFixed(2)
+            .replaceAll(RegExp(r'0+$'), '')
+            .replaceAll(RegExp(r'\.$'), '');
         meta_text = easy.tr(
           'home.book_rating',
-          namedArgs: <String, String>{'rating': item.score.toStringAsFixed(1)},
+          namedArgs: <String, String>{'rating': rating},
         );
       }
 

@@ -469,7 +469,7 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     adView.callToActionView = callToActionLabel
 
     // 视频静音播放
-    nativeAd.mediaContent.videoController.mute(true)
+    nativeAd.mediaContent.videoController.isMuted = true
 
     let hasVideoContent = nativeAd.mediaContent.hasVideoContent
     reportMediaType(hasVideoContent: hasVideoContent, slotID: slotID, layoutToken: layoutToken)

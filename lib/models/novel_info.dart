@@ -11,8 +11,8 @@ class NovelInfo {
   /// 小说副标题。
   final String subtitle;
 
-  // TODO 小说评分
-  final int score;
+  /// 小说评分。
+  final double score;
 
   /// 作者 id。
   final String author_id;
@@ -130,7 +130,7 @@ class NovelInfo {
       focus_on: json['focus_on'] is bool ? json['focus_on'] : false,
       is_liked: json['like'] == true,
       is_favorited: json['favorite'] == true,
-      score: _parse_int(json['score']),
+      score: _parse_double(json['score']),
       source_type: _parse_int(json['source_type']),
       publish_status: _parse_int(json['publish_status']),
       recommend_status: _parse_int(json['recommend_status']),
@@ -167,6 +167,13 @@ class NovelInfo {
     if (value == null) return 0;
     if (value is int) return value;
     return int.tryParse(value.toString()) ?? 0;
+  }
+
+  static double _parse_double(dynamic value) {
+    if (value == null) return 0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0;
   }
 }
 
