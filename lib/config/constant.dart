@@ -64,4 +64,10 @@ class Constant {
 
   /// 为 `true` 时 [GameWebsocketService] 打印每条解密后的 WS 业务包；`false` 关闭（默认）。
   static const bool enableGameWebsocketVerboseLog = false;
+
+  /// 开屏图片展示时长（毫秒）。
+  static const int splashScreenDisplayDurationMs = 1500;
+
+  /// 开屏淡出动画时长（毫秒）。
+  static const int splashScreenFadeOutDurationMs = 300;
 }

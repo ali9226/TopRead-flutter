@@ -14,6 +14,7 @@ import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/components/app_wrapper/utils/get_app_title.dart';
 import 'package:app/components/app_wrapper/utils/route_page_warm_up.dart';
 import 'package:app/components/app_wrapper/utils/route_asset_warm_up.dart';
+import 'package:app/components/splash_screen/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/permission_request/admob_consent_permission_request.dart';
@@ -47,6 +48,9 @@ class _AppWrapperState extends State<AppWrapper> {
 
   /// 设备主题等运行时信息。
   final deviceInfo = Get.find<DeviceInfo>();
+
+  /// 是否显示开屏页面
+  bool _show_splash = true;
 
   /// 监听 RouterDelegate 的真实路由变化。
   ///
@@ -211,6 +215,24 @@ class _AppWrapperState extends State<AppWrapper> {
         builder: (context, child) {
           final smartDialogBuilder = FlutterSmartDialog.init();
           final smartDialogChild = smartDialogBuilder(context, child);
+
+          // 如果需要显示开屏页面，使用 Stack 将开屏页面覆盖在最上层
+          if (_show_splash) {
+            return Stack(
+              children: [
+                smartDialogChild,
+                SplashScreen(
+                  on_complete: () {
+                    // 开屏完成后隐藏开屏页面
+                    setState(() {
+                      _show_splash = false;
+                    });
+                  },
+                ),
+              ],
+            );
+          }
+
           return smartDialogChild;
         },
       ),

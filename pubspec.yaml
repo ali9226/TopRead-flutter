@@ -192,3 +192,4 @@ flutter:
     - assets/i18n/en.json
     - assets/svg/
     - assets/img/
+    - assets/img/splash_screen/
