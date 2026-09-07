@@ -97,8 +97,11 @@ class CreatorWorkDraft {
   /// TODO 原始创作语种代码。
   final String language_code;
 
-  /// TODO 作者选中的分类名称。
-  final List<String> categories;
+  /// TODO 作者选中的分类 id 列表。
+  ///
+  /// 取自全局 [PreferenceStore] 中「内容偏好」分组下的选项 id，
+  /// 展示时再通过 id 反查名称，避免把展示文案当成业务主键。
+  final List<int> category_ids;
 
   /// TODO 短篇正文；长篇时保持为空。
   final String short_content;
@@ -128,7 +131,7 @@ class CreatorWorkDraft {
     required this.work_type,
     required this.is_completed,
     required this.language_code,
-    required this.categories,
+    required this.category_ids,
     required this.short_content,
     required this.chapters,
     required this.status,
@@ -157,7 +160,7 @@ class CreatorWorkDraft {
     CreatorWorkType? work_type,
     bool? is_completed,
     String? language_code,
-    List<String>? categories,
+    List<int>? category_ids,
     String? short_content,
     List<CreatorChapterDraft>? chapters,
     CreatorWorkStatus? status,
@@ -174,7 +177,7 @@ class CreatorWorkDraft {
       work_type: work_type ?? this.work_type,
       is_completed: is_completed ?? this.is_completed,
       language_code: language_code ?? this.language_code,
-      categories: categories ?? this.categories,
+      category_ids: category_ids ?? this.category_ids,
       short_content: short_content ?? this.short_content,
       chapters: chapters ?? this.chapters,
       status: status ?? this.status,

@@ -2,6 +2,7 @@
 
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
+import 'package:app/pages/author_center/logic.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
@@ -70,13 +71,12 @@ class AuthorWorkCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Row(
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
                           children: <Widget>[
                             _build_status_badge(status_color),
-                            if (work.is_demo) ...<Widget>[
-                              const SizedBox(width: 6),
-                              _build_demo_badge(),
-                            ],
+                            if (work.is_demo) _build_demo_badge(),
                           ],
                         ),
                         const SizedBox(height: 9),
@@ -106,7 +106,12 @@ class AuthorWorkCard extends StatelessWidget {
                                   ? easy.tr('creator_center.completed')
                                   : easy.tr('creator_center.serializing'),
                             ),
-                            ...work.categories.take(1).map(_build_meta_pill),
+                            // TODO 分类只存 id，展示时反查名称并过滤未就绪数据
+                            ...work.category_ids
+                                .take(1)
+                                .map(CreatorLogic.category_name)
+                                .where((String name) => name.isNotEmpty)
+                                .map(_build_meta_pill),
                           ],
                         ),
                         const SizedBox(height: 11),

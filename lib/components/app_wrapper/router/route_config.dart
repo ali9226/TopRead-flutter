@@ -25,6 +25,8 @@ import 'package:app/pages/about_topread/index.dart';
 import 'package:app/pages/debug/index.dart';
 import 'package:app/pages/author_apply/index.dart';
 import 'package:app/pages/author_center/index.dart';
+import 'package:app/pages/author_center/models/creator_work.dart';
+import 'package:app/pages/work_editor/index.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/pages/login/index.dart' as login_page;
 
@@ -264,6 +266,20 @@ class RouteConfig {
           name: 'author_center',
           pageBuilder: (context, state) =>
               buildRoutePage(state: state, child: const AuthorCenterPage()),
+        ),
+        GoRoute(
+          path: '/work_editor',
+          name: 'work_editor',
+          pageBuilder: (context, state) {
+            final CreatorWorkDraft? initial_work =
+                state.extra is CreatorWorkDraft
+                    ? state.extra as CreatorWorkDraft
+                    : null;
+            return buildRoutePage(
+              state: state,
+              child: CreatorWorkEditorPage(initial_work: initial_work),
+            );
+          },
         ),
       ],
     );

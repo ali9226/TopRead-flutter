@@ -1,17 +1,18 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'package:app/pages/author_center/author_style.dart';
+import 'package:app/pages/author_center/logic.dart';
 import 'package:app/pages/author_center/chapter_editor/index.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/author_center/widgets/creator_header.dart';
 import 'package:app/pages/author_center/widgets/creator_work_tab.dart';
-import 'package:app/pages/author_center/work_editor/index.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/router/router_back.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/foundation.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -64,6 +65,11 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   late List<CreatorWorkDraft> _works;
   late TabController _tab_controller;
 
+  /// Dashboard统计数据
+  int _total_works = 0;
+  int _total_favorites = 0;
+  int _total_comments = 0;
+
   /// 每个 Tab 独占的滚动控制器。
   late final List<_CreatorTabScrollController> _tab_scroll_controllers;
 
@@ -89,13 +95,13 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   bool _preserve_pinned_header_on_tab_change = false;
 
   /// 头部从展开到吸顶需要的滚动距离。
-  late final double _header_collapse_range;
+  late double _header_collapse_range;
 
   /// 头部最大展开高度（含状态栏）。
-  late final double _header_max_extent;
+  late double _header_max_extent;
 
   /// 头部最小高度（折叠态）。
-  late final double _header_min_extent;
+  late double _header_min_extent;
 
   /// 创作中心固定状态 Tab 数量。
   static const int _tab_count = 6;
@@ -124,6 +130,25 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       ..._tab_scroll_controllers,
     ]);
     _tab_controller.addListener(_on_tab_index_changed);
+
+    // TODO 加载Dashboard统计数据
+    _load_dashboard_data();
+  }
+
+  /// 加载Dashboard统计数据
+  Future<void> _load_dashboard_data() async {
+    try {
+      final result = await CreatorLogic.getDashboard();
+      if (result != null && mounted) {
+        setState(() {
+          _total_works = result['total_works'] ?? 0;
+          _total_favorites = result['total_favorites'] ?? 0;
+          _total_comments = result['total_comments'] ?? 0;
+        });
+      }
+    } catch (e) {
+      debugPrint('加载Dashboard失败: $e');
+    }
   }
 
   /// 测量文本在给定宽度下的实际行数。
@@ -209,24 +234,15 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   }
 
   Future<void> _create_work() async {
-    final CreatorWorkDraft? result = await Navigator.of(context)
-        .push<CreatorWorkDraft>(
-          MaterialPageRoute<CreatorWorkDraft>(
-            builder: (BuildContext context) => const CreatorWorkEditorPage(),
-          ),
-        );
+    final CreatorWorkDraft? result =
+        await context.push<CreatorWorkDraft>('/work_editor');
     if (result == null || !mounted) return;
     setState(() => _works.insert(0, result));
   }
 
   Future<void> _edit_work(CreatorWorkDraft work) async {
-    final CreatorWorkDraft? result = await Navigator.of(context)
-        .push<CreatorWorkDraft>(
-          MaterialPageRoute<CreatorWorkDraft>(
-            builder: (BuildContext context) =>
-                CreatorWorkEditorPage(initial_work: work),
-          ),
-        );
+    final CreatorWorkDraft? result =
+        await context.push<CreatorWorkDraft>('/work_editor', extra: work);
     if (result == null || !mounted) return;
     final int index = _works.indexWhere(
       (CreatorWorkDraft item) => item.local_id == work.local_id,
@@ -348,9 +364,9 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                     is_dark: is_dark,
                     is_cjk: is_cjk,
                     author_name: author_name,
-                    works_count: works_count,
-                    favorites_count: kDebugMode ? '12.8K' : '—',
-                    comments_count: kDebugMode ? '246' : '—',
+                    works_count: _total_works,
+                    favorites_count: _total_favorites.toString(),
+                    comments_count: _total_comments.toString(),
                     on_back: () => routerBack(context),
                     on_create_work: _create_work,
                     on_continue_writing: _continue_latest_draft,
@@ -711,7 +727,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         work_type: CreatorWorkType.long,
         is_completed: false,
         language_code: 'zh',
-        categories: <String>['奇幻'],
+        category_ids: const <int>[],
         short_content: '',
         chapters: <CreatorChapterDraft>[
           CreatorChapterDraft(
@@ -740,7 +756,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         work_type: CreatorWorkType.short,
         is_completed: true,
         language_code: 'zh',
-        categories: <String>['悬疑'],
+        category_ids: const <int>[],
         short_content: '用于展示短篇投稿状态的本地示例正文。' * 120,
         chapters: const <CreatorChapterDraft>[],
         status: CreatorWorkStatus.reviewing,
@@ -756,7 +772,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         work_type: CreatorWorkType.long,
         is_completed: false,
         language_code: 'zh',
-        categories: <String>['科幻'],
+        category_ids: const <int>[],
         short_content: '',
         chapters: const <CreatorChapterDraft>[],
         status: CreatorWorkStatus.scheduled,
@@ -772,7 +788,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         work_type: CreatorWorkType.short,
         is_completed: false,
         language_code: 'zh',
-        categories: <String>['现代'],
+        category_ids: const <int>[],
         short_content: '这是用于测试草稿列表滚动的本地正文。' * 90,
         chapters: const <CreatorChapterDraft>[],
         status: CreatorWorkStatus.draft,
@@ -788,7 +804,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         work_type: CreatorWorkType.long,
         is_completed: false,
         language_code: 'zh',
-        categories: <String>['悬疑'],
+        category_ids: const <int>[],
         short_content: '',
         chapters: <CreatorChapterDraft>[
           CreatorChapterDraft(
@@ -811,7 +827,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         work_type: CreatorWorkType.long,
         is_completed: true,
         language_code: 'zh',
-        categories: <String>['文艺'],
+        category_ids: const <int>[],
         short_content: '',
         chapters: <CreatorChapterDraft>[
           CreatorChapterDraft(
@@ -834,7 +850,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         work_type: CreatorWorkType.short,
         is_completed: true,
         language_code: 'zh',
-        categories: <String>['治愈'],
+        category_ids: const <int>[],
         short_content: '凌晨四点，巷口的灯第一次亮了起来。' * 100,
         chapters: const <CreatorChapterDraft>[],
         status: CreatorWorkStatus.scheduled,
@@ -850,7 +866,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         work_type: CreatorWorkType.short,
         is_completed: true,
         language_code: 'zh',
-        categories: <String>['科幻'],
+        category_ids: const <int>[],
         short_content: '银河从铅笔尖流出，穿过了桌面上所有无人命名的星球。' * 110,
         chapters: const <CreatorChapterDraft>[],
         status: CreatorWorkStatus.published,
@@ -866,7 +882,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         work_type: CreatorWorkType.long,
         is_completed: true,
         language_code: 'zh',
-        categories: <String>['都市'],
+        category_ids: const <int>[],
         short_content: '',
         chapters: <CreatorChapterDraft>[
           CreatorChapterDraft(
@@ -889,7 +905,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         work_type: CreatorWorkType.short,
         is_completed: true,
         language_code: 'zh',
-        categories: <String>['奇幻'],
+        category_ids: const <int>[],
         short_content: '渔船离开码头后，才发现帆上的风始终来自前方。' * 80,
         chapters: const <CreatorChapterDraft>[],
         status: CreatorWorkStatus.rejected,
@@ -905,7 +921,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         work_type: CreatorWorkType.short,
         is_completed: false,
         language_code: 'zh',
-        categories: <String>['幻想'],
+        category_ids: const <int>[],
         short_content: '窗外万里无云，镜子里的行人却都撑起了伞。' * 95,
         chapters: const <CreatorChapterDraft>[],
         status: CreatorWorkStatus.rejected,

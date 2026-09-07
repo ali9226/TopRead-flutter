@@ -20,6 +20,9 @@ dependencies:
   # TODO 多语种
   easy_localization: ^3.0.7+1
 
+  # TODO 上传docx文件解析
+  docx_to_text: ^1.0.1
+
   # TODO google登录
   firebase_core: 4.12.1
   firebase_auth: 6.5.6
@@ -108,6 +111,9 @@ dependencies:
 
   # TODO 选择图片
   image_picker: ^1.2.0
+
+  # TODO 选择文件（txt、word等）
+  file_picker: ^8.1.2
 
   # TODO 哈希/md5等加密，不用于解密
   crypto: ^3.0.6
