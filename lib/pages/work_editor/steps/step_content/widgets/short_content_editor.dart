@@ -1,5 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/svg_icon/index.dart';
+import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/work_editor/widgets/step_utils.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -8,7 +10,7 @@ import 'package:flutter/material.dart';
 /// TODO 短篇小说内容编辑器。
 ///
 /// 包含：
-/// 1. 文件上传按钮（支持 txt、word 文件解析）
+/// 1. 文件上传按钮（支持 txt、docx 文件解析）
 /// 2. 正文输入框
 /// 3. 字数统计
 class ShortContentEditor extends StatelessWidget {
@@ -51,17 +53,17 @@ class ShortContentEditor extends StatelessWidget {
                 required: true,
               ),
             ),
-            /// 文件上传按钮。
-            _build_file_upload_button(),
-            const SizedBox(width: 12),
             Text(
-              '$word_count ${easy.tr('creator_center.words')}',
+              '$word_count${easy.tr('read.chapter_word_count_suffix')}',
               style: TextStyle(
                 color: AuthorStyle.secondary_text(is_dark),
                 fontSize: 12,
                 fontWeight: AuthorStyle.body_weight,
               ),
             ),
+            const SizedBox(width: 12),
+            /// 文件上传按钮。
+            _build_file_upload_button(),
           ],
         ),
         const SizedBox(height: 8),
@@ -86,34 +88,30 @@ class ShortContentEditor extends StatelessWidget {
 
   /// TODO 构建文件上传按钮。
   Widget _build_file_upload_button() {
-    final Color gold = is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold;
-
     return InkWell(
       onTap: on_file_upload,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: gold.withValues(alpha: is_dark ? 0.15 : 0.10),
+          color: ColorConstants.themeColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: gold.withValues(alpha: 0.3),
-          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(
-              Icons.upload_file_rounded,
-              size: 16,
-              color: gold,
+            SvgIcon(
+              name: 'upgrade',
+              width: 16,
+              height: 16,
+              color: ColorConstants.lightTextColor,
             ),
             const SizedBox(width: 4),
             Text(
               easy.tr('creator_center.upload_file'),
               style: TextStyle(
                 fontSize: 12,
-                color: gold,
+                color: ColorConstants.lightTextColor,
                 fontWeight: AuthorStyle.body_weight,
               ),
             ),

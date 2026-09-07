@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/work_editor/style.dart';
 import 'package:flutter/material.dart';
@@ -12,8 +13,14 @@ class EditorSectionCard extends StatelessWidget {
   /// TODO 区块说明。
   final String subtitle;
 
-  /// TODO 区块图标。
-  final IconData icon;
+  /// TODO 区块图标（与 iconSvgName 二选一）。
+  final IconData? icon;
+
+  /// TODO 区块 SVG 图标名称（不含路径和扩展名，与 icon 二选一）。
+  final String? iconSvgName;
+
+  /// TODO SVG 图标颜色（为空时使用原始颜色）。
+  final Color? iconColor;
 
   /// TODO 区块正文。
   final Widget child;
@@ -25,7 +32,9 @@ class EditorSectionCard extends StatelessWidget {
     super.key,
     required this.title,
     required this.subtitle,
-    required this.icon,
+    this.icon,
+    this.iconSvgName,
+    this.iconColor,
     required this.child,
     required this.is_dark,
   });
@@ -63,11 +72,18 @@ class EditorSectionCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(13),
                 ),
                 alignment: Alignment.center,
-                child: Icon(
-                  icon,
-                  color: is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
-                  size: 21,
-                ),
+                child: iconSvgName != null
+                    ? SvgIcon(
+                        name: iconSvgName!,
+                        width: 21,
+                        height: 21,
+                        color: iconColor,
+                      )
+                    : Icon(
+                        icon,
+                        color: is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
+                        size: 21,
+                      ),
               ),
               const SizedBox(width: 12),
               Expanded(

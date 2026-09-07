@@ -73,6 +73,30 @@ class CreatorChapterDraft {
 
   /// TODO 按非空白字符计算字数，UI 阶段用于实时反馈。
   int get word_count => content.replaceAll(RegExp(r'\s+'), '').length;
+
+  /// TODO 转换为 JSON Map。
+  Map<String, dynamic> to_json() {
+    return <String, dynamic>{
+      'local_id': local_id,
+      'title': title,
+      'content': content,
+      'update_time': update_time.millisecondsSinceEpoch,
+    };
+  }
+
+  /// TODO 从 JSON Map 解析。
+  factory CreatorChapterDraft.from_json(Map<String, dynamic> json) {
+    return CreatorChapterDraft(
+      local_id: json['local_id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      content: json['content']?.toString() ?? '',
+      update_time: DateTime.fromMillisecondsSinceEpoch(
+        json['update_time'] is int
+            ? json['update_time']
+            : int.tryParse(json['update_time']?.toString() ?? '0') ?? 0,
+      ),
+    );
+  }
 }
 
 /// TODO 创作者作品的本地 UI 草稿模型。
@@ -98,9 +122,6 @@ class CreatorWorkDraft {
   final String language_code;
 
   /// TODO 作者选中的分类 id 列表。
-  ///
-  /// 取自全局 [PreferenceStore] 中「内容偏好」分组下的选项 id，
-  /// 展示时再通过 id 反查名称，避免把展示文案当成业务主键。
   final List<int> category_ids;
 
   /// TODO 短篇正文；长篇时保持为空。
@@ -124,6 +145,24 @@ class CreatorWorkDraft {
   /// TODO 是否为仅供开发阶段查看布局的示例作品。
   final bool is_demo;
 
+  /// TODO 已上传的封面 URL。
+  final String? cover_url;
+
+  /// TODO 保存草稿时的步骤索引（用于恢复进度）。
+  final int saved_step;
+
+  /// TODO 所有偏好选择（key 为偏好分组 id，value 为已选选项 id 集合）。
+  final Map<String, List<int>> preferences;
+
+  /// TODO 是否已确认发布权声明。
+  final bool rights_confirmed;
+
+  /// TODO 长篇新增模式下的当前章节标题。
+  final String chapter_title;
+
+  /// TODO 长篇新增模式下的当前章节内容。
+  final String chapter_content;
+
   const CreatorWorkDraft({
     required this.local_id,
     required this.title,
@@ -139,6 +178,12 @@ class CreatorWorkDraft {
     required this.scheduled_publish_time,
     required this.update_time,
     this.is_demo = false,
+    this.cover_url,
+    this.saved_step = 0,
+    this.preferences = const <String, List<int>>{},
+    this.rights_confirmed = false,
+    this.chapter_title = '',
+    this.chapter_content = '',
   });
 
   /// TODO 返回作品当前总字数。
@@ -169,6 +214,12 @@ class CreatorWorkDraft {
     bool clear_scheduled_publish_time = false,
     DateTime? update_time,
     bool? is_demo,
+    String? cover_url,
+    int? saved_step,
+    Map<String, List<int>>? preferences,
+    bool? rights_confirmed,
+    String? chapter_title,
+    String? chapter_content,
   }) {
     return CreatorWorkDraft(
       local_id: local_id,
@@ -187,6 +238,108 @@ class CreatorWorkDraft {
           : scheduled_publish_time ?? this.scheduled_publish_time,
       update_time: update_time ?? this.update_time,
       is_demo: is_demo ?? this.is_demo,
+      cover_url: cover_url ?? this.cover_url,
+      saved_step: saved_step ?? this.saved_step,
+      preferences: preferences ?? this.preferences,
+      rights_confirmed: rights_confirmed ?? this.rights_confirmed,
+      chapter_title: chapter_title ?? this.chapter_title,
+      chapter_content: chapter_content ?? this.chapter_content,
     );
+  }
+
+  /// TODO 转换为 JSON Map（用于本地持久化）。
+  Map<String, dynamic> to_json() {
+    return <String, dynamic>{
+      'local_id': local_id,
+      'title': title,
+      'introduction': introduction,
+      'work_type': work_type.index,
+      'is_completed': is_completed,
+      'language_code': language_code,
+      'category_ids': category_ids,
+      'short_content': short_content,
+      'chapters': chapters
+          .map((CreatorChapterDraft c) => c.to_json())
+          .toList(),
+      'status': status.index,
+      'release_mode': release_mode.index,
+      'scheduled_publish_time': scheduled_publish_time?.millisecondsSinceEpoch,
+      'update_time': update_time.millisecondsSinceEpoch,
+      'is_demo': is_demo,
+      'cover_url': cover_url,
+      'saved_step': saved_step,
+      'preferences': preferences.map(
+        (key, value) => MapEntry(key, value),
+      ),
+      'rights_confirmed': rights_confirmed,
+      'chapter_title': chapter_title,
+      'chapter_content': chapter_content,
+    };
+  }
+
+  /// TODO 从 JSON Map 解析。
+  factory CreatorWorkDraft.from_json(Map<String, dynamic> json) {
+    return CreatorWorkDraft(
+      local_id: json['local_id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      introduction: json['introduction']?.toString() ?? '',
+      work_type: CreatorWorkType.values[json['work_type'] is int
+          ? json['work_type']
+          : int.tryParse(json['work_type']?.toString() ?? '0') ?? 0],
+      is_completed: json['is_completed'] == true,
+      language_code: json['language_code']?.toString() ?? 'zh',
+      category_ids: (json['category_ids'] as List<dynamic>?)
+              ?.map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0)
+              .toList() ??
+          <int>[],
+      short_content: json['short_content']?.toString() ?? '',
+      chapters: (json['chapters'] as List<dynamic>?)
+              ?.map((e) => CreatorChapterDraft.from_json(
+                  e is Map<String, dynamic> ? e : <String, dynamic>{}))
+              .toList() ??
+          <CreatorChapterDraft>[],
+      status: CreatorWorkStatus.values[json['status'] is int
+          ? json['status']
+          : int.tryParse(json['status']?.toString() ?? '0') ?? 0],
+      release_mode: CreatorReleaseMode.values[json['release_mode'] is int
+          ? json['release_mode']
+          : int.tryParse(json['release_mode']?.toString() ?? '0') ?? 0],
+      scheduled_publish_time: json['scheduled_publish_time'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(
+              json['scheduled_publish_time'] is int
+                  ? json['scheduled_publish_time']
+                  : int.tryParse(
+                          json['scheduled_publish_time'].toString()) ??
+                      0)
+          : null,
+      update_time: DateTime.fromMillisecondsSinceEpoch(
+        json['update_time'] is int
+            ? json['update_time']
+            : int.tryParse(json['update_time']?.toString() ?? '0') ?? 0,
+      ),
+      is_demo: json['is_demo'] == true,
+      cover_url: json['cover_url']?.toString(),
+      saved_step: json['saved_step'] is int
+          ? json['saved_step']
+          : int.tryParse(json['saved_step']?.toString() ?? '0') ?? 0,
+      preferences: _parse_preferences(json['preferences']),
+      rights_confirmed: json['rights_confirmed'] == true,
+      chapter_title: json['chapter_title']?.toString() ?? '',
+      chapter_content: json['chapter_content']?.toString() ?? '',
+    );
+  }
+
+  /// TODO 解析偏好 JSON。
+  static Map<String, List<int>> _parse_preferences(dynamic raw) {
+    if (raw is! Map) return <String, List<int>>{};
+    final Map<String, List<int>> result = {};
+    raw.forEach((key, value) {
+      if (key is String && value is List) {
+        result[key] = value
+            .map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0)
+            .toList();
+      }
+    });
+    return result;
   }
 }

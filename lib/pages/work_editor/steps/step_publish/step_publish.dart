@@ -40,13 +40,12 @@ class StepPublish extends StatelessWidget {
         EditorSectionCard(
           title: easy.tr('creator_center.publish_title'),
           subtitle: easy.tr('creator_center.publish_subtitle'),
-          icon: Icons.verified_user_outlined,
+          iconSvgName: 'user_selected',
+          iconColor: is_dark ? Colors.white : null,
           is_dark: is_dark,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _build_info_box(),
-              const SizedBox(height: WorkEditorStyle.field_spacing),
               StepUtils.build_field_label(
                 easy.tr('creator_center.release_mode'),
                 is_dark,
@@ -78,56 +77,6 @@ class StepPublish extends StatelessWidget {
     );
   }
 
-  Widget _build_info_box() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AuthorStyle.blue.withValues(alpha: is_dark ? 0.12 : 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AuthorStyle.blue.withValues(alpha: is_dark ? 0.24 : 0.16),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Icon(
-            Icons.info_outline_rounded,
-            color: AuthorStyle.blue,
-            size: 18,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  easy.tr('creator_center.review_tip_title'),
-                  style: TextStyle(
-                    color: AuthorStyle.blue,
-                    fontSize: 13,
-                    fontWeight: WorkEditorStyle.field_label_weight,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  easy.tr('creator_center.review_tip_content'),
-                  style: TextStyle(
-                    color: AuthorStyle.blue.withValues(alpha: 0.80),
-                    fontSize: 12,
-                    height: 1.5,
-                    fontWeight: AuthorStyle.body_weight,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _build_release_option({
     required CreatorReleaseMode mode,
     required IconData icon,
@@ -135,23 +84,21 @@ class StepPublish extends StatelessWidget {
     required String subtitle,
   }) {
     final bool is_selected = release_mode == mode;
-    final Color gold = is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold;
+    final Color red = ColorConstants.dangerColor;
 
     return GestureDetector(
       onTap: () => on_release_mode_changed(mode),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
+      child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
           color: is_selected
-              ? gold.withValues(alpha: is_dark ? 0.12 : 0.08)
+              ? red.withValues(alpha: is_dark ? 0.12 : 0.08)
               : AuthorStyle.secondary_surface(is_dark),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: is_selected
-                ? gold.withValues(alpha: is_dark ? 0.40 : 0.50)
+                ? red.withValues(alpha: is_dark ? 0.40 : 0.50)
                 : AuthorStyle.border(is_dark),
             width: is_selected ? 1.4 : 1.0,
           ),
@@ -163,14 +110,14 @@ class StepPublish extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(
                 color: is_selected
-                    ? gold.withValues(alpha: is_dark ? 0.20 : 0.16)
+                    ? red.withValues(alpha: is_dark ? 0.20 : 0.16)
                     : AuthorStyle.secondary_surface(is_dark),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 icon,
                 color: is_selected
-                    ? gold
+                    ? red
                     : AuthorStyle.secondary_text(is_dark),
                 size: 19,
               ),
@@ -209,7 +156,7 @@ class StepPublish extends StatelessWidget {
               onChanged: (CreatorReleaseMode? v) {
                 if (v != null) on_release_mode_changed(v);
               },
-              activeColor: gold,
+              activeColor: red,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               visualDensity: VisualDensity.compact,
             ),
@@ -240,7 +187,7 @@ class StepPublish extends StatelessWidget {
             Icon(
               Icons.event_outlined,
               color: scheduled_publish_time != null
-                  ? (is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold)
+                  ? ColorConstants.dangerColor
                   : AuthorStyle.secondary_text(is_dark),
               size: 20,
             ),
@@ -269,7 +216,7 @@ class StepPublish extends StatelessWidget {
   }
 
   Widget _build_rights_confirmation() {
-    final Color gold = is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold;
+    final Color red = ColorConstants.dangerColor;
 
     return InkWell(
       borderRadius: BorderRadius.circular(10),
@@ -284,11 +231,12 @@ class StepPublish extends StatelessWidget {
               onChanged: (bool? v) {
                 if (v != null) on_rights_confirmed_changed(v);
               },
-              activeColor: gold,
+              activeColor: red,
+              checkColor: Colors.white,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               visualDensity: VisualDensity.compact,
               side: BorderSide(
-                color: AuthorStyle.secondary_text(is_dark),
+                color: red,
               ),
             ),
             const SizedBox(width: 4),

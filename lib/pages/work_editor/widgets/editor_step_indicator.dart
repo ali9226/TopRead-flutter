@@ -2,6 +2,7 @@
 
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
+import 'package:app/pages/work_editor/style.dart';
 import 'package:flutter/material.dart';
 
 /// TODO 三步作品创建流程指示器。
@@ -51,13 +52,17 @@ class EditorStepIndicator extends StatelessWidget {
                     onTap: on_step_tap != null
                         ? () => on_step_tap!(index)
                         : null,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        AnimatedContainer(
+                    child: SizedBox(
+                      height: WorkEditorStyle.step_indicator_height,
+                      child: Center(
+                        child: AnimatedContainer(
                           duration: const Duration(milliseconds: 220),
-                          width: is_current ? 30 : 24,
-                          height: is_current ? 30 : 24,
+                          width: is_current
+                              ? WorkEditorStyle.step_circle_size_large
+                              : WorkEditorStyle.step_circle_size_small,
+                          height: is_current
+                              ? WorkEditorStyle.step_circle_size_large
+                              : WorkEditorStyle.step_circle_size_small,
                           decoration: BoxDecoration(
                             color: has_error
                                 ? ColorConstants.dangerColor
@@ -98,7 +103,7 @@ class EditorStepIndicator extends StatelessWidget {
                                       ),
                                     ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),

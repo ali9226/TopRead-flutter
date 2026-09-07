@@ -384,6 +384,7 @@
     "delete_chapter_confirm": "Sura hii ya ndani haiwezi kurejeshwa baada ya kufutwa. Uendelee?",
     "delete": "Futa",
     "short_content_label": "Hadithi Kamili",
+    "chapter_content_label": "Maudhui ya Sura",
     "short_content_hint": "Anza kuandika hadithi yako hapa…",
     "publish_title": "Ukaguzi na Uchapishaji",
     "publish_subtitle": "Maudhui yaliyotumwa hufungwa kwa ukaguzi. Kazi iliyokataliwa inaweza kuhaririwa na kutumwa tena.",

@@ -51,6 +51,9 @@ class CreatorHeaderOverlay extends StatelessWidget {
   /// 打开创作说明回调。
   final VoidCallback on_open_guide;
 
+  /// 是否有本地草稿。
+  final bool has_draft;
+
   const CreatorHeaderOverlay({
     super.key,
     required this.tab_controller,
@@ -65,6 +68,7 @@ class CreatorHeaderOverlay extends StatelessWidget {
     required this.on_create_work,
     required this.on_continue_writing,
     required this.on_open_guide,
+    this.has_draft = false,
   });
 
   /// 测量文本在给定宽度下的实际行数。
@@ -155,6 +159,7 @@ class CreatorHeaderOverlay extends StatelessWidget {
                 on_create_work: on_create_work,
                 on_continue_writing: on_continue_writing,
                 on_open_guide: on_open_guide,
+                has_draft: has_draft,
               ),
             ),
             Positioned(
@@ -247,6 +252,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
   final VoidCallback on_create_work;
   final VoidCallback on_continue_writing;
   final VoidCallback on_open_guide;
+  final bool has_draft;
 
   const _CreatorFlexibleHeader({
     required this.expanded_height,
@@ -260,6 +266,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
     required this.on_create_work,
     required this.on_continue_writing,
     required this.on_open_guide,
+    this.has_draft = false,
   });
 
   @override
@@ -519,7 +526,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          /// 操作按钮：创建作品、继续写作。
+          /// 操作按钮：创建作品、继续写作（有草稿时显示）。
           Row(
             children: <Widget>[
               Expanded(
@@ -532,17 +539,19 @@ class _CreatorFlexibleHeader extends StatelessWidget {
                   on_tap: on_create_work,
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _HeaderActionButton(
-                  icon: Icons.edit_note_rounded,
-                  label: easy.tr('creator_center.continue_writing'),
-                  is_primary: false,
-                  is_dark: is_dark,
-                  is_cjk: is_cjk,
-                  on_tap: on_continue_writing,
+              if (has_draft) ...<Widget>[
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _HeaderActionButton(
+                    icon: Icons.edit_note_rounded,
+                    label: easy.tr('creator_center.continue_writing'),
+                    is_primary: false,
+                    is_dark: is_dark,
+                    is_cjk: is_cjk,
+                    on_tap: on_continue_writing,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ],

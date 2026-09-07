@@ -8,6 +8,7 @@ import 'package:app/pages/author_center/widgets/creator_header.dart';
 import 'package:app/pages/author_center/widgets/creator_work_tab.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
+import 'package:app/util/creator_draft_storage.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/router/router_back.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -106,10 +107,16 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   /// 创作中心固定状态 Tab 数量。
   static const int _tab_count = 6;
 
+  /// 是否有本地草稿。
+  bool _has_draft = false;
+
   @override
   void initState() {
     super.initState();
     _works = kDebugMode ? _build_demo_works() : <CreatorWorkDraft>[];
+
+    /// 加载本地草稿。
+    _load_local_drafts();
     _tab_controller = TabController(length: _tab_count, vsync: this);
     _tab_scroll_controllers = List<_CreatorTabScrollController>.generate(
       _tab_count,
@@ -149,6 +156,26 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     } catch (e) {
       debugPrint('加载Dashboard失败: $e');
     }
+  }
+
+  /// TODO 加载本地草稿。
+  Future<void> _load_local_drafts() async {
+    final List<CreatorWorkDraft> drafts =
+        await CreatorDraftStorage.getAllDrafts();
+    if (!mounted) return;
+
+    setState(() {
+      _has_draft = drafts.isNotEmpty;
+      /// 将本地草稿合并到 _works 列表（不覆盖已有的）。
+      for (final CreatorWorkDraft draft in drafts) {
+        final int index = _works.indexWhere(
+          (w) => w.local_id == draft.local_id,
+        );
+        if (index < 0) {
+          _works.insert(0, draft);
+        }
+      }
+    });
   }
 
   /// 测量文本在给定宽度下的实际行数。
@@ -237,18 +264,32 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     final CreatorWorkDraft? result =
         await context.push<CreatorWorkDraft>('/work_editor');
     if (result == null || !mounted) return;
-    setState(() => _works.insert(0, result));
+    setState(() {
+      _works.insert(0, result);
+      _has_draft =
+          _works.any((w) => w.status == CreatorWorkStatus.draft);
+    });
   }
 
   Future<void> _edit_work(CreatorWorkDraft work) async {
     final CreatorWorkDraft? result =
         await context.push<CreatorWorkDraft>('/work_editor', extra: work);
     if (result == null || !mounted) return;
+
     final int index = _works.indexWhere(
       (CreatorWorkDraft item) => item.local_id == work.local_id,
     );
-    if (index < 0) return;
-    setState(() => _works[index] = result);
+
+    setState(() {
+      if (index >= 0) {
+        _works[index] = result;
+      } else {
+        _works.insert(0, result);
+      }
+      /// 刷新草稿状态。
+      _has_draft =
+          _works.any((w) => w.status == CreatorWorkStatus.draft);
+    });
   }
 
   Future<void> _continue_writing(CreatorWorkDraft work) async {
@@ -279,6 +320,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   }
 
   Future<void> _continue_latest_draft() async {
+    /// 先从内存中查找草稿。
     final List<CreatorWorkDraft> drafts =
         _works
             .where(
@@ -289,11 +331,21 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
             (CreatorWorkDraft left, CreatorWorkDraft right) =>
                 right.update_time.compareTo(left.update_time),
           );
-    if (drafts.isEmpty) {
-      await _create_work();
+
+    if (drafts.isNotEmpty) {
+      await _edit_work(drafts.first);
       return;
     }
-    await _continue_writing(drafts.first);
+
+    /// 内存中没有，从本地存储加载。
+    final CreatorWorkDraft? localDraft =
+        await CreatorDraftStorage.getLatestDraft();
+    if (localDraft != null) {
+      await _edit_work(localDraft);
+      return;
+    }
+
+    await _create_work();
   }
 
   // ───────────────────────── build ─────────────────────────
@@ -371,6 +423,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                     on_create_work: _create_work,
                     on_continue_writing: _continue_latest_draft,
                     on_open_guide: () => _show_creator_guide(is_dark),
+                    has_draft: _has_draft,
                   );
                 },
               ),

@@ -23,6 +23,9 @@ dependencies:
   # TODO 上传docx文件解析
   docx_to_text: ^1.0.1
 
+  # TODO 选择日期时间
+  bottom_picker: ^5.0.0
+
   # TODO google登录
   firebase_core: 4.12.1
   firebase_auth: 6.5.6

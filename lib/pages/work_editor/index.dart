@@ -1,9 +1,15 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:io';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:app/components/image_source_sheet/index.dart';
+import 'package:docx_to_text/docx_to_text.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:app/config/color_config.dart';
+import 'package:app/config/font_config.dart';
 import 'package:app/models/preference.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/chapter_editor/index.dart';
@@ -15,8 +21,10 @@ import 'package:app/pages/work_editor/steps/step_content/step_content.dart';
 import 'package:app/pages/work_editor/steps/step_publish/step_publish.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/preference_store.dart';
+import 'package:app/util/creator_draft_storage.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/language_util/index.dart';
+import 'package:app/util/upload_file.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -60,11 +68,38 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
   /// TODO 短篇正文输入控制器。
   late final TextEditingController _short_content_controller;
 
+  /// TODO 长篇章节标题输入控制器。
+  late final TextEditingController _chapter_title_controller;
+
+  /// TODO 长篇章节正文输入控制器。
+  late final TextEditingController _chapter_content_controller;
+
   /// TODO 当前步骤索引。
   int _current_step = 0;
 
-  /// TODO 当前选择的篇幅类型。
-  late CreatorWorkType _work_type;
+  /// TODO 当前选择的篇幅类型（从偏好 map 推导）。
+  CreatorWorkType get _work_type {
+    final int? pref_id =
+        _find_preference_group_by_item_id(WorkEditorStyle.long_work_id);
+    if (pref_id == null) return CreatorWorkType.short;
+    final Set<int> selected = _selected_preference_map[pref_id] ?? <int>{};
+    return selected.contains(WorkEditorStyle.long_work_id)
+        ? CreatorWorkType.long
+        : CreatorWorkType.short;
+  }
+
+  /// TODO 根据选项 ID 查找其所属偏好分组 ID。
+  int? _find_preference_group_by_item_id(int item_id) {
+    final PreferenceStore store = Get.find<PreferenceStore>();
+    for (final Preference pref in store.preference_list) {
+      for (final PreferenceItem item in pref.data_list) {
+        if (item.id == item_id) {
+          return pref.id;
+        }
+      }
+    }
+    return null;
+  }
 
   /// TODO 是否完结。
   late bool _is_completed;
@@ -74,8 +109,8 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
 
   /// TODO 当前选择的分类 id（从偏好 map 中提取）。
   Set<int> get _selected_category_ids {
-    const int category_type_id = 2;
-    return _selected_preference_map[category_type_id] ?? <int>{};
+    return _selected_preference_map[WorkEditorStyle.preference_category_id] ??
+        <int>{};
   }
 
   /// TODO 各偏好分类的选中项（key 为偏好类别 id，value 为已选选项 id 集合）。
@@ -93,11 +128,14 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
   /// TODO 是否已确认原创和授权声明。
   bool _rights_confirmed = false;
 
-  /// TODO 本轮选择的封面内存数据。
-  Uint8List? _cover_bytes;
+  /// TODO 本地封面图片路径（上传中使用）。
+  String? _cover_local_path;
 
-  /// TODO 是否正在读取封面。
-  bool _is_picking_cover = false;
+  /// TODO 已上传的封面 URL。
+  String? _cover_url;
+
+  /// TODO 是否正在上传封面。
+  bool _is_uploading_cover = false;
 
   /// TODO 存在错误的步骤索引集合。
   final Set<int> _error_steps = <int>{};
@@ -114,20 +152,64 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
     _short_content_controller = TextEditingController(
       text: work?.short_content ?? '',
     );
-    _work_type = work?.work_type ?? CreatorWorkType.short;
+    _chapter_title_controller = TextEditingController(
+      text: work?.chapter_title ?? '',
+    );
+    _chapter_content_controller = TextEditingController(
+      text: work?.chapter_content ?? '',
+    );
     _is_completed = work?.is_completed ?? false;
     _language_code = work?.language_code ?? 'zh';
-    _selected_preference_map = <int, Set<int>>{
-      2: <int>{...?work?.category_ids},
-    };
     _chapters = <CreatorChapterDraft>[...?work?.chapters];
 
-    /// 新增作品时，设置各偏好默认值。
-    if (work == null) {
-      _set_default_preferences();
+    /// 恢复所有偏好选择。
+    if (work != null && work.preferences.isNotEmpty) {
+      _selected_preference_map = <int, Set<int>>{};
+      work.preferences.forEach((key, value) {
+        final int? intKey = int.tryParse(key);
+        if (intKey != null) {
+          _selected_preference_map[intKey] = Set<int>.from(value);
+        }
+      });
+    } else {
+      _selected_preference_map = <int, Set<int>>{
+        2: <int>{...?work?.category_ids},
+      };
+
+      /// 编辑模式下，根据 work_type 设置篇幅偏好。
+      if (work != null && work.work_type == CreatorWorkType.long) {
+        _selected_preference_map[WorkEditorStyle.short_work_id] =
+            <int>{WorkEditorStyle.long_work_id};
+      }
+
+      /// 新增作品时，设置各偏好默认值。
+      if (work == null) {
+        _set_default_preferences();
+      }
     }
     _release_mode = work?.release_mode ?? CreatorReleaseMode.immediate;
     _scheduled_publish_time = work?.scheduled_publish_time;
+    _rights_confirmed = work?.rights_confirmed ?? false;
+
+    /// 恢复保存时的步骤进度。
+    if (work != null && work.saved_step > 0) {
+      _current_step = work.saved_step;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _page_controller.jumpToPage(_current_step);
+      });
+    }
+
+    /// 恢复完成后刷新错误状态（标记未填步骤）。
+    _refresh_error_steps();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    /// 新增作品时，首次设置默认语种为 app 当前语种。
+    if (widget.initial_work == null && _language_code == 'zh') {
+      _language_code = context.locale.languageCode;
+    }
   }
 
   @override
@@ -136,6 +218,8 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
     _title_controller.dispose();
     _introduction_controller.dispose();
     _short_content_controller.dispose();
+    _chapter_title_controller.dispose();
+    _chapter_content_controller.dispose();
     super.dispose();
   }
 
@@ -155,20 +239,25 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
     );
   }
 
+  /// TODO 读取当前输入的长篇章节字数。
+  int get _current_chapter_word_count {
+    return _chapter_content_controller.text.replaceAll(RegExp(r'\s+'), '').length;
+  }
+
   /// TODO 页面可选分类，取自全局偏好缓存中的「内容偏好」分组。
   List<PreferenceItem> get _category_options => CreatorLogic.category_options;
 
   /// TODO 新增作品时设置各偏好默认值。
   ///
-  /// 性别偏好：无所谓（ID 113）
-  /// 篇幅：短篇（ID 119）
+  /// 性别偏好：无所谓（ID [WorkEditorStyle.gender_any_id]）
+  /// 篇幅：短篇（ID [WorkEditorStyle.short_work_id]）
   /// 状态：连载中（按标题匹配）
   void _set_default_preferences() {
     final PreferenceStore store = Get.find<PreferenceStore>();
 
-    /// 按 ID 直接设置默认值（性别无所谓=113，篇幅短篇=119）。
-    _set_preference_by_id(store, 113);
-    _set_preference_by_id(store, 119);
+    /// 按 ID 直接设置默认值。
+    _set_preference_by_id(store, WorkEditorStyle.gender_any_id);
+    _set_preference_by_id(store, WorkEditorStyle.short_work_id);
 
     /// 状态（连载中）按标题匹配。
     for (final Preference pref in store.preference_list) {
@@ -208,9 +297,12 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
 
   /// TODO 切换偏好选中状态。
   ///
-  /// 单选偏好：再次点击取消，否则替换为仅该项。
+  /// 单选偏好：已选中时再次点击不取消，保持选中。
   /// 多选偏好：追加或移除。
   void _toggle_preference(int preference_id, int item_id) {
+    /// 记录切换前的篇幅类型。
+    final CreatorWorkType old_type = _work_type;
+
     setState(() {
       final Set<int> current =
           _selected_preference_map[preference_id] ?? <int>{};
@@ -222,10 +314,8 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
           pref != null ? _is_force_single_preference(pref) || pref.is_single_select : true;
 
       if (is_single) {
-        /// 单选：再次点击取消，否则替换。
-        if (current.contains(item_id)) {
-          _selected_preference_map[preference_id] = <int>{};
-        } else {
+        /// 单选：已选中时不取消，直接替换。
+        if (!current.contains(item_id)) {
           _selected_preference_map[preference_id] = <int>{item_id};
         }
       } else {
@@ -239,19 +329,55 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
         _selected_preference_map[preference_id] = next;
       }
     });
+
+    /// 篇幅类型切换时，同步正文内容。
+    final CreatorWorkType new_type = _work_type;
+    if (old_type != new_type) {
+      _sync_content_between_modes(old_type, new_type);
+    }
+  }
+
+  /// TODO 切换篇幅类型时同步正文内容。
+  ///
+  /// 短篇 → 长篇：短篇正文带入长篇章节内容。
+  /// 长篇 → 短篇：长篇章节内容带入短篇正文。
+  void _sync_content_between_modes(
+    CreatorWorkType from_type,
+    CreatorWorkType to_type,
+  ) {
+    final String short_content = _short_content_controller.text;
+    final String chapter_content = _chapter_content_controller.text;
+
+    if (from_type == CreatorWorkType.short &&
+        to_type == CreatorWorkType.long) {
+      /// 短篇 → 长篇：带入正文到章节内容。
+      if (chapter_content.isEmpty && short_content.isNotEmpty) {
+        _chapter_content_controller.text = short_content;
+      }
+    } else if (from_type == CreatorWorkType.long &&
+        to_type == CreatorWorkType.short) {
+      /// 长篇 → 短篇：带入章节内容到正文。
+      if (short_content.isEmpty && chapter_content.isNotEmpty) {
+        _short_content_controller.text = chapter_content;
+      }
+    }
   }
 
   /// TODO 校验指定步骤是否填写完整，返回 true 表示通过。
   bool _validate_step(int step) {
     switch (step) {
       case 0:
-        return _title_controller.text.trim().isNotEmpty &&
-            (_cover_bytes != null || _is_editing);
+        return _title_controller.text.trim().isNotEmpty;
       case 1:
-        return _selected_category_ids.isNotEmpty;
+        /// 分类非必填，始终通过。
+        return true;
       case 2:
         if (_work_type == CreatorWorkType.long) {
-          return _chapters.isNotEmpty;
+          /// 有章节列表时检查列表。
+          if (_chapters.isNotEmpty) return true;
+          /// 否则检查当前输入的章节标题和内容。
+          return _chapter_title_controller.text.trim().isNotEmpty &&
+              _chapter_content_controller.text.trim().isNotEmpty;
         }
         return _short_content_controller.text.trim().isNotEmpty;
       case 3:
@@ -295,27 +421,89 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
     await _go_to_step(_current_step + 1);
   }
 
-  /// TODO 上传短篇文件（txt、word等），解析内容到正文框。
-  ///
-  /// 需要添加 file_picker 依赖：`flutter pub add file_picker`
+  /// TODO 上传短篇文件（txt、docx），解析内容到正文框。
   Future<void> _upload_short_file() async {
-    // TODO: 实现文件上传功能，需要安装 file_picker 包
-    showBottomTip(easy.tr('creator_center.file_upload_coming_soon'));
+    try {
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['txt', 'docx'],
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final PlatformFile file = result.files.first;
+      final Uint8List? bytes = file.bytes;
+      if (bytes == null) return;
+
+      String content;
+      if (file.name.endsWith('.docx')) {
+        content = docxToText(bytes);
+      } else {
+        content = utf8.decode(bytes);
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _short_content_controller.text = content;
+      });
+
+      showBottomTip(easy.tr('creator_center.file_upload_success'));
+    } catch (e) {
+      if (!mounted) return;
+      showBottomTip(easy.tr('creator_center.file_upload_failed'));
+    }
   }
 
-  /// TODO 上传长篇文件（txt、word等），解析内容为新章节。
+  /// TODO 上传长篇文件（txt、docx），解析内容到输入框。
   ///
-  /// 需要添加 file_picker 依赖：`flutter pub add file_picker`
+  /// 如果标题输入框为空，使用文件名（去掉扩展名）作为章节标题。
   Future<void> _upload_long_file() async {
-    // TODO: 实现文件上传功能，需要安装 file_picker 包
-    showBottomTip(easy.tr('creator_center.file_upload_coming_soon'));
+    try {
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['txt', 'docx'],
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final PlatformFile file = result.files.first;
+      final Uint8List? bytes = file.bytes;
+      if (bytes == null) return;
+
+      String content;
+      if (file.name.endsWith('.docx')) {
+        content = docxToText(bytes);
+      } else {
+        content = utf8.decode(bytes);
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        /// 填入正文内容。
+        _chapter_content_controller.text = content;
+
+        /// 如果标题为空，使用文件名作为标题。
+        if (_chapter_title_controller.text.trim().isEmpty) {
+          final String title = file.name.replaceAll(RegExp(r'\.(txt|docx)$'), '');
+          _chapter_title_controller.text = title;
+        }
+      });
+
+      showBottomTip(easy.tr('creator_center.file_upload_success'));
+    } catch (e) {
+      if (!mounted) return;
+      showBottomTip(easy.tr('creator_center.file_upload_failed'));
+    }
   }
 
-  /// TODO 选择相册或相机中的封面，并立即在本地预览。
+  /// TODO 选择相册或相机中的封面，上传到服务器。
   Future<void> _pick_cover(ImageSource source) async {
-    if (_is_picking_cover) return;
+    if (_is_uploading_cover) return;
 
-    setState(() => _is_picking_cover = true);
     try {
       final XFile? image = await _image_picker.pickImage(
         source: source,
@@ -324,14 +512,35 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
       );
       if (image == null) return;
 
-      final Uint8List bytes = await image.readAsBytes();
       if (!mounted) return;
 
-      setState(() => _cover_bytes = bytes);
+      /// 立即显示本地图片。
+      setState(() {
+        _cover_local_path = image.path;
+        _is_uploading_cover = true;
+      });
+
+      /// 上传到服务器。
+      final String? url = await uploadFile(File(image.path));
+
+      if (!mounted) return;
+
+      if (url != null) {
+        setState(() {
+          _cover_url = url;
+          _cover_local_path = null;
+        });
+      } else {
+        showBottomTip(easy.tr('creator_center.cover_pick_failed'));
+        setState(() => _cover_local_path = null);
+      }
     } catch (_) {
-      showBottomTip(easy.tr('creator_center.cover_pick_failed'));
+      if (mounted) {
+        showBottomTip(easy.tr('creator_center.cover_pick_failed'));
+        setState(() => _cover_local_path = null);
+      }
     } finally {
-      if (mounted) setState(() => _is_picking_cover = false);
+      if (mounted) setState(() => _is_uploading_cover = false);
     }
   }
 
@@ -394,7 +603,7 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(dialog_context).pop(false),
-              child: Text(easy.tr('constant.cancel')),
+              child: Text(easy.tr('common.cancel')),
             ),
             TextButton(
               onPressed: () => Navigator.of(dialog_context).pop(true),
@@ -412,40 +621,138 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
     setState(() => _chapters.removeAt(index));
   }
 
-  /// TODO 打开系统日期和时间选择器。
+  /// TODO 打开底部日期时间选择器。
   Future<void> _select_schedule_time() async {
     final DateTime now = DateTime.now();
     final DateTime initial_time =
         _scheduled_publish_time ?? now.add(const Duration(days: 1));
+    final bool is_dark = _device_info.dark.value;
+    final Color red = ColorConstants.dangerColor;
 
-    final DateTime? selected_date = await showDatePicker(
+    DateTime temp_selected = initial_time;
+
+    await showModalBottomSheet<void>(
       context: context,
-      initialDate: initial_time,
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365)),
-    );
-    if (selected_date == null || !mounted) return;
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext sheetContext) {
+        return Container(
+          height: 340,
+          decoration: BoxDecoration(
+            color: is_dark ? const Color(0xFF1E1E2E) : Colors.white,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: <Widget>[
+              /// 标题栏。
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        easy.tr('creator_center.select_schedule_time'),
+                        style: TextStyle(
+                          color: is_dark
+                              ? Colors.white
+                              : const Color(0xFF1A1A1A),
+                          fontSize: 16,
+                          fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: is_dark
+                            ? Colors.white54
+                            : const Color(0xFF999999),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-    final TimeOfDay? selected_time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(initial_time),
-    );
-    if (selected_time == null || !mounted) return;
+              /// 日期时间选择器。
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.dateAndTime,
+                  initialDateTime: temp_selected,
+                  minimumDate: now,
+                  maximumDate: now.add(const Duration(days: 365)),
+                  use24hFormat: true,
+                  onDateTimeChanged: (DateTime newDate) {
+                    temp_selected = newDate;
+                  },
+                ),
+              ),
 
-    setState(() {
-      _scheduled_publish_time = DateTime(
-        selected_date.year,
-        selected_date.month,
-        selected_date.day,
-        selected_time.hour,
-        selected_time.minute,
-      );
-    });
+              /// 按钮栏。
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  0,
+                  20,
+                  MediaQuery.paddingOf(sheetContext).bottom + 16,
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: red,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: Text(easy.tr('common.cancel')),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _scheduled_publish_time = temp_selected;
+                          });
+                          Navigator.of(sheetContext).pop();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: ColorConstants.themeColor,
+                          foregroundColor: ColorConstants.lightTextColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: Text(easy.tr('common.confirm')),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   /// TODO 构造要返回给创作者中心的本地作品模型。
   CreatorWorkDraft _build_work(CreatorWorkStatus status) {
     final DateTime now = DateTime.now();
+
+    /// 将偏好 map 转为可序列化格式。
+    final Map<String, List<int>> prefs = {};
+    _selected_preference_map.forEach((key, value) {
+      prefs[key.toString()] = value.toList();
+    });
 
     return CreatorWorkDraft(
       local_id:
@@ -469,12 +776,26 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
           : null,
       update_time: now,
       is_demo: false,
+      cover_url: _cover_url,
+      saved_step: _current_step,
+      preferences: prefs,
+      rights_confirmed: _rights_confirmed,
+      chapter_title: _chapter_title_controller.text.trim(),
+      chapter_content: _chapter_content_controller.text.trim(),
     );
   }
 
   /// TODO 保存本地草稿，不要求所有投稿字段已经完整。
-  void _save_draft() {
+  Future<void> _save_draft() async {
+    /// 刷新错误状态。
+    _refresh_error_steps();
+
     final CreatorWorkDraft draft = _build_work(CreatorWorkStatus.draft);
+
+    /// 保存到本地存储。
+    await CreatorDraftStorage.saveDraft(draft);
+
+    if (!mounted) return;
     showBottomTip(easy.tr('creator_center.draft_saved'));
     Navigator.of(context).pop<CreatorWorkDraft>(draft);
   }
@@ -484,11 +805,6 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
     if (_title_controller.text.trim().isEmpty) {
       _go_to_step(0);
       showBottomTip(easy.tr('creator_center.required_title'));
-      return;
-    }
-    if (_cover_bytes == null && !_is_editing) {
-      _go_to_step(0);
-      showBottomTip(easy.tr('creator_center.required_cover'));
       return;
     }
     if (_selected_category_ids.isEmpty) {
@@ -588,9 +904,10 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
                     title_controller: _title_controller,
                     introduction_controller: _introduction_controller,
                     language_code: _language_code,
-                    cover_bytes: _cover_bytes,
-                    is_picking_cover: _is_picking_cover,
-                    on_open_cover_picker: _open_cover_picker,
+                    cover_local_path: _cover_local_path,
+                    cover_url: _cover_url,
+                    is_uploading_cover: _is_uploading_cover,
+                    on_pick_cover: _open_cover_picker,
                     on_language_changed: (String code) =>
                         setState(() => _language_code = code),
                   ),
@@ -605,9 +922,11 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
                     is_editing: _is_editing,
                     chapters: _chapters,
                     short_content_controller: _short_content_controller,
+                    chapter_title_controller: _chapter_title_controller,
+                    chapter_content_controller: _chapter_content_controller,
                     chapter_word_count: _chapter_word_count,
                     short_word_count: _short_word_count,
-                    on_add_chapter: _add_chapter,
+                    current_chapter_word_count: _current_chapter_word_count,
                     on_edit_chapter: _edit_chapter,
                     on_delete_chapter: _delete_chapter,
                     on_reorder_chapters: (int old_index, int new_index) {
@@ -618,6 +937,7 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
                       });
                     },
                     on_short_content_changed: () => setState(() {}),
+                    on_chapter_content_changed: () => setState(() {}),
                     on_short_file_upload: _upload_short_file,
                     on_long_file_upload: _upload_long_file,
                   ),

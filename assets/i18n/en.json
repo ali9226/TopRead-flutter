@@ -405,6 +405,7 @@
     "delete_chapter_confirm": "This local chapter cannot be restored after deletion. Continue?",
     "delete": "Delete",
     "short_content_label": "Full Story",
+    "chapter_content_label": "Chapter Content",
     "short_content_hint": "Start writing your story here…",
     "publish_title": "Review & Release",
     "publish_subtitle": "Submitted content is locked for review. Rejected work can be edited and resubmitted.",

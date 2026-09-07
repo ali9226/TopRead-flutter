@@ -103,7 +103,7 @@ class StepCategory extends StatelessWidget {
 
       if (i < preferences.length - 1) {
         sections.add(
-          const SizedBox(height: InterestPreferenceStyle.sectionSpacing),
+          const SizedBox(height: 2),
         );
       }
     }

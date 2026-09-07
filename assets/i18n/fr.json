@@ -415,6 +415,7 @@
     "delete_chapter_confirm": "Ce chapitre local ne pourra pas être restauré. Continuer ?",
     "delete": "Supprimer",
     "short_content_label": "Texte complet",
+    "chapter_content_label": "Contenu du chapitre",
     "short_content_hint": "Commencez votre histoire ici…",
     "publish_title": "Validation et publication",
     "publish_subtitle": "Le contenu soumis est verrouillé. Une œuvre refusée peut être corrigée et renvoyée.",

@@ -13,7 +13,7 @@ import 'widgets/short_content_editor.dart';
 ///
 /// 根据作品类型（长篇/短篇）委托给对应的子组件：
 /// - 短篇：[ShortContentEditor] - 正文输入框 + 文件上传
-/// - 长篇：[LongContentEditor] - 章节管理 + 文件上传
+/// - 长篇：[LongContentEditor] - 章节标题 + 正文输入框 + 文件上传
 class StepContent extends StatelessWidget {
   /// TODO 是否夜间主题。
   final bool is_dark;
@@ -30,14 +30,20 @@ class StepContent extends StatelessWidget {
   /// TODO 短篇正文控制器。
   final TextEditingController short_content_controller;
 
+  /// TODO 长篇章节标题控制器。
+  final TextEditingController chapter_title_controller;
+
+  /// TODO 长篇章节正文控制器。
+  final TextEditingController chapter_content_controller;
+
   /// TODO 长篇章节总字数。
   final int chapter_word_count;
 
   /// TODO 短篇字数。
   final int short_word_count;
 
-  /// TODO 添加章节回调。
-  final VoidCallback on_add_chapter;
+  /// TODO 长篇当前输入字数。
+  final int current_chapter_word_count;
 
   /// TODO 编辑章节回调。
   final ValueChanged<int> on_edit_chapter;
@@ -50,6 +56,9 @@ class StepContent extends StatelessWidget {
 
   /// TODO 短篇内容变化回调。
   final VoidCallback on_short_content_changed;
+
+  /// TODO 长篇内容变化回调。
+  final VoidCallback on_chapter_content_changed;
 
   /// TODO 短篇文件上传回调。
   final VoidCallback on_short_file_upload;
@@ -64,13 +73,16 @@ class StepContent extends StatelessWidget {
     required this.is_editing,
     required this.chapters,
     required this.short_content_controller,
+    required this.chapter_title_controller,
+    required this.chapter_content_controller,
     required this.chapter_word_count,
     required this.short_word_count,
-    required this.on_add_chapter,
+    required this.current_chapter_word_count,
     required this.on_edit_chapter,
     required this.on_delete_chapter,
     required this.on_reorder_chapters,
     required this.on_short_content_changed,
+    required this.on_chapter_content_changed,
     required this.on_short_file_upload,
     required this.on_long_file_upload,
   });
@@ -89,7 +101,7 @@ class StepContent extends StatelessWidget {
                 ? 'creator_center.content_long_subtitle'
                 : 'creator_center.content_short_subtitle',
           ),
-          icon: is_long ? Icons.view_agenda_rounded : Icons.subject_rounded,
+          iconSvgName: 'signature',
           is_dark: is_dark,
           child: is_long
               ? LongContentEditor(
@@ -97,11 +109,14 @@ class StepContent extends StatelessWidget {
                   is_editing: is_editing,
                   chapters: chapters,
                   chapter_word_count: chapter_word_count,
-                  on_add_chapter: on_add_chapter,
+                  chapter_title_controller: chapter_title_controller,
+                  chapter_content_controller: chapter_content_controller,
+                  current_word_count: current_chapter_word_count,
+                  on_content_changed: on_chapter_content_changed,
+                  on_file_upload: on_long_file_upload,
                   on_edit_chapter: on_edit_chapter,
                   on_delete_chapter: on_delete_chapter,
                   on_reorder_chapters: on_reorder_chapters,
-                  on_file_upload: on_long_file_upload,
                 )
               : ShortContentEditor(
                   is_dark: is_dark,
