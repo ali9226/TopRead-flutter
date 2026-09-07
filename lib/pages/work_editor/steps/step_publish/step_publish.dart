@@ -40,8 +40,6 @@ class StepPublish extends StatelessWidget {
         EditorSectionCard(
           title: easy.tr('creator_center.publish_title'),
           subtitle: easy.tr('creator_center.publish_subtitle'),
-          iconSvgName: 'user_selected',
-          iconColor: is_dark ? Colors.white : null,
           is_dark: is_dark,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -93,6 +93,7 @@ class StepUtils {
             maxWidth: WorkEditorStyle.content_max_width,
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: children
                 .expand(
                   (Widget child) => <Widget>[

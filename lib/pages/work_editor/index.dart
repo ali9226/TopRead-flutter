@@ -866,17 +866,28 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
             ),
           ),
           actions: <Widget>[
-            TextButton(
-              onPressed: _save_draft,
-              child: Text(
-                easy.tr('creator_center.save_draft'),
-                style: TextStyle(
-                  color: is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
-                  fontWeight: AuthorStyle.emphasis_weight,
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: ElevatedButton(
+                onPressed: _save_draft,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ColorConstants.themeColor,
+                  foregroundColor: ColorConstants.lightTextColor,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  textStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: AuthorStyle.emphasis_weight,
+                  ),
                 ),
+                child: Text(easy.tr('creator_center.save_draft')),
               ),
             ),
-            const SizedBox(width: 6),
           ],
         ),
         body: Column(

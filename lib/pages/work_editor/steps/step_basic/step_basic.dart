@@ -72,7 +72,6 @@ class StepBasic extends StatelessWidget {
         EditorSectionCard(
           title: easy.tr('creator_center.basic_title'),
           subtitle: easy.tr('creator_center.basic_subtitle'),
-          iconSvgName: 'signature',
           is_dark: is_dark,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,11 +1,16 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/author_center/author_style.dart';
-import 'package:app/pages/work_editor/style.dart';
+import 'package:app/pages/interest_preference/style.dart';
 import 'package:flutter/material.dart';
 
-/// TODO 作品编辑页的统一表单卡片。
+/// TODO 作品编辑页的表单区块标题组件。
+///
+/// 设计规范（与步骤2统一）：
+/// - 大标题 24px，字重 w500
+/// - 副标题 13px，字重 w400
+/// - 无图标、无外框、无阴影
+/// - 左对齐，简洁清爽
 class EditorSectionCard extends StatelessWidget {
   /// TODO 区块标题。
   final String title;
@@ -13,13 +18,13 @@ class EditorSectionCard extends StatelessWidget {
   /// TODO 区块说明。
   final String subtitle;
 
-  /// TODO 区块图标（与 iconSvgName 二选一）。
+  /// TODO 区块图标（保留参数兼容，但不使用）。
   final IconData? icon;
 
-  /// TODO 区块 SVG 图标名称（不含路径和扩展名，与 icon 二选一）。
+  /// TODO 区块 SVG 图标名称（保留参数兼容，但不使用）。
   final String? iconSvgName;
 
-  /// TODO SVG 图标颜色（为空时使用原始颜色）。
+  /// TODO SVG 图标颜色（保留参数兼容，但不使用）。
   final Color? iconColor;
 
   /// TODO 区块正文。
@@ -41,80 +46,44 @@ class EditorSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(WorkEditorStyle.section_padding),
-      decoration: BoxDecoration(
-        color: AuthorStyle.surface(is_dark),
-        borderRadius: BorderRadius.circular(WorkEditorStyle.section_radius),
-        border: Border.all(color: AuthorStyle.border(is_dark)),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: is_dark ? 0.16 : 0.04),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        /// 标题区域（与步骤2统一）。
+        _build_title_section(),
+
+        /// 正文内容。
+        child,
+      ],
+    );
+  }
+
+  /// TODO 构建标题区域。
+  Widget _build_title_section() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: AuthorStyle.gold.withValues(
-                    alpha: is_dark ? 0.16 : 0.20,
-                  ),
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                alignment: Alignment.center,
-                child: iconSvgName != null
-                    ? SvgIcon(
-                        name: iconSvgName!,
-                        width: 21,
-                        height: 21,
-                        color: iconColor,
-                      )
-                    : Icon(
-                        icon,
-                        color: is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
-                        size: 21,
-                      ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: AuthorStyle.primary_text(is_dark),
-                        fontSize: 17,
-                        fontWeight: WorkEditorStyle.section_title_weight,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: AuthorStyle.secondary_text(is_dark),
-                        fontSize: 12,
-                        height: 1.45,
-                        fontWeight: AuthorStyle.body_weight,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: InterestPreferenceStyle.titleFontSize,
+              fontWeight: InterestPreferenceStyle.titleFontWeight,
+              color: AuthorStyle.primary_text(is_dark),
+              height: 1.3,
+            ),
           ),
-          const SizedBox(height: 20),
-          child,
+          const SizedBox(height: InterestPreferenceStyle.titleBottomSpacing),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: InterestPreferenceStyle.subtitleFontSize,
+              fontWeight: InterestPreferenceStyle.subtitleFontWeight,
+              color: AuthorStyle.secondary_text(is_dark),
+              height: 1.4,
+            ),
+          ),
         ],
       ),
     );

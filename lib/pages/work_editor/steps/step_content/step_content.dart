@@ -101,7 +101,6 @@ class StepContent extends StatelessWidget {
                 ? 'creator_center.content_long_subtitle'
                 : 'creator_center.content_short_subtitle',
           ),
-          iconSvgName: 'signature',
           is_dark: is_dark,
           child: is_long
               ? LongContentEditor(

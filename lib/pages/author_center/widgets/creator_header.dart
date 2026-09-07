@@ -2,6 +2,7 @@
 
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
+import 'package:app/pages/author_center/widgets/nickname_badge.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -54,6 +55,12 @@ class CreatorHeaderOverlay extends StatelessWidget {
   /// 是否有本地草稿。
   final bool has_draft;
 
+  /// 用户头像 URL（为空时使用随机默认头像）。
+  final String? avatar_url;
+
+  /// 随机头像索引（0-9）。
+  final int random_avatar_index;
+
   const CreatorHeaderOverlay({
     super.key,
     required this.tab_controller,
@@ -69,6 +76,8 @@ class CreatorHeaderOverlay extends StatelessWidget {
     required this.on_continue_writing,
     required this.on_open_guide,
     this.has_draft = false,
+    this.avatar_url,
+    this.random_avatar_index = 0,
   });
 
   /// 测量文本在给定宽度下的实际行数。
@@ -160,6 +169,8 @@ class CreatorHeaderOverlay extends StatelessWidget {
                 on_continue_writing: on_continue_writing,
                 on_open_guide: on_open_guide,
                 has_draft: has_draft,
+                avatar_url: avatar_url,
+                random_avatar_index: random_avatar_index,
               ),
             ),
             Positioned(
@@ -253,6 +264,8 @@ class _CreatorFlexibleHeader extends StatelessWidget {
   final VoidCallback on_continue_writing;
   final VoidCallback on_open_guide;
   final bool has_draft;
+  final String? avatar_url;
+  final int random_avatar_index;
 
   const _CreatorFlexibleHeader({
     required this.expanded_height,
@@ -267,6 +280,8 @@ class _CreatorFlexibleHeader extends StatelessWidget {
     required this.on_continue_writing,
     required this.on_open_guide,
     this.has_draft = false,
+    this.avatar_url,
+    this.random_avatar_index = 0,
   });
 
   @override
@@ -410,18 +425,14 @@ class _CreatorFlexibleHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    easy.tr('creator_center.title'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AuthorStyle.primary_text(is_dark),
-                      fontSize: is_cjk ? 19 : 17,
-                      fontWeight: AuthorStyle.title_weight,
-                    ),
-                  ),
+                NicknameBadge(
+                  nickname: author_name,
+                  is_dark: is_dark,
+                  is_cjk: is_cjk,
+                  avatar_url: avatar_url,
+                  random_avatar_index: random_avatar_index,
                 ),
+                const Spacer(),
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: on_open_guide,
@@ -441,28 +452,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
             ),
           ),
 
-          /// 认证标签 + 问候语。
-          Row(
-            children: <Widget>[
-              _build_verified_badge(),
-              const SizedBox(width: 9),
-              Flexible(
-                child: Text(
-                  easy.tr(
-                    'creator_center.greeting',
-                    namedArgs: <String, String>{'name': author_name},
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AuthorStyle.secondary_text(is_dark),
-                    fontSize: is_cjk ? 12 : 11,
-                    fontWeight: AuthorStyle.body_weight,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          /// 用户昵称标签 + 问候语。
           const SizedBox(height: 8),
 
           /// 主标题。
@@ -494,7 +484,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
               fontWeight: AuthorStyle.body_weight,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 20),
 
           /// 统计卡片：作品、收藏、评论。
           Row(
@@ -524,7 +514,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 18),
 
           /// 操作按钮：创建作品、继续写作（有草稿时显示）。
           Row(
@@ -581,30 +571,14 @@ class _CreatorFlexibleHeader extends StatelessWidget {
                 on_tap: on_back,
               ),
               const SizedBox(width: 10),
-              Expanded(
-                child: Row(
-                  children: <Widget>[
-                    Flexible(
-                      child: Text(
-                        easy.tr('creator_center.title'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AuthorStyle.primary_text(is_dark),
-                          fontSize: is_cjk ? 18 : 16.5,
-                          fontWeight: AuthorStyle.title_weight,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Icon(
-                      Icons.verified_rounded,
-                      size: 15,
-                      color: is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
-                    ),
-                  ],
+              NicknameBadge(
+                  nickname: author_name,
+                  is_dark: is_dark,
+                  is_cjk: is_cjk,
+                  avatar_url: avatar_url,
+                  random_avatar_index: random_avatar_index,
                 ),
-              ),
+              const Spacer(),
               _HeaderIconButton(
                 icon: Icons.help_outline_rounded,
                 tooltip: easy.tr('creator_center.creator_guide'),
@@ -660,11 +634,13 @@ class _CreatorFlexibleHeader extends StatelessWidget {
     required String label,
     required Color accent_color,
   }) {
-    final Color start_color =
-        accent_color.withValues(alpha: is_dark ? 0.10 : 0.08);
+    /// 根据强调色计算渐变起止色（与 user_info 页面一致）。
+    final Color start_color = is_dark
+        ? _dark_gradient_start(accent_color)
+        : _light_gradient_start(accent_color);
     final Color end_color = is_dark
-        ? AuthorStyle.dark_surface.withValues(alpha: 0.6)
-        : Colors.white.withValues(alpha: 0.9);
+        ? _dark_gradient_end(accent_color)
+        : _light_gradient_end(accent_color);
 
     return Container(
       height: AuthorStyle.metric_strip_height,
@@ -732,6 +708,34 @@ class _CreatorFlexibleHeader extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// TODO 日间模式渐变起始色（浅色调）。
+  static Color _light_gradient_start(Color accent) {
+    if (accent == AuthorStyle.blue) return const Color(0xFFF2F7FF);
+    if (accent == AuthorStyle.gold) return const Color(0xFFFFF4D3);
+    return const Color(0xFFFFF0F0);
+  }
+
+  /// TODO 日间模式渐变结束色（接近白色）。
+  static Color _light_gradient_end(Color accent) {
+    if (accent == AuthorStyle.blue) return const Color(0xFFFBFDFF);
+    if (accent == AuthorStyle.gold) return const Color(0xFFFFFCF0);
+    return const Color(0xFFFFF8F8);
+  }
+
+  /// TODO 夜间模式渐变起始色（深色调）。
+  static Color _dark_gradient_start(Color accent) {
+    if (accent == AuthorStyle.blue) return const Color(0xFF18222F);
+    if (accent == AuthorStyle.gold) return const Color(0xFF262113);
+    return const Color(0xFF261515);
+  }
+
+  /// TODO 夜间模式渐变结束色（更深色调）。
+  static Color _dark_gradient_end(Color accent) {
+    if (accent == AuthorStyle.blue) return const Color(0xFF101721);
+    if (accent == AuthorStyle.gold) return const Color(0xFF17140E);
+    return const Color(0xFF171010);
   }
 }
 

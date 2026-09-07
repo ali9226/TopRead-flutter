@@ -5,6 +5,7 @@ import 'package:app/common_style/selection_chip/style.dart';
 import 'package:app/models/preference.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/interest_preference/style.dart';
+import 'package:app/pages/work_editor/widgets/editor_section_card.dart';
 import 'package:app/pages/work_editor/widgets/step_utils.dart';
 import 'package:app/stores/preference_store.dart';
 import 'package:app/util/language_util/index.dart';
@@ -46,40 +47,16 @@ class StepCategory extends StatelessWidget {
     return StepUtils.build_step_scroll_view(
       context: context,
       children: <Widget>[
-        _build_title_section(),
-        ..._build_preference_sections(preferences),
+        EditorSectionCard(
+          title: easy.tr('creator_center.category_step_title'),
+          subtitle: easy.tr('creator_center.category_step_subtitle'),
+          is_dark: is_dark,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _build_preference_sections(preferences),
+          ),
+        ),
       ],
-    );
-  }
-
-  /// TODO 构建标题区域。
-  Widget _build_title_section() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            easy.tr('creator_center.category_step_title'),
-            style: TextStyle(
-              fontSize: InterestPreferenceStyle.titleFontSize,
-              fontWeight: InterestPreferenceStyle.titleFontWeight,
-              color: AuthorStyle.primary_text(is_dark),
-              height: 1.3,
-            ),
-          ),
-          const SizedBox(height: InterestPreferenceStyle.titleBottomSpacing),
-          Text(
-            easy.tr('creator_center.category_step_subtitle'),
-            style: TextStyle(
-              fontSize: InterestPreferenceStyle.subtitleFontSize,
-              fontWeight: InterestPreferenceStyle.subtitleFontWeight,
-              color: AuthorStyle.secondary_text(is_dark),
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -93,6 +70,9 @@ class StepCategory extends StatelessWidget {
       final String display_title = _get_display_title(pref);
       final bool force_single = _is_force_single(pref);
 
+      /// 第一个区块间距10px，其余20px。
+      sections.add(SizedBox(height: i == 0 ? 10 : 20));
+
       sections.add(
         _build_preference_section(
           preference: pref,
@@ -100,12 +80,6 @@ class StepCategory extends StatelessWidget {
           force_single: force_single,
         ),
       );
-
-      if (i < preferences.length - 1) {
-        sections.add(
-          const SizedBox(height: 2),
-        );
-      }
     }
     return sections;
   }

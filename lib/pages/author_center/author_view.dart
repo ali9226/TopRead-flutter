@@ -6,6 +6,7 @@ import 'package:app/pages/author_center/chapter_editor/index.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/author_center/widgets/creator_header.dart';
 import 'package:app/pages/author_center/widgets/creator_work_tab.dart';
+import 'package:app/pages/author_center/widgets/nickname_badge.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/creator_draft_storage.dart';
@@ -110,8 +111,12 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   /// 是否有本地草稿。
   bool _has_draft = false;
 
+  /// 随机头像索引（0-9）。
+  late final int _random_avatar_index;
+
   @override
   void initState() {
+    _random_avatar_index = NicknameBadge.generate_random_index();
     super.initState();
     _works = kDebugMode ? _build_demo_works() : <CreatorWorkDraft>[];
 
@@ -424,6 +429,8 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                     on_continue_writing: _continue_latest_draft,
                     on_open_guide: () => _show_creator_guide(is_dark),
                     has_draft: _has_draft,
+                    avatar_url: _user_information.userInfo.value?.avatarUrl,
+                    random_avatar_index: _random_avatar_index,
                   );
                 },
               ),
