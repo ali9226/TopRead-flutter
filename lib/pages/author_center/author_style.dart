@@ -117,13 +117,13 @@ class AuthorStyle {
   static const double tab_font_size_cjk = 15;
 
   /// 非 CJK Tab 字号。
-  static const double tab_font_size_alphabetic = 13;
+  static const double tab_font_size_alphabetic = 15;
 
   /// CJK Tab 选中时的文字缩放比例。
   static const double tab_selected_scale_cjk = 1.3;
 
   /// 非 CJK Tab 选中时的文字缩放比例。
-  static const double tab_selected_scale_alphabetic = 1.15;
+  static const double tab_selected_scale_alphabetic = 1.5;
 
   /// 滚动距离比较容差。
   static const double scroll_extent_tolerance = 0.5;

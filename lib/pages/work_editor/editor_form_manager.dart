@@ -46,11 +46,17 @@ mixin WorkEditorFormMixin {
   /// 通知状态变更的回调。
   void Function(void Function()) get notifyStateChanged;
 
+  /// 兼容偏好配置暂未加载或旧稿未保存偏好的情况。
+  CreatorWorkType get fallback_work_type => CreatorWorkType.short;
+
   /// 当前选择的篇幅类型（从偏好 map 推导）。
   CreatorWorkType get work_type {
-    final int? pref_id = find_preference_group_by_item_id(WorkEditorStyle.long_work_id);
-    if (pref_id == null) return CreatorWorkType.short;
+    final int? pref_id = find_preference_group_by_item_id(
+      WorkEditorStyle.long_work_id,
+    );
+    if (pref_id == null) return fallback_work_type;
     final Set<int> selected = selected_preference_map[pref_id] ?? <int>{};
+    if (selected.isEmpty) return fallback_work_type;
     return selected.contains(WorkEditorStyle.long_work_id)
         ? CreatorWorkType.long
         : CreatorWorkType.short;
@@ -58,7 +64,8 @@ mixin WorkEditorFormMixin {
 
   /// 当前选择的分类 id（从偏好 map 中提取）。
   Set<int> get selected_category_ids {
-    return selected_preference_map[WorkEditorStyle.preference_category_id] ?? <int>{};
+    return selected_preference_map[WorkEditorStyle.preference_category_id] ??
+        <int>{};
   }
 
   /// 根据选项 ID 查找其所属偏好分组 ID。
@@ -84,7 +91,8 @@ mixin WorkEditorFormMixin {
       final String title = pref.title;
       if (title.contains('完结') || title.toLowerCase().contains('complet')) {
         for (final PreferenceItem item in pref.data_list) {
-          if (item.title.contains('连载') || item.title.toLowerCase().contains('serial')) {
+          if (item.title.contains('连载') ||
+              item.title.toLowerCase().contains('serial')) {
             selected_preference_map[pref.id] = <int>{item.id};
             return;
           }
@@ -120,11 +128,13 @@ mixin WorkEditorFormMixin {
     final CreatorWorkType old_type = work_type;
 
     notifyStateChanged(() {
-      final Set<int> current = selected_preference_map[preference_id] ?? <int>{};
+      final Set<int> current =
+          selected_preference_map[preference_id] ?? <int>{};
       final PreferenceStore store = Get.find<PreferenceStore>();
       final Preference? pref = store.find_preference_by_id(preference_id);
-      final bool is_single =
-          pref != null ? is_force_single_preference(pref) || pref.is_single_select : true;
+      final bool is_single = pref != null
+          ? is_force_single_preference(pref) || pref.is_single_select
+          : true;
 
       if (is_single) {
         if (!current.contains(item_id)) {
@@ -148,7 +158,10 @@ mixin WorkEditorFormMixin {
   }
 
   /// 切换篇幅类型时同步正文内容。
-  void sync_content_between_modes(CreatorWorkType from_type, CreatorWorkType to_type) {
+  void sync_content_between_modes(
+    CreatorWorkType from_type,
+    CreatorWorkType to_type,
+  ) {
     final String short_content = short_content_controller.text;
     final String chapter_content = chapter_content_controller.text;
 
@@ -156,7 +169,8 @@ mixin WorkEditorFormMixin {
       if (chapter_content.isEmpty && short_content.isNotEmpty) {
         chapter_content_controller.text = short_content;
       }
-    } else if (from_type == CreatorWorkType.long && to_type == CreatorWorkType.short) {
+    } else if (from_type == CreatorWorkType.long &&
+        to_type == CreatorWorkType.short) {
       if (short_content.isEmpty && chapter_content.isNotEmpty) {
         short_content_controller.text = chapter_content;
       }
@@ -197,6 +211,23 @@ mixin WorkEditorFormMixin {
     }
   }
 
+  /// 把输入中的完整章节移入列表，并清空输入，失败重试时不会重复添加。
+  bool commit_current_chapter() {
+    final String title = chapter_title_controller.text.trim();
+    final String content = chapter_content_controller.text;
+    if (title.isEmpty || content.trim().isEmpty) return false;
+    final now = DateTime.now();
+    chapters.add(CreatorChapterDraft(
+      local_id: 'chapter_${now.microsecondsSinceEpoch}',
+      title: title,
+      content: content,
+      update_time: now,
+    ));
+    chapter_title_controller.clear();
+    chapter_content_controller.clear();
+    return true;
+  }
+
   /// 构造要返回给创作者中心的本地作品模型。
   CreatorWorkDraft build_work(
     CreatorWorkStatus status, {
@@ -219,13 +250,17 @@ mixin WorkEditorFormMixin {
       is_completed: false,
       language_code: language_code,
       category_ids: selected_category_ids.toList(growable: false),
-      short_content: work_type == CreatorWorkType.short ? short_content_controller.text.trim() : '',
+      short_content: work_type == CreatorWorkType.short
+          ? short_content_controller.text
+          : '',
       chapters: work_type == CreatorWorkType.long
           ? List<CreatorChapterDraft>.unmodifiable(chapters)
           : const <CreatorChapterDraft>[],
       status: status,
       release_mode: release_mode,
-      scheduled_publish_time: release_mode == CreatorReleaseMode.scheduled ? scheduled_publish_time : null,
+      scheduled_publish_time: release_mode == CreatorReleaseMode.scheduled
+          ? scheduled_publish_time
+          : null,
       update_time: now,
       is_demo: false,
       cover_url: cover_url,
@@ -233,7 +268,7 @@ mixin WorkEditorFormMixin {
       preferences: prefs,
       rights_confirmed: rights_confirmed,
       chapter_title: chapter_title_controller.text.trim(),
-      chapter_content: chapter_content_controller.text.trim(),
+      chapter_content: chapter_content_controller.text,
     );
   }
 }

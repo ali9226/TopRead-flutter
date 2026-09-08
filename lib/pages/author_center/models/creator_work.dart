@@ -103,7 +103,7 @@ class CreatorChapterDraft {
 
 /// TODO 创作者作品的本地 UI 草稿模型。
 ///
-/// 当前阶段不接后端，页面通过该模型完成新增、编辑、筛选和状态预览。
+/// 编辑器通过该模型恢复服务端草稿，并在保存或提交后返回最新状态。
 class CreatorWorkDraft {
   /// TODO 本地稳定标识。
   final String local_id;
@@ -116,6 +116,9 @@ class CreatorWorkDraft {
 
   /// 后端语种版本ID（已保存到后端时有值）。
   final int? novel_language_id;
+
+  /// 原始语种 ID，按服务端配置保存。
+  final int? language_id;
 
   /// 乐观锁版本号。
   final int? lock_version;
@@ -183,6 +186,7 @@ class CreatorWorkDraft {
     this.revision_id,
     this.novel_language_id,
     this.lock_version,
+    this.language_id,
     required this.title,
     required this.introduction,
     required this.work_type,
@@ -245,6 +249,7 @@ class CreatorWorkDraft {
     int? revision_id,
     int? novel_language_id,
     int? lock_version,
+    int? language_id,
   }) {
     return CreatorWorkDraft(
       local_id: local_id,
@@ -252,6 +257,7 @@ class CreatorWorkDraft {
       revision_id: revision_id ?? this.revision_id,
       novel_language_id: novel_language_id ?? this.novel_language_id,
       lock_version: lock_version ?? this.lock_version,
+      language_id: language_id ?? this.language_id,
       title: title ?? this.title,
       introduction: introduction ?? this.introduction,
       work_type: work_type ?? this.work_type,
@@ -284,6 +290,7 @@ class CreatorWorkDraft {
       'revision_id': revision_id,
       'novel_language_id': novel_language_id,
       'lock_version': lock_version,
+      'language_id': language_id,
       'title': title,
       'introduction': introduction,
       'work_type': work_type.index,
@@ -291,9 +298,7 @@ class CreatorWorkDraft {
       'language_code': language_code,
       'category_ids': category_ids,
       'short_content': short_content,
-      'chapters': chapters
-          .map((CreatorChapterDraft c) => c.to_json())
-          .toList(),
+      'chapters': chapters.map((CreatorChapterDraft c) => c.to_json()).toList(),
       'status': status.index,
       'release_mode': release_mode.index,
       'scheduled_publish_time': scheduled_publish_time?.millisecondsSinceEpoch,
@@ -301,9 +306,7 @@ class CreatorWorkDraft {
       'is_demo': is_demo,
       'cover_url': cover_url,
       'saved_step': saved_step,
-      'preferences': preferences.map(
-        (key, value) => MapEntry(key, value),
-      ),
+      'preferences': preferences.map((key, value) => MapEntry(key, value)),
       'rights_confirmed': rights_confirmed,
       'chapter_title': chapter_title,
       'chapter_content': chapter_content,
@@ -316,54 +319,63 @@ class CreatorWorkDraft {
       local_id: json['local_id']?.toString() ?? '',
       novel_id: json['novel_id'] != null
           ? (json['novel_id'] is int
-              ? json['novel_id']
-              : int.tryParse(json['novel_id'].toString()))
+                ? json['novel_id']
+                : int.tryParse(json['novel_id'].toString()))
           : null,
       revision_id: json['revision_id'] != null
           ? (json['revision_id'] is int
-              ? json['revision_id']
-              : int.tryParse(json['revision_id'].toString()))
+                ? json['revision_id']
+                : int.tryParse(json['revision_id'].toString()))
           : null,
       novel_language_id: json['novel_language_id'] != null
           ? (json['novel_language_id'] is int
-              ? json['novel_language_id']
-              : int.tryParse(json['novel_language_id'].toString()))
+                ? json['novel_language_id']
+                : int.tryParse(json['novel_language_id'].toString()))
           : null,
       lock_version: json['lock_version'] != null
           ? (json['lock_version'] is int
-              ? json['lock_version']
-              : int.tryParse(json['lock_version'].toString()))
+                ? json['lock_version']
+                : int.tryParse(json['lock_version'].toString()))
           : null,
+      language_id: int.tryParse(json['language_id']?.toString() ?? ''),
       title: json['title']?.toString() ?? '',
       introduction: json['introduction']?.toString() ?? '',
-      work_type: CreatorWorkType.values[json['work_type'] is int
-          ? json['work_type']
-          : int.tryParse(json['work_type']?.toString() ?? '0') ?? 0],
+      work_type:
+          CreatorWorkType.values[json['work_type'] is int
+              ? json['work_type']
+              : int.tryParse(json['work_type']?.toString() ?? '0') ?? 0],
       is_completed: json['is_completed'] == true,
       language_code: json['language_code']?.toString() ?? 'zh',
-      category_ids: (json['category_ids'] as List<dynamic>?)
+      category_ids:
+          (json['category_ids'] as List<dynamic>?)
               ?.map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0)
               .toList() ??
           <int>[],
       short_content: json['short_content']?.toString() ?? '',
-      chapters: (json['chapters'] as List<dynamic>?)
-              ?.map((e) => CreatorChapterDraft.from_json(
-                  e is Map<String, dynamic> ? e : <String, dynamic>{}))
+      chapters:
+          (json['chapters'] as List<dynamic>?)
+              ?.map(
+                (e) => CreatorChapterDraft.from_json(
+                  e is Map<String, dynamic> ? e : <String, dynamic>{},
+                ),
+              )
               .toList() ??
           <CreatorChapterDraft>[],
-      status: CreatorWorkStatus.values[json['status'] is int
-          ? json['status']
-          : int.tryParse(json['status']?.toString() ?? '0') ?? 0],
-      release_mode: CreatorReleaseMode.values[json['release_mode'] is int
-          ? json['release_mode']
-          : int.tryParse(json['release_mode']?.toString() ?? '0') ?? 0],
+      status:
+          CreatorWorkStatus.values[json['status'] is int
+              ? json['status']
+              : int.tryParse(json['status']?.toString() ?? '0') ?? 0],
+      release_mode:
+          CreatorReleaseMode.values[json['release_mode'] is int
+              ? json['release_mode']
+              : int.tryParse(json['release_mode']?.toString() ?? '0') ?? 0],
       scheduled_publish_time: json['scheduled_publish_time'] != null
           ? DateTime.fromMillisecondsSinceEpoch(
               json['scheduled_publish_time'] is int
                   ? json['scheduled_publish_time']
-                  : int.tryParse(
-                          json['scheduled_publish_time'].toString()) ??
-                      0)
+                  : int.tryParse(json['scheduled_publish_time'].toString()) ??
+                        0,
+            )
           : null,
       update_time: DateTime.fromMillisecondsSinceEpoch(
         json['update_time'] is int

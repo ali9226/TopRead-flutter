@@ -375,6 +375,21 @@ class CreatorLogic {
     }
   }
 
+  /// 删除作品
+  static Future<bool> deleteWork(int novelId) async {
+    try {
+      final result = await CreatorWorkApi.deleteWork(novelId: novelId);
+      if (result.status) {
+        return true;
+      }
+      logUtil(msg: '删除作品失败: ${result.message}', type: 'e');
+      return false;
+    } catch (e) {
+      logUtil(msg: '删除作品异常: $e', type: 'e');
+      return false;
+    }
+  }
+
   /// TODO 作者投稿可选分类所在的分组 id。
   ///
   /// 对应 `novel_preference_type` 中 label 为「内容偏好」的分组，

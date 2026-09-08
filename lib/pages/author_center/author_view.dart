@@ -1,20 +1,22 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
-import 'dart:convert';
-
+import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/logic.dart';
-import 'package:app/pages/author_center/chapter_editor/index.dart';
+import 'package:app/pages/author_center/creator_tab_state.dart';
+import 'package:app/pages/author_center/models/creator_backend_models.dart';
+import 'package:app/pages/work_editor/backend_draft_loader.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/author_center/widgets/creator_header.dart';
 import 'package:app/pages/author_center/widgets/creator_work_tab.dart';
 import 'package:app/pages/author_center/widgets/nickname_badge.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
+import 'package:app/util/dialog/show_bottom_tip.dart';
+import 'package:app/util/dialog/show_message.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/router/router_back.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
-import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -65,7 +67,8 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   final DeviceInfo _device_info = Get.find<DeviceInfo>();
   final UserInformation _user_information = Get.find<UserInformation>();
 
-  late List<CreatorWorkDraft> _works;
+  late final List<CreatorTabState> _tabs;
+  bool _opening_work = false;
   late TabController _tab_controller;
 
   /// Dashboard统计数据
@@ -107,9 +110,9 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   late double _header_min_extent;
 
   /// 创作中心固定状态 Tab 数量。
-  static const int _tab_count = 6;
+  static const int _tab_count = 3;
 
-  /// 是否有本地草稿。
+  /// 是否有服务器上可继续编辑的草稿。
   bool _has_draft = false;
 
   /// 随机头像索引（0-9）。
@@ -119,10 +122,23 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   void initState() {
     _random_avatar_index = NicknameBadge.generate_random_index();
     super.initState();
-    _works = kDebugMode ? _build_demo_works() : <CreatorWorkDraft>[];
-
-    /// 加载本地草稿。
-    _load_local_drafts();
+    _tabs = [
+      CreatorTabState(
+        loadPage: (page) =>
+            CreatorLogic.getMyWorks(publicStatus: 2, page: page),
+      ),
+      CreatorTabState(
+        loadPage: (page) =>
+            CreatorLogic.getMyWorks(initialAuditStatus: 2, page: page),
+      ),
+      CreatorTabState(
+        loadPage: (page) => CreatorLogic.getDraftList(page: page),
+        isDraftList: true,
+      ),
+    ];
+    for (final tab in _tabs) {
+      tab.addListener(_on_data_changed);
+    }
     _tab_controller = TabController(length: _tab_count, vsync: this);
     _tab_scroll_controllers = List<_CreatorTabScrollController>.generate(
       _tab_count,
@@ -145,7 +161,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     _tab_controller.addListener(_on_tab_index_changed);
 
     // TODO 加载Dashboard统计数据
-    _load_dashboard_data();
+    _reload_all();
   }
 
   /// 加载Dashboard统计数据
@@ -154,9 +170,9 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       final result = await CreatorLogic.getDashboard();
       if (result != null && mounted) {
         setState(() {
-          _total_works = result['total_works'] ?? 0;
-          _total_favorites = result['total_favorites'] ?? 0;
-          _total_comments = result['total_comments'] ?? 0;
+          _total_works = int.tryParse('${result['total_works']}') ?? 0;
+          _total_favorites = int.tryParse('${result['total_favorites']}') ?? 0;
+          _total_comments = int.tryParse('${result['total_comments']}') ?? 0;
         });
       }
     } catch (e) {
@@ -164,23 +180,26 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     }
   }
 
-  /// 检查后端是否有草稿。
-  Future<void> _load_local_drafts() async {
-    try {
-      // 使用专用的草稿列表接口检查是否有草稿
-      final result = await CreatorLogic.getDraftList(page: 1, pageSize: 1);
+  void _on_data_changed() {
+    if (!mounted) return;
+    setState(() {
+      _has_draft = _tabs[2].works.isNotEmpty;
+    });
+  }
 
-      if (!mounted) return;
+  Future<void> _reload_all() async {
+    await Future.wait([
+      ..._tabs.map((tab) => tab.refresh()),
+      _load_dashboard_data(),
+    ]);
+  }
 
-      final hasDrafts = result != null &&
-          (result['list'] as List? ?? []).isNotEmpty;
-
-      setState(() {
-        _has_draft = hasDrafts;
-      });
-    } catch (e) {
-      debugPrint('检查后端草稿失败: $e');
-    }
+  Future<void> _refresh_tab(int index) async {
+    await Future.wait([
+      _tabs[index].refresh(),
+      _load_dashboard_data(),
+      if (index != 2) _tabs[2].refresh(),
+    ]);
   }
 
   /// 测量文本在给定宽度下的实际行数。
@@ -200,18 +219,23 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final double status_bar = MediaQuery.paddingOf(context).top;
-    _header_min_extent = status_bar +
+    _header_min_extent =
+        status_bar +
         AuthorStyle.header_toolbar_height +
         AuthorStyle.header_tab_bar_height;
 
     // 测量标题和副标题行数，动态计算高度。
     // 基础360 = 单行标题 + 2行副标题。
     // 标题每多一行 +30，副标题超过2行每多一行 +15。
-    final bool is_cjk = LanguageUtil.is_cjk_language(context.locale.languageCode);
+    final bool is_cjk = LanguageUtil.is_cjk_language(
+      context.locale.languageCode,
+    );
     final String title_text = easy.tr('creator_center.hero_title');
     final String subtitle_text = easy.tr('creator_center.hero_subtitle');
     final TextStyle title_style = TextStyle(
-      fontSize: is_cjk ? AuthorStyle.hero_title_size_cjk : AuthorStyle.hero_title_size_alphabetic,
+      fontSize: is_cjk
+          ? AuthorStyle.hero_title_size_cjk
+          : AuthorStyle.hero_title_size_alphabetic,
       height: is_cjk ? 1.24 : 1.28,
       fontWeight: AuthorStyle.title_weight,
       letterSpacing: is_cjk ? 0.2 : -0.2,
@@ -221,20 +245,36 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       height: is_cjk ? 1.42 : 1.48,
       fontWeight: AuthorStyle.body_weight,
     );
-    final double content_width = MediaQuery.sizeOf(context).width -
+    final double content_width =
+        MediaQuery.sizeOf(context).width -
         AuthorStyle.header_content_padding * 2;
-    final int title_lines = _measure_line_count(title_text, title_style, content_width);
-    final int subtitle_lines = _measure_line_count(subtitle_text, subtitle_style, content_width);
+    final int title_lines = _measure_line_count(
+      title_text,
+      title_style,
+      content_width,
+    );
+    final int subtitle_lines = _measure_line_count(
+      subtitle_text,
+      subtitle_style,
+      content_width,
+    );
     final int title_extra = title_lines - 1;
     final int subtitle_extra = subtitle_lines - 2;
-    _header_max_extent = status_bar + 360 + title_extra * 30 + subtitle_extra * 15;
+    _header_max_extent =
+        status_bar + 360 + title_extra * 30 + subtitle_extra * 15;
     _header_collapse_range = _header_max_extent - _header_min_extent;
 
-    debugPrint('[AuthorView] title_lines=$title_lines, title_extra=$title_extra, subtitle_lines=$subtitle_lines, subtitle_extra=$subtitle_extra, _header_max_extent=$_header_max_extent');
+    debugPrint(
+      '[AuthorView] title_lines=$title_lines, title_extra=$title_extra, subtitle_lines=$subtitle_lines, subtitle_extra=$subtitle_extra, _header_max_extent=$_header_max_extent',
+    );
   }
 
   @override
   void dispose() {
+    for (final tab in _tabs) {
+      tab.removeListener(_on_data_changed);
+      tab.dispose();
+    }
     _tab_controller.removeListener(_on_tab_index_changed);
     for (final ScrollController controller in _tab_scroll_controllers) {
       controller.dispose();
@@ -245,293 +285,190 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  CreatorWorkStatus? _status_for_tab(int index) {
-    const List<CreatorWorkStatus?> statuses = <CreatorWorkStatus?>[
-      null,
-      CreatorWorkStatus.draft,
-      CreatorWorkStatus.reviewing,
-      CreatorWorkStatus.scheduled,
-      CreatorWorkStatus.published,
-      CreatorWorkStatus.rejected,
-    ];
-    return statuses[index];
-  }
-
-  List<CreatorWorkDraft> _filtered_works(int tab_index) {
-    final CreatorWorkStatus? status = _status_for_tab(tab_index);
-    if (status == null) return List<CreatorWorkDraft>.unmodifiable(_works);
-    return _works
-        .where((CreatorWorkDraft work) => work.status == status)
-        .toList(growable: false);
-  }
-
   Future<void> _create_work() async {
-    final CreatorWorkDraft? result =
-        await context.push<CreatorWorkDraft>('/work_editor');
-    if (result == null || !mounted) return;
-    setState(() {
-      _works.insert(0, result);
-      _has_draft =
-          _works.any((w) => w.status == CreatorWorkStatus.draft);
-    });
-  }
-
-  Future<void> _edit_work(CreatorWorkDraft work) async {
-    final CreatorWorkDraft? result =
-        await context.push<CreatorWorkDraft>('/work_editor', extra: work);
-    if (result == null || !mounted) return;
-
-    final int index = _works.indexWhere(
-      (CreatorWorkDraft item) => item.local_id == work.local_id,
-    );
-
-    setState(() {
-      if (index >= 0) {
-        _works[index] = result;
-      } else {
-        _works.insert(0, result);
-      }
-      /// 刷新草稿状态。
-      _has_draft =
-          _works.any((w) => w.status == CreatorWorkStatus.draft);
-    });
-  }
-
-  Future<void> _continue_writing(CreatorWorkDraft work) async {
-    if (work.work_type == CreatorWorkType.short) {
-      await _edit_work(work);
-      return;
+    if (_opening_work) return;
+    _opening_work = true;
+    try {
+      final result = await context.push<CreatorWorkDraft>('/work_editor');
+      if (!mounted) return;
+      _select_result_tab(result);
+      await _reload_all();
+    } finally {
+      _opening_work = false;
     }
-    final CreatorChapterDraft? chapter = await Navigator.of(context)
-        .push<CreatorChapterDraft>(
-          MaterialPageRoute<CreatorChapterDraft>(
-            builder: (BuildContext context) =>
-                ChapterEditorPage(chapter_number: work.chapters.length + 1),
-          ),
-        );
-    if (chapter == null || !mounted) return;
-    final int index = _works.indexWhere(
-      (CreatorWorkDraft item) => item.local_id == work.local_id,
+  }
+
+  void _select_result_tab(CreatorWorkDraft? result) {
+    if (result == null) return;
+    _tab_controller.animateTo(
+      result.status == CreatorWorkStatus.reviewing ? 1 : 2,
     );
-    if (index < 0) return;
-    setState(() {
-      _works[index] = work.copy_with(
-        chapters: <CreatorChapterDraft>[...work.chapters, chapter],
-        status: CreatorWorkStatus.draft,
-        update_time: DateTime.now(),
-        is_demo: false,
+  }
+
+  Future<void> _open_work(CreatorWorkModel work) async {
+    if (work.is_draft || work.is_rejected) {
+      await _open_draft(work.id);
+    } else if (work.is_published) {
+      final location = work.is_short_novel
+          ? '/short_story_read?id=${work.id}'
+          : '/read?id=${work.id}&title=${Uri.encodeComponent(work.title)}';
+      await context.push<void>(location);
+      if (mounted) await _reload_all();
+    } else {
+      await _show_review_status(work);
+    }
+  }
+
+  Future<void> _open_draft(int novelId) async {
+    if (_opening_work) return;
+    _opening_work = true;
+    try {
+      // 列表只提供摘要；进入编辑器前必须从服务端取回完整正文和章节。
+      final draft = await loadCreatorWorkDraft(novelId);
+      if (!mounted) return;
+      final result = await context.push<CreatorWorkDraft>(
+        '/work_editor',
+        extra: draft,
       );
-    });
+      if (!mounted) return;
+      _select_result_tab(result);
+      await _reload_all();
+    } catch (_) {
+      _show_error('草稿读取失败或已提交审核，请刷新后重试');
+      if (mounted) await _reload_all();
+    } finally {
+      _opening_work = false;
+    }
   }
 
   Future<void> _continue_latest_draft() async {
+    if (_opening_work) return;
+    _opening_work = true;
+    int? novelId;
     try {
-      // 使用专用的草稿列表接口
       final result = await CreatorLogic.getDraftList(page: 1, pageSize: 1);
-
-      if (result != null) {
-        final list = result['list'] as List? ?? [];
-        if (list.isNotEmpty) {
-          final draftData = list.first as Map<String, dynamic>;
-          final workDraft = _buildDraftFromBackend(draftData, null, []);
-
-          if (mounted) {
-            await _edit_work(workDraft);
-            return;
-          }
-        }
+      if (!mounted) return;
+      if (result == null) {
+        _show_error('获取最近草稿失败，请稍后重试');
+        return;
       }
-    } catch (e) {
-      debugPrint('获取后端草稿失败: $e');
+      final list = result['list'] as List? ?? [];
+      setState(() => _has_draft = list.isNotEmpty);
+      if (list.isEmpty) {
+        await _tabs[2].refresh();
+        return;
+      }
+      novelId = int.tryParse('${list.first['novel_id']}');
+      if (novelId == null) _show_error('草稿信息不完整，请刷新后重试');
+    } finally {
+      _opening_work = false;
     }
-
-    // 后端没有草稿，尝试从本地内存中查找
-    final List<CreatorWorkDraft> drafts =
-        _works
-            .where(
-              (CreatorWorkDraft work) => work.status == CreatorWorkStatus.draft,
-            )
-            .toList(growable: false)
-          ..sort(
-            (CreatorWorkDraft left, CreatorWorkDraft right) =>
-                right.update_time.compareTo(left.update_time),
-          );
-
-    if (drafts.isNotEmpty) {
-      await _edit_work(drafts.first);
-      return;
-    }
-
-    // 都没有，创建新作品
-    await _create_work();
+    if (mounted && novelId != null) await _open_draft(novelId);
   }
 
-  /// 从后端草稿数据构建 CreatorWorkDraft
-  CreatorWorkDraft _buildDraftFromBackend(
-    Map<String, dynamic> draft,
-    Map<String, dynamic>? novel,
-    List<dynamic> categories,
-  ) {
-    // 解析偏好数据
-    Map<String, List<int>> preferences = {};
-    if (draft['preferences'] != null) {
-      try {
-        dynamic raw = draft['preferences'];
-        if (raw is String) {
-          raw = jsonDecode(raw);
-        }
-        if (raw is Map) {
-          raw.forEach((key, value) {
-            if (value is List) {
-              preferences[key.toString()] =
-                  value.map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0).toList();
-            }
-          });
-        }
-      } catch (_) {}
-    }
+  void _show_error(String message) {
+    if (!mounted) return;
+    showBottomTip(message);
+  }
 
-    // 解析分类ID
-    final List<int> categoryIds = categories
-        .map((c) => _parseInt(c['category_id']))
-        .where((id) => id > 0)
-        .toList();
-
-    // 解析定时发布时间
-    DateTime? scheduledTime;
-    if (draft['scheduled_publish_time'] != null) {
-      try {
-        final timeStr = draft['scheduled_publish_time'].toString();
-        if (timeStr.contains(' ')) {
-          scheduledTime = DateTime.parse(timeStr.replaceFirst(' ', 'T'));
-        } else {
-          scheduledTime = DateTime.parse(timeStr);
-        }
-      } catch (_) {}
-    }
-
-    // 解析语言ID转语言代码
-    final int languageId = _parseInt(draft['language_id']);
-    final String languageCode = _getLanguageCode(languageId);
-
-    // 解析短篇内容（短篇使用 temp_chapter_content 存储正文）
-    final int workType = _parseInt(draft['work_type']);
-    final String shortContent = workType == 2
-        ? (draft['temp_chapter_content']?.toString() ?? '')
-        : '';
-
-    // 解析长篇临时章节内容
-    final String chapterTitle = workType == 1
-        ? (draft['temp_chapter_title']?.toString() ?? '')
-        : '';
-    final String chapterContent = workType == 1
-        ? (draft['temp_chapter_content']?.toString() ?? '')
-        : '';
-
-    return CreatorWorkDraft(
-      local_id: 'work_${draft['novel_id']}',
-      novel_id: _parseIntNullable(draft['novel_id']),
-      revision_id: _parseIntNullable(draft['id']),
-      novel_language_id: _parseIntNullable(draft['novel_language_id']),
-      lock_version: _parseIntNullable(draft['lock_version']),
-      title: draft['title']?.toString() ?? '',
-      introduction: draft['introduction']?.toString() ?? '',
-      work_type: workType == 1
-          ? CreatorWorkType.long
-          : CreatorWorkType.short,
-      is_completed: _parseInt(draft['serialization_status']) == 2,
-      language_code: languageCode,
-      category_ids: categoryIds,
-      short_content: shortContent,
-      chapters: const [],
-      status: CreatorWorkStatus.draft,
-      release_mode: _parseInt(draft['release_mode']) == 1
-          ? CreatorReleaseMode.immediate
-          : CreatorReleaseMode.scheduled,
-      scheduled_publish_time: scheduledTime,
-      update_time: DateTime.now(),
-      cover_url: draft['cover_url']?.toString(),
-      saved_step: _parseInt(draft['saved_step']),
-      preferences: preferences,
-      rights_confirmed: _parseInt(draft['rights_confirmed']) == 1,
-      chapter_title: chapterTitle,
-      chapter_content: chapterContent,
+  Future<bool> _delete_work(CreatorWorkModel work) async {
+    bool confirmed = false;
+    await showMessage(
+      message: easy.tr('creator_center.delete_confirm_message'),
+      iconData: Icons.delete_outline_rounded,
+      iconColor: ColorConstants.dangerColor,
+      leftButtonText: easy.tr('common.cancel'),
+      rightButtonText: easy.tr('creator_center.delete_work'),
+      rightButtonColor: ColorConstants.dangerColor,
+      onRightPressed: () async => confirmed = true,
     );
+    if (!confirmed || !mounted) return false;
+
+    // 乐观删除：立即返回 true 让列表播放移除动画，后台调 API
+    CreatorLogic.deleteWork(work.id).then((success) {
+      if (!mounted) return;
+      if (!success) {
+        _show_error(easy.tr('creator_center.delete_failed'));
+      }
+      _reload_all();
+    });
+
+    return true;
   }
 
-  /// 安全解析整数
-  int _parseInt(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    if (value is String) return int.tryParse(value) ?? 0;
-    if (value is double) return value.toInt();
-    return 0;
-  }
-
-  /// 安全解析可空整数
-  int? _parseIntNullable(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    if (value is String) return int.tryParse(value);
-    if (value is double) return value.toInt();
-    return null;
-  }
-
-  /// 语言ID转语言代码
-  String _getLanguageCode(int languageId) {
-    const Map<int, String> languageMap = {
-      1: 'zh',
-      2: 'en',
-      3: 'fr',
-      4: 'es',
-      5: 'ar',
-      6: 'pt',
-      7: 'id',
-      8: 'ja',
-      9: 'ko',
-      10: 'de',
-      11: 'it',
-      12: 'tr',
-      13: 'th',
-      14: 'vi',
-      15: 'ms',
-      16: 'sw',
-    };
-    return languageMap[languageId] ?? 'en';
-  }
-
-  /// 从作品列表数据构建 CreatorWorkDraft（无详细草稿数据时）
-  CreatorWorkDraft _buildDraftFromWorkData(
-    Map<String, dynamic> workData,
-    List<dynamic> categories,
-  ) {
-    final List<int> categoryIds = categories
-        .map((c) => _parseInt(c['category_id']))
-        .where((id) => id > 0)
-        .toList();
-
-    return CreatorWorkDraft(
-      local_id: 'work_${workData['id']}',
-      novel_id: _parseIntNullable(workData['id']),
-      title: workData['title']?.toString() ?? '',
-      introduction: workData['introduction']?.toString() ?? '',
-      work_type: _parseInt(workData['work_type']) == 1
-          ? CreatorWorkType.long
-          : CreatorWorkType.short,
-      is_completed: _parseInt(workData['serialization_status']) == 2,
-      language_code: 'zh',
-      category_ids: categoryIds,
-      short_content: '',
-      chapters: const [],
-      status: CreatorWorkStatus.draft,
-      release_mode: CreatorReleaseMode.immediate,
-      scheduled_publish_time: null,
-      update_time: DateTime.now(),
-      cover_url: workData['cover_url']?.toString(),
-      saved_step: 0,
-      preferences: const {},
-      rights_confirmed: false,
-    );
+  Future<void> _show_review_status(CreatorWorkModel work) async {
+    if (_opening_work) return;
+    _opening_work = true;
+    try {
+      final info = await CreatorLogic.getWorkInfo(work.id);
+      if (!mounted) return;
+      if (info == null) {
+        _show_error('审核信息加载失败，请稍后重试');
+        return;
+      }
+      final submissions = info['recent_submissions'] as List? ?? [];
+      final latest = submissions.isEmpty ? null : submissions.first as Map;
+      final status = int.tryParse('${latest?['status']}');
+      final statusText = switch (status) {
+        3 => '审核已通过',
+        4 => '审核未通过',
+        5 => '审核已撤回',
+        _ => '作品待审核',
+      };
+      final isDark = _device_info.dark.value;
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: AuthorStyle.surface(isDark),
+        showDragHandle: true,
+        builder: (context) => SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.fact_check_outlined,
+                  size: 36,
+                  color: isDark ? AuthorStyle.gold : AuthorStyle.deep_gold,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  work.title.isEmpty ? '未命名作品' : work.title,
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: AuthorStyle.primary_text(isDark),
+                    fontWeight: AuthorStyle.title_weight,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  statusText,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AuthorStyle.primary_text(isDark),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  latest?['review_note']?.toString().trim().isNotEmpty == true
+                      ? latest!['review_note'].toString()
+                      : '提交的内容已保存。审核通过并发布后，读者即可浏览这部作品。',
+                  style: TextStyle(
+                    height: 1.6,
+                    color: AuthorStyle.secondary_text(isDark),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      if (mounted) await _reload_all();
+    } finally {
+      _opening_work = false;
+    }
   }
 
   // ───────────────────────── build ─────────────────────────
@@ -549,9 +486,6 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
           _user_information.userInfo.value?.name.trim().isNotEmpty == true
           ? _user_information.userInfo.value!.name.trim()
           : easy.tr('creator_center.author_fallback_name');
-      final int works_count = kDebugMode
-          ? _works.length
-          : _works.where((CreatorWorkDraft work) => !work.is_demo).length;
 
       return Scaffold(
         backgroundColor: background,
@@ -568,16 +502,26 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                     (int tab_index) => CreatorWorkTab(
                       key: ValueKey<String>('creator_work_tab_$tab_index'),
                       tab_index: tab_index,
-                      works: _filtered_works(tab_index),
+                      works: _tabs[tab_index].works,
+                      is_loading: _tabs[tab_index].isLoading,
+                      is_loading_more: _tabs[tab_index].isLoadingMore,
+                      error_message: _tabs[tab_index].error,
+                      load_more_error: _tabs[tab_index].loadMoreError,
+                      has_more: _tabs[tab_index].hasMore,
+                      total_count: _tabs[tab_index].total,
+                      on_refresh: () => _refresh_tab(tab_index),
+                      on_load_more: _tabs[tab_index].loadMore,
                       is_dark: is_dark,
                       is_cjk: is_cjk,
                       scroll_controller: _tab_scroll_controllers[tab_index],
                       header_spacer_height: _header_max_extent,
                       minimum_header_height: _header_min_extent,
-                      minimum_scroll_extent: _header_max_extent - _header_min_extent,
+                      minimum_scroll_extent:
+                          _header_max_extent - _header_min_extent,
                       on_create_work: _create_work,
-                      on_edit_work: _edit_work,
-                      on_primary_action: _continue_writing,
+                      on_edit_work: _open_work,
+                      on_primary_action: _open_work,
+                      on_delete_work: _delete_work,
                     ),
                     growable: false,
                   ),
@@ -953,224 +897,5 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         ],
       ),
     );
-  }
-
-  // ───────────────────── demo data ─────────────────────
-
-  List<CreatorWorkDraft> _build_demo_works() {
-    final DateTime now = DateTime.now();
-
-    return <CreatorWorkDraft>[
-      CreatorWorkDraft(
-        local_id: 'demo_long_draft',
-        title: '雾海拾光',
-        introduction: '在遗忘之海寻找被时间带走的名字。',
-        work_type: CreatorWorkType.long,
-        is_completed: false,
-        language_code: 'zh',
-        category_ids: const <int>[],
-        short_content: '',
-        chapters: <CreatorChapterDraft>[
-          CreatorChapterDraft(
-            local_id: 'demo_chapter_1',
-            title: '潮汐来信',
-            content: '这是用于展示章节管理交互的本地示例正文。' * 60,
-            update_time: now.subtract(const Duration(hours: 2)),
-          ),
-          CreatorChapterDraft(
-            local_id: 'demo_chapter_2',
-            title: '没有影子的灯塔',
-            content: '雾从海面升起，灯塔却没有留下任何影子。' * 50,
-            update_time: now.subtract(const Duration(hours: 1)),
-          ),
-        ],
-        status: CreatorWorkStatus.draft,
-        release_mode: CreatorReleaseMode.immediate,
-        scheduled_publish_time: null,
-        update_time: now.subtract(const Duration(minutes: 38)),
-        is_demo: true,
-      ),
-      CreatorWorkDraft(
-        local_id: 'demo_short_reviewing',
-        title: '第七码头',
-        introduction: '末班船离港以后，码头才真正醒来。',
-        work_type: CreatorWorkType.short,
-        is_completed: true,
-        language_code: 'zh',
-        category_ids: const <int>[],
-        short_content: '用于展示短篇投稿状态的本地示例正文。' * 120,
-        chapters: const <CreatorChapterDraft>[],
-        status: CreatorWorkStatus.reviewing,
-        release_mode: CreatorReleaseMode.immediate,
-        scheduled_publish_time: null,
-        update_time: now.subtract(const Duration(days: 1)),
-        is_demo: true,
-      ),
-      CreatorWorkDraft(
-        local_id: 'demo_long_scheduled',
-        title: '星轨之外',
-        introduction: '当星图失效，真正的远方才第一次出现。',
-        work_type: CreatorWorkType.long,
-        is_completed: false,
-        language_code: 'zh',
-        category_ids: const <int>[],
-        short_content: '',
-        chapters: const <CreatorChapterDraft>[],
-        status: CreatorWorkStatus.scheduled,
-        release_mode: CreatorReleaseMode.scheduled,
-        scheduled_publish_time: now.add(const Duration(days: 2)),
-        update_time: now.subtract(const Duration(days: 3)),
-        is_demo: true,
-      ),
-      CreatorWorkDraft(
-        local_id: 'demo_short_draft_winter',
-        title: '未寄出的冬天',
-        introduction: '一封在二十年后才找到收件人的信。',
-        work_type: CreatorWorkType.short,
-        is_completed: false,
-        language_code: 'zh',
-        category_ids: const <int>[],
-        short_content: '这是用于测试草稿列表滚动的本地正文。' * 90,
-        chapters: const <CreatorChapterDraft>[],
-        status: CreatorWorkStatus.draft,
-        release_mode: CreatorReleaseMode.immediate,
-        scheduled_publish_time: null,
-        update_time: now.subtract(const Duration(hours: 5)),
-        is_demo: true,
-      ),
-      CreatorWorkDraft(
-        local_id: 'demo_long_draft_archive',
-        title: '月下档案',
-        introduction: '城市档案馆每到月圆时就会多出一份不存在的档案。',
-        work_type: CreatorWorkType.long,
-        is_completed: false,
-        language_code: 'zh',
-        category_ids: const <int>[],
-        short_content: '',
-        chapters: <CreatorChapterDraft>[
-          CreatorChapterDraft(
-            local_id: 'demo_archive_chapter_1',
-            title: '第一份档案',
-            content: '闭馆铃声响起时，书架后传来了纸页翻动的声音。' * 70,
-            update_time: now.subtract(const Duration(hours: 8)),
-          ),
-        ],
-        status: CreatorWorkStatus.draft,
-        release_mode: CreatorReleaseMode.immediate,
-        scheduled_publish_time: null,
-        update_time: now.subtract(const Duration(hours: 8)),
-        is_demo: true,
-      ),
-      CreatorWorkDraft(
-        local_id: 'demo_long_reviewing_mountain',
-        title: '山城来信',
-        introduction: '每一级台阶都通往一个被遗忘的故事。',
-        work_type: CreatorWorkType.long,
-        is_completed: true,
-        language_code: 'zh',
-        category_ids: const <int>[],
-        short_content: '',
-        chapters: <CreatorChapterDraft>[
-          CreatorChapterDraft(
-            local_id: 'demo_mountain_chapter_1',
-            title: '雨后的三百级台阶',
-            content: '雨水沿着青石板一路向下，送来很多年前的声音。' * 80,
-            update_time: now.subtract(const Duration(days: 2)),
-          ),
-        ],
-        status: CreatorWorkStatus.reviewing,
-        release_mode: CreatorReleaseMode.immediate,
-        scheduled_publish_time: null,
-        update_time: now.subtract(const Duration(days: 2)),
-        is_demo: true,
-      ),
-      CreatorWorkDraft(
-        local_id: 'demo_short_scheduled_flower',
-        title: '凌晨四点的花店',
-        introduction: '这家花店只为即将告别的人开门。',
-        work_type: CreatorWorkType.short,
-        is_completed: true,
-        language_code: 'zh',
-        category_ids: const <int>[],
-        short_content: '凌晨四点，巷口的灯第一次亮了起来。' * 100,
-        chapters: const <CreatorChapterDraft>[],
-        status: CreatorWorkStatus.scheduled,
-        release_mode: CreatorReleaseMode.scheduled,
-        scheduled_publish_time: now.add(const Duration(hours: 16)),
-        update_time: now.subtract(const Duration(hours: 12)),
-        is_demo: true,
-      ),
-      CreatorWorkDraft(
-        local_id: 'demo_short_published_galaxy',
-        title: '纸上银河',
-        introduction: '一名绘图员在旧星图上画出了归家的路。',
-        work_type: CreatorWorkType.short,
-        is_completed: true,
-        language_code: 'zh',
-        category_ids: const <int>[],
-        short_content: '银河从铅笔尖流出，穿过了桌面上所有无人命名的星球。' * 110,
-        chapters: const <CreatorChapterDraft>[],
-        status: CreatorWorkStatus.published,
-        release_mode: CreatorReleaseMode.immediate,
-        scheduled_publish_time: null,
-        update_time: now.subtract(const Duration(days: 4)),
-        is_demo: true,
-      ),
-      CreatorWorkDraft(
-        local_id: 'demo_long_published_station',
-        title: '旧车站',
-        introduction: '停运十年的列车，在某个夏夜重新驶入站台。',
-        work_type: CreatorWorkType.long,
-        is_completed: true,
-        language_code: 'zh',
-        category_ids: const <int>[],
-        short_content: '',
-        chapters: <CreatorChapterDraft>[
-          CreatorChapterDraft(
-            local_id: 'demo_station_chapter_1',
-            title: '末班车之后',
-            content: '钟表停在十一点四十七分，铁轨却开始轻轻震动。' * 120,
-            update_time: now.subtract(const Duration(days: 6)),
-          ),
-        ],
-        status: CreatorWorkStatus.published,
-        release_mode: CreatorReleaseMode.immediate,
-        scheduled_publish_time: null,
-        update_time: now.subtract(const Duration(days: 6)),
-        is_demo: true,
-      ),
-      CreatorWorkDraft(
-        local_id: 'demo_short_rejected_island',
-        title: '逆风岛',
-        introduction: '岛上所有的风都朝着海心吹去。',
-        work_type: CreatorWorkType.short,
-        is_completed: true,
-        language_code: 'zh',
-        category_ids: const <int>[],
-        short_content: '渔船离开码头后，才发现帆上的风始终来自前方。' * 80,
-        chapters: const <CreatorChapterDraft>[],
-        status: CreatorWorkStatus.rejected,
-        release_mode: CreatorReleaseMode.immediate,
-        scheduled_publish_time: null,
-        update_time: now.subtract(const Duration(days: 5)),
-        is_demo: true,
-      ),
-      CreatorWorkDraft(
-        local_id: 'demo_short_rejected_glass_rain',
-        title: '玻璃雨',
-        introduction: '一场只有镜子能看见的雨落进了城市。',
-        work_type: CreatorWorkType.short,
-        is_completed: false,
-        language_code: 'zh',
-        category_ids: const <int>[],
-        short_content: '窗外万里无云，镜子里的行人却都撑起了伞。' * 95,
-        chapters: const <CreatorChapterDraft>[],
-        status: CreatorWorkStatus.rejected,
-        release_mode: CreatorReleaseMode.immediate,
-        scheduled_publish_time: null,
-        update_time: now.subtract(const Duration(days: 7)),
-        is_demo: true,
-      ),
-    ];
   }
 }

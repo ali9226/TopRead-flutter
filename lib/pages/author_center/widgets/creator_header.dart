@@ -52,7 +52,7 @@ class CreatorHeaderOverlay extends StatelessWidget {
   /// 打开创作说明回调。
   final VoidCallback on_open_guide;
 
-  /// 是否有本地草稿。
+  /// 是否有服务器上可编辑的草稿。
   final bool has_draft;
 
   /// 用户头像 URL（为空时使用随机默认头像）。
@@ -101,7 +101,9 @@ class CreatorHeaderOverlay extends StatelessWidget {
     final String title_text = easy.tr('creator_center.hero_title');
     final String subtitle_text = easy.tr('creator_center.hero_subtitle');
     final TextStyle title_style = TextStyle(
-      fontSize: is_cjk ? AuthorStyle.hero_title_size_cjk : AuthorStyle.hero_title_size_alphabetic,
+      fontSize: is_cjk
+          ? AuthorStyle.hero_title_size_cjk
+          : AuthorStyle.hero_title_size_alphabetic,
       height: is_cjk ? 1.24 : 1.28,
       fontWeight: AuthorStyle.title_weight,
       letterSpacing: is_cjk ? 0.2 : -0.2,
@@ -111,10 +113,19 @@ class CreatorHeaderOverlay extends StatelessWidget {
       height: is_cjk ? 1.42 : 1.48,
       fontWeight: AuthorStyle.body_weight,
     );
-    final double content_width = MediaQuery.sizeOf(context).width -
+    final double content_width =
+        MediaQuery.sizeOf(context).width -
         AuthorStyle.header_content_padding * 2;
-    final int title_lines = _measure_line_count(title_text, title_style, content_width);
-    final int subtitle_lines = _measure_line_count(subtitle_text, subtitle_style, content_width);
+    final int title_lines = _measure_line_count(
+      title_text,
+      title_style,
+      content_width,
+    );
+    final int subtitle_lines = _measure_line_count(
+      subtitle_text,
+      subtitle_style,
+      content_width,
+    );
     final int title_extra = title_lines - 1;
     final int subtitle_extra = subtitle_lines - 2;
     final double expanded_height = 360 + title_extra * 30 + subtitle_extra * 15;
@@ -147,9 +158,7 @@ class CreatorHeaderOverlay extends StatelessWidget {
     );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: is_dark
-          ? SystemUiOverlayStyle.light
-          : SystemUiOverlayStyle.dark,
+      value: is_dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: SizedBox(
         height: safe_height,
         child: Stack(
@@ -572,12 +581,12 @@ class _CreatorFlexibleHeader extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               NicknameBadge(
-                  nickname: author_name,
-                  is_dark: is_dark,
-                  is_cjk: is_cjk,
-                  avatar_url: avatar_url,
-                  random_avatar_index: random_avatar_index,
-                ),
+                nickname: author_name,
+                is_dark: is_dark,
+                is_cjk: is_cjk,
+                avatar_url: avatar_url,
+                random_avatar_index: random_avatar_index,
+              ),
               const Spacer(),
               _HeaderIconButton(
                 icon: Icons.help_outline_rounded,
@@ -596,34 +605,6 @@ class _CreatorFlexibleHeader extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  /// 构建认证作者胶囊。
-  Widget _build_verified_badge() {
-    final Color foreground = is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AuthorStyle.gold.withValues(alpha: is_dark ? 0.12 : 0.22),
-        borderRadius: BorderRadius.circular(AuthorStyle.pill_radius),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(Icons.verified_rounded, size: 13, color: foreground),
-          const SizedBox(width: 4),
-          Text(
-            easy.tr('creator_center.verified'),
-            style: TextStyle(
-              color: foreground,
-              fontSize: is_cjk ? 10.5 : 9.5,
-              fontWeight: AuthorStyle.emphasis_weight,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -754,12 +735,9 @@ class _CreatorFilterTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<String> titles = <String>[
-      easy.tr('creator_center.filter_all'),
-      easy.tr('creator_center.filter_draft'),
-      easy.tr('creator_center.filter_reviewing'),
-      easy.tr('creator_center.filter_scheduled'),
       easy.tr('creator_center.filter_published'),
-      easy.tr('creator_center.filter_rejected'),
+      easy.tr('creator_center.filter_reviewing'),
+      easy.tr('creator_center.filter_draft'),
     ];
 
     return Container(
@@ -774,11 +752,11 @@ class _CreatorFilterTabBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(
           horizontal: AuthorStyle.page_padding,
         ),
-        labelPadding: EdgeInsets.only(left: is_cjk ? 16 : 10),
+        labelPadding: EdgeInsets.symmetric(horizontal: is_cjk ? 20 : 16),
         indicatorSize: TabBarIndicatorSize.label,
         indicator: const UnderlineTabIndicator(
           borderSide: BorderSide(width: 3, color: AuthorStyle.gold),
-          insets: EdgeInsets.only(bottom: 4),
+          insets: EdgeInsets.only(bottom: -3),
         ),
         labelColor: AuthorStyle.primary_text(is_dark),
         unselectedLabelColor: AuthorStyle.secondary_text(is_dark),
@@ -786,7 +764,7 @@ class _CreatorFilterTabBar extends StatelessWidget {
           fontSize: is_cjk
               ? AuthorStyle.tab_font_size_cjk
               : AuthorStyle.tab_font_size_alphabetic,
-          fontWeight: AuthorStyle.title_weight,
+          fontWeight: AuthorStyle.emphasis_weight,
         ),
         unselectedLabelStyle: TextStyle(
           fontSize: is_cjk
@@ -931,11 +909,7 @@ class _HeaderActionButton extends StatelessWidget {
     return FilledButton.icon(
       onPressed: on_tap,
       icon: Icon(icon, size: 18, color: foreground),
-      label: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       style: FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(AuthorStyle.header_action_height),
         padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -946,16 +920,13 @@ class _HeaderActionButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AuthorStyle.header_action_radius),
           side: is_primary
               ? BorderSide.none
-              : BorderSide(
-                  color: AuthorStyle.border(is_dark),
-                  width: 1,
-                ),
+              : BorderSide(color: AuthorStyle.border(is_dark), width: 1),
         ),
         textStyle: TextStyle(
           fontSize: is_cjk
               ? AuthorStyle.button_font_size_cjk
               : AuthorStyle.button_font_size_alphabetic,
-          fontWeight: AuthorStyle.title_weight,
+          fontWeight: AuthorStyle.emphasis_weight,
         ),
       ),
     );

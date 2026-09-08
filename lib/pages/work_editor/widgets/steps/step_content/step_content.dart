@@ -45,6 +45,8 @@ class StepContent extends StatelessWidget {
   /// TODO 长篇当前输入字数。
   final int current_chapter_word_count;
 
+  final VoidCallback on_save_current_chapter;
+
   /// TODO 编辑章节回调。
   final ValueChanged<int> on_edit_chapter;
 
@@ -79,6 +81,7 @@ class StepContent extends StatelessWidget {
     required this.short_word_count,
     required this.current_chapter_word_count,
     required this.on_edit_chapter,
+    required this.on_save_current_chapter,
     required this.on_delete_chapter,
     required this.on_reorder_chapters,
     required this.on_short_content_changed,
@@ -114,6 +117,7 @@ class StepContent extends StatelessWidget {
                   on_content_changed: on_chapter_content_changed,
                   on_file_upload: on_long_file_upload,
                   on_edit_chapter: on_edit_chapter,
+                  on_save_current_chapter: on_save_current_chapter,
                   on_delete_chapter: on_delete_chapter,
                   on_reorder_chapters: on_reorder_chapters,
                 )

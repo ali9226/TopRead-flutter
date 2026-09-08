@@ -94,7 +94,7 @@ mixin WorkEditorFileMixin {
       showBottomTip(easy.tr('creator_center.file_upload_success'));
     } catch (e) {
       if (!mounted) return;
-      showBottomTip(easy.tr('creator_center.file_upload_failed'));
+      showBottomTip('文件读取失败，请重试');
     }
   }
 
@@ -130,7 +130,10 @@ mixin WorkEditorFileMixin {
 
         // 如果标题为空，使用文件名作为标题。
         if (chapter_title_controller.text.trim().isEmpty) {
-          final String title = file.name.replaceAll(RegExp(r'\.(txt|docx)$'), '');
+          final String title = file.name.replaceAll(
+            RegExp(r'\.(txt|docx)$'),
+            '',
+          );
           chapter_title_controller.text = title;
         }
       });
@@ -138,7 +141,7 @@ mixin WorkEditorFileMixin {
       showBottomTip(easy.tr('creator_center.file_upload_success'));
     } catch (e) {
       if (!mounted) return;
-      showBottomTip(easy.tr('creator_center.file_upload_failed'));
+      showBottomTip('文件读取失败，请重试');
     }
   }
 
@@ -173,12 +176,12 @@ mixin WorkEditorFileMixin {
           cover_local_path = null;
         });
       } else {
-        showBottomTip(easy.tr('creator_center.cover_pick_failed'));
+        showBottomTip('封面上传失败，请重试');
         notifyStateChanged(() => cover_local_path = null);
       }
     } catch (_) {
       if (mounted) {
-        showBottomTip(easy.tr('creator_center.cover_pick_failed'));
+        showBottomTip('封面上传失败，请重试');
         notifyStateChanged(() => cover_local_path = null);
       }
     } finally {
@@ -269,7 +272,10 @@ mixin WorkEditorFileMixin {
     required void Function(DateTime?) on_time_selected,
   }) async {
     final DateTime now = DateTime.now();
-    final DateTime initial_time = scheduled_publish_time ?? now.add(const Duration(days: 1));
+    final DateTime initial_time =
+        scheduled_publish_time != null && scheduled_publish_time.isAfter(now)
+        ? scheduled_publish_time
+        : now.add(const Duration(days: 1));
     final bool is_dark = device_info.dark.value;
     final Color red = ColorConstants.dangerColor;
 
@@ -290,16 +296,23 @@ mixin WorkEditorFileMixin {
             children: <Widget>[
               // 标题栏。
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: <Widget>[
                     Expanded(
                       child: Text(
                         easy.tr('creator_center.select_schedule_time'),
                         style: TextStyle(
-                          color: is_dark ? Colors.white : const Color(0xFF1A1A1A),
+                          color: is_dark
+                              ? Colors.white
+                              : const Color(0xFF1A1A1A),
                           fontSize: 16,
-                          fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
+                          fontWeight: FontConfig.adjustedWeight(
+                            FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
@@ -307,7 +320,9 @@ mixin WorkEditorFileMixin {
                       onPressed: () => Navigator.of(sheetContext).pop(),
                       icon: Icon(
                         Icons.close_rounded,
-                        color: is_dark ? Colors.white54 : const Color(0xFF999999),
+                        color: is_dark
+                            ? Colors.white54
+                            : const Color(0xFF999999),
                       ),
                     ),
                   ],

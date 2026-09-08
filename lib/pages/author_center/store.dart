@@ -5,6 +5,12 @@ import 'package:get/get.dart';
 
 /// 创作者中心状态管理
 class CreatorStore extends GetxController {
+  static int? _parseIntNullable(dynamic value) {
+    if (value is int) return value;
+    if (value is num && value.isFinite) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+
   /// 作品列表
   final works = <CreatorWorkModel>[].obs;
 
@@ -92,7 +98,9 @@ class CreatorStore extends GetxController {
 
       if (result != null) {
         final list = result['list'] as List? ?? [];
-        final newWorks = list.map((item) => CreatorWorkModel.fromJson(item)).toList();
+        final newWorks = list
+            .map((item) => CreatorWorkModel.fromJson(item))
+            .toList();
 
         if (refresh || currentPage.value == 1) {
           works.value = newWorks;
@@ -100,7 +108,7 @@ class CreatorStore extends GetxController {
           works.addAll(newWorks);
         }
 
-        final total = result['total'] as int? ?? 0;
+        final total = _parseIntNullable(result['total']) ?? 0;
         totalPages.value = (total / 20).ceil();
       }
     } catch (e) {
@@ -124,11 +132,7 @@ class CreatorStore extends GetxController {
   }
 
   /// 设置筛选条件
-  void setFilter({
-    int? workType,
-    int? publicStatus,
-    int? auditStatus,
-  }) {
+  void setFilter({int? workType, int? publicStatus, int? auditStatus}) {
     filterWorkType.value = workType;
     filterPublicStatus.value = publicStatus;
     filterAuditStatus.value = auditStatus;
@@ -188,7 +192,7 @@ class CreatorStore extends GetxController {
         await refreshWorks();
 
         // 返回新创建的作品（从列表中查找）
-        final novelId = result['novel_id'] as int?;
+        final novelId = _parseIntNullable(result['novel_id']);
         if (novelId != null) {
           return works.firstWhereOrNull((w) => w.id == novelId);
         }
@@ -299,7 +303,7 @@ class CreatorStore extends GetxController {
         await loadChapters(novelId);
 
         // 返回新创建的章节
-        final revisionId = result['revision_id'] as int?;
+        final revisionId = _parseIntNullable(result['revision_id']);
         if (revisionId != null) {
           return chapters.firstWhereOrNull((c) => c.id == revisionId);
         }

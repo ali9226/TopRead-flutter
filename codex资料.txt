@@ -1,0 +1,40 @@
+# 创作者中心 - Codex接手文档
+
+## 环境信息
+- Flutter: /Users/ali/work/小说/app
+- 后端: /Users/ali/work/小说/后端
+- DB: mysql -u ali -p'#z8hi31Q' novel
+- 测试用户: author_id=37427
+
+## 已完成
+- 后端7个接口: create_draft, save_draft, get_info, inquire, submit, get_draft_list, dashboard
+- Flutter API层: lib/api/creator_work.dart
+- 数据模型: models/creator_backend_models.dart, models/creator_work.dart
+- 编辑器: lib/pages/work_editor/ (保存草稿、提交审核)
+- 数据库迁移: 001_creator_tables.sql, 002_creator_draft_fields.sql
+
+## 待完成任务
+
+### 任务1: creator_center_page.dart Tab对接
+路径: lib/pages/author_center/creator_center_page.dart
+- "草稿"Tab → CreatorLogic.getDraftList()
+- "待审核"Tab → CreatorLogic.getMyWorks(initialAuditStatus: 2)
+- "已发布"Tab → CreatorLogic.getMyWorks(publicStatus: 2)
+- 每个Tab: 下拉刷新 + 上拉加载更多
+- 空列表: 美观占位图，兼容夜间模式
+
+### 任务2: backend_work_card.dart 优化
+路径: lib/pages/author_center/widgets/backend_work_card.dart
+- 显示: 标题、类型标签、状态标签、字数、更新时间
+- 风格参考: author_style.dart
+- 兼容夜间模式
+
+### 任务3: 已知bug修复
+- save_draft.js 第43行已加work_type查询
+- ID类型转换用_parseIntNullable() (参考author_view.dart)
+- 错误提示直接中文，不用翻译key
+
+## 数据库表结构速查
+- novel_main: id, title, author_id, work_type(1长2短), initial_audit_status(1草稿2待审3通过4驳回)
+- novel_work_revision: id, novel_id, revision_status(1草稿2锁定3发布4驳回), language_id, lock_version
+- 关键字段: saved_step, preferences, temp_chapter_content(短篇正文存这里)

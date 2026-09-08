@@ -1,8 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'package:app/api/creator_work.dart';
 import 'package:app/config/color_config.dart';
-import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/work_editor/style.dart';
@@ -11,6 +9,7 @@ import 'package:app/pages/work_editor/widgets/steps/step_category/step_category.
 import 'package:app/pages/work_editor/widgets/steps/step_content/step_content.dart';
 import 'package:app/pages/work_editor/widgets/steps/step_publish/step_publish.dart';
 import 'package:app/stores/device_info.dart';
+import 'package:app/stores/language_store.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/log_util.dart';
@@ -19,9 +18,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'draft_persistence.dart';
 import 'editor_form_manager.dart';
 import 'editor_file_handler.dart';
-import 'style.dart';
 import 'widgets/editor_step_indicator.dart';
 
 /// 创建或编辑小说的三步交互页面。
@@ -104,17 +103,13 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
   /// 存在错误的步骤索引集合。
   final Set<int> _error_steps = <int>{};
 
-  /// 后端作品ID（保存后更新）。
-  int? _novel_id;
+  late final CreatorDraftPersistence _persistence;
+  bool _is_saving = false;
+  bool _language_initialized = false;
 
-  /// 后端修订版本ID（保存后更新）。
-  int? _revision_id;
-
-  /// 后端语种版本ID（保存后更新）。
-  int? _novel_language_id;
-
-  /// 乐观锁版本号（保存后更新）。
-  int? _lock_version;
+  @override
+  CreatorWorkType get fallback_work_type =>
+      widget.initial_work?.work_type ?? CreatorWorkType.short;
 
   // ==================== Mixin 接口实现 ====================
 
@@ -186,11 +181,21 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
 
     final CreatorWorkDraft? work = widget.initial_work;
     _title_controller = TextEditingController(text: work?.title ?? '');
-    _introduction_controller = TextEditingController(text: work?.introduction ?? '');
-    _short_content_controller = TextEditingController(text: work?.short_content ?? '');
-    _chapter_title_controller = TextEditingController(text: work?.chapter_title ?? '');
-    _chapter_content_controller = TextEditingController(text: work?.chapter_content ?? '');
+    _introduction_controller = TextEditingController(
+      text: work?.introduction ?? '',
+    );
+    _short_content_controller = TextEditingController(
+      text: work?.short_content ?? '',
+    );
+    _chapter_title_controller = TextEditingController(
+      text: work?.chapter_title ?? '',
+    );
+    _chapter_content_controller = TextEditingController(
+      text: work?.chapter_content ?? '',
+    );
     _is_completed = work?.is_completed ?? false;
+    _cover_url = work?.cover_url;
+    _persistence = CreatorDraftPersistence(initialWork: work);
     _language_code = work?.language_code ?? 'zh';
     _chapters = <CreatorChapterDraft>[...?work?.chapters];
 
@@ -210,7 +215,12 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
 
       // 编辑模式下，根据 work_type 设置篇幅偏好。
       if (work != null && work.work_type == CreatorWorkType.long) {
-        _selected_preference_map[WorkEditorStyle.short_work_id] = <int>{WorkEditorStyle.long_work_id};
+        final group = find_preference_group_by_item_id(
+          WorkEditorStyle.long_work_id,
+        );
+        if (group != null) {
+          _selected_preference_map[group] = <int>{WorkEditorStyle.long_work_id};
+        }
       }
 
       // 新增作品时，设置各偏好默认值。
@@ -222,17 +232,13 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
     _scheduled_publish_time = work?.scheduled_publish_time;
     _rights_confirmed = work?.rights_confirmed ?? false;
 
-    // 初始化后端ID
-    _novel_id = work?.novel_id;
-    _revision_id = work?.revision_id;
-    _novel_language_id = work?.novel_language_id;
-    _lock_version = work?.lock_version;
-
     // 恢复保存时的步骤进度。
     if (work != null && work.saved_step > 0) {
-      _current_step = work.saved_step;
+      _current_step = work.saved_step.clamp(0, 3);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _page_controller.jumpToPage(_current_step);
+        if (mounted && _page_controller.hasClients) {
+          _page_controller.jumpToPage(_current_step);
+        }
       });
     }
 
@@ -244,8 +250,11 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
   void didChangeDependencies() {
     super.didChangeDependencies();
     // 新增作品时，首次设置默认语种为 app 当前语种。
-    if (widget.initial_work == null && _language_code == 'zh') {
-      _language_code = context.locale.languageCode;
+    if (!_language_initialized) {
+      _language_initialized = true;
+      if (widget.initial_work == null) {
+        _language_code = context.locale.languageCode;
+      }
     }
   }
 
@@ -280,13 +289,15 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
 
   /// 读取当前输入的长篇章节字数。
   int get _current_chapter_word_count {
-    return _chapter_content_controller.text.replaceAll(RegExp(r'\s+'), '').length;
+    return _chapter_content_controller.text
+        .replaceAll(RegExp(r'\s+'), '')
+        .length;
   }
 
   // ==================== 步骤导航 ====================
 
   Future<void> _go_to_step(int step) async {
-    if (step < 0 || step > 3 || step == _current_step) return;
+    if (_is_saving || step < 0 || step > 3 || step == _current_step) return;
 
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
@@ -308,325 +319,156 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
 
   // ==================== 保存/提交 ====================
 
-  /// 保存草稿到后端数据库。
-  Future<void> _save_draft() async {
-    refresh_error_steps();
+  /// 保存和提交共用同一份完整表单，失败后留在编辑器以便重试。
+  Future<void> _save_draft() => _persist_work();
 
-    // 准备偏好数据
-    final Map<String, List<int>> prefs = {};
-    _selected_preference_map.forEach((key, value) {
-      prefs[key.toString()] = value.toList();
-    });
+  int _resolve_language_id() {
+    final initial = widget.initial_work;
+    if (initial != null &&
+        initial.language_code == _language_code &&
+        initial.language_id != null) {
+      return initial.language_id!;
+    }
+    if (Get.isRegistered<LanguageStore>()) {
+      final language = Get.find<LanguageStore>()
+          .find_supported_language_by_code(_language_code);
+      if (language != null && language.id > 0) return language.id;
+    }
+    throw const CreatorDraftException('语种配置尚未加载，请稍后重试');
+  }
 
-    // 准备分类快照
-    final List<Map<String, dynamic>> categorySnapshot = selected_category_ids
-        .map((id) => {'category_id': id})
-        .toList();
-
+  Future<void> _persist_work({bool submitForReview = false}) async {
+    if (_is_saving) return;
+    if (_is_uploading_cover) {
+      showBottomTip('封面正在上传，请稍候');
+      return;
+    }
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (work_type == CreatorWorkType.long &&
+        _chapter_title_controller.text.trim().isNotEmpty &&
+        _chapter_content_controller.text.trim().isNotEmpty) {
+      _save_current_chapter();
+    }
+    setState(() => _is_saving = true);
     try {
-      // 如果没有 novel_id，需要先创建作品
-      if (_novel_id == null) {
-        final int languageId = await LanguageUtil.get_language_id();
-        final createResult = await CreatorWorkApi.createDraft(
-          workType: work_type == CreatorWorkType.long ? 1 : 2,
-          languageId: languageId,
-          title: _title_controller.text.trim(),
-          introduction: _introduction_controller.text.trim(),
-        );
-
-        if (!createResult.status || createResult.content == null) {
-          if (!mounted) return;
-          showBottomTip(createResult.message.isNotEmpty
-              ? createResult.message
-              : easy.tr('creator_center.draft_save_failed'));
-          return;
-        }
-
-        // 更新状态变量
-        setState(() {
-          _novel_id = _parseIntNullable(createResult.content!['novel_id']);
-          _revision_id = _parseIntNullable(createResult.content!['revision_id']);
-          _novel_language_id = _parseIntNullable(createResult.content!['novel_language_id']);
-          _lock_version = 0;
-        });
-      }
-
-      // 计算字数
-      final int wordCount = work_type == CreatorWorkType.short
-          ? _short_content_controller.text.replaceAll(RegExp(r'\s+'), '').length
-          : _chapters.fold<int>(0, (total, chapter) => total + chapter.word_count);
-
-      // 语言代码转语言ID
-      final int languageId = await _getLanguageId(_language_code);
-
-      // 短篇内容和长篇临时章节分开处理
-      final String? shortContent = work_type == CreatorWorkType.short
-          ? _short_content_controller.text
-          : null;
-      final String? tempChapterTitle = work_type == CreatorWorkType.long
-          ? _chapter_title_controller.text.trim()
-          : null;
-      final String? tempChapterContent = work_type == CreatorWorkType.long
-          ? _chapter_content_controller.text
-          : null;
-
-      // 保存草稿到后端
-      final saveResult = await CreatorWorkApi.saveDraft(
-        novelId: _novel_id!,
-        revisionId: _revision_id!,
-        title: _title_controller.text.trim(),
-        introduction: _introduction_controller.text.trim(),
-        coverUrl: _cover_url,
-        wordCount: wordCount,
-        serializationStatus: _is_completed ? 2 : 1,
-        categorySnapshot: categorySnapshot,
-        lockVersion: _lock_version,
-        preferences: prefs,
-        savedStep: _current_step,
-        rightsConfirmed: _rights_confirmed,
-        releaseMode: _release_mode == CreatorReleaseMode.immediate ? 1 : 2,
-        scheduledPublishTime: _scheduled_publish_time?.toIso8601String(),
-        tempChapterTitle: tempChapterTitle,
-        tempChapterContent: tempChapterContent,
-        languageId: languageId,
-        shortContent: shortContent,
+      refresh_error_steps();
+      final draft =
+          build_work(
+            CreatorWorkStatus.draft,
+            local_id:
+                widget.initial_work?.local_id ??
+                'work_${DateTime.now().microsecondsSinceEpoch}',
+            language_code: _language_code,
+            current_step: _current_step,
+            cover_url: _cover_url,
+          ).copy_with(
+            is_completed: work_type == CreatorWorkType.short || _is_completed,
+          );
+      final saved = await _persistence.save(
+        draft,
+        languageId: _resolve_language_id(),
+        submitForReview: submitForReview,
       );
-
-      if (!saveResult.status) {
-        if (!mounted) return;
-        showBottomTip(saveResult.message.isNotEmpty
-            ? saveResult.message
-            : easy.tr('creator_center.draft_save_failed'));
-        return;
-      }
-
-      // 更新 lock_version
-      final newLockVersion = _parseIntNullable(saveResult.content?['lock_version']);
-      if (newLockVersion != null) {
-        setState(() {
-          _lock_version = newLockVersion;
-        });
-      }
-
-      // 构建返回的草稿对象
-      final CreatorWorkDraft draft = build_work(
-        CreatorWorkStatus.draft,
-        local_id: widget.initial_work?.local_id ?? 'work_${DateTime.now().microsecondsSinceEpoch}',
-        language_code: _language_code,
-        current_step: _current_step,
-        cover_url: _cover_url,
-      ).copy_with(
-        novel_id: _novel_id,
-        revision_id: _revision_id,
-        novel_language_id: _novel_language_id,
-        lock_version: _lock_version,
+      if (!mounted) return;
+      showBottomTip(submitForReview ? '已提交审核' : '草稿已保存');
+      if (context.mounted) Navigator.of(context).pop<CreatorWorkDraft>(saved);
+    } catch (error) {
+      logUtil(msg: '保存或提交作品失败: $error', type: 'e');
+      if (!mounted) return;
+      showBottomTip(
+        error is CreatorDraftException
+            ? error.message
+            : (submitForReview ? '提交审核失败，请重试' : '保存草稿失败，请重试'),
       );
-
-      if (!mounted) return;
-      showBottomTip(easy.tr('creator_center.draft_saved'));
-      Navigator.of(context).pop<CreatorWorkDraft>(draft);
-    } catch (e) {
-      logUtil(msg: '保存草稿异常: $e', type: 'e');
-      if (!mounted) return;
-      showBottomTip(easy.tr('creator_center.draft_save_failed'));
+    } finally {
+      if (mounted) setState(() => _is_saving = false);
     }
   }
 
-  /// 安全解析可空整数
-  int? _parseIntNullable(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    if (value is String) return int.tryParse(value);
-    if (value is double) return value.toInt();
-    return null;
+  /// 将当前输入归入独立章节。未完成的输入在保存草稿时仍保存在临时字段。
+  void _save_current_chapter() {
+    if (_chapter_title_controller.text.trim().isEmpty) {
+      showBottomTip('请填写章节标题');
+      return;
+    }
+    if (_chapter_content_controller.text.trim().isEmpty) {
+      showBottomTip('请填写章节正文');
+      return;
+    }
+    setState(() {
+      commit_current_chapter();
+      refresh_error_steps();
+    });
   }
 
-  /// 语言代码转语言ID
-  Future<int> _getLanguageId(String languageCode) async {
-    // 常见语言代码映射
-    const Map<String, int> languageMap = {
-      'zh': 1,
-      'en': 2,
-      'fr': 3,
-      'es': 4,
-      'ar': 5,
-      'pt': 6,
-      'id': 7,
-      'ja': 8,
-      'ko': 9,
-      'de': 10,
-      'it': 11,
-      'tr': 12,
-      'th': 13,
-      'vi': 14,
-      'ms': 15,
-      'sw': 16,
-    };
-    return languageMap[languageCode] ?? 2; // 默认英语
-  }
-
-  /// 语言ID转语言代码
-  String _getLanguageCode(int languageId) {
-    const Map<int, String> languageMap = {
-      1: 'zh',
-      2: 'en',
-      3: 'fr',
-      4: 'es',
-      5: 'ar',
-      6: 'pt',
-      7: 'id',
-      8: 'ja',
-      9: 'ko',
-      10: 'de',
-      11: 'it',
-      12: 'tr',
-      13: 'th',
-      14: 'vi',
-      15: 'ms',
-      16: 'sw',
-    };
-    return languageMap[languageId] ?? 'en';
-  }
-
-  /// 校验投稿资料并进入待审核状态。
   Future<void> _submit_for_review() async {
+    if (_is_saving) return;
     if (_title_controller.text.trim().isEmpty) {
       _go_to_step(0);
-      showBottomTip(easy.tr('creator_center.required_title'));
+      showBottomTip('请填写作品标题');
       return;
     }
     if (selected_category_ids.isEmpty) {
       _go_to_step(1);
-      showBottomTip(easy.tr('creator_center.required_category'));
+      showBottomTip('请选择作品分类');
       return;
     }
-    if (work_type == CreatorWorkType.long && _chapters.isEmpty) {
+    if (work_type == CreatorWorkType.long) {
+      final hasPendingChapter =
+          _chapter_title_controller.text.trim().isNotEmpty ||
+          _chapter_content_controller.text.trim().isNotEmpty;
+      if (hasPendingChapter) {
+        if (_chapter_title_controller.text.trim().isEmpty ||
+            _chapter_content_controller.text.trim().isEmpty) {
+          _go_to_step(2);
+          showBottomTip('请补全当前章节的标题和正文');
+          return;
+        }
+        _save_current_chapter();
+      }
+      if (_chapters.isEmpty ||
+          _chapters.any(
+            (chapter) =>
+                chapter.title.trim().isEmpty || chapter.content.trim().isEmpty,
+          )) {
+        _go_to_step(2);
+        showBottomTip('请至少完成一个章节，并补全章节标题和正文');
+        return;
+      }
+    } else if (_short_content_controller.text.trim().isEmpty) {
       _go_to_step(2);
-      showBottomTip(easy.tr('creator_center.required_chapter'));
+      showBottomTip('请填写短篇正文');
       return;
     }
-    if (work_type == CreatorWorkType.short && _short_content_controller.text.trim().isEmpty) {
-      _go_to_step(2);
-      showBottomTip(easy.tr('creator_center.required_short_content'));
-      return;
-    }
-    if (_release_mode == CreatorReleaseMode.scheduled && _scheduled_publish_time == null) {
-      showBottomTip(easy.tr('creator_center.required_schedule'));
+    if (_release_mode == CreatorReleaseMode.scheduled &&
+        (_scheduled_publish_time == null ||
+            !_scheduled_publish_time!.isAfter(DateTime.now()))) {
+      _go_to_step(3);
+      showBottomTip('请选择未来的发布时间');
       return;
     }
     if (!_rights_confirmed) {
-      showBottomTip(easy.tr('creator_center.required_rights'));
+      _go_to_step(3);
+      showBottomTip('请确认原创及授权声明');
       return;
     }
-
-    if (_novel_id == null || _revision_id == null) {
-      // 需要先保存草稿
-      await _save_draft();
-      return;
-    }
-
-    try {
-      // 先保存最新数据
-      await _save_draft_only();
-
-      // 提交审核
-      final submitResult = await CreatorWorkApi.submit(
-        novelId: _novel_id!,
-        revisionId: _revision_id!,
-        submissionType: 1, // 首次投稿
-      );
-
-      if (!submitResult.status) {
-        if (!mounted) return;
-        showBottomTip(submitResult.message.isNotEmpty
-            ? submitResult.message
-            : easy.tr('creator_center.submit_failed'));
-        return;
-      }
-
-      final CreatorWorkDraft reviewing_work = build_work(
-        CreatorWorkStatus.reviewing,
-        local_id: widget.initial_work?.local_id ?? 'work_${DateTime.now().microsecondsSinceEpoch}',
-        language_code: _language_code,
-        current_step: _current_step,
-        cover_url: _cover_url,
-      ).copy_with(
-        novel_id: _novel_id,
-        revision_id: _revision_id,
-      );
-
-      if (!mounted) return;
-      showBottomTip(easy.tr('creator_center.submitted'));
-      Navigator.of(context).pop<CreatorWorkDraft>(reviewing_work);
-    } catch (e) {
-      logUtil(msg: '提交审核异常: $e', type: 'e');
-      if (!mounted) return;
-      showBottomTip(easy.tr('creator_center.submit_failed'));
-    }
-  }
-
-  /// 仅保存草稿不返回（用于提交前的自动保存）。
-  Future<bool> _save_draft_only() async {
-    if (_novel_id == null || _revision_id == null) return false;
-
-    try {
-      final Map<String, List<int>> prefs = {};
-      _selected_preference_map.forEach((key, value) {
-        prefs[key.toString()] = value.toList();
-      });
-
-      final List<Map<String, dynamic>> categorySnapshot = selected_category_ids
-          .map((id) => {'category_id': id})
-          .toList();
-
-      final int wordCount = work_type == CreatorWorkType.short
-          ? _short_content_controller.text.replaceAll(RegExp(r'\s+'), '').length
-          : _chapters.fold<int>(0, (total, chapter) => total + chapter.word_count);
-
-      final saveResult = await CreatorWorkApi.saveDraft(
-        novelId: _novel_id!,
-        revisionId: _revision_id!,
-        title: _title_controller.text.trim(),
-        introduction: _introduction_controller.text.trim(),
-        coverUrl: _cover_url,
-        wordCount: wordCount,
-        serializationStatus: _is_completed ? 2 : 1,
-        categorySnapshot: categorySnapshot,
-        lockVersion: _lock_version,
-        preferences: prefs,
-        savedStep: _current_step,
-        rightsConfirmed: _rights_confirmed,
-        releaseMode: _release_mode == CreatorReleaseMode.immediate ? 1 : 2,
-        scheduledPublishTime: _scheduled_publish_time?.toIso8601String(),
-        tempChapterTitle: _chapter_title_controller.text.trim(),
-        tempChapterContent: _chapter_content_controller.text,
-      );
-
-      if (saveResult.status) {
-        // 更新 lock_version
-        final newLockVersion = _parseIntNullable(saveResult.content?['lock_version']);
-        if (newLockVersion != null) {
-          _lock_version = newLockVersion;
-        }
-      }
-
-      return saveResult.status;
-    } catch (e) {
-      logUtil(msg: '保存草稿异常: $e', type: 'e');
-      return false;
-    }
+    await _persist_work(submitForReview: true);
   }
 
   // ==================== UI 构建 ====================
 
   @override
   Widget build(BuildContext context) {
-    final bool is_cjk = LanguageUtil.is_cjk_language(context.locale.languageCode);
+    final bool is_cjk = LanguageUtil.is_cjk_language(
+      context.locale.languageCode,
+    );
 
     return Obx(() {
       final bool is_dark = _device_info.dark.value;
 
-      return Scaffold(
+      return PopScope(
+        canPop: !_is_saving,
+        child: Scaffold(
         backgroundColor: AuthorStyle.background(is_dark),
         appBar: AppBar(
           backgroundColor: AuthorStyle.surface(is_dark),
@@ -646,12 +488,15 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: ElevatedButton(
-                onPressed: _save_draft,
+                onPressed: _is_saving ? null : _save_draft,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ColorConstants.themeColor,
                   foregroundColor: ColorConstants.lightTextColor,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   shape: RoundedRectangleBorder(
@@ -662,93 +507,106 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
                     fontWeight: AuthorStyle.emphasis_weight,
                   ),
                 ),
-                child: Text(easy.tr('creator_center.save_draft')),
+                child: Text(
+                  _is_saving ? '保存中…' : easy.tr('creator_center.save_draft'),
+                ),
               ),
             ),
           ],
         ),
-        body: Column(
-          children: <Widget>[
-            EditorStepIndicator(
-              current_step: _current_step,
-              labels: <String>[
-                easy.tr('creator_center.step_basic'),
-                easy.tr('creator_center.step_category'),
-                easy.tr('creator_center.step_content'),
-                easy.tr('creator_center.step_publish'),
-              ],
-              is_dark: is_dark,
-              error_steps: _error_steps,
-              on_step_tap: (int step) => _go_to_step(step),
-            ),
-            Expanded(
-              child: PageView(
-                controller: _page_controller,
-                physics: const NeverScrollableScrollPhysics(),
-                children: <Widget>[
-                  StepBasic(
-                    is_dark: is_dark,
-                    is_editing: _is_editing,
-                    title_controller: _title_controller,
-                    introduction_controller: _introduction_controller,
-                    language_code: _language_code,
-                    cover_local_path: _cover_local_path,
-                    cover_url: _cover_url,
-                    is_uploading_cover: _is_uploading_cover,
-                    on_pick_cover: open_cover_picker,
-                    on_language_changed: (String code) => setState(() => _language_code = code),
-                  ),
-                  StepCategory(
-                    is_dark: is_dark,
-                    selected_preference_map: _selected_preference_map,
-                    on_toggle_preference: toggle_preference,
-                  ),
-                  StepContent(
-                    is_dark: is_dark,
-                    work_type: work_type,
-                    is_editing: _is_editing,
-                    chapters: _chapters,
-                    short_content_controller: _short_content_controller,
-                    chapter_title_controller: _chapter_title_controller,
-                    chapter_content_controller: _chapter_content_controller,
-                    chapter_word_count: _chapter_word_count,
-                    short_word_count: _short_word_count,
-                    current_chapter_word_count: _current_chapter_word_count,
-                    on_edit_chapter: edit_chapter,
-                    on_delete_chapter: delete_chapter,
-                    on_reorder_chapters: (int old_index, int new_index) {
-                      setState(() {
-                        final CreatorChapterDraft item = _chapters.removeAt(old_index);
-                        _chapters.insert(new_index, item);
-                      });
-                    },
-                    on_short_content_changed: () => setState(() {}),
-                    on_chapter_content_changed: () => setState(() {}),
-                    on_short_file_upload: upload_short_file,
-                    on_long_file_upload: upload_long_file,
-                  ),
-                  StepPublish(
-                    is_dark: is_dark,
-                    is_editing: _is_editing,
-                    release_mode: _release_mode,
-                    scheduled_publish_time: _scheduled_publish_time,
-                    rights_confirmed: _rights_confirmed,
-                    on_release_mode_changed: (CreatorReleaseMode mode) =>
-                        setState(() => _release_mode = mode),
-                    on_select_schedule_time: () => select_schedule_time(
-                      scheduled_publish_time: _scheduled_publish_time,
-                      on_time_selected: (DateTime? time) {
-                        setState(() => _scheduled_publish_time = time);
-                      },
-                    ),
-                    on_rights_confirmed_changed: (bool value) =>
-                        setState(() => _rights_confirmed = value),
-                  ),
+        body: AbsorbPointer(
+          absorbing: _is_saving,
+          child: Column(
+            children: <Widget>[
+              EditorStepIndicator(
+                current_step: _current_step,
+                labels: <String>[
+                  easy.tr('creator_center.step_basic'),
+                  easy.tr('creator_center.step_category'),
+                  easy.tr('creator_center.step_content'),
+                  easy.tr('creator_center.step_publish'),
                 ],
+                is_dark: is_dark,
+                error_steps: _error_steps,
+                on_step_tap: (int step) => _go_to_step(step),
               ),
-            ),
-            _build_bottom_bar(is_dark, is_cjk),
-          ],
+              Expanded(
+                child: PageView(
+                  controller: _page_controller,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: <Widget>[
+                    StepBasic(
+                      is_dark: is_dark,
+                      is_editing: _is_editing,
+                      title_controller: _title_controller,
+                      introduction_controller: _introduction_controller,
+                      language_code: _language_code,
+                      cover_local_path: _cover_local_path,
+                      cover_url: _cover_url,
+                      is_uploading_cover: _is_uploading_cover,
+                      on_pick_cover: open_cover_picker,
+                      on_language_changed: (String code) =>
+                          setState(() => _language_code = code),
+                    ),
+                    StepCategory(
+                      is_dark: is_dark,
+                      selected_preference_map: _selected_preference_map,
+                      on_toggle_preference: toggle_preference,
+                    ),
+                    StepContent(
+                      is_dark: is_dark,
+                      work_type: work_type,
+                      is_editing: _is_editing,
+                      chapters: _chapters,
+                      short_content_controller: _short_content_controller,
+                      chapter_title_controller: _chapter_title_controller,
+                      chapter_content_controller: _chapter_content_controller,
+                      chapter_word_count: _chapter_word_count,
+                      short_word_count: _short_word_count,
+                      current_chapter_word_count: _current_chapter_word_count,
+                      on_save_current_chapter: _save_current_chapter,
+                      on_edit_chapter: edit_chapter,
+                      on_delete_chapter: delete_chapter,
+                      on_reorder_chapters: (int old_index, int new_index) {
+                        setState(() {
+                          final CreatorChapterDraft item = _chapters.removeAt(
+                            old_index,
+                          );
+                          final target = new_index > old_index
+                              ? new_index - 1
+                              : new_index;
+                          _chapters.insert(target, item);
+                        });
+                      },
+                      on_short_content_changed: () => setState(() {}),
+                      on_chapter_content_changed: () => setState(() {}),
+                      on_short_file_upload: upload_short_file,
+                      on_long_file_upload: upload_long_file,
+                    ),
+                    StepPublish(
+                      is_dark: is_dark,
+                      is_editing: _is_editing,
+                      release_mode: _release_mode,
+                      scheduled_publish_time: _scheduled_publish_time,
+                      rights_confirmed: _rights_confirmed,
+                      on_release_mode_changed: (CreatorReleaseMode mode) =>
+                          setState(() => _release_mode = mode),
+                      on_select_schedule_time: () => select_schedule_time(
+                        scheduled_publish_time: _scheduled_publish_time,
+                        on_time_selected: (DateTime? time) {
+                          setState(() => _scheduled_publish_time = time);
+                        },
+                      ),
+                      on_rights_confirmed_changed: (bool value) =>
+                          setState(() => _rights_confirmed = value),
+                    ),
+                  ],
+                ),
+              ),
+              _build_bottom_bar(is_dark, is_cjk),
+            ],
+          ),
+        ),
         ),
       );
     });
@@ -760,7 +618,9 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
         : easy.tr('creator_center.next');
 
     return Container(
-      constraints: const BoxConstraints(minHeight: WorkEditorStyle.bottom_bar_min_height),
+      constraints: const BoxConstraints(
+        minHeight: WorkEditorStyle.bottom_bar_min_height,
+      ),
       padding: EdgeInsets.fromLTRB(
         16,
         11,
@@ -773,13 +633,15 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: WorkEditorStyle.content_max_width),
+          constraints: const BoxConstraints(
+            maxWidth: WorkEditorStyle.content_max_width,
+          ),
           child: Row(
             children: <Widget>[
               if (_current_step == 0)
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _save_draft,
+                    onPressed: _is_saving ? null : _save_draft,
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(52),
                       foregroundColor: AuthorStyle.primary_text(is_dark),
@@ -817,9 +679,15 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
               Expanded(
                 flex: 2,
                 child: FilledButton.icon(
-                  onPressed: _current_step == 3 ? _submit_for_review : _try_next_step,
+                  onPressed: _is_saving
+                      ? null
+                      : (_current_step == 3
+                            ? _submit_for_review
+                            : _try_next_step),
                   icon: Icon(
-                    _current_step == 3 ? Icons.send_rounded : Icons.arrow_forward_rounded,
+                    _current_step == 3
+                        ? Icons.send_rounded
+                        : Icons.arrow_forward_rounded,
                     size: 19,
                   ),
                   label: Text(primary_title),

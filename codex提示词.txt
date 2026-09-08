@@ -1,0 +1,39 @@
+# Codex任务 - 创作者中心
+
+先读这些文件理解上下文:
+- /Users/ali/work/小说/app/codex资料.txt
+- /Users/ali/work/小说/app/lib/pages/author_center/creator_center_page.dart
+- /Users/ali/work/小说/app/lib/pages/author_center/store.dart
+
+然后执行以下任务。
+
+## 输出要求
+- 只输出要修改的代码块，不要输出没改动的部分
+- 用 edit 工具精确替换，不要用 write 重写整个文件
+- 不要加解释性注释和说明文字
+- 一次改完一个文件的所有改动，不要分多次
+
+## 任务1: store.dart 添加草稿列表功能
+
+在 store.dart 中添加:
+1. 属性: drafts, draftCurrentPage, draftTotalPages, isDraftsLoading
+2. 方法: loadDrafts(), loadMoreDrafts()
+3. 修改 loadWorks() 支持 publicStatus/auditStatus 参数
+
+## 任务2: creator_center_page.dart Tab对接
+
+修改内容:
+1. _tab_keys 改为 ['草稿', '待审核', '已发布']
+2. _on_tab_changed 分别调用 store.loadDrafts / loadWorks
+3. body 区域用 TabBarView 显示三个不同列表
+4. 草稿列表调用 _store.drafts，支持下拉刷新、上拉加载
+5. 空列表显示占位图(兼容夜间模式)
+6. 添加 _navigate_to_edit_draft 方法导航到编辑器
+7. 添加导入: logic.dart, creator_work.dart, work_editor/index.dart
+
+## 关键逻辑
+- 草稿Tab: CreatorLogic.getDraftList(page, pageSize)
+- 待审核: CreatorLogic.getMyWorks(initialAuditStatus: 2)
+- 已发布: CreatorLogic.getMyWorks(publicStatus: 2)
+- 草稿数据转CreatorWorkDraft时用 novel_id 作为 id
+- ID转换用: int.tryParse(value.toString()) ?? 0

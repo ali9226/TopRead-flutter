@@ -47,6 +47,8 @@ class LongContentEditor extends StatelessWidget {
   /// TODO 文件上传回调。
   final VoidCallback on_file_upload;
 
+  final VoidCallback on_save_current_chapter;
+
   /// TODO 编辑章节回调（编辑模式使用）。
   final ValueChanged<int> on_edit_chapter;
 
@@ -68,43 +70,39 @@ class LongContentEditor extends StatelessWidget {
     required this.on_content_changed,
     required this.on_file_upload,
     required this.on_edit_chapter,
+    required this.on_save_current_chapter,
     required this.on_delete_chapter,
     required this.on_reorder_chapters,
   });
 
   @override
   Widget build(BuildContext context) {
-    /// 编辑模式：展示章节列表。
-    if (is_editing && chapters.isNotEmpty) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          /// 章节统计。
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Text(
-              easy
-                  .tr('creator_center.chapter_summary')
-                  .replaceAll('{count}', '${chapters.length}')
-                  .replaceAll('{words}', '$chapter_word_count'),
-              style: TextStyle(
-                color: AuthorStyle.secondary_text(is_dark),
-                fontSize: 13,
-                fontWeight: AuthorStyle.body_weight,
-              ),
-            ),
-          ),
-
-          /// 章节列表。
-          _build_chapter_list(context),
-        ],
-      );
-    }
-
     /// 新增模式：章节标题 + 正文输入 + 文件上传。
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        if (chapters.isNotEmpty) ...[
+          Text(
+            '共 ${chapters.length} 章 · $chapter_word_count 字',
+            style: TextStyle(
+              color: AuthorStyle.secondary_text(is_dark),
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _build_chapter_list(context),
+          const SizedBox(height: 16),
+        ],
+        Text(
+          '第 ${chapters.length + 1} 章',
+          style: TextStyle(
+            color: AuthorStyle.primary_text(is_dark),
+            fontWeight: AuthorStyle.title_weight,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 16),
+
         /// 章节标题。
         StepUtils.build_field_label(
           easy.tr('creator_center.chapter_title_hint'),
@@ -120,6 +118,7 @@ class LongContentEditor extends StatelessWidget {
             hint: easy.tr('creator_center.chapter_title_hint'),
           ),
           maxLines: 1,
+          onChanged: (_) => on_content_changed(),
         ),
         const SizedBox(height: WorkEditorStyle.field_spacing),
 
@@ -160,6 +159,25 @@ class LongContentEditor extends StatelessWidget {
           keyboardType: TextInputType.multiline,
           textInputAction: TextInputAction.newline,
           onChanged: (_) => on_content_changed(),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: on_save_current_chapter,
+            icon: const Icon(Icons.playlist_add_rounded),
+            label: const Text('完成本章，继续下一章'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: is_dark
+                  ? AuthorStyle.gold
+                  : AuthorStyle.deep_gold,
+              side: BorderSide(color: AuthorStyle.border(is_dark)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -206,10 +224,14 @@ class LongContentEditor extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: chapters.length,
+      buildDefaultDragHandles: false,
       onReorder: on_reorder_chapters,
       itemBuilder: (BuildContext context, int index) {
         return _build_chapter_item(
-            context, index, ValueKey(chapters[index].local_id));
+          context,
+          index,
+          ValueKey(chapters[index].local_id),
+        );
       },
     );
   }
@@ -242,8 +264,7 @@ class LongContentEditor extends StatelessWidget {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color:
-                  AuthorStyle.gold.withValues(alpha: is_dark ? 0.16 : 0.20),
+              color: AuthorStyle.gold.withValues(alpha: is_dark ? 0.16 : 0.20),
               borderRadius: BorderRadius.circular(8),
             ),
             alignment: Alignment.center,

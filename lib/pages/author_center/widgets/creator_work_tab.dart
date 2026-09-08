@@ -4,8 +4,9 @@ import 'package:app/components/floating_back_to_top/index.dart';
 import 'package:app/components/floating_back_to_top/style.dart'
     as floating_back_to_top_style;
 import 'package:app/pages/author_center/author_style.dart';
-import 'package:app/pages/author_center/models/creator_work.dart';
-import 'package:app/pages/author_center/widgets/author_work_card.dart';
+import 'package:app/pages/author_center/models/creator_backend_models.dart';
+import 'package:app/pages/author_center/widgets/backend_work_card.dart';
+import 'package:app/pages/author_center/widgets/creator_empty_state.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show SliverConstraints;
@@ -19,7 +20,17 @@ class CreatorWorkTab extends StatefulWidget {
   final int tab_index;
 
   /// 当前筛选后的作品列表。
-  final List<CreatorWorkDraft> works;
+  final List<CreatorWorkModel> works;
+
+  /// 首屏或刷新请求状态；刷新期间继续保留已有列表。
+  final bool is_loading;
+  final bool is_loading_more;
+  final String? error_message;
+  final String? load_more_error;
+  final bool has_more;
+  final int? total_count;
+  final Future<void> Function()? on_refresh;
+  final Future<void> Function()? on_load_more;
 
   /// 当前是否为夜间主题。
   final bool is_dark;
@@ -43,10 +54,13 @@ class CreatorWorkTab extends StatefulWidget {
   final VoidCallback on_create_work;
 
   /// 编辑作品回调。
-  final ValueChanged<CreatorWorkDraft> on_edit_work;
+  final ValueChanged<CreatorWorkModel> on_edit_work;
 
   /// 作品主操作回调。
-  final ValueChanged<CreatorWorkDraft> on_primary_action;
+  final ValueChanged<CreatorWorkModel> on_primary_action;
+
+  /// 删除作品回调，返回 true 表示确认删除。
+  final Future<bool> Function(CreatorWorkModel)? on_delete_work;
 
   const CreatorWorkTab({
     super.key,
@@ -61,6 +75,15 @@ class CreatorWorkTab extends StatefulWidget {
     required this.on_create_work,
     required this.on_edit_work,
     required this.on_primary_action,
+    this.on_delete_work,
+    this.is_loading = false,
+    this.is_loading_more = false,
+    this.error_message,
+    this.load_more_error,
+    this.has_more = false,
+    this.total_count,
+    this.on_refresh,
+    this.on_load_more,
   });
 
   @override
@@ -86,6 +109,10 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
 
   /// 当前 Tab 的返回顶部按钮是否可见。
   bool _show_back_to_top = false;
+
+  bool _load_more_in_flight = false;
+  String? _local_load_more_error;
+  String? _local_refresh_error;
 
   @override
   void initState() {
@@ -129,18 +156,28 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
                 onPointerMove: _on_pointer_move,
                 onPointerUp: _on_pointer_up,
                 onPointerCancel: _on_pointer_cancel,
-                child: CustomScrollView(
-                  key: PageStorageKey<String>(
-                    'creator_center_content_tab_${widget.tab_index}',
-                  ),
-                  controller: widget.scroll_controller,
-                  primary: false,
-                  physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
-                  ),
-                  slivers: _build_slivers(
-                    context,
-                    viewport_height: constraints.maxHeight,
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _on_scroll_notification,
+                  child: RefreshIndicator(
+                    onRefresh: _refresh,
+                    color: Theme.of(context).primaryColor,
+                    backgroundColor: AuthorStyle.surface(widget.is_dark),
+                    edgeOffset: widget.header_spacer_height,
+                    displacement: 24,
+                    child: CustomScrollView(
+                      key: PageStorageKey<String>(
+                        'creator_center_content_tab_${widget.tab_index}',
+                      ),
+                      controller: widget.scroll_controller,
+                      primary: false,
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      slivers: _build_slivers(
+                        context,
+                        viewport_height: constraints.maxHeight,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -168,6 +205,61 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
         );
       },
     );
+  }
+
+  Future<void> _refresh() async {
+    if (widget.on_refresh == null) return;
+    setState(() {
+      _local_refresh_error = null;
+      _local_load_more_error = null;
+    });
+    try {
+      await widget.on_refresh!();
+    } catch (_) {
+      if (mounted) setState(() => _local_refresh_error = '作品加载失败，请稍后重试');
+    }
+  }
+
+  /// 只响应向下滚动列表的动作，首帧和 rebuild 不触发网络请求。
+  bool _on_scroll_notification(ScrollNotification notification) {
+    if (notification.depth != 0 || notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
+    final bool toward_end =
+        (notification is ScrollUpdateNotification &&
+            (notification.scrollDelta ?? 0) > 0) ||
+        (notification is OverscrollNotification && notification.overscroll > 0);
+    if (toward_end && notification.metrics.extentAfter < 280) {
+      _load_more();
+    }
+    return false;
+  }
+
+  Future<void> _load_more({bool retry = false}) async {
+    if (!mounted ||
+        widget.on_load_more == null ||
+        !widget.has_more ||
+        widget.is_loading ||
+        widget.is_loading_more ||
+        _load_more_in_flight ||
+        (!retry &&
+            (widget.load_more_error != null ||
+                _local_load_more_error != null))) {
+      return;
+    }
+
+    // 先锁住本次手势，再退出滚动通知的布局阶段后更新状态和请求。
+    _load_more_in_flight = true;
+    await Future<void>.value();
+    if (!mounted) return;
+    setState(() => _local_load_more_error = null);
+    try {
+      await widget.on_load_more!();
+    } catch (_) {
+      if (mounted) _local_load_more_error = '加载更多失败，请重试';
+    } finally {
+      if (mounted) setState(() => _load_more_in_flight = false);
+    }
   }
 
   /// 首次挂载或更换控制器后同步返回顶部按钮状态。
@@ -283,7 +375,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
     );
   }
 
-  /// 根据作品数据构建列表或空状态。
+  /// 根据作品数据构建列表、加载状态或空状态。
   List<Widget> _build_slivers(
     BuildContext context, {
     required double viewport_height,
@@ -291,19 +383,36 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
     final Widget header_spacer = SliverToBoxAdapter(
       child: SizedBox(height: widget.header_spacer_height),
     );
+    final String? refresh_error = widget.error_message ?? _local_refresh_error;
 
     if (widget.works.isEmpty) {
-      final double empty_content_height =
-          (viewport_height - widget.minimum_header_height).clamp(
-            0.0,
-            double.infinity,
-          );
       return <Widget>[
         header_spacer,
         SliverToBoxAdapter(
-          child: SizedBox(
-            height: empty_content_height,
-            child: _build_empty_state(),
+          child: _constrain_content(
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: AuthorStyle.list_header_top_spacing,
+                    bottom: 30,
+                  ),
+                  child: _build_list_header(),
+                ),
+                widget.is_loading
+                    ? _build_initial_loading()
+                    : refresh_error != null
+                    ? _build_initial_error(refresh_error)
+                    : CreatorEmptyState(
+                        tab_index: widget.tab_index,
+                        is_dark: widget.is_dark,
+                        is_cjk: widget.is_cjk,
+                        on_create_work: widget.on_create_work,
+                      ),
+              ],
+            ),
           ),
         ),
         _build_minimum_scroll_extent_filler(),
@@ -312,63 +421,71 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
 
     return <Widget>[
       header_spacer,
+      if (refresh_error != null)
+        SliverToBoxAdapter(
+          child: _constrain_content(
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: _build_error_notice(refresh_error, on_retry: _refresh),
+            ),
+          ),
+        ),
       SliverToBoxAdapter(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: AuthorStyle.content_max_width,
+        child: _constrain_content(
+          Padding(
+            padding: const EdgeInsets.only(
+              top: AuthorStyle.list_header_top_spacing,
+              bottom: AuthorStyle.list_header_bottom_spacing,
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AuthorStyle.page_padding,
-                AuthorStyle.list_header_top_spacing,
-                AuthorStyle.page_padding,
-                AuthorStyle.list_header_bottom_spacing,
-              ),
-              child: _build_list_header(),
-            ),
+            child: _build_list_header(),
           ),
         ),
       ),
       SliverPadding(
-        padding: EdgeInsets.fromLTRB(
-          AuthorStyle.page_padding,
-          0,
-          AuthorStyle.page_padding,
-          AuthorStyle.list_bottom_spacing +
-              MediaQuery.paddingOf(context).bottom,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AuthorStyle.page_padding,
         ),
-        sliver: SliverList.separated(
-          itemCount: widget.works.length,
-          separatorBuilder: (BuildContext context, int index) =>
-              const SizedBox(height: AuthorStyle.work_card_spacing),
-          itemBuilder: (BuildContext context, int index) {
-            final CreatorWorkDraft work = widget.works[index];
-            return Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: AuthorStyle.content_max_width,
-                ),
-                child: AuthorWorkCard(
-                  work: work,
-                  is_dark: widget.is_dark,
-                  is_cjk: widget.is_cjk,
-                  on_tap: () => widget.on_edit_work(work),
-                  on_primary_action: () => widget.on_primary_action(work),
-                ),
-              ),
-            );
-          },
+        sliver: _AnimatedWorkList(
+          works: widget.works,
+          is_dark: widget.is_dark,
+          is_cjk: widget.is_cjk,
+          on_edit_work: widget.on_edit_work,
+          on_primary_action: widget.on_primary_action,
+          on_delete_work: widget.on_delete_work,
+        ),
+      ),
+      SliverToBoxAdapter(
+        child: _constrain_content(
+          Padding(
+            padding: EdgeInsets.only(
+              top: 16,
+              bottom:
+                  AuthorStyle.list_bottom_spacing +
+                  MediaQuery.paddingOf(context).bottom,
+            ),
+            child: _build_load_more_footer(),
+          ),
         ),
       ),
       _build_minimum_scroll_extent_filler(),
     ];
   }
 
+  Widget _constrain_content(Widget child) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AuthorStyle.page_padding),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: AuthorStyle.content_max_width,
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
   /// 在首次布局中即补齐短内容的最小滚动范围。
-  ///
-  /// 使用 Sliver 约束直接计算剩余高度，避免首帧渲染后再 setState
-  /// 导致新 Tab 先出现空白区，下一帧才将内容顶上来。
   Widget _build_minimum_scroll_extent_filler() {
     return SliverLayoutBuilder(
       builder: (BuildContext context, SliverConstraints constraints) {
@@ -384,7 +501,17 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
     );
   }
 
-  /// 构建作品列表标题和当前筛选结果数量。
+  String get _list_title_key {
+    switch (widget.tab_index) {
+      case 0:
+        return 'creator_center.list_title_published';
+      case 1:
+        return 'creator_center.list_title_reviewing';
+      default:
+        return 'creator_center.list_title_draft';
+    }
+  }
+
   Widget _build_list_header() {
     return Row(
       children: <Widget>[
@@ -393,7 +520,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                easy.tr('creator_center.my_works'),
+                easy.tr(_list_title_key),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -404,8 +531,8 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
               ),
               const SizedBox(height: 3),
               Text(
-                easy.tr('creator_center.my_works_subtitle'),
-                maxLines: 1,
+                widget.is_cjk ? '按最近更新时间排序' : 'Most recently updated',
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: AuthorStyle.secondary_text(widget.is_dark),
@@ -426,7 +553,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
           ),
           alignment: Alignment.center,
           child: Text(
-            '${widget.works.length}',
+            '${widget.total_count ?? widget.works.length}',
             style: TextStyle(
               color: AuthorStyle.selected_tab_text(widget.is_dark),
               fontSize: 12,
@@ -438,33 +565,51 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
     );
   }
 
-  /// 构建当前筛选条件下的空状态。
-  Widget _build_empty_state() {
+  Widget _build_initial_loading() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 34, 24, 120),
+        padding: const EdgeInsets.fromLTRB(24, 48, 24, 72),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _build_progress(),
+            const SizedBox(height: 15),
+            Text(
+              widget.is_cjk ? '正在加载作品…' : 'Loading your works…',
+              style: TextStyle(
+                color: AuthorStyle.secondary_text(widget.is_dark),
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _build_initial_error(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 36, 24, 72),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Container(
-              width: 72,
-              height: 72,
+              width: 76,
+              height: 76,
               decoration: BoxDecoration(
-                color: AuthorStyle.selected_tab_surface(widget.is_dark),
+                color: AuthorStyle.secondary_surface(widget.is_dark),
                 borderRadius: BorderRadius.circular(24),
               ),
-              alignment: Alignment.center,
               child: Icon(
-                Icons.auto_stories_outlined,
+                Icons.cloud_off_rounded,
+                color: AuthorStyle.secondary_text(widget.is_dark),
                 size: 32,
-                color: widget.is_dark
-                    ? AuthorStyle.gold
-                    : AuthorStyle.deep_gold,
               ),
             ),
-            const SizedBox(height: 17),
+            const SizedBox(height: 18),
             Text(
-              easy.tr('creator_center.empty_title'),
+              '作品暂时没有加载出来',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AuthorStyle.primary_text(widget.is_dark),
@@ -472,44 +617,294 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
                 fontWeight: AuthorStyle.title_weight,
               ),
             ),
-            const SizedBox(height: 7),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 360),
-              child: Text(
-                easy.tr('creator_center.empty_subtitle'),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AuthorStyle.secondary_text(widget.is_dark),
-                  fontSize: 12.5,
-                  height: 1.55,
-                  fontWeight: AuthorStyle.body_weight,
-                ),
+            const SizedBox(height: 9),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AuthorStyle.secondary_text(widget.is_dark),
+                fontSize: 12.5,
+                height: 1.6,
               ),
             ),
             const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: widget.on_create_work,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: Text(easy.tr('creator_center.create_first_work')),
-              style: FilledButton.styleFrom(
-                backgroundColor: AuthorStyle.gold,
-                foregroundColor: const Color(0xFF1A1A18),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 11,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                textStyle: TextStyle(
-                  fontSize: 12,
-                  fontWeight: AuthorStyle.title_weight,
-                ),
-              ),
+            OutlinedButton.icon(
+              onPressed: widget.on_refresh == null ? null : _refresh,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('重新加载'),
+              style: _retry_button_style(),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _build_load_more_footer() {
+    if (widget.is_loading_more || _load_more_in_flight) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Center(child: _build_progress()),
+      );
+    }
+    final String? message = widget.load_more_error ?? _local_load_more_error;
+    if (message != null) {
+      return _build_error_notice(
+        message,
+        on_retry: () => _load_more(retry: true),
+      );
+    }
+    if (widget.has_more) {
+      // 同时保留按钮，短列表、辅助功能和桌面设备也能继续翻页。
+      return Center(
+        child: TextButton(
+          onPressed: widget.on_load_more == null ? null : _load_more,
+          style: TextButton.styleFrom(
+            foregroundColor: AuthorStyle.selected_tab_text(widget.is_dark),
+          ),
+          child: Text(widget.is_cjk ? '加载更多' : 'Load more'),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Text(
+        widget.is_cjk ? '已显示全部作品' : 'All works are shown',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: AuthorStyle.secondary_text(widget.is_dark),
+          fontSize: 11.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _build_error_notice(String message, {required VoidCallback on_retry}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AuthorStyle.secondary_surface(widget.is_dark),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AuthorStyle.secondary_text(widget.is_dark),
+              fontSize: 12,
+              height: 1.5,
+            ),
+          ),
+          TextButton.icon(
+            onPressed: on_retry,
+            style: TextButton.styleFrom(
+              foregroundColor: AuthorStyle.selected_tab_text(widget.is_dark),
+            ),
+            icon: const Icon(Icons.refresh_rounded, size: 17),
+            label: const Text('点击重试'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  ButtonStyle _retry_button_style() => OutlinedButton.styleFrom(
+    foregroundColor: AuthorStyle.selected_tab_text(widget.is_dark),
+    side: BorderSide(color: AuthorStyle.border(widget.is_dark)),
+    minimumSize: const Size(120, 44),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+  );
+
+  Widget _build_progress() {
+    return SizedBox.square(
+      dimension: 24,
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        color: widget.is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
+      ),
+    );
+  }
+}
+
+/// 支持乐观删除动画的作品列表。
+///
+/// 使用 [GlobalKey] 追踪每个卡片的高度，删除时先测量高度，
+/// 再通过 [SizeTransition] 播放收起动画。
+class _AnimatedWorkList extends StatefulWidget {
+  final List<CreatorWorkModel> works;
+  final bool is_dark;
+  final bool is_cjk;
+  final ValueChanged<CreatorWorkModel> on_edit_work;
+  final ValueChanged<CreatorWorkModel> on_primary_action;
+  final Future<bool> Function(CreatorWorkModel)? on_delete_work;
+
+  const _AnimatedWorkList({
+    required this.works,
+    required this.is_dark,
+    required this.is_cjk,
+    required this.on_edit_work,
+    required this.on_primary_action,
+    this.on_delete_work,
+  });
+
+  @override
+  State<_AnimatedWorkList> createState() => _AnimatedWorkListState();
+}
+
+class _AnimatedWorkListState extends State<_AnimatedWorkList>
+    with TickerProviderStateMixin {
+  final Map<int, AnimationController> _removing = {};
+  final Map<int, double> _item_heights = {};
+
+  @override
+  void dispose() {
+    for (final c in _removing.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _start_remove(CreatorWorkModel work) async {
+    if (_removing.containsKey(work.id)) return;
+
+    // 先调用确认回调，用户取消则不播放动画
+    if (widget.on_delete_work != null) {
+      final bool confirmed = await widget.on_delete_work!(work);
+      if (!confirmed || !mounted) return;
+    }
+
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _removing[work.id] = controller;
+
+    controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        controller.dispose();
+        _removing.remove(work.id);
+        _item_heights.remove(work.id);
+      }
+    });
+
+    controller.forward();
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<CreatorWorkModel> visible = widget.works
+        .where((w) => !_removing.containsKey(w.id) || _removing[w.id]!.isAnimating)
+        .toList();
+
+    if (visible.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+    return SliverList.builder(
+      itemCount: visible.length,
+      itemBuilder: (BuildContext context, int index) {
+        final CreatorWorkModel work = visible[index];
+        final AnimationController? controller = _removing[work.id];
+
+        Widget card = Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: AuthorStyle.content_max_width,
+            ),
+            child: BackendWorkCard(
+              key: ValueKey<int>(work.id),
+              work: work,
+              is_dark: widget.is_dark,
+              is_cjk: widget.is_cjk,
+              on_tap: () => widget.on_edit_work(work),
+              on_primary_action: () => widget.on_primary_action(work),
+              on_delete: widget.on_delete_work != null
+                  ? () => _start_remove(work)
+                  : null,
+            ),
+          ),
+        );
+
+        if (controller != null) {
+          // 阶段1 (0~0.4): 淡出 + 向上微移
+          // 阶段2 (0.3~1.0): 高度收缩
+          final fade = Tween<double>(begin: 1, end: 0).animate(
+            CurvedAnimation(
+              parent: controller,
+              curve: const Interval(0, 0.4, curve: Curves.easeOut),
+            ),
+          );
+          final slide = Tween<Offset>(
+            begin: Offset.zero,
+            end: const Offset(0, -0.15),
+          ).animate(
+            CurvedAnimation(
+              parent: controller,
+              curve: const Interval(0, 0.4, curve: Curves.easeOut),
+            ),
+          );
+          final size = CurvedAnimation(
+            parent: controller,
+            curve: const Interval(0.3, 1.0, curve: Curves.easeOutCubic),
+          );
+
+          return SizeTransition(
+            sizeFactor: size,
+            child: FadeTransition(
+              opacity: fade,
+              child: SlideTransition(
+                position: slide,
+                child: card,
+              ),
+            ),
+          );
+        }
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: index < visible.length - 1
+                ? AuthorStyle.work_card_spacing
+                : 0,
+          ),
+          child: _MeasureSize(
+            on_size: (size) => _item_heights[work.id] = size.height,
+            child: card,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 测量子组件实际高度的包装组件。
+class _MeasureSize extends StatefulWidget {
+  final Widget child;
+  final ValueChanged<Size> on_size;
+
+  const _MeasureSize({required this.child, required this.on_size});
+
+  @override
+  State<_MeasureSize> createState() => _MeasureSizeState();
+}
+
+class _MeasureSizeState extends State<_MeasureSize> {
+  Size? _last_size;
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final RenderBox? box = context.findRenderObject() as RenderBox?;
+      if (box == null || !box.hasSize) return;
+      final Size size = box.size;
+      if (_last_size != size) {
+        _last_size = size;
+        widget.on_size(size);
+      }
+    });
+    return widget.child;
   }
 }

@@ -119,7 +119,7 @@ class CreatorWorkModel {
       like_count: _parseInt(json['like_count']),
       favorite_count: _parseInt(json['favorite_count']),
       comment_count: _parseInt(json['comment_count']),
-      latest_chapter_no: json['latest_chapter_no'] != null ? _parseInt(json['latest_chapter_no']) : null,
+      latest_chapter_no: _parseIntNullable(json['latest_chapter_no']),
       latest_update_time: json['latest_update_time'],
       first_publish_time: json['first_publish_time'],
       last_publish_time: json['last_publish_time'],
@@ -130,14 +130,35 @@ class CreatorWorkModel {
       chapter_count: _parseInt(json['chapter_count']),
       word_count: _parseInt(json['word_count']),
       introduction: json['introduction'],
-      draft_revision_id: json['draft_revision_id'] != null ? _parseInt(json['draft_revision_id']) : null,
-      draft_status: json['draft_status'] != null ? _parseInt(json['draft_status']) : null,
+      draft_revision_id: _parseIntNullable(json['draft_revision_id']),
+      draft_status: _parseIntNullable(json['draft_status']),
       pending_submission: json['pending_submission'],
     );
   }
 
   /// 是否为长篇
   bool get is_long_novel => work_type == 1;
+
+  /// 草稿接口的 id 是修订 ID；列表和导航始终以 novel_id 标识作品。
+  factory CreatorWorkModel.fromDraftJson(Map<String, dynamic> json) {
+    return CreatorWorkModel.fromJson({
+      ...json,
+      'id': json['novel_id'],
+      'draft_revision_id': json['revision_id'] ?? json['id'],
+      'draft_status': json['revision_status'] ?? 1,
+      'initial_audit_status': _parseInt(json['initial_audit_status']) == 4
+          ? 4
+          : 1,
+      'public_status': 1,
+      'creator_update_time': json['update_time'] ?? json['creator_update_time'],
+    });
+  }
+
+  DateTime get updatedAt =>
+      DateTime.tryParse(
+        creator_update_time ?? latest_update_time ?? create_time,
+      )?.toLocal() ??
+      DateTime.fromMillisecondsSinceEpoch(0);
 
   /// 是否为短篇
   bool get is_short_novel => work_type == 2;
@@ -163,25 +184,27 @@ class CreatorWorkModel {
   /// 获取状态文本
   String get status_text {
     if (is_draft) return '草稿';
-    if (is_reviewing) return '审核中';
+    if (is_reviewing) return '待审核';
     if (is_rejected) return '已驳回';
     if (is_off_shelf) return '已下架';
     if (is_published) return '已发布';
-    return '未知';
+    if (is_approved) return '已通过';
+    return '未发布';
   }
 
   /// 获取作品类型文本
   String get work_type_text => is_long_novel ? '长篇' : '短篇';
 
   /// 获取连载状态文本
-  String get serialization_status_text => serialization_status == 1 ? '连载中' : '已完结';
+  String get serialization_status_text =>
+      serialization_status == 1 ? '连载中' : '已完结';
 
-  static int _parseInt(dynamic value) {
-    if (value == null) return 0;
+  static int _parseInt(dynamic value) => _parseIntNullable(value) ?? 0;
+
+  static int? _parseIntNullable(dynamic value) {
     if (value is int) return value;
-    if (value is String) return int.tryParse(value) ?? 0;
-    if (value is double) return value.toInt();
-    return 0;
+    if (value is num && value.isFinite) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
   }
 }
 
@@ -243,8 +266,8 @@ class CreatorChapterModel {
     return CreatorChapterModel(
       id: _parseInt(json['id']),
       chapter_uid: json['chapter_uid'] ?? '',
-      chapter_id: json['chapter_id'] != null ? _parseInt(json['chapter_id']) : null,
-      chapter_no: json['chapter_no'] != null ? _parseInt(json['chapter_no']) : null,
+      chapter_id: _parseIntNullable(json['chapter_id']),
+      chapter_no: _parseIntNullable(json['chapter_no']),
       title: json['title'] ?? '',
       word_count: _parseInt(json['word_count']),
       revision_status: _parseInt(json['revision_status']),
@@ -280,12 +303,12 @@ class CreatorChapterModel {
     return '未知';
   }
 
-  static int _parseInt(dynamic value) {
-    if (value == null) return 0;
+  static int _parseInt(dynamic value) => _parseIntNullable(value) ?? 0;
+
+  static int? _parseIntNullable(dynamic value) {
     if (value is int) return value;
-    if (value is String) return int.tryParse(value) ?? 0;
-    if (value is double) return value.toInt();
-    return 0;
+    if (value is num && value.isFinite) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
   }
 }
 
@@ -370,11 +393,15 @@ class CreatorSubmissionModel {
       status: _parseInt(json['status']),
       submit_note: json['submit_note'],
       review_note: json['review_note'],
-      reviewer_id: json['reviewer_id'] != null ? _parseInt(json['reviewer_id']) : null,
+      reviewer_id: json['reviewer_id'] != null
+          ? _parseInt(json['reviewer_id'])
+          : null,
       submit_time: json['submit_time'] ?? '',
       review_time: json['review_time'],
       novel_title: json['novel_title'],
-      work_type: json['work_type'] != null ? _parseInt(json['work_type']) : null,
+      work_type: json['work_type'] != null
+          ? _parseInt(json['work_type'])
+          : null,
       cover_url: json['cover_url'],
       chapter_count: _parseInt(json['chapter_count']),
     );
@@ -395,32 +422,44 @@ class CreatorSubmissionModel {
   /// 获取状态文本
   String get status_text {
     switch (status) {
-      case 1: return '待审核';
-      case 2: return '审核中';
-      case 3: return '已通过';
-      case 4: return '已驳回';
-      case 5: return '已撤回';
-      default: return '未知';
+      case 1:
+        return '待审核';
+      case 2:
+        return '审核中';
+      case 3:
+        return '已通过';
+      case 4:
+        return '已驳回';
+      case 5:
+        return '已撤回';
+      default:
+        return '未知';
     }
   }
 
   /// 获取投稿类型文本
   String get submission_type_text {
     switch (submission_type) {
-      case 1: return '首次投稿';
-      case 2: return '资料更新';
-      case 3: return '新增章节';
-      case 4: return '章节修改';
-      case 5: return '章节删除';
-      default: return '未知';
+      case 1:
+        return '首次投稿';
+      case 2:
+        return '资料更新';
+      case 3:
+        return '新增章节';
+      case 4:
+        return '章节修改';
+      case 5:
+        return '章节删除';
+      default:
+        return '未知';
     }
   }
 
-  static int _parseInt(dynamic value) {
-    if (value == null) return 0;
+  static int _parseInt(dynamic value) => _parseIntNullable(value) ?? 0;
+
+  static int? _parseIntNullable(dynamic value) {
     if (value is int) return value;
-    if (value is String) return int.tryParse(value) ?? 0;
-    if (value is double) return value.toInt();
-    return 0;
+    if (value is num && value.isFinite) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
   }
 }
