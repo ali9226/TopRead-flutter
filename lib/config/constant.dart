@@ -1,16 +1,18 @@
 import 'package:package_info_plus/package_info_plus.dart';
 
-/*
-  TODO 常量
- */
+/// 全局常量配置。
+///
+/// 集中管理 App 名称、版本号、本地存储 key、网络请求域名等全局常量。
 class Constant {
 
-  static const String app_name = "TopRead"; // TODO App的名称
+  /// App 的显示名称。
+  static const String app_name = "TopRead";
 
-  /// TODO 应用版本号（从 pubspec.yaml 动态读取）。
+  /// 应用版本号（从 pubspec.yaml 动态读取，缓存后直接返回）。
   static String _appVersion = "";
 
-  /// TODO 获取应用版本号。
+  /// 获取应用版本号。
+  ///
   /// 首次调用会从 pubspec.yaml 读取，之后返回缓存值。
   static Future<String> getAppVersion() async {
     if (_appVersion.isEmpty) {
@@ -18,45 +20,38 @@ class Constant {
         final PackageInfo packageInfo = await PackageInfo.fromPlatform();
         _appVersion = packageInfo.version;
       } catch (e) {
-        _appVersion = "1.0.0"; // fallback
+        _appVersion = "1.0.0";
       }
     }
     return _appVersion;
   }
 
-  /// TODO 同步获取版本号（需要先调用 getAppVersion 初始化）。
+  /// 同步获取版本号（需要先调用 [getAppVersion] 初始化）。
   static String get appVersion => _appVersion.isNotEmpty ? _appVersion : "1.0.0";
 
-  /// TODO 保存在本地的密码的key
+  /// 保存在本地的密码的 key。
   static const String passwordKey = "password_key";
 
-  /// TODO 保存在本地的token的key
+  /// 保存在本地的 token 的 key。
   static const String tokenKey = "token_key";
 
-
-
-  /// TODO 请求加密的key
+  /// 请求加密的 key。
   static const String encryptionKey = "encryption_key";
 
-  // TODO 后端返回给前端的数据需要解密用到的key
+  /// 后端返回给前端的数据需要解密用到的 key。
   static const String decryptionKey = "dencryption_key";
 
-  // TODO 网络请求的域名。
-  // TODO 浏览器 Debug 模式走当前页面同源地址，让本地代理处理 `/api/` 转发，避免跨域。
-  // TODO 其他场景继续走正式域名，保持现有发布行为不变。
+  /// 网络请求的域名。
+  ///
+  /// 本地调试时使用 `http://0.0.0.0:5006`，发布前需切换为正式域名。
   static String get requestUrl {
-    // if (kIsWeb) {
-    //   if (kDebugMode) {
-    //     return "http://localhost:5006";
-    //   }
-    //   return "https://web.caution.icu";
-    // }
-
-    // return "https://www.read.top";
+    // 本地调试地址
     return "http://0.0.0.0:5006";
+    // 正式域名（发布前取消注释上面一行，注释此行）
+    // return "https://www.read.top";
   }
 
-  // TODO 网络请求的前缀
+  /// 网络请求的前缀。
   static const String prefix = "/api/";
 
   /// 为 `true` 时 [postRequest] 在 Debug 下打印成功响应的 `content` 预览；`false` 关闭（默认）。

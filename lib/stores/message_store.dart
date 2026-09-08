@@ -13,6 +13,7 @@ import 'package:app/util/storage_util/index.dart';
 import 'package:app/fcm/fcm_service.dart';
 import 'package:app/stores/message_deduplicator.dart';
 import 'package:app/stores/message_unread_counter.dart';
+import 'package:app/util/number_util.dart' show parse_int;
 
 typedef MessageListFetcher =
     Future<MessageListResult?> Function({
@@ -763,7 +764,7 @@ class MessageStore extends GetxController {
     final dynamic payload = data['data'];
     bool suppress_unread_update = false;
     if (payload is Map) {
-      final int state_version = _parse_int(payload['state_version']);
+      final int state_version = parse_int(payload['state_version']);
       if (state_version > 0) {
         final bool is_reconnect_snapshot = type == 'unread_count';
         if (state_version < _latest_server_state_version ||
@@ -839,7 +840,7 @@ class MessageStore extends GetxController {
           final Map<String, dynamic> chat_data = Map<String, dynamic>.from(
             payload,
           );
-          final int unread = _parse_int(chat_data['unread']);
+          final int unread = parse_int(chat_data['unread']);
           chat_unread.value = unread;
           _unread.recompute_total();
           _unread_state_revision++;
@@ -881,7 +882,7 @@ class MessageStore extends GetxController {
           }
           if (suppress_unread_update) break;
           if (_defer_realtime_unread_update()) break;
-          final int unread = _parse_int(chat_data['unread']);
+          final int unread = parse_int(chat_data['unread']);
           chat_unread.value = unread;
           _unread.recompute_total();
           _unread_state_revision++;
@@ -900,9 +901,9 @@ class MessageStore extends GetxController {
   }) {
     if (payload is! Map) return;
     final Map<String, dynamic> chat_data = Map<String, dynamic>.from(payload);
-    if (_parse_int(chat_data['sender_type']) != 2) return;
+    if (parse_int(chat_data['sender_type']) != 2) return;
 
-    final int message_id = _parse_int(chat_data['id']);
+    final int message_id = parse_int(chat_data['id']);
     if (message_id > 0 && !_dedup.remember_chat(message_id)) return;
     final bool is_latest_message =
         message_id <= 0 || message_id >= _latest_chat_message_id;
@@ -919,12 +920,12 @@ class MessageStore extends GetxController {
 
     if (chat_data.containsKey('unread')) {
       _apply_authoritative_chat_unread(
-        _parse_int(chat_data['unread']),
+        parse_int(chat_data['unread']),
         is_latest_message: is_latest_message,
       );
     } else if (chat_data.containsKey('chat_unread')) {
       _apply_authoritative_chat_unread(
-        _parse_int(chat_data['chat_unread']),
+        parse_int(chat_data['chat_unread']),
         is_latest_message: is_latest_message,
       );
     } else {
@@ -936,7 +937,7 @@ class MessageStore extends GetxController {
 
   /// 将管理员最新回复实时写入“全部消息”桶的客服摘要。
   void _upsert_chat_summary(Map<String, dynamic> chat_data) {
-    final int message_id = _parse_int(chat_data['id']);
+    final int message_id = parse_int(chat_data['id']);
     if (message_id <= 0) return;
 
     final String content = chat_data['content']?.toString() ?? '';
@@ -947,7 +948,7 @@ class MessageStore extends GetxController {
       introduction: content,
       content: content,
       type: MessageType.chat_reply,
-      send_user: _parse_int(chat_data['sender_id']),
+      send_user: parse_int(chat_data['sender_id']),
       send_time:
           chat_data['create_time']?.toString() ??
           chat_data['send_time']?.toString() ??
@@ -1003,7 +1004,7 @@ class MessageStore extends GetxController {
   /// 应用其他设备产生的已读或删除状态，并使用权威快照更新全部角标。
   void _handle_message_state_changed(Map<String, dynamic> payload) {
     final String action = payload['action']?.toString() ?? '';
-    final int message_id = _parse_int(payload['message_id']);
+    final int message_id = parse_int(payload['message_id']);
 
     if (action == 'read' && message_id > 0) {
       _mark_cached_message_as_read(message_id);
@@ -1140,13 +1141,6 @@ class MessageStore extends GetxController {
     } catch (e) {
       debugPrint('fetch_chat_unread error: $e');
     }
-  }
-
-  /// 解析整数。
-  static int _parse_int(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    return int.tryParse(value.toString()) ?? 0;
   }
 
   @override

@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -8,7 +10,6 @@ import 'package:app/api/post_request.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/models/novel_info.dart';
-import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/services/bookshelf_sync_service.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/util/device/save_body_font_size.dart';
@@ -19,14 +20,19 @@ import 'utils/read_models.dart';
 import 'utils/progress_calculator.dart';
 import 'utils/chapter_cache.dart';
 import 'utils/detail_builder.dart';
+import 'logic/interaction_handler.dart';
+import 'logic/progress_handler.dart';
 
 export 'utils/read_models.dart';
 
 /// 章节正文加载器。
 typedef ChapterContentLoader = Future<String> Function(String chapter_id);
 
-/// 阅读页占位逻辑层。
-class Logic extends GetxController {
+/// 阅读页逻辑层。
+///
+/// 负责章节加载、缓存管理、滚动导航等核心逻辑。
+/// 互动操作抽离到 [ReadInteractionMixin]，进度计算抽离到 [ReadProgressMixin]。
+class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin {
   /// 路由传入的书籍 id。
   final int story_id;
 
@@ -40,9 +46,6 @@ class Logic extends GetxController {
   bool is_loading_next = false;
 
   /// 当前下一章拼接任务完成信号。
-  ///
-  /// 自动阅读和边界预取同时触发时复用同一个任务，避免后调用方误以为
-  /// 下一章已经完成布局而提前停止。
   Completer<void>? _load_next_completer;
 
   /// 是否正在切换章节（上一章/下一章/进度跳转）。
@@ -57,7 +60,7 @@ class Logic extends GetxController {
   /// 当前阅读到的章节索引。
   var current_chapter_index = 0.obs;
 
-  /// 当前阅读到的章节ID（可靠值，由 jump_to_chapter / load_next / load_prev 设置）。
+  /// 当前阅读到的章节ID。
   int current_chapter_db_id = 0;
 
   /// 当前已加载到的章节索引。
@@ -68,7 +71,7 @@ class Logic extends GetxController {
   int get min_loaded_chapter_index => _min_loaded_chapter_index;
   int _min_loaded_chapter_index = 0;
 
-  /// 是否正在加载上一章中（纯状态标记，不触发 UI 重建）。
+  /// 是否正在加载上一章中。
   bool is_loading_prev = false;
 
   /// 主动跳章时预先拼接到目标章前面的章节数。
@@ -78,107 +81,49 @@ class Logic extends GetxController {
   static const int _jump_window_after_count = 1;
 
   /// 当前阅读窗口版本。
-  ///
-  /// 每次主动跳章都会递增。自然加载任务在真正修改列表前校验版本，
-  /// 避免旧任务在新章节窗口上追加或插入错误章节。
   int _chapter_window_generation = 0;
 
   /// 正在进行的章节正文请求。
-  ///
-  /// 同一个章节的预加载、自然拼接和主动跳转可能同时发生，通过复用 Future
-  /// 避免重复读取磁盘或重复发起网络请求。
-  final Map<int, Future<String>> _chapter_fetch_in_flight =
-      <int, Future<String>>{};
+  final Map<int, Future<String>> _chapter_fetch_in_flight = <int, Future<String>>{};
 
-  /// 外部页面提供的“等待主滚动区域空闲”回调。
-  ///
-  /// 正文可以提前请求，但 append/prepend 必须等用户拖动和惯性滚动结束。
-  /// 使用滚动结束事件唤醒，不再通过固定 16ms 轮询猜测滚动状态。
+  /// 外部页面提供的"等待主滚动区域空闲"回调。
   Future<void> Function()? wait_until_chapter_mutation_allowed;
 
-  /// 外部页面提供的“保持可视锚点后执行插入”回调。
-  ///
-  /// [mutation] 真正插入上一章的同步操作。
-  /// [anchor_chapter_index] 插入前列表顶部章节，用于记录真实屏幕坐标。
-  Future<void> Function(VoidCallback mutation, int anchor_chapter_index)?
-  preserve_chapter_anchor;
+  /// 外部页面提供的"保持可视锚点后执行插入"回调。
+  Future<void> Function(VoidCallback mutation, int anchor_chapter_index)? preserve_chapter_anchor;
 
   /// 章节正文进入当前阅读窗口后的回调。
-  ///
-  /// 页面层通过该回调按项目配置完成一次性广告概率判断，并在首次命中时
-  /// 请求长篇原生广告配置。
   ValueChanged<int>? on_chapter_loaded;
 
-  /// 等待到滚动空闲后再修改正文列表。
-  ///
-  /// 章节内容可以提前请求和缓存，但真正 append/prepend 到 reading_items 必须避开
-  /// ScrollActivity 活跃期，否则会出现第一次滑动卡住、边界拼接卡顿的问题。
-  Future<void> _wait_until_chapter_mutation_allowed() async {
-    await wait_until_chapter_mutation_allowed?.call();
-  }
-
-  /// 章节锚点 key 映射，用于精确滚动到指定章节。
+  /// 章节锚点 key 映射。
   final Map<int, GlobalKey> _chapter_keys = {};
 
   /// 当前阅读会话内每章的原生广告概率判断结果。
-  ///
-  /// 同一章节在组件重建、上下章拼接和目录跳转时不会重复抽取概率。
   final Map<int, bool> _chapter_native_ad_decisions = <int, bool>{};
 
   /// 当前阅读会话内每章的"看视频免广告"提示概率判断结果。
-  ///
-  /// 同一章节不会重复抽取概率。
   final Map<int, bool> _chapter_video_ad_hint_decisions = <int, bool>{};
 
-  /// 是否显示导航栏（顶部和底部）。
+  /// 是否显示导航栏。
   var show_navigation = false.obs;
 
-  /// 评论数（从 novel_info 读取）。
-  int get comment_count {
-    final info = _store.novel_info.value;
-    if (info == null) return 0;
-    return int.tryParse(info.comment_count) ?? 0;
-  }
+  /// 是否已点赞。
+  var is_liked = false.obs;
 
-  /// 更新评论数（评论弹窗关闭后同步最新数量）。
-  void update_comment_count(int new_count) {
-    final info = _store.novel_info.value;
-    if (info == null) return;
-    final updated = NovelInfo(
-      id: info.id,
-      title: info.title,
-      subtitle: info.subtitle,
-      score: info.score,
-      focus_on: info.focus_on,
-      is_liked: info.is_liked,
-      is_favorited: info.is_favorited,
-      author_id: info.author_id,
-      source_type: info.source_type,
-      publish_status: info.publish_status,
-      recommend_status: info.recommend_status,
-      sorting: info.sorting,
-      read_count: info.read_count,
-      comment_count: new_count.toString(),
-      like_count: info.like_count,
-      favorite_count: info.favorite_count,
-      latest_chapter_no: info.latest_chapter_no,
-      latest_update_time: info.latest_update_time,
-      remark: info.remark,
-      create_time: info.create_time,
-      update_time: info.update_time,
-      remove_status: info.remove_status,
-      remove_time: info.remove_time,
-      author_name: info.author_name,
-      author_avatar: info.author_avatar,
-      language_info: info.language_info,
-      category_list: info.category_list,
-      comment_list: info.comment_list,
-      chapter_info: info.chapter_info,
-    );
-    _store.set_novel_info(updated);
-  }
+  /// 点赞数。
+  var like_count = 0.obs;
+
+  /// 是否正在点赞请求中。
+  var is_like_loading = false.obs;
+
+  /// 是否正在收藏请求中。
+  var is_favorite_loading = false.obs;
+
+  /// 是否已收藏。
+  var is_favorited = false.obs;
 
   /// 同步点赞状态到底层数据（点赞/取消点赞后调用）。
+  @override
   void sync_like_state(bool new_status, int new_count) {
     is_liked.value = new_status;
     like_count.value = new_count;
@@ -218,60 +163,6 @@ class Logic extends GetxController {
     _store.set_novel_info(updated);
   }
 
-  /// 同步关注状态到底层数据（关注/取消关注后调用）。
-  void update_focus_on(bool new_status) {
-    final info = _store.novel_info.value;
-    if (info == null) return;
-
-    final updated = NovelInfo(
-      id: info.id,
-      title: info.title,
-      subtitle: info.subtitle,
-      score: info.score,
-      focus_on: new_status,
-      is_liked: info.is_liked,
-      is_favorited: info.is_favorited,
-      author_id: info.author_id,
-      source_type: info.source_type,
-      publish_status: info.publish_status,
-      recommend_status: info.recommend_status,
-      sorting: info.sorting,
-      read_count: info.read_count,
-      comment_count: info.comment_count,
-      like_count: info.like_count,
-      favorite_count: info.favorite_count,
-      latest_chapter_no: info.latest_chapter_no,
-      latest_update_time: info.latest_update_time,
-      remark: info.remark,
-      create_time: info.create_time,
-      update_time: info.update_time,
-      remove_status: info.remove_status,
-      remove_time: info.remove_time,
-      author_name: info.author_name,
-      author_avatar: info.author_avatar,
-      language_info: info.language_info,
-      category_list: info.category_list,
-      comment_list: info.comment_list,
-      chapter_info: info.chapter_info,
-    );
-    _store.set_novel_info(updated);
-  }
-
-  /// 是否已点赞。
-  var is_liked = false.obs;
-
-  /// 点赞数。
-  var like_count = 0.obs;
-
-  /// 是否正在点赞请求中。
-  var is_like_loading = false.obs;
-
-  /// 是否正在收藏请求中。
-  var is_favorite_loading = false.obs;
-
-  /// 是否已收藏。
-  var is_favorited = false.obs;
-
   /// 正文字号。
   late final RxDouble body_font_size;
 
@@ -287,21 +178,13 @@ class Logic extends GetxController {
   /// 是否正在自动阅读。
   var is_auto_reading = false.obs;
 
-  /// 自动阅读速度（0.0 最慢，1.0 最快）。
+  /// 自动阅读速度。
   late final RxDouble auto_read_speed;
 
-  /// 滚动方向检测：上一帧滚动偏移量。
+  /// 滚动方向检测状态。
   double _last_scroll_offset = 0;
-
-  /// 滚动方向检测：当前是否在向下滑动（内容向上移动）。
   bool _is_scrolling_down = false;
-
-  /// 当前滚动方向开始时的偏移量。
-  ///
-  /// 导航栏显隐使用同方向累计距离判断，避免微小方向抖动反复触发动画。
   double _scroll_direction_anchor_offset = 0;
-
-  /// 上一次滚动方向；true 表示向后阅读，false 表示向前回看。
   bool? _last_scroll_direction_down;
 
   /// 小说阅读仓库。
@@ -318,6 +201,16 @@ class Logic extends GetxController {
       .map((Color color) => color.value)
       .toList();
 
+  // ==================== Mixin 接口实现 ====================
+
+  @override
+  NovelReadingStore get store => _store;
+
+  @override
+  int get total_word_count => _total_word_count;
+
+  // ==================== 构造/析构 ====================
+
   /// 目录列表。
   List<NovelChapterInfo> get chapter_list => _store.chapter_list;
 
@@ -325,81 +218,16 @@ class Logic extends GetxController {
   int get current_novel_language_id =>
       int.tryParse(_store.novel_info.value?.language_info.id ?? '') ?? 0;
 
-  /// 当前已进入阅读窗口的章节索引。
+  /// 当前已进入阅读窗口的章节索引集合。
   Set<int> get loaded_chapter_indexes => _store.reading_items
       .map((ReadingContentItem item) => item.chapter_index)
       .where((int chapter_index) => chapter_index >= 0)
       .toSet();
 
-  /// 为指定章节完成一次性原生广告概率判断。
-  ///
-  /// [roll] 仅用于测试概率边界；生产环境不传时使用公共随机数生成器。
-  bool resolve_chapter_native_ad_decision({
-    required int chapter_index,
-    required int probability,
-    int? roll,
-  }) {
-    final bool? existing_decision = _chapter_native_ad_decisions[chapter_index];
-    if (existing_decision != null) return existing_decision;
-
-    final bool should_show = PercentageProbability.is_hit(
-      probability,
-      roll: roll,
-    );
-    _chapter_native_ad_decisions[chapter_index] = should_show;
-    debugPrint(
-      '📢 [ReadNativeAd] 章节概率判断: chapter_index=$chapter_index, '
-      'probability=${probability.clamp(0, 100)}, show=$should_show',
-    );
-    return should_show;
-  }
-
-  /// 查询指定章节已经固定的原生广告展示结果。
-  bool should_show_native_ad_for_chapter(int chapter_index) {
-    return _chapter_native_ad_decisions[chapter_index] ?? false;
-  }
-
-  /// 为指定章节完成一次性"看视频免广告"提示概率判断。
-  ///
-  /// [chapter_index] 章节索引。
-  /// [probability] 概率值（0~100）。
-  /// [roll] 仅用于测试概率边界；生产环境不传时使用公共随机数生成器。
-  bool resolve_chapter_video_ad_hint_decision({
-    required int chapter_index,
-    required int probability,
-    int? roll,
-  }) {
-    final bool? existing_decision =
-        _chapter_video_ad_hint_decisions[chapter_index];
-    if (existing_decision != null) return existing_decision;
-
-    final bool should_show = PercentageProbability.is_hit(
-      probability,
-      roll: roll,
-    );
-    _chapter_video_ad_hint_decisions[chapter_index] = should_show;
-    debugPrint(
-      '📢 [ReadVideoAdHint] 章节概率判断: chapter_index=$chapter_index, '
-      'probability=${probability.clamp(0, 100)}, show=$should_show',
-    );
-    return should_show;
-  }
-
-  /// 更新总字数，基于目录列表。
-  void _update_total_word_count() {
-    int total = 0;
-    for (var chapter in _store.chapter_list) {
-      total += chapter.word_count;
-    }
-    if (total > 0) {
-      _total_word_count = total;
-    }
-  }
-
   /// 最小合法书籍 id 阈值。
   static const int _min_valid_story_id = 0;
 
-  /// 页面滚动控制器，由于 Logic 被持久化，此控制器也能跨主题切换重建而保持。
+  /// 页面滚动控制器。
   late final ScrollController scroll_controller;
 
   Logic({
@@ -412,13 +240,8 @@ class Logic extends GetxController {
   }) : _store = reading_store ?? NovelReadingStore(),
        _chapter_content_loader = chapter_content_loader {
     scroll_controller = ScrollController();
-    // 初始化字号。
-    body_font_size =
-        (initial_body_font_size ?? load_body_font_size() ?? 18.0).obs;
-    // 初始化自动阅读速度。
-    auto_read_speed =
-        (initial_auto_read_speed ?? load_auto_read_speed() ?? 0.2).obs;
-    // 刚进入 read 页面时，清空之前拿到的全局数据，确保展示的是当前书籍的内容。
+    body_font_size = (initial_body_font_size ?? load_body_font_size() ?? 18.0).obs;
+    auto_read_speed = (initial_auto_read_speed ?? load_auto_read_speed() ?? 0.2).obs;
     _store.clear_novel_info();
   }
 
@@ -432,223 +255,61 @@ class Logic extends GetxController {
     super.onClose();
   }
 
-  /// 增加正文字号。
-  void increase_font_size() {
-    final double next = body_font_size.value + font_size_step;
-    if (next <= font_size_max) {
-      body_font_size.value = next;
-      save_body_font_size(next);
+  // ==================== 广告概率判断 ====================
+
+  /// 为指定章节完成一次性原生广告概率判断。
+  bool resolve_chapter_native_ad_decision({
+    required int chapter_index,
+    required int probability,
+    int? roll,
+  }) {
+    final bool? existing_decision = _chapter_native_ad_decisions[chapter_index];
+    if (existing_decision != null) return existing_decision;
+
+    final bool should_show = PercentageProbability.is_hit(probability, roll: roll);
+    _chapter_native_ad_decisions[chapter_index] = should_show;
+    return should_show;
+  }
+
+  /// 查询指定章节已经固定的原生广告展示结果。
+  bool should_show_native_ad_for_chapter(int chapter_index) {
+    return _chapter_native_ad_decisions[chapter_index] ?? false;
+  }
+
+  /// 为指定章节完成一次性"看视频免广告"提示概率判断。
+  bool resolve_chapter_video_ad_hint_decision({
+    required int chapter_index,
+    required int probability,
+    int? roll,
+  }) {
+    final bool? existing_decision = _chapter_video_ad_hint_decisions[chapter_index];
+    if (existing_decision != null) return existing_decision;
+
+    final bool should_show = PercentageProbability.is_hit(probability, roll: roll);
+    _chapter_video_ad_hint_decisions[chapter_index] = should_show;
+    return should_show;
+  }
+
+  // ==================== 数据初始化 ====================
+
+  /// 更新总字数。
+  void _update_total_word_count() {
+    int total = 0;
+    for (var chapter in _store.chapter_list) {
+      total += chapter.word_count;
+    }
+    if (total > 0) {
+      _total_word_count = total;
     }
   }
 
-  /// 减少正文字号。
-  void decrease_font_size() {
-    final double next = body_font_size.value - font_size_step;
-    if (next >= font_size_min) {
-      body_font_size.value = next;
-      save_body_font_size(next);
-    }
-  }
-
-  /// 切换点赞状态（乐观更新）。
-  ///
-  /// 立即切换本地状态，然后发起请求。
-  /// 请求失败时回退状态，请求成功时保持不变。
-  /// 请求期间通过 is_like_loading 防止重复点击。
-  Future<void> toggle_like() async {
-    if (is_like_loading.value) return;
-
-    is_like_loading.value = true;
-
-    // 乐观更新：立即切换状态。
-    final bool previous_status = is_liked.value;
-    final int previous_count = like_count.value;
-    final bool optimistic_status = !previous_status;
-    final int optimistic_count = (previous_count + (optimistic_status ? 1 : -1))
-        .clamp(0, 999999);
-    sync_like_state(optimistic_status, optimistic_count);
-
-    try {
-      final ResultsType<Map<String, dynamic>> results =
-          await postRequest<Map<String, dynamic>>(
-            path: 'novel_like/click',
-            parameter: <String, dynamic>{'novel_id': story_id},
-            fromJson: (Map<String, dynamic> json) => json,
-          );
-
-      if (!results.status || results.content == null) {
-        // 请求失败，回退状态。
-        sync_like_state(previous_status, previous_count);
-        return;
-      }
-
-      final bool server_status = results.content!['like'] == true;
-      // 服务端状态与乐观更新不一致时，以服务端为准。
-      if (server_status != optimistic_status) {
-        final int server_count = (previous_count + (server_status ? 1 : -1))
-            .clamp(0, 999999);
-        sync_like_state(server_status, server_count);
-      }
-    } catch (_) {
-      // 异常时回退状态。
-      sync_like_state(previous_status, previous_count);
-    } finally {
-      is_like_loading.value = false;
-    }
-  }
-
-  /// 切换收藏状态（乐观更新）。
-  ///
-  /// 立即切换本地状态，然后发起请求。
-  /// 请求失败时回退状态，请求成功时保持不变。
-  /// 请求期间通过 is_favorite_loading 防止重复点击。
-  Future<bool?> toggle_favorite() async {
-    if (is_favorite_loading.value) return null;
-
-    is_favorite_loading.value = true;
-
-    // 乐观更新：立即切换状态。
-    final bool previous_status = is_favorited.value;
-    final bool optimistic_status = !previous_status;
-    is_favorited.value = optimistic_status;
-
-    // 同步到 store 中的 novel_info。
-    final info = _store.novel_info.value;
-    NovelInfo? previous_info;
-    if (info != null) {
-      previous_info = info;
-      final int delta = optimistic_status ? 1 : -1;
-      final int new_count = (int.tryParse(info.favorite_count) ?? 0) + delta;
-      final updated = NovelInfo(
-        id: info.id,
-        title: info.title,
-        subtitle: info.subtitle,
-        score: info.score,
-        focus_on: info.focus_on,
-        is_liked: info.is_liked,
-        is_favorited: optimistic_status,
-        author_id: info.author_id,
-        source_type: info.source_type,
-        publish_status: info.publish_status,
-        recommend_status: info.recommend_status,
-        sorting: info.sorting,
-        read_count: info.read_count,
-        comment_count: info.comment_count,
-        like_count: info.like_count,
-        favorite_count: new_count.toString(),
-        latest_chapter_no: info.latest_chapter_no,
-        latest_update_time: info.latest_update_time,
-        remark: info.remark,
-        create_time: info.create_time,
-        update_time: info.update_time,
-        remove_status: info.remove_status,
-        remove_time: info.remove_time,
-        author_name: info.author_name,
-        author_avatar: info.author_avatar,
-        language_info: info.language_info,
-        category_list: info.category_list,
-        comment_list: info.comment_list,
-        chapter_info: info.chapter_info,
-      );
-      _store.set_novel_info(updated);
-    }
-
-    try {
-      final ResultsType<Map<String, dynamic>> results =
-          await postRequest<Map<String, dynamic>>(
-            path: 'novel_favorite/click',
-            parameter: <String, dynamic>{'novel_id': story_id},
-            fromJson: (Map<String, dynamic> json) => json,
-          );
-
-      if (!results.status || results.content == null) {
-        // 请求失败，回退状态。
-        _revert_favorite(previous_status, previous_info);
-        return null;
-      }
-
-      final dynamic raw_server_status = results.content!['favorite'];
-      final bool server_status =
-          raw_server_status == true || raw_server_status == 1;
-      // 服务端状态与乐观更新不一致时，以服务端为准。
-      if (server_status != optimistic_status) {
-        is_favorited.value = server_status;
-        if (previous_info != null) {
-          final int server_delta = server_status ? 1 : -1;
-          final int server_count =
-              (int.tryParse(previous_info.favorite_count) ?? 0) + server_delta;
-          _store.set_novel_info(
-            NovelInfo(
-              id: previous_info.id,
-              title: previous_info.title,
-              subtitle: previous_info.subtitle,
-              score: previous_info.score,
-              focus_on: previous_info.focus_on,
-              is_liked: previous_info.is_liked,
-              is_favorited: server_status,
-              author_id: previous_info.author_id,
-              source_type: previous_info.source_type,
-              publish_status: previous_info.publish_status,
-              recommend_status: previous_info.recommend_status,
-              sorting: previous_info.sorting,
-              read_count: previous_info.read_count,
-              comment_count: previous_info.comment_count,
-              like_count: previous_info.like_count,
-              favorite_count: server_count.toString(),
-              latest_chapter_no: previous_info.latest_chapter_no,
-              latest_update_time: previous_info.latest_update_time,
-              remark: previous_info.remark,
-              create_time: previous_info.create_time,
-              update_time: previous_info.update_time,
-              remove_status: previous_info.remove_status,
-              remove_time: previous_info.remove_time,
-              author_name: previous_info.author_name,
-              author_avatar: previous_info.author_avatar,
-              language_info: previous_info.language_info,
-              category_list: previous_info.category_list,
-              comment_list: previous_info.comment_list,
-              chapter_info: previous_info.chapter_info,
-            ),
-          );
-        }
-      }
-
-      unawaited(BookshelfSyncService.favorite_changed());
-
-      // 只在服务端确认小说已加入收藏后申请系统通知权限。
-      if (server_status) {
-        unawaited(NotificationPermissionRequest.request_after_novel_favorite());
-      }
-      return server_status;
-    } catch (_) {
-      // 异常时回退状态。
-      _revert_favorite(previous_status, previous_info);
-      return null;
-    } finally {
-      is_favorite_loading.value = false;
-    }
-  }
-
-  /// 回退收藏状态。
-  void _revert_favorite(bool previous_status, NovelInfo? previous_info) {
-    is_favorited.value = previous_status;
-    if (previous_info != null) {
-      _store.set_novel_info(previous_info);
-    }
-  }
-
-  /// 请求书籍详情接口，用于页面进入时拉取最新小说数据。
-  ///
-  /// [force] 是否强制刷新，默认为 false。
+  /// 请求书籍详情接口。
   Future<void> fetch_info({
     bool force = false,
     bool show_loading = true,
     bool bypass_chapter_cache = false,
   }) async {
-    // 如果不是强制刷新，且 Store 中已经有数据，则跳过请求，避免重复加载。
-    if (!force &&
-        _store.novel_info.value != null &&
-        _store.reading_items.isNotEmpty) {
+    if (!force && _store.novel_info.value != null && _store.reading_items.isNotEmpty) {
       is_loading.value = false;
       return;
     }
@@ -668,7 +329,6 @@ class Logic extends GetxController {
       _store.clear_chapter_content_cache();
     }
 
-    // 调用全局封装的 POST 请求，请求小说详情。
     final ResultsType<NovelInfo> results = await postRequest<NovelInfo>(
       path: 'novel/get_info',
       parameter: <String, dynamic>{'id': story_id},
@@ -676,28 +336,19 @@ class Logic extends GetxController {
     );
 
     if (results.status && results.content != null) {
-      // 请求成功，保存到 Store。
       _store.set_novel_info(results.content!);
-      // TODO 后端已完成“进入即记录”，同步可能早已加载的书架历史。
       unawaited(BookshelfSyncService.history_changed());
       _total_word_count = results.content!.language_info.word_count;
 
-      // TODO 初始化点赞状态、点赞数、收藏状态。
       is_liked.value = results.content!.is_liked;
       like_count.value = int.tryParse(results.content!.like_count) ?? 0;
       is_favorited.value = results.content!.is_favorited;
 
-      // 获取章节目录。
       await fetch_directory(results.content!.language_info.id);
 
-      // 继续拉取第一章的正文内容。
       if (_store.chapter_list.isNotEmpty) {
         final NovelChapterInfo first_chapter = _store.chapter_list.first;
-        // 获取第一章内容并写入缓存。
-        final String content = await _fetch_chapter_content(
-          0,
-          force: bypass_chapter_cache,
-        );
+        final String content = await _fetch_chapter_content(0, force: bypass_chapter_cache);
         _store.set_initial_content(
           first_chapter.title,
           first_chapter.chapter_no,
@@ -711,22 +362,17 @@ class Logic extends GetxController {
         _min_loaded_chapter_index = 0;
         current_chapter_index.value = 0;
         current_chapter_db_id = int.tryParse(first_chapter.id) ?? 0;
-
-        // 异步预加载第二章到缓存，不阻塞页面渲染。
         _preload_adjacent_chapters(0);
       }
 
       is_loading.value = false;
     } else {
-      // 请求失败。
       is_error.value = !(force && has_existing_content && !show_loading);
       is_loading.value = false;
     }
   }
 
   /// 请求章节目录接口。
-  ///
-  /// [novel_language_id] 小说语种 id。
   Future<void> fetch_directory(String novel_language_id) async {
     final ResultsType<List<NovelChapterInfo>> results =
         await postRequest<List<NovelChapterInfo>>(
@@ -734,10 +380,7 @@ class Logic extends GetxController {
           parameter: <String, dynamic>{'novel_language_id': novel_language_id},
           fromJsonList: (List<dynamic> json) {
             return json
-                .map(
-                  (e) =>
-                      NovelChapterInfo.from_json(Map<String, dynamic>.from(e)),
-                )
+                .map((e) => NovelChapterInfo.from_json(Map<String, dynamic>.from(e)))
                 .toList();
           },
         );
@@ -748,20 +391,21 @@ class Logic extends GetxController {
     }
   }
 
+  // ==================== 章节加载 ====================
+
+  /// 等待到滚动空闲后再修改正文列表。
+  Future<void> _wait_until_chapter_mutation_allowed() async {
+    await wait_until_chapter_mutation_allowed?.call();
+  }
+
   /// 加载并追加下一章内容。
-  ///
-  /// 自然阅读场景：用户滚动到接近底部时自动触发。
-  /// 优先从缓存读取，缓存未命中则发起网络请求。
-  /// 加载完成后自动预加载更后面的章节到缓存。
   Future<void> load_next_chapter() async {
     if (is_loading_next) {
       await _load_next_completer?.future;
       return;
     }
 
-    // 没有目录，或者已经加载完所有章节，则不继续。
-    if (_store.chapter_list.isEmpty ||
-        _loaded_chapter_index >= _store.chapter_list.length - 1) {
+    if (_store.chapter_list.isEmpty || _loaded_chapter_index >= _store.chapter_list.length - 1) {
       return;
     }
 
@@ -775,11 +419,9 @@ class Logic extends GetxController {
       final int next_index = _loaded_chapter_index + 1;
       final NovelChapterInfo next_chapter = _store.chapter_list[next_index];
 
-      // 获取内容（优先缓存，否则网络请求）。
       final String content = await _fetch_chapter_content(next_index);
       if (content.isEmpty) return;
 
-      // 等待滚动空闲后再追加到 Store，避免滚动过程中改变内容高度。
       await _wait_until_chapter_mutation_allowed();
 
       if (window_generation != _chapter_window_generation ||
@@ -788,7 +430,6 @@ class Logic extends GetxController {
         return;
       }
 
-      // 追加到 Store。
       int words_before = 0;
       for (int i = 0; i < next_index; i++) {
         words_before += _store.chapter_list[i].word_count;
@@ -804,10 +445,7 @@ class Logic extends GetxController {
       );
       on_chapter_loaded?.call(next_index);
 
-      // 更新已加载索引。
       _loaded_chapter_index = next_index;
-
-      // 异步预加载更后面的章节到缓存。
       _preload_adjacent_chapters(next_index);
     } catch (e) {
       debugPrint('加载下一章失败: $e');
@@ -823,10 +461,6 @@ class Logic extends GetxController {
   }
 
   /// 确保当前阅读章节的下一章已经拼接到正文末尾。
-  ///
-  /// [chapter_index] 当前正在阅读的章节索引。
-  /// 当用户进入第 N 章时，如果第 N+1 章还没有追加到正文列表，就立即加载并追加；
-  /// 章节正文获取仍然走“内存 -> 磁盘 -> 网络”的缓存链路。
   Future<void> ensure_next_chapter_appended_after(int chapter_index) async {
     if (_store.chapter_list.isEmpty ||
         chapter_index < _min_loaded_chapter_index ||
@@ -841,15 +475,8 @@ class Logic extends GetxController {
   }
 
   /// 加载并插入上一章内容。
-  ///
-  /// 自然阅读场景：用户向上滚动到正文顶部附近时自动触发。
-  /// 优先从缓存读取，缓存未命中则发起网络请求。
-  /// 加载完成后自动预加载更前面的章节到缓存。
   Future<void> load_prev_chapter() async {
-    // 已经在加载中，或者没有目录，或者已经加载到第一章，则不继续。
-    if (is_loading_prev ||
-        _store.chapter_list.isEmpty ||
-        _min_loaded_chapter_index <= 0) {
+    if (is_loading_prev || _store.chapter_list.isEmpty || _min_loaded_chapter_index <= 0) {
       return;
     }
 
@@ -861,17 +488,14 @@ class Logic extends GetxController {
       final int prev_index = _min_loaded_chapter_index - 1;
       final NovelChapterInfo prev_chapter = _store.chapter_list[prev_index];
 
-      // 获取内容（优先缓存，否则网络请求）。
       final String content = await _fetch_chapter_content(prev_index);
       if (content.isEmpty) return;
 
-      // 计算该章节之前的字数。
       int words_before = 0;
       for (int i = 0; i < prev_index; i++) {
         words_before += _store.chapter_list[i].word_count;
       }
 
-      // 等待滚动空闲后再插入到 Store，避免滚动过程中改变内容高度并打断手势。
       await _wait_until_chapter_mutation_allowed();
 
       if (window_generation != _chapter_window_generation ||
@@ -900,7 +524,6 @@ class Logic extends GetxController {
         await preserve_anchor(apply_prepend, expected_min_loaded_index);
       }
 
-      // 异步预加载更前面的章节到缓存。
       _preload_adjacent_chapters(prev_index);
     } catch (e) {
       debugPrint('加载上一章失败: $e');
@@ -910,10 +533,6 @@ class Logic extends GetxController {
   }
 
   /// 跳转到指定章节。
-  ///
-  /// 主动跳转不是只渲染目标单章，而是把目标章前后各一章一起拼接进
-  /// reading_items。这样从第 15 章 10% 恢复时，第 14 章已经真实存在于
-  /// 列表上方，用户向上滑动不会遇到上一章迟迟不加载的问题。
   Future<int?> jump_to_chapter(int index) async {
     if (index < 0 || index >= _store.chapter_list.length) return null;
 
@@ -922,15 +541,8 @@ class Logic extends GetxController {
 
     try {
       final NovelChapterInfo chapter = _store.chapter_list[index];
-      debugPrint(
-        '📖 [jump_to_chapter] index=$index, chapter_id=${chapter.id}, '
-        'chapter_no=${chapter.chapter_no}, title=${chapter.title}',
-      );
 
-      final bool rebuilt = await _rebuild_reading_window_around_chapter(
-        index,
-        generation: generation,
-      );
+      final bool rebuilt = await _rebuild_reading_window_around_chapter(index, generation: generation);
       if (generation != _chapter_window_generation) {
         return null;
       }
@@ -953,42 +565,21 @@ class Logic extends GetxController {
   }
 
   /// 完成主动跳章。
-  ///
-  /// 页面只有在目标章节完成布局并被精确放到目标位置后才调用，确保骨架屏
-  /// 不会在列表仍停留于上一章时提前消失。
   void complete_chapter_jump(int generation) {
     if (generation != _chapter_window_generation) return;
     is_jumping_chapter.value = false;
   }
 
   /// 重建以目标章节为中心的阅读窗口。
-  ///
-  /// [index] 目标章节索引。
-  /// 会同步拉取目标章前后一章的正文并从缓存重建 reading_items。
-  Future<bool> _rebuild_reading_window_around_chapter(
-    int index, {
-    required int generation,
-  }) async {
+  Future<bool> _rebuild_reading_window_around_chapter(int index, {required int generation}) async {
     final int total_count = _store.chapter_list.length;
-    if (total_count <= 0) {
-      return false;
-    }
+    if (total_count <= 0) return false;
 
-    final int start_index = (index - _jump_window_before_count).clamp(
-      0,
-      total_count - 1,
-    );
-    final int end_index = (index + _jump_window_after_count).clamp(
-      0,
-      total_count - 1,
-    );
+    final int start_index = (index - _jump_window_before_count).clamp(0, total_count - 1);
+    final int end_index = (index + _jump_window_after_count).clamp(0, total_count - 1);
 
     final List<int> chapter_indexes = <int>[
-      for (
-        int chapter_index = start_index;
-        chapter_index <= end_index;
-        chapter_index++
-      )
+      for (int chapter_index = start_index; chapter_index <= end_index; chapter_index++)
         chapter_index,
     ];
     final List<String> contents = <String>[];
@@ -999,32 +590,23 @@ class Logic extends GetxController {
         debugPrint('加载跳转窗口章节 $chapter_index 失败: $error');
         contents.add('');
       }
-      if (generation != _chapter_window_generation) {
-        return false;
-      }
+      if (generation != _chapter_window_generation) return false;
     }
 
-    // 中间章节跳转必须优先保证紧邻的上一章存在。并发拉取三个远端正文时，
-    // 任一邻章可能因瞬时失败返回空字符串；若直接完成跳转，列表顶部就会被
-    // 锁在目标章。上一章首次为空时，在其他窗口内容完成后再独立重试一次。
     if (index > 0) {
       final int previous_content_index = index - 1 - start_index;
       if (previous_content_index >= 0 &&
           previous_content_index < contents.length &&
           contents[previous_content_index].isEmpty) {
         try {
-          contents[previous_content_index] = await _fetch_chapter_content(
-            index - 1,
-            force: true,
-          );
+          contents[previous_content_index] = await _fetch_chapter_content(index - 1, force: true);
         } catch (error) {
           debugPrint('重试加载上一章 ${index - 1} 失败: $error');
         }
       }
     }
-    if (generation != _chapter_window_generation) {
-      return false;
-    }
+    if (generation != _chapter_window_generation) return false;
+
     final int target_content_index = index - start_index;
     if (target_content_index < 0 ||
         target_content_index >= contents.length ||
@@ -1039,61 +621,38 @@ class Logic extends GetxController {
     }
 
     int actual_start_index = index;
-    while (actual_start_index > start_index &&
-        contents[actual_start_index - start_index - 1].isNotEmpty) {
+    while (actual_start_index > start_index && contents[actual_start_index - start_index - 1].isNotEmpty) {
       actual_start_index--;
     }
     int actual_end_index = index;
-    while (actual_end_index < end_index &&
-        contents[actual_end_index - start_index + 1].isNotEmpty) {
+    while (actual_end_index < end_index && contents[actual_end_index - start_index + 1].isNotEmpty) {
       actual_end_index++;
     }
 
-    _store.rebuild_reading_items_from_cache(
-      actual_start_index,
-      actual_end_index,
-      _store.chapter_list,
-    );
-    for (
-      int chapter_index = actual_start_index;
-      chapter_index <= actual_end_index;
-      chapter_index++
-    ) {
+    _store.rebuild_reading_items_from_cache(actual_start_index, actual_end_index, _store.chapter_list);
+    for (int chapter_index = actual_start_index; chapter_index <= actual_end_index; chapter_index++) {
       on_chapter_loaded?.call(chapter_index);
     }
 
-    // 只把连续成功加载的章节计入窗口；相邻章节请求失败时，后续自然滚动
-    // 仍可重新请求，避免目录跳转后永久跨过一章。
     _min_loaded_chapter_index = actual_start_index;
     _loaded_chapter_index = actual_end_index;
     return true;
   }
 
-  /// 跳转后的预加载链：提前把目标章节前后多章写入缓存。
-  ///
-  /// 目录从第 5 章跳到第 18 章后，用户第一次滑动时最容易遇到上下章拼接。
-  /// 因此这里不只缓存相邻 1 章，而是前后各缓存 2 章，降低首次滑动等待网络的概率。
-  /// 这里只做缓存，不修改 reading_items。
+  /// 跳转后的预加载链。
   void _preload_chain_after_jump(int index) {
     _preload_chapter_window(index, radius: 2);
   }
 
-  /// 获取章节内容，优先从缓存读取，缓存未命中则发起网络请求并写入缓存。
-  ///
-  /// 这是所有章节数据获取的唯一入口，保证缓存一致性。
-  ///
-  /// [index] 章节在目录中的索引。
-  /// 返回章节正文文本。
+  // ==================== 缓存管理 ====================
+
+  /// 获取章节内容，优先从缓存读取。
   Future<String> _fetch_chapter_content(int index, {bool force = false}) async {
-    if (index < 0 || index >= _store.chapter_list.length) {
-      return '';
-    }
+    if (index < 0 || index >= _store.chapter_list.length) return '';
 
     if (!force) {
       final Future<String>? in_flight = _chapter_fetch_in_flight[index];
-      if (in_flight != null) {
-        return in_flight;
-      }
+      if (in_flight != null) return in_flight;
     }
 
     final Future<String> request = _load_chapter_content(index, force: force);
@@ -1115,15 +674,11 @@ class Logic extends GetxController {
     final NovelChapterInfo chapter = _store.chapter_list[index];
     final String chapter_id = chapter.id;
 
-    // 内存缓存命中，直接返回。
     if (!force) {
       final String? cached = _store.get_cached_chapter_content(index);
-      if (cached != null && cached.isNotEmpty) {
-        return cached;
-      }
+      if (cached != null && cached.isNotEmpty) return cached;
     }
 
-    // 磁盘缓存命中，回写内存缓存后返回。
     if (!force) {
       final String? disk_cached = await ChapterCache.read(chapter_id);
       if (disk_cached != null && disk_cached.isNotEmpty) {
@@ -1132,7 +687,6 @@ class Logic extends GetxController {
       }
     }
 
-    // 缓存未命中，发起网络请求。
     final String content = await _chapter_content_loader(chapter_id);
     if (content.isNotEmpty) {
       _store.cache_chapter_content(index, content);
@@ -1141,19 +695,12 @@ class Logic extends GetxController {
     return content;
   }
 
-  /// 异步预加载指定章节附近的章节到缓存（不更新 reading_items）。
-  ///
-  /// 当用户正在阅读第 N 章时，提前将 N 前后 2 章内容缓存，
-  /// 这样自然滚动或跳转时可以直接从缓存读取，无需等待网络请求。
-  ///
-  /// [current_index] 当前章节索引。
+  /// 异步预加载指定章节附近的章节到缓存。
   void _preload_adjacent_chapters(int current_index) {
     _preload_chapter_window(current_index, radius: 2);
   }
 
   /// 预加载指定章节前后窗口内的正文到缓存。
-  ///
-  /// 只请求/写缓存，不 append/prepend 正文列表，因此不会改变当前滚动高度。
   void _preload_chapter_window(int center_index, {int radius = 2}) {
     final int total = _store.chapter_list.length;
     if (total <= 0) return;
@@ -1170,6 +717,8 @@ class Logic extends GetxController {
     }
   }
 
+  // ==================== 滚动/导航 ====================
+
   /// 判断当前路由参数是否合法。
   bool get has_valid_story_id => story_id > _min_valid_story_id;
 
@@ -1181,9 +730,6 @@ class Logic extends GetxController {
   }
 
   /// 同步程序化定位后的滚动基准。
-  ///
-  /// 章节跳转、上一章锚点补偿等 jumpTo 不属于用户手势，必须重置方向锚点，
-  /// 否则下一次轻微滑动会被旧偏移量误判为一次超大距离滚动。
   void sync_scroll_offset(double offset) {
     _last_scroll_offset = offset;
     _scroll_direction_anchor_offset = offset;
@@ -1191,25 +737,17 @@ class Logic extends GetxController {
   }
 
   /// 根据滚动方向自动显示/隐藏导航栏。
-  ///
-  /// 上滑（内容向上移动）时隐藏，下滑（内容向下移动）时显示。
-  /// 使用 8px 阈值防止误触。
-  /// 接近顶部 300px 以内时，上滑不显示导航栏，避免在简介区域频繁闪烁。
   void on_scroll(double offset) {
     if (offset == _last_scroll_offset) return;
 
-    // 判断滚动方向：offset 增大 = 向下滑动（看更晚的内容）。
     _is_scrolling_down = offset > _last_scroll_offset;
-    if (_last_scroll_direction_down == null ||
-        _last_scroll_direction_down != _is_scrolling_down) {
+    if (_last_scroll_direction_down == null || _last_scroll_direction_down != _is_scrolling_down) {
       _scroll_direction_anchor_offset = _last_scroll_offset;
       _last_scroll_direction_down = _is_scrolling_down;
     }
     _last_scroll_offset = offset;
-    final double scroll_distance = (offset - _scroll_direction_anchor_offset)
-        .abs();
+    final double scroll_distance = (offset - _scroll_direction_anchor_offset).abs();
 
-    // 接近顶部时，强制隐藏导航栏并返回，不处理上滑显示逻辑。
     if (offset < Style.navigation_force_hidden_top_threshold) {
       if (show_navigation.value) {
         show_navigation.value = false;
@@ -1219,44 +757,34 @@ class Logic extends GetxController {
       return;
     }
 
-    // 下滑 + 可见 + 累计距离 > 8px → 隐藏。
-    if (_is_scrolling_down &&
-        show_navigation.value &&
-        scroll_distance > Style.navigation_visibility_scroll_threshold) {
+    if (_is_scrolling_down && show_navigation.value && scroll_distance > Style.navigation_visibility_scroll_threshold) {
       show_navigation.value = false;
       _scroll_direction_anchor_offset = offset;
     }
 
-    // 上滑 + 隐藏 + 累计距离 > 8px → 显示（仅在远离顶部时生效）。
-    if (!_is_scrolling_down &&
-        !show_navigation.value &&
-        scroll_distance > Style.navigation_visibility_scroll_threshold) {
+    if (!_is_scrolling_down && !show_navigation.value && scroll_distance > Style.navigation_visibility_scroll_threshold) {
       show_navigation.value = true;
       _scroll_direction_anchor_offset = offset;
     }
   }
 
+  // ==================== 状态查询 ====================
+
   /// 是否为第一章。
   bool get is_first_chapter => current_chapter_index.value == 0;
 
   /// 当前阅读列表是否包含并展示小说简介。
-  ///
-  /// 自然从第一章开始阅读时，即使当前章节已经推进到第二章、第三章，简介仍然在列表顶部；
-  /// 只有目录跳转到非第一章且列表从中间章节开始时，才隐藏简介。
   bool get should_show_introduction => _min_loaded_chapter_index == 0;
 
   /// 是否为最后一章。
   bool get is_last_chapter =>
-      _store.chapter_list.isEmpty ||
-      current_chapter_index.value >= _store.chapter_list.length - 1;
+      _store.chapter_list.isEmpty || current_chapter_index.value >= _store.chapter_list.length - 1;
+
+  // ==================== 构建方法 ====================
 
   /// 构建占位详情数据。
   ReadDetail build_detail() {
-    return DetailBuilder.build(
-      store: _store,
-      story_id: story_id,
-      story_title: story_title,
-    );
+    return DetailBuilder.build(store: _store, story_id: story_id, story_title: story_title);
   }
 
   /// 构建正文内容项列表。
@@ -1264,7 +792,6 @@ class Logic extends GetxController {
     final List<ReadingContentItem> items = _store.reading_items;
 
     if (items.isEmpty) {
-      // 如果正文内容为空，返回一个提示占位。
       return <ReadingContentItem>[
         ReadingContentItem(
           text: easy.tr('image_text.loading'),
@@ -1280,83 +807,8 @@ class Logic extends GetxController {
     return items;
   }
 
-  /// 根据滚动位置计算阅读百分比。
-  ///
-  /// 基于当前章节索引和章节内进度换算全书进度，
-  /// 避免因只加载部分章节导致进度计算偏差。
-  ///
-  /// [scroll_offset] 当前滚动偏移量。
-  /// [max_scroll_extent] 最大滚动范围。
-  /// [reading_section_offset] 正文区块距离列表顶部的绝对高度。
-  double calculate_reading_progress(
-    double scroll_offset,
-    double max_scroll_extent, {
-    double reading_section_offset = 0,
-  }) {
-    if (_total_word_count <= 0 || _store.chapter_list.isEmpty) {
-      return 0;
-    }
-
-    // 获取当前章节索引。
-    final int chapter_index = current_chapter_index.value;
-    if (chapter_index < 0 || chapter_index >= _store.chapter_list.length) {
-      return 0;
-    }
-
-    // 基于章节字数计算全书进度。
-    return calculate_total_progress_percent_for_chapter(
-      chapter_index: chapter_index,
-      chapter_progress_percent: _current_chapter_progress,
-    );
-  }
-
-  /// 获取进度计算器实例。
-  ProgressCalculator get _progress_calculator => ProgressCalculator(
-    chapter_list: _store.chapter_list,
-    total_word_count: _total_word_count,
-  );
-
-  /// 根据全书阅读百分比推算所在章节索引。
-  int find_chapter_index_by_progress(double progress_percent) {
-    return _progress_calculator.find_chapter_index_by_progress(
-      progress_percent,
-    );
-  }
-
-  /// 根据全书阅读进度换算指定章节内部的阅读百分比。
-  double calculate_chapter_progress_percent({
-    required double reading_progress_percent,
-    required int chapter_index,
-  }) {
-    return _progress_calculator.calculate_chapter_progress_percent(
-      reading_progress_percent: reading_progress_percent,
-      chapter_index: chapter_index,
-    );
-  }
-
-  /// 根据章节索引和章节内进度换算全书阅读进度。
-  double calculate_total_progress_percent_for_chapter({
-    required int chapter_index,
-    required double chapter_progress_percent,
-  }) {
-    return _progress_calculator.calculate_total_progress_percent_for_chapter(
-      chapter_index: chapter_index,
-      chapter_progress_percent: chapter_progress_percent,
-    );
-  }
-
   /// 获取指定章节的 GlobalKey。
   GlobalKey get_chapter_key(int index) {
     return _chapter_keys.putIfAbsent(index, () => GlobalKey());
-  }
-
-  /// 当前章节内阅读进度百分比（0-100）。
-  ///
-  /// 由外部（index.dart）通过 [update_chapter_progress] 更新。
-  double _current_chapter_progress = 0;
-
-  /// 更新当前章节内阅读进度。
-  void update_chapter_progress(double progress) {
-    _current_chapter_progress = progress.clamp(0.0, 100.0);
   }
 }

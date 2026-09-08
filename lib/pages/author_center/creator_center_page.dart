@@ -1,9 +1,12 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/pages/author_center/logic.dart';
 import 'package:app/pages/author_center/store.dart';
 import 'package:app/pages/author_center/models/creator_backend_models.dart';
+import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/author_center/widgets/backend_work_card.dart';
 import 'package:app/pages/author_center/work_detail_page.dart';
+import 'package:app/pages/work_editor/index.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/util/language_util/index.dart';
@@ -535,9 +538,38 @@ class _CreateWorkSheetState extends State<_CreateWorkSheet> {
 
       if (work != null && mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(easy.tr('creator_center.create_success'))),
+
+        // 导航到编辑器页面
+        final CreatorWorkDraft workDraft = CreatorWorkDraft(
+          local_id: 'work_${work.id}',
+          novel_id: work.id,
+          title: title,
+          introduction: intro,
+          work_type: _selected_type == 1
+              ? CreatorWorkType.long
+              : CreatorWorkType.short,
+          is_completed: false,
+          language_code: 'zh',
+          category_ids: const [],
+          short_content: '',
+          chapters: const [],
+          status: CreatorWorkStatus.draft,
+          release_mode: CreatorReleaseMode.immediate,
+          scheduled_publish_time: null,
+          update_time: DateTime.now(),
         );
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CreatorWorkEditorPage(initial_work: workDraft),
+          ),
+        ).then((result) {
+          // 返回时刷新作品列表
+          if (result != null) {
+            widget.store.refreshWorks();
+          }
+        });
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(easy.tr('creator_center.create_failed'))),

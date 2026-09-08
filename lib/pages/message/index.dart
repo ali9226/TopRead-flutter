@@ -99,14 +99,14 @@ class _MessagePageState extends State<MessagePage> {
     super.initState();
     _scroll_controller.addListener(_on_scroll);
 
-    // TODO 首次加载阻塞等待，后续静默后台刷新
+    // 首次加载阻塞等待，后续静默后台刷新。
     if (message_store.has_loaded) {
       message_store.silent_refresh();
     } else {
       message_store.refresh();
     }
 
-    // TODO 监听 tab 切换，每次切到消息 tab 时刷新数据
+    // 监听 tab 切换，每次切到消息 tab 时刷新数据。
     _tab_worker = ever(shell_tab_info.activePath, (String path) {
       if (path == '/message' && user_information.isLoggedIn.value) {
         message_store.silent_refresh();
@@ -133,7 +133,7 @@ class _MessagePageState extends State<MessagePage> {
       });
     }
 
-    // TODO 接近底部加载更多
+    // 接近底部时触发加载更多。
     if (_scroll_controller.position.extentAfter < 260) {
       message_store.load_more();
     }
@@ -201,12 +201,16 @@ class _MessagePageState extends State<MessagePage> {
     message_store.mark_as_read(message.id);
   }
 
-  /// TODO 删除消息。
+  /// 删除消息。
+  ///
+  /// [message] 要删除的消息对象。
   Future<void> _delete_message(MessageData message) async {
     await message_store.delete_message(message.id);
   }
 
-  /// TODO 根据消息类型获取 SVG 图标名称。
+  /// 根据消息类型获取 SVG 图标名称。
+  ///
+  /// [type] 消息类型（参见 [MessageType]）。
   String _get_icon_name_by_type(int type) {
     switch (type) {
       case MessageType.system:
@@ -226,11 +230,14 @@ class _MessagePageState extends State<MessagePage> {
     }
   }
 
-  /// TODO 根据消息类型获取颜色。
-  /// 评论：comment_reply（type=2）→ 蓝色
-  /// 点赞：comment_like（type=3）+ novel_like（type=4）→ 红色
-  /// 收藏：novel_favorite（type=5）→ 金色
-  /// 客服回复：chat_reply（type=6）→ 绿色
+  /// 根据消息类型获取颜色。
+  ///
+  /// - 评论：comment_reply（type=2）→ 蓝色
+  /// - 点赞：comment_like（type=3）+ novel_like（type=4）→ 红色
+  /// - 收藏：novel_favorite（type=5）→ 金色
+  /// - 客服回复：chat_reply（type=6）→ 绿色
+  ///
+  /// [type] 消息类型（参见 [MessageType]）。
   Color _get_color_by_type(int type) {
     switch (type) {
       case MessageType.system:
@@ -250,7 +257,9 @@ class _MessagePageState extends State<MessagePage> {
     }
   }
 
-  /// TODO 格式化相对时间。
+  /// 格式化相对时间。
+  ///
+  /// [time_str] UTC 时间字符串。
   String _format_time(String time_str) {
     if (time_str.isEmpty) return '';
     final DateTime? message_time = parse_utc_time_to_local(time_str);
@@ -295,7 +304,7 @@ class _MessagePageState extends State<MessagePage> {
 
       final double status_bar_height = MediaQuery.paddingOf(context).top;
 
-      // TODO 从 store 获取数据（分桶存储，已按类型筛选）
+      // 从 store 获取数据（分桶存储，已按类型筛选）。
       final List<MessageData> messages = message_store.message_list;
       final bool has_more = message_store.has_more;
       final int? selected_type = message_store.filter_type;
@@ -576,7 +585,7 @@ class _MessagePageState extends State<MessagePage> {
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
-                // TODO 总数 + 未读数
+                // 总数 + 未读数。
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -612,7 +621,7 @@ class _MessagePageState extends State<MessagePage> {
                     ],
                   ],
                 ),
-                // TODO 标题
+                // 标题。
                 Text(
                   title,
                   maxLines: 1,

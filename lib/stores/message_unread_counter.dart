@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:get/get.dart';
 import 'package:app/models/message_data.dart';
 import 'package:app/fcm/fcm_service.dart';
+import 'package:app/util/number_util.dart' show parse_int;
 
 /// 消息未读计数管理器。
 ///
@@ -80,25 +81,25 @@ class MessageUnreadCounter {
 
   /// 从 WebSocket 数据更新各类型未读数。
   void update_from_ws(Map<String, dynamic> data) {
-    comment_unread.value = _parse_int(data['comment_unread']);
-    comment_total.value = _parse_int(data['comment_total']);
-    like_unread.value = _parse_int(data['like_unread']);
-    like_total.value = _parse_int(data['like_total']);
-    favorite_unread.value = _parse_int(data['favorite_unread']);
-    favorite_total.value = _parse_int(data['favorite_total']);
+    comment_unread.value = parse_int(data['comment_unread']);
+    comment_total.value = parse_int(data['comment_total']);
+    like_unread.value = parse_int(data['like_unread']);
+    like_total.value = parse_int(data['like_total']);
+    favorite_unread.value = parse_int(data['favorite_unread']);
+    favorite_total.value = parse_int(data['favorite_total']);
 
     if (data.containsKey('chat_unread')) {
-      chat_unread.value = _parse_int(data['chat_unread']);
+      chat_unread.value = parse_int(data['chat_unread']);
     }
 
     if (data.containsKey('system_unread')) {
-      system_unread.value = _parse_int(data['system_unread']);
+      system_unread.value = parse_int(data['system_unread']);
     } else if (data.containsKey('total')) {
       final int known = comment_unread.value +
           like_unread.value +
           favorite_unread.value +
           chat_unread.value;
-      system_unread.value = (_parse_int(data['total']) - known).clamp(0, 9999);
+      system_unread.value = (parse_int(data['total']) - known).clamp(0, 9999);
     }
     recompute_total(force_badge_sync: true);
   }
@@ -135,11 +136,5 @@ class MessageUnreadCounter {
   /// 释放定时器资源。
   void dispose() {
     _badge_update_timer?.cancel();
-  }
-
-  static int _parse_int(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    return int.tryParse(value.toString()) ?? 0;
   }
 }

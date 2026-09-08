@@ -1,5 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:convert';
+
 /// TODO 创作者作品篇幅类型。
 enum CreatorWorkType {
   /// TODO 长篇作品，正文按章节管理。
@@ -106,6 +108,18 @@ class CreatorWorkDraft {
   /// TODO 本地稳定标识。
   final String local_id;
 
+  /// 后端作品ID（已保存到后端时有值）。
+  final int? novel_id;
+
+  /// 后端修订版本ID（已保存到后端时有值）。
+  final int? revision_id;
+
+  /// 后端语种版本ID（已保存到后端时有值）。
+  final int? novel_language_id;
+
+  /// 乐观锁版本号。
+  final int? lock_version;
+
   /// TODO 作品标题。
   final String title;
 
@@ -165,6 +179,10 @@ class CreatorWorkDraft {
 
   const CreatorWorkDraft({
     required this.local_id,
+    this.novel_id,
+    this.revision_id,
+    this.novel_language_id,
+    this.lock_version,
     required this.title,
     required this.introduction,
     required this.work_type,
@@ -185,6 +203,9 @@ class CreatorWorkDraft {
     this.chapter_title = '',
     this.chapter_content = '',
   });
+
+  /// 是否已保存到后端（有 novel_id 和 revision_id）。
+  bool get is_saved_to_backend => novel_id != null && revision_id != null;
 
   /// TODO 返回作品当前总字数。
   int get word_count {
@@ -220,9 +241,17 @@ class CreatorWorkDraft {
     bool? rights_confirmed,
     String? chapter_title,
     String? chapter_content,
+    int? novel_id,
+    int? revision_id,
+    int? novel_language_id,
+    int? lock_version,
   }) {
     return CreatorWorkDraft(
       local_id: local_id,
+      novel_id: novel_id ?? this.novel_id,
+      revision_id: revision_id ?? this.revision_id,
+      novel_language_id: novel_language_id ?? this.novel_language_id,
+      lock_version: lock_version ?? this.lock_version,
       title: title ?? this.title,
       introduction: introduction ?? this.introduction,
       work_type: work_type ?? this.work_type,
@@ -251,6 +280,10 @@ class CreatorWorkDraft {
   Map<String, dynamic> to_json() {
     return <String, dynamic>{
       'local_id': local_id,
+      'novel_id': novel_id,
+      'revision_id': revision_id,
+      'novel_language_id': novel_language_id,
+      'lock_version': lock_version,
       'title': title,
       'introduction': introduction,
       'work_type': work_type.index,
@@ -281,6 +314,26 @@ class CreatorWorkDraft {
   factory CreatorWorkDraft.from_json(Map<String, dynamic> json) {
     return CreatorWorkDraft(
       local_id: json['local_id']?.toString() ?? '',
+      novel_id: json['novel_id'] != null
+          ? (json['novel_id'] is int
+              ? json['novel_id']
+              : int.tryParse(json['novel_id'].toString()))
+          : null,
+      revision_id: json['revision_id'] != null
+          ? (json['revision_id'] is int
+              ? json['revision_id']
+              : int.tryParse(json['revision_id'].toString()))
+          : null,
+      novel_language_id: json['novel_language_id'] != null
+          ? (json['novel_language_id'] is int
+              ? json['novel_language_id']
+              : int.tryParse(json['novel_language_id'].toString()))
+          : null,
+      lock_version: json['lock_version'] != null
+          ? (json['lock_version'] is int
+              ? json['lock_version']
+              : int.tryParse(json['lock_version'].toString()))
+          : null,
       title: json['title']?.toString() ?? '',
       introduction: json['introduction']?.toString() ?? '',
       work_type: CreatorWorkType.values[json['work_type'] is int
@@ -331,6 +384,19 @@ class CreatorWorkDraft {
 
   /// TODO 解析偏好 JSON。
   static Map<String, List<int>> _parse_preferences(dynamic raw) {
+    if (raw == null) return <String, List<int>>{};
+
+    // 处理 JSON 字符串
+    if (raw is String) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) {
+          return _parse_preferences(decoded);
+        }
+      } catch (_) {}
+      return <String, List<int>>{};
+    }
+
     if (raw is! Map) return <String, List<int>>{};
     final Map<String, List<int>> result = {};
     raw.forEach((key, value) {

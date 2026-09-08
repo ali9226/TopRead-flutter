@@ -533,6 +533,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     );
   }
 
+  // ==================== 广告管理 ====================
+
   /// 后台加载原生高级广告配置。
   ///
   /// 从 `redis/get.ads_ids` 本地缓存获取广告单元 ID，
@@ -991,6 +993,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       ),
     );
   }
+
+  // ==================== 滚动处理 ====================
 
   /// 处理滚动事件。
   ///

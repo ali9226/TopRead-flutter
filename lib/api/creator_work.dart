@@ -15,7 +15,7 @@ class CreatorWorkApi {
   static Future<ResultsType<Map<String, dynamic>>> createDraft({
     required int workType,
     required int languageId,
-    required String title,
+    String? title,
     String? subtitle,
     String? introduction,
   }) {
@@ -24,7 +24,7 @@ class CreatorWorkApi {
       parameter: {
         'work_type': workType,
         'language_id': languageId,
-        'title': title,
+        if (title != null && title.isNotEmpty) 'title': title,
         if (subtitle != null) 'subtitle': subtitle,
         if (introduction != null) 'introduction': introduction,
       },
@@ -85,6 +85,15 @@ class CreatorWorkApi {
     int? serializationStatus,
     List<Map<String, dynamic>>? categorySnapshot,
     int? lockVersion,
+    Map<String, List<int>>? preferences,
+    int? savedStep,
+    bool? rightsConfirmed,
+    int? releaseMode,
+    String? scheduledPublishTime,
+    String? tempChapterTitle,
+    String? tempChapterContent,
+    int? languageId,
+    String? shortContent,
   }) {
     return postRequest<Map<String, dynamic>>(
       path: 'creator_work/save_draft',
@@ -102,6 +111,15 @@ class CreatorWorkApi {
         if (serializationStatus != null) 'serialization_status': serializationStatus,
         if (categorySnapshot != null) 'category_snapshot': categorySnapshot,
         if (lockVersion != null) 'lock_version': lockVersion,
+        if (preferences != null) 'preferences': preferences,
+        if (savedStep != null) 'saved_step': savedStep,
+        if (rightsConfirmed != null) 'rights_confirmed': rightsConfirmed,
+        if (releaseMode != null) 'release_mode': releaseMode,
+        if (scheduledPublishTime != null) 'scheduled_publish_time': scheduledPublishTime,
+        if (tempChapterTitle != null) 'temp_chapter_title': tempChapterTitle,
+        if (tempChapterContent != null) 'temp_chapter_content': tempChapterContent,
+        if (languageId != null) 'language_id': languageId,
+        if (shortContent != null) 'short_content': shortContent,
       },
       fromJson: (json) => json,
     );
@@ -143,6 +161,21 @@ class CreatorWorkApi {
   static Future<ResultsType<Map<String, dynamic>>> dashboard() {
     return postRequest<Map<String, dynamic>>(
       path: 'creator_work/dashboard',
+      fromJson: (json) => json,
+    );
+  }
+
+  /// 获取草稿列表
+  static Future<ResultsType<Map<String, dynamic>>> getDraftList({
+    int page = 1,
+    int pageSize = 20,
+  }) {
+    return postRequest<Map<String, dynamic>>(
+      path: 'creator_work/get_draft_list',
+      parameter: {
+        'page': page,
+        'page_size': pageSize,
+      },
       fromJson: (json) => json,
     );
   }

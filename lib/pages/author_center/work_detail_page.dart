@@ -1,7 +1,12 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:convert';
+
+import 'package:app/pages/author_center/logic.dart';
 import 'package:app/pages/author_center/store.dart';
 import 'package:app/pages/author_center/models/creator_backend_models.dart';
+import 'package:app/pages/author_center/models/creator_work.dart';
+import 'package:app/pages/work_editor/index.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -522,8 +527,209 @@ class _CreatorWorkDetailPageState extends State<CreatorWorkDetailPage> {
   }
 
   /// 导航到编辑页面
-  void _navigate_to_edit() {
-    // TODO: 导航到作品编辑页面
+  Future<void> _navigate_to_edit() async {
+    // 加载作品详情获取草稿数据
+    final info = await CreatorLogic.getWorkInfo(widget.work.id);
+    if (info == null || !mounted) return;
+
+    final draftData = info['draft'] as Map<String, dynamic>?;
+    final novelData = info['novel'] as Map<String, dynamic>?;
+    final categories = info['categories'] as List<dynamic>? ?? [];
+
+    // 构建 CreatorWorkDraft 对象
+    final CreatorWorkDraft workDraft;
+
+    if (draftData != null) {
+      // 从后端草稿数据构建
+      workDraft = _buildDraftFromBackend(draftData, novelData, categories);
+    } else {
+      // 没有草稿，使用作品基本信息
+      workDraft = _buildDraftFromNovel(novelData, categories);
+    }
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreatorWorkEditorPage(initial_work: workDraft),
+      ),
+    ).then((result) {
+      // 返回时刷新作品详情
+      if (result != null && mounted) {
+        setState(() {});
+        _store.refreshWorks();
+      }
+    });
+  }
+
+  /// 从后端草稿数据构建 CreatorWorkDraft
+  CreatorWorkDraft _buildDraftFromBackend(
+    Map<String, dynamic> draft,
+    Map<String, dynamic>? novel,
+    List<dynamic> categories,
+  ) {
+    // 解析偏好数据
+    Map<String, List<int>> preferences = {};
+    if (draft['preferences'] != null) {
+      try {
+        dynamic raw = draft['preferences'];
+        // 处理 JSON 字符串
+        if (raw is String) {
+          raw = jsonDecode(raw);
+        }
+        if (raw is Map) {
+          raw.forEach((key, value) {
+            if (value is List) {
+              preferences[key.toString()] =
+                  value.map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0).toList();
+            }
+          });
+        }
+      } catch (_) {}
+    }
+
+    // 解析分类ID
+    final List<int> categoryIds = categories
+        .map((c) => _parseInt(c['category_id']))
+        .where((id) => id > 0)
+        .toList();
+
+    // 解析定时发布时间
+    DateTime? scheduledTime;
+    if (draft['scheduled_publish_time'] != null) {
+      try {
+        final timeStr = draft['scheduled_publish_time'].toString();
+        // 处理 MySQL datetime 格式 (YYYY-MM-DD HH:MM:SS)
+        if (timeStr.contains(' ')) {
+          scheduledTime = DateTime.parse(timeStr.replaceFirst(' ', 'T'));
+        } else {
+          scheduledTime = DateTime.parse(timeStr);
+        }
+      } catch (_) {}
+    }
+
+    // 解析语言ID转语言代码
+    final int languageId = _parseInt(draft['language_id']);
+    final String languageCode = _getLanguageCode(languageId);
+
+    // 解析短篇内容（短篇使用 temp_chapter_content 存储正文）
+    final int workType = _parseInt(draft['work_type']);
+    final String shortContent = workType == 2
+        ? (draft['temp_chapter_content']?.toString() ?? '')
+        : '';
+
+    // 解析长篇临时章节内容
+    final String chapterTitle = workType == 1
+        ? (draft['temp_chapter_title']?.toString() ?? '')
+        : '';
+    final String chapterContent = workType == 1
+        ? (draft['temp_chapter_content']?.toString() ?? '')
+        : '';
+
+    return CreatorWorkDraft(
+      local_id: 'work_${draft['novel_id']}',
+      novel_id: _parseIntNullable(draft['novel_id']),
+      revision_id: _parseIntNullable(draft['id']),
+      novel_language_id: _parseIntNullable(draft['novel_language_id']),
+      lock_version: _parseIntNullable(draft['lock_version']),
+      title: draft['title']?.toString() ?? '',
+      introduction: draft['introduction']?.toString() ?? '',
+      work_type: workType == 1
+          ? CreatorWorkType.long
+          : CreatorWorkType.short,
+      is_completed: _parseInt(draft['serialization_status']) == 2,
+      language_code: languageCode,
+      category_ids: categoryIds,
+      short_content: shortContent,
+      chapters: const [],
+      status: CreatorWorkStatus.draft,
+      release_mode: _parseInt(draft['release_mode']) == 1
+          ? CreatorReleaseMode.immediate
+          : CreatorReleaseMode.scheduled,
+      scheduled_publish_time: scheduledTime,
+      update_time: DateTime.now(),
+      cover_url: draft['cover_url']?.toString(),
+      saved_step: _parseInt(draft['saved_step']),
+      preferences: preferences,
+      rights_confirmed: _parseInt(draft['rights_confirmed']) == 1,
+      chapter_title: chapterTitle,
+      chapter_content: chapterContent,
+    );
+  }
+
+  /// 安全解析整数
+  int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    if (value is double) return value.toInt();
+    return 0;
+  }
+
+  /// 安全解析可空整数
+  int? _parseIntNullable(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    if (value is double) return value.toInt();
+    return null;
+  }
+
+  /// 语言ID转语言代码
+  String _getLanguageCode(int languageId) {
+    const Map<int, String> languageMap = {
+      1: 'zh',
+      2: 'en',
+      3: 'fr',
+      4: 'es',
+      5: 'ar',
+      6: 'pt',
+      7: 'id',
+      8: 'ja',
+      9: 'ko',
+      10: 'de',
+      11: 'it',
+      12: 'tr',
+      13: 'th',
+      14: 'vi',
+      15: 'ms',
+      16: 'sw',
+    };
+    return languageMap[languageId] ?? 'en';
+  }
+
+  /// 从作品基本信息构建 CreatorWorkDraft（无草稿时）
+  CreatorWorkDraft _buildDraftFromNovel(
+    Map<String, dynamic>? novel,
+    List<dynamic> categories,
+  ) {
+    final List<int> categoryIds = categories
+        .map((c) => _parseInt(c['category_id']))
+        .where((id) => id > 0)
+        .toList();
+
+    return CreatorWorkDraft(
+      local_id: 'work_${widget.work.id}',
+      novel_id: widget.work.id,
+      title: widget.work.title,
+      introduction: widget.work.introduction ?? '',
+      work_type: widget.work.is_long_novel
+          ? CreatorWorkType.long
+          : CreatorWorkType.short,
+      is_completed: widget.work.serialization_status == 2,
+      language_code: 'zh',
+      category_ids: categoryIds,
+      short_content: '',
+      chapters: const [],
+      status: CreatorWorkStatus.draft,
+      release_mode: CreatorReleaseMode.immediate,
+      scheduled_publish_time: null,
+      update_time: DateTime.now(),
+      cover_url: widget.work.cover_url,
+      saved_step: 0,
+      preferences: const {},
+      rights_confirmed: false,
+    );
   }
 
   /// 导航到章节页面

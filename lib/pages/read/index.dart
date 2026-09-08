@@ -95,6 +95,8 @@ class _ReadPageState extends State<ReadPage>
   /// 是否已经进入正文阅读状态，用于控制底部胶囊与进度条显隐。
   bool has_started_reading = false;
 
+  // ==================== 状态变量 ====================
+
   /// 是否正在恢复阅读进度（静默加载目标章节，不展示第一章内容）。
   bool _is_restoring_progress = false;
 
@@ -118,6 +120,8 @@ class _ReadPageState extends State<ReadPage>
   /// 滚动过程中只刷新进度相关小组件，避免整页正文随每个像素重建。
   final ValueNotifier<double> _reading_progress_notifier =
       ValueNotifier<double>(0);
+
+  // ==================== 广告相关状态 ====================
 
   /// 当前小说唯一的原生广告配置，所有命中概率的章节共同复用。
   AdConfig? _native_ad_config;
@@ -214,6 +218,8 @@ class _ReadPageState extends State<ReadPage>
   /// 确保弹窗不在提示文字刚出现时就弹出，给用户足够阅读时间。
   Timer? _unlock_popup_defer_timer;
 
+  // ==================== 免广告状态 ====================
+
   /// 当前设备是否在免广告期内。
   ///
   /// 进入页面时通过接口查询，看视频广告后实时更新。
@@ -269,6 +275,8 @@ class _ReadPageState extends State<ReadPage>
 
   /// 主题背景色透明度，统一控制底部胶囊背景在日间模式下的层次。
   static const double _light_bottom_pill_background_alpha = 0.92;
+
+  // ==================== 生命周期 ====================
 
   @override
   void initState() {
@@ -332,6 +340,8 @@ class _ReadPageState extends State<ReadPage>
       }
     });
   }
+
+  // ==================== 广告管理 ====================
 
   /// 后台加载原生高级广告配置。
   ///
@@ -1269,6 +1279,8 @@ class _ReadPageState extends State<ReadPage>
     }
   }
 
+  // ==================== 销毁 ====================
+
   @override
   void dispose() {
     _progress_save_timer?.cancel();
@@ -1811,6 +1823,8 @@ class _ReadPageState extends State<ReadPage>
     return false;
   }
 
+  // ==================== 滚动处理 ====================
+
   void _handle_scroll() {
     if (!scroll_controller.hasClients || !mounted) {
       return;
@@ -2204,6 +2218,8 @@ class _ReadPageState extends State<ReadPage>
       logic.update_comment_count(new_count);
     }
   }
+
+  // ==================== UI 构建 ====================
 
   @override
   Widget build(BuildContext context) {

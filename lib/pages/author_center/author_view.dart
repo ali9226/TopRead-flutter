@@ -1,5 +1,7 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
+import 'dart:convert';
+
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/logic.dart';
 import 'package:app/pages/author_center/chapter_editor/index.dart';
@@ -9,7 +11,6 @@ import 'package:app/pages/author_center/widgets/creator_work_tab.dart';
 import 'package:app/pages/author_center/widgets/nickname_badge.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
-import 'package:app/util/creator_draft_storage.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/router/router_back.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -163,24 +164,23 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     }
   }
 
-  /// TODO 加载本地草稿。
+  /// 检查后端是否有草稿。
   Future<void> _load_local_drafts() async {
-    final List<CreatorWorkDraft> drafts =
-        await CreatorDraftStorage.getAllDrafts();
-    if (!mounted) return;
+    try {
+      // 使用专用的草稿列表接口检查是否有草稿
+      final result = await CreatorLogic.getDraftList(page: 1, pageSize: 1);
 
-    setState(() {
-      _has_draft = drafts.isNotEmpty;
-      /// 将本地草稿合并到 _works 列表（不覆盖已有的）。
-      for (final CreatorWorkDraft draft in drafts) {
-        final int index = _works.indexWhere(
-          (w) => w.local_id == draft.local_id,
-        );
-        if (index < 0) {
-          _works.insert(0, draft);
-        }
-      }
-    });
+      if (!mounted) return;
+
+      final hasDrafts = result != null &&
+          (result['list'] as List? ?? []).isNotEmpty;
+
+      setState(() {
+        _has_draft = hasDrafts;
+      });
+    } catch (e) {
+      debugPrint('检查后端草稿失败: $e');
+    }
   }
 
   /// 测量文本在给定宽度下的实际行数。
@@ -325,7 +325,27 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   }
 
   Future<void> _continue_latest_draft() async {
-    /// 先从内存中查找草稿。
+    try {
+      // 使用专用的草稿列表接口
+      final result = await CreatorLogic.getDraftList(page: 1, pageSize: 1);
+
+      if (result != null) {
+        final list = result['list'] as List? ?? [];
+        if (list.isNotEmpty) {
+          final draftData = list.first as Map<String, dynamic>;
+          final workDraft = _buildDraftFromBackend(draftData, null, []);
+
+          if (mounted) {
+            await _edit_work(workDraft);
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('获取后端草稿失败: $e');
+    }
+
+    // 后端没有草稿，尝试从本地内存中查找
     final List<CreatorWorkDraft> drafts =
         _works
             .where(
@@ -342,15 +362,176 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       return;
     }
 
-    /// 内存中没有，从本地存储加载。
-    final CreatorWorkDraft? localDraft =
-        await CreatorDraftStorage.getLatestDraft();
-    if (localDraft != null) {
-      await _edit_work(localDraft);
-      return;
+    // 都没有，创建新作品
+    await _create_work();
+  }
+
+  /// 从后端草稿数据构建 CreatorWorkDraft
+  CreatorWorkDraft _buildDraftFromBackend(
+    Map<String, dynamic> draft,
+    Map<String, dynamic>? novel,
+    List<dynamic> categories,
+  ) {
+    // 解析偏好数据
+    Map<String, List<int>> preferences = {};
+    if (draft['preferences'] != null) {
+      try {
+        dynamic raw = draft['preferences'];
+        if (raw is String) {
+          raw = jsonDecode(raw);
+        }
+        if (raw is Map) {
+          raw.forEach((key, value) {
+            if (value is List) {
+              preferences[key.toString()] =
+                  value.map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0).toList();
+            }
+          });
+        }
+      } catch (_) {}
     }
 
-    await _create_work();
+    // 解析分类ID
+    final List<int> categoryIds = categories
+        .map((c) => _parseInt(c['category_id']))
+        .where((id) => id > 0)
+        .toList();
+
+    // 解析定时发布时间
+    DateTime? scheduledTime;
+    if (draft['scheduled_publish_time'] != null) {
+      try {
+        final timeStr = draft['scheduled_publish_time'].toString();
+        if (timeStr.contains(' ')) {
+          scheduledTime = DateTime.parse(timeStr.replaceFirst(' ', 'T'));
+        } else {
+          scheduledTime = DateTime.parse(timeStr);
+        }
+      } catch (_) {}
+    }
+
+    // 解析语言ID转语言代码
+    final int languageId = _parseInt(draft['language_id']);
+    final String languageCode = _getLanguageCode(languageId);
+
+    // 解析短篇内容（短篇使用 temp_chapter_content 存储正文）
+    final int workType = _parseInt(draft['work_type']);
+    final String shortContent = workType == 2
+        ? (draft['temp_chapter_content']?.toString() ?? '')
+        : '';
+
+    // 解析长篇临时章节内容
+    final String chapterTitle = workType == 1
+        ? (draft['temp_chapter_title']?.toString() ?? '')
+        : '';
+    final String chapterContent = workType == 1
+        ? (draft['temp_chapter_content']?.toString() ?? '')
+        : '';
+
+    return CreatorWorkDraft(
+      local_id: 'work_${draft['novel_id']}',
+      novel_id: _parseIntNullable(draft['novel_id']),
+      revision_id: _parseIntNullable(draft['id']),
+      novel_language_id: _parseIntNullable(draft['novel_language_id']),
+      lock_version: _parseIntNullable(draft['lock_version']),
+      title: draft['title']?.toString() ?? '',
+      introduction: draft['introduction']?.toString() ?? '',
+      work_type: workType == 1
+          ? CreatorWorkType.long
+          : CreatorWorkType.short,
+      is_completed: _parseInt(draft['serialization_status']) == 2,
+      language_code: languageCode,
+      category_ids: categoryIds,
+      short_content: shortContent,
+      chapters: const [],
+      status: CreatorWorkStatus.draft,
+      release_mode: _parseInt(draft['release_mode']) == 1
+          ? CreatorReleaseMode.immediate
+          : CreatorReleaseMode.scheduled,
+      scheduled_publish_time: scheduledTime,
+      update_time: DateTime.now(),
+      cover_url: draft['cover_url']?.toString(),
+      saved_step: _parseInt(draft['saved_step']),
+      preferences: preferences,
+      rights_confirmed: _parseInt(draft['rights_confirmed']) == 1,
+      chapter_title: chapterTitle,
+      chapter_content: chapterContent,
+    );
+  }
+
+  /// 安全解析整数
+  int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    if (value is double) return value.toInt();
+    return 0;
+  }
+
+  /// 安全解析可空整数
+  int? _parseIntNullable(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    if (value is double) return value.toInt();
+    return null;
+  }
+
+  /// 语言ID转语言代码
+  String _getLanguageCode(int languageId) {
+    const Map<int, String> languageMap = {
+      1: 'zh',
+      2: 'en',
+      3: 'fr',
+      4: 'es',
+      5: 'ar',
+      6: 'pt',
+      7: 'id',
+      8: 'ja',
+      9: 'ko',
+      10: 'de',
+      11: 'it',
+      12: 'tr',
+      13: 'th',
+      14: 'vi',
+      15: 'ms',
+      16: 'sw',
+    };
+    return languageMap[languageId] ?? 'en';
+  }
+
+  /// 从作品列表数据构建 CreatorWorkDraft（无详细草稿数据时）
+  CreatorWorkDraft _buildDraftFromWorkData(
+    Map<String, dynamic> workData,
+    List<dynamic> categories,
+  ) {
+    final List<int> categoryIds = categories
+        .map((c) => _parseInt(c['category_id']))
+        .where((id) => id > 0)
+        .toList();
+
+    return CreatorWorkDraft(
+      local_id: 'work_${workData['id']}',
+      novel_id: _parseIntNullable(workData['id']),
+      title: workData['title']?.toString() ?? '',
+      introduction: workData['introduction']?.toString() ?? '',
+      work_type: _parseInt(workData['work_type']) == 1
+          ? CreatorWorkType.long
+          : CreatorWorkType.short,
+      is_completed: _parseInt(workData['serialization_status']) == 2,
+      language_code: 'zh',
+      category_ids: categoryIds,
+      short_content: '',
+      chapters: const [],
+      status: CreatorWorkStatus.draft,
+      release_mode: CreatorReleaseMode.immediate,
+      scheduled_publish_time: null,
+      update_time: DateTime.now(),
+      cover_url: workData['cover_url']?.toString(),
+      saved_step: 0,
+      preferences: const {},
+      rights_confirmed: false,
+    );
   }
 
   // ───────────────────────── build ─────────────────────────

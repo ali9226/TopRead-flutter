@@ -6,29 +6,28 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:app/util/device/save_theme_mode.dart';
 import 'package:app/util/log_util.dart';
 
+/// 设备信息全局状态。
+///
+/// 管理设备主题模式和网络连接状态。
 class DeviceInfo extends GetxController {
-  /* TODO
-   * 当前设备主题。
-   *
-   * light: 亮色
-   * dark: 深色
-   */
+  /// 当前设备主题。
+  ///
+  /// - [ThemeMode.light]：亮色主题
+  /// - [ThemeMode.dark]：深色主题
   var theme = ThemeMode.light.obs;
 
-  // TODO 是否是深色主题
+  /// 是否是深色主题。
   var dark = false.obs;
 
-  /* TODO
-   * 网络状态编码。
-   *
-   * 0: 没有网络
-   * 1: 移动网络
-   * 2: WiFi
-   * 3: 有线网络
-   * 4: VPN
-   * 5: 蓝牙网络
-   * 6: 其它网络
-   */
+  /// 网络状态编码。
+  ///
+  /// - 0：没有网络
+  /// - 1：移动网络
+  /// - 2：WiFi
+  /// - 3：有线网络
+  /// - 4：VPN
+  /// - 5：蓝牙网络
+  /// - 6：其它网络
   var networkStatus = 0.obs;
 
   /// 网络状态变更流订阅。
@@ -55,7 +54,7 @@ class DeviceInfo extends GetxController {
     super.onClose();
   }
 
-  // TODO 设置网络状态（手动调用，用于初始化或需要主动刷新时）。
+  /// 设置网络状态（手动调用，用于初始化或需要主动刷新时）。
   Future<void> setNetworkStatus() async {
     logUtil(msg: "设置网络状态");
     final List<ConnectivityResult> connectivityResult = await (Connectivity()
@@ -82,13 +81,12 @@ class DeviceInfo extends GetxController {
     }
   }
 
-  // TODO 改变主题
+  /// 切换主题模式。
+  ///
+  /// [themeMode] 目标主题模式。
   void changeTheme(ThemeMode themeMode) {
     theme.value = themeMode;
-
     dark.value = theme.value == ThemeMode.dark;
-
-    // TODO 把主题保存到本地
     saveThemeMode(themeMode);
   }
 }

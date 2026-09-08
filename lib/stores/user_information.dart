@@ -1,9 +1,15 @@
 import 'package:get/get.dart';
 import 'package:app/models/user_info.dart';
 
+/// 用户信息全局状态。
+///
+/// 管理当前登录用户资料、登录状态和认证会话版本。
 class UserInformation extends GetxController {
-  var userInfo = Rxn<UserInfo>(); // TODO 用户信息，默认 null
-  var isLoggedIn = false.obs; // TODO 登录状态 RxBool
+  /// 当前用户信息，默认 null 表示未登录。
+  var userInfo = Rxn<UserInfo>();
+
+  /// 当前登录状态。
+  var isLoggedIn = false.obs;
 
   /// 当前认证会话版本。
   ///
@@ -29,19 +35,21 @@ class UserInformation extends GetxController {
   void onInit() {
     super.onInit();
 
-    // TODO 监听 userInfo 的变化，自动更新 isLoggedIn
+    // 监听 userInfo 的变化，自动更新 isLoggedIn。
     ever(userInfo, (_) {
       final info = userInfo.value;
       isLoggedIn.value = info != null && info.id != 0;
     });
   }
 
-  // TODO 保存用户信息
+  /// 保存用户信息。
+  ///
+  /// [info] 要保存的用户信息。
   void saveUserInfo(UserInfo info) {
     _set_user_info(info);
   }
 
-  // TODO 清空用户信息（登出）
+  /// 清空用户信息（登出）。
   void clearUserInfo() {
     _set_user_info(null);
   }
@@ -63,12 +71,12 @@ class UserInformation extends GetxController {
     final int current_user_id = _authenticated_user_id(userInfo.value);
     final int next_user_id = _authenticated_user_id(next_user_info);
 
-    /// 访客、当前账号和其他账号分别属于不同的认证身份。
+    // 访客、当前账号和其他账号分别属于不同的认证身份。
     if (current_user_id != next_user_id) {
       _auth_identity_revision.value++;
     }
 
-    /// 写入用户资料后，由现有 ever 统一同步 isLoggedIn。
+    // 写入用户资料后，由现有 ever 统一同步 isLoggedIn。
     userInfo.value = next_user_info;
   }
 
@@ -83,21 +91,30 @@ class UserInformation extends GetxController {
   }
 
   /// 判断指定请求是否仍属于当前认证会话。
+  ///
+  /// [request_revision] 请求发起时的会话版本。
   bool is_auth_revision_current(int request_revision) {
     return request_revision == _auth_revision;
   }
 
   /// 判断登录态请求响应是否仍可写入。
+  ///
+  /// [request_revision] 请求发起时的会话版本。
   bool can_apply_authenticated_response(int request_revision) {
     return is_auth_revision_current(request_revision) && isLoggedIn.value;
   }
 
   /// 判断访客态请求响应是否仍可写入。
+  ///
+  /// [request_revision] 请求发起时的会话版本。
   bool can_apply_visitor_response(int request_revision) {
     return is_auth_revision_current(request_revision) && !isLoggedIn.value;
   }
 
   /// 仅在认证会话未失效时保存异步请求返回的用户信息。
+  ///
+  /// [info] 用户信息。
+  /// [request_revision] 请求发起时的会话版本。
   bool save_user_info_if_current(
     UserInfo info, {
     required int request_revision,

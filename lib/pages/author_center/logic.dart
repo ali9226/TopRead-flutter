@@ -53,7 +53,7 @@ class CreatorLogic {
   static Future<Map<String, dynamic>?> createDraft({
     required int workType,
     required int languageId,
-    required String title,
+    String? title,
     String? subtitle,
     String? introduction,
   }) async {
@@ -103,6 +103,27 @@ class CreatorLogic {
       return null;
     } catch (e) {
       logUtil(msg: '查询作品列表异常: $e', type: 'e');
+      return null;
+    }
+  }
+
+  /// 获取草稿列表
+  static Future<Map<String, dynamic>?> getDraftList({
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    try {
+      final result = await CreatorWorkApi.getDraftList(
+        page: page,
+        pageSize: pageSize,
+      );
+      if (result.status && result.content != null) {
+        return result.content;
+      }
+      logUtil(msg: '获取草稿列表失败: ${result.message}', type: 'e');
+      return null;
+    } catch (e) {
+      logUtil(msg: '获取草稿列表异常: $e', type: 'e');
       return null;
     }
   }

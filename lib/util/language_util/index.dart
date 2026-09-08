@@ -8,18 +8,16 @@ import 'package:app/models/language_info.dart';
 import 'package:app/stores/language_store.dart';
 import 'package:app/util/storage_util/index.dart';
 
-/* TODO
- * 语言工具。
- *
- * 负责决定应用启动时应使用的语种，并优先尊重用户本地缓存。
- */
+/// 语言工具。
+///
+/// 负责决定应用启动时应使用的语种，并优先尊重用户本地缓存。
 class LanguageUtil {
   const LanguageUtil._();
 
-  /// TODO 本地翻译资源中的语种代码列表。
+  /// 本地翻译资源中的语种代码列表。
   static List<String> _asset_language_code_list = <String>[];
 
-  /// TODO 初始化本地翻译资源语种列表。
+  /// 初始化本地翻译资源语种列表。
   static Future<void> load_asset_language_code_list() async {
     final AssetManifest asset_manifest =
         await AssetManifest.loadFromAssetBundle(rootBundle);
@@ -38,18 +36,18 @@ class LanguageUtil {
     _asset_language_code_list = next_asset_language_code_list;
   }
 
-  /// TODO 获取本地翻译资源语种列表。
+  /// 获取本地翻译资源语种列表。
   static List<String> get asset_language_code_list =>
       List<String>.from(_asset_language_code_list);
 
-  /// TODO 生成 `EasyLocalization` 需要的 locale 列表。
+  /// 生成 `EasyLocalization` 需要的 locale 列表。
   static List<Locale> get supported_locales {
     return _asset_language_code_list
         .map((String item) => Locale(item))
         .toList();
   }
 
-  /* TODO 获取当前应该使用的语言代码。 */
+  /// 获取当前应该使用的语言代码。
   static Future<String> get_language() async {
     final String? cache_language = await StorageUtil.getData(
       LanguageStore.language_key,
@@ -77,9 +75,7 @@ class LanguageUtil {
     return get_fallback_language_code();
   }
 
-  /* TODO
-   * 把语种代码映射为后端约定的 language 数字 ID。
-   */
+  /// 把语种代码映射为后端约定的 language 数字 ID。
   static Future<int> get_language_id() async {
     final String language_code = (await get_language()).toLowerCase();
     final LanguageInfo? current_language_info = _find_supported_language(
@@ -99,7 +95,7 @@ class LanguageUtil {
     return 1;
   }
 
-  /// TODO 获取默认回退语种代码。
+  /// 获取默认回退语种代码。
   static String get_fallback_language_code() {
     final LanguageStore? language_store = _get_language_store();
     if (language_store != null) {
@@ -113,7 +109,9 @@ class LanguageUtil {
     return 'en';
   }
 
-  /// TODO 根据语种代码获取请求头 locale。
+  /// 根据语种代码获取请求头 locale。
+  ///
+  /// [language_code] 语种代码。
   static String resolve_locale_code_by_language(String language_code) {
     final LanguageInfo? current_language_info = _find_supported_language(
       language_code,
@@ -125,7 +123,9 @@ class LanguageUtil {
     return get_fallback_language_code();
   }
 
-  /// TODO 获取当前语种的展示名称。
+  /// 获取当前语种的展示名称。
+  ///
+  /// [language_code] 语种代码。
   static String get_language_name(String language_code) {
     final LanguageInfo? current_language_info = _find_supported_language(
       language_code,
@@ -137,7 +137,9 @@ class LanguageUtil {
     return _normalize_language_code(language_code).toUpperCase();
   }
 
-  /// TODO 获取当前语种的 app 标题。
+  /// 获取当前语种的 app 标题。
+  ///
+  /// [language_code] 语种代码。
   static String get_language_title(String language_code) {
     final LanguageInfo? current_language_info = _find_supported_language(
       language_code,
@@ -149,7 +151,9 @@ class LanguageUtil {
     return get_language_name(get_fallback_language_code());
   }
 
-  /// TODO 获取当前语种图标资源路径。
+  /// 获取当前语种图标资源路径。
+  ///
+  /// [language_code] 语种代码。
   static String get_language_asset_image(String language_code) {
     final String normalized_language_code = _normalize_language_code(
       language_code,
@@ -160,7 +164,9 @@ class LanguageUtil {
     return 'assets/img/${get_fallback_language_code()}.png';
   }
 
-  /// TODO 判断当前语种是否有可用的本地图标资源。
+  /// 判断当前语种是否有可用的本地图标资源。
+  ///
+  /// [language_code] 语种代码。
   static bool has_language_asset_image(String language_code) {
     final String normalized_language_code = _normalize_language_code(
       language_code,
@@ -168,7 +174,9 @@ class LanguageUtil {
     return _asset_language_code_list.contains(normalized_language_code);
   }
 
-  /// TODO 获取当前语种对应的接口图标地址。
+  /// 获取当前语种对应的接口图标地址。
+  ///
+  /// [language_code] 语种代码。
   static String get_language_icon_url(String language_code) {
     final LanguageInfo? current_language_info = _find_supported_language(
       language_code,
@@ -179,11 +187,13 @@ class LanguageUtil {
     return '';
   }
 
-  /// TODO 判断当前语种是否为 CJK（中日韩）语系。
+  /// 判断当前语种是否为 CJK（中日韩）语系。
   ///
   /// CJK 语系字符宽度均匀、视觉密度高，布局上可以使用更紧凑的间距和更大的字号。
   /// 非 CJK 语系（如英语、斯瓦希里语等拉丁字母语种）单词宽度更大，
   /// 需要更小的字号和更紧凑的间距以避免溢出。
+  ///
+  /// [language_code] 语种代码。
   static bool is_cjk_language(String language_code) {
     final String normalized = _normalize_language_code(language_code);
     return normalized.startsWith('zh') ||
@@ -191,7 +201,9 @@ class LanguageUtil {
         normalized.startsWith('ko');
   }
 
-  /// TODO 判断语种代码是否属于应用允许的展示范围。
+  /// 判断语种代码是否属于应用允许的展示范围。
+  ///
+  /// [language_code] 语种代码。
   static bool is_supported_language_code(String language_code) {
     final String normalized_language_code = _normalize_language_code(
       language_code,
@@ -202,7 +214,7 @@ class LanguageUtil {
     return _asset_language_code_list.contains(normalized_language_code);
   }
 
-  /// TODO 断网且接口缓存不可用时使用的离线兜底语种代码。
+  /// 断网且接口缓存不可用时使用的离线兜底语种代码列表。
   static List<String> get offline_fallback_language_code_list {
     final List<String> fallback_list = <String>['en', 'sw']
         .where((String item) => _asset_language_code_list.contains(item))
@@ -215,7 +227,9 @@ class LanguageUtil {
         : <String>['en'];
   }
 
-  /// TODO 断网且接口缓存不可用时使用的离线兜底图标路径。
+  /// 断网且接口缓存不可用时使用的离线兜底图标路径。
+  ///
+  /// [language_code] 语种代码。
   static String get_offline_fallback_language_asset_image(
     String language_code,
   ) {
@@ -228,6 +242,9 @@ class LanguageUtil {
     return get_language_asset_image(get_fallback_language_code());
   }
 
+  /// 查找支持的语种信息。
+  ///
+  /// [language_code] 语种代码。
   static LanguageInfo? _find_supported_language(String? language_code) {
     final String normalized_language_code = _normalize_language_code(
       language_code ?? '',
@@ -246,7 +263,7 @@ class LanguageUtil {
     }
 
     if (_asset_language_code_list.contains(normalized_language_code)) {
-      // TODO 如果尚未加载远程语种列表，提供常见语种的初始 ID 映射，避免首次请求携带 language_id=1。
+      // 如果尚未加载远程语种列表，提供常见语种的初始 ID 映射，避免首次请求携带 language_id=1。
       int initial_id = 0;
       if (normalized_language_code == 'en') {
         initial_id = 1;
@@ -264,6 +281,7 @@ class LanguageUtil {
     return null;
   }
 
+  /// 获取 LanguageStore 实例（如果已注册）。
   static LanguageStore? _get_language_store() {
     if (!Get.isRegistered<LanguageStore>()) {
       return null;
@@ -271,6 +289,9 @@ class LanguageUtil {
     return Get.find<LanguageStore>();
   }
 
+  /// 标准化语种代码（转小写、去空格、取主代码）。
+  ///
+  /// [language_code] 原始语种代码。
   static String _normalize_language_code(String language_code) {
     final String normalized_language_code = language_code.trim().toLowerCase();
     if (normalized_language_code.isEmpty) {

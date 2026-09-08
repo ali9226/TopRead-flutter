@@ -10,13 +10,12 @@ import 'package:app/stores/bottom_navigation_info.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/config/font_config.dart';
 
-/**
- * TODO 普通确认弹窗预热器。
- * 作用：
- * 1. 提前构建退出登录这类确认弹窗的卡片、按钮和装饰层。
- * 2. 把首开时最明显的布局、阴影和按钮主题解析成本提前到页面空闲时完成。
- * 3. 只预热一次，避免每次进个人页都重复做无意义的后台构建。
- */
+/// 普通确认弹窗预热器。
+///
+/// 作用：
+/// 1. 提前构建退出登录这类确认弹窗的卡片、按钮和装饰层。
+/// 2. 把首开时最明显的布局、阴影和按钮主题解析成本提前到页面空闲时完成。
+/// 3. 只预热一次，避免每次进个人页都重复做无意义的后台构建。
 class ShowMessageWarmUp {
   static bool _hasWarmedUp = false;
 
@@ -63,7 +62,7 @@ class ShowMessageWarmUp {
   }
 }
 
-/// TODO 异步弹窗函数，点击按钮或关闭弹窗都会完成 Future
+/// 异步弹窗函数，点击按钮或关闭弹窗都会完成 Future。
 Future<void> showMessage({
   required String message,
   String? leftButtonText,

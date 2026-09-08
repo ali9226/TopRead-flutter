@@ -3,7 +3,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
-    show kIsWeb, TargetPlatform, defaultTargetPlatform;
+    show kIsWeb, kDebugMode, TargetPlatform, defaultTargetPlatform;
 import 'package:go_router/go_router.dart';
 import 'package:get/get.dart';
 import 'package:app/components/app_wrapper/utils/back_aware_page.dart';
@@ -243,12 +243,14 @@ class RouteConfig {
             );
           },
         ),
-        GoRoute(
-          path: '/debug',
-          name: 'debug',
-          pageBuilder: (context, state) =>
-              buildRoutePage(state: state, child: const DebugPage()),
-        ),
+        // 仅在 Debug 模式下注册调试页面路由。
+        if (kDebugMode)
+          GoRoute(
+            path: '/debug',
+            name: 'debug',
+            pageBuilder: (context, state) =>
+                buildRoutePage(state: state, child: const DebugPage()),
+          ),
         GoRoute(
           path: '/about_topread',
           name: 'about_topread',

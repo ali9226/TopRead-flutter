@@ -3,18 +3,23 @@ import 'dart:typed_data';
 
 import 'package:pointycastle/export.dart';
 
+/// AES 加密密钥。
+///
+/// 注意：此密钥硬编码在源码中，仅用于客户端本地加密场景。
+/// 生产环境建议从安全配置或后端动态获取。
 const String _aesKey = 'HoldEmApp@2025!!';
+
+/// AES 初始化向量。
 const String _aesIv = 'AESInitVector123';
 
+/// 将字符串转换为 Uint8List。
 Uint8List _createUint8ListFromString(String value) {
   return Uint8List.fromList(utf8.encode(value));
 }
 
-/* TODO
- * 使用 AES-CBC 加密字符串。
- *
- * [plainText] 需要加密的明文。
- */
+/// 使用 AES-CBC 加密字符串。
+///
+/// [plainText] 需要加密的明文。
 String aesEncryption(String plainText) {
   if (plainText.isEmpty) return '';
 
@@ -39,11 +44,9 @@ String aesEncryption(String plainText) {
   }
 }
 
-/* TODO
- * 使用 AES-CBC 解密字符串。
- *
- * [base64CipherText] Base64 编码后的密文。
- */
+/// 使用 AES-CBC 解密字符串。
+///
+/// [base64CipherText] Base64 编码后的密文。
 String aesDecryption(String base64CipherText) {
   if (base64CipherText.isEmpty) return '';
 
@@ -68,7 +71,7 @@ String aesDecryption(String base64CipherText) {
   }
 }
 
-/* TODO PKCS7 填充。 */
+/// PKCS7 填充。
 Uint8List _pad(Uint8List data) {
   final int padLength = 16 - (data.length % 16);
   final Uint8List padded = Uint8List(data.length + padLength)..setAll(0, data);
@@ -78,7 +81,7 @@ Uint8List _pad(Uint8List data) {
   return padded;
 }
 
-/* TODO 移除 PKCS7 填充。 */
+/// 移除 PKCS7 填充。
 Uint8List _unpad(Uint8List padded) {
   final int padLength = padded.last;
   return padded.sublist(0, padded.length - padLength);

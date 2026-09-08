@@ -2,12 +2,10 @@ import 'dart:convert';
 import 'package:app/util/log_util.dart';
 import 'package:jwt_decode/jwt_decode.dart';
 
-/* TODO
- * 解密 JWT 包裹的加密数据。
- *
- * [encryption] 服务端返回的加密字符串。
- * [encryptionKey] 可选密钥；当前实现仅在默认流程下做双层 Base64 解码。
- */
+/// 解密 JWT 包裹的加密数据。
+///
+/// [encryption] 服务端返回的加密字符串。
+/// [encryptionKey] 可选密钥；当前实现仅在默认流程下做双层 Base64 解码。
 dynamic decryptEncryption(String encryption, {String? encryptionKey}) {
   String encryptionKeyStr = '';
 
@@ -64,7 +62,7 @@ dynamic decryptEncryption(String encryption, {String? encryptionKey}) {
       final String firstDecode = utf8.decode(base64.decode(encryptionKeyStr));
       encryptionKeyStr = utf8.decode(base64.decode(firstDecode));
     } catch (error) {
-      logUtil(msg: 'TODO Base64 解码失败: $error', type: 'e');
+      logUtil(msg: 'Base64 解码失败: $error', type: 'e');
     }
   } else {
     encryptionKeyStr = encryptionKey;
@@ -73,7 +71,7 @@ dynamic decryptEncryption(String encryption, {String? encryptionKey}) {
   try {
     return Jwt.parseJwt(encryption);
   } catch (error) {
-    logUtil(msg: 'TODO JWT 解码失败: $error', type: 'e');
+    logUtil(msg: 'JWT 解码失败: $error', type: 'e');
     return encryption;
   }
 }

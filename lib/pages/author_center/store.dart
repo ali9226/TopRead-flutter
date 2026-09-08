@@ -168,7 +168,7 @@ class CreatorStore extends GetxController {
   Future<CreatorWorkModel?> createWork({
     required int workType,
     required int languageId,
-    required String title,
+    String? title,
     String? subtitle,
     String? introduction,
   }) async {

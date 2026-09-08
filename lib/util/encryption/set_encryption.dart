@@ -4,7 +4,9 @@ import 'dart:typed_data';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:app/util/log_util.dart';
 
-/* TODO 生成固定长度随机数字串。 */
+/// 生成固定长度随机数字串。
+///
+/// [length] 要生成的数字串长度。
 String accessNumber(int length) {
   const String chars = '0123456789';
   final Random random = Random.secure();
@@ -14,12 +16,10 @@ String accessNumber(int length) {
   ).join();
 }
 
-/* TODO
- * 把业务数据加密为服务端约定格式。
- *
- * [data] 原始业务参数。
- * [encryptionKey] 可选自定义密钥。
- */
+/// 把业务数据加密为服务端约定格式。
+///
+/// [data] 原始业务参数。
+/// [encryptionKey] 可选自定义密钥。
 Map<String, String> encryptData(
   Map<String, dynamic> data, {
   String? encryptionKey,
@@ -92,7 +92,7 @@ Map<String, String> encryptData(
       final Uint8List secondDecode = base64Decode(firstDecodeString);
       encryptionKeyStr = utf8.decode(secondDecode);
     } catch (error) {
-      logUtil(msg: 'TODO 默认密钥解码失败: $error', type: 'e');
+      logUtil(msg: '默认密钥解码失败: $error', type: 'e');
       return <String, String>{};
     }
   } else {
@@ -111,7 +111,7 @@ Map<String, String> encryptData(
       expiresIn: const Duration(days: 1),
     );
   } catch (error) {
-    logUtil(msg: 'TODO JWT 加密失败: $error', type: 'e');
+    logUtil(msg: 'JWT 加密失败: $error', type: 'e');
     return <String, String>{};
   }
 

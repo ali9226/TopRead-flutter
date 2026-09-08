@@ -1,46 +1,39 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'dart:io';
-import 'dart:convert';
-import 'dart:typed_data';
-
-import 'package:app/components/image_source_sheet/index.dart';
-import 'package:docx_to_text/docx_to_text.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:app/api/creator_work.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
-import 'package:app/models/preference.dart';
 import 'package:app/pages/author_center/author_style.dart';
-import 'package:app/pages/author_center/chapter_editor/index.dart';
-import 'package:app/pages/author_center/logic.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
-import 'package:app/pages/work_editor/steps/step_basic/step_basic.dart';
-import 'package:app/pages/work_editor/steps/step_category/step_category.dart';
-import 'package:app/pages/work_editor/steps/step_content/step_content.dart';
-import 'package:app/pages/work_editor/steps/step_publish/step_publish.dart';
+import 'package:app/pages/work_editor/style.dart';
+import 'package:app/pages/work_editor/widgets/steps/step_basic/step_basic.dart';
+import 'package:app/pages/work_editor/widgets/steps/step_category/step_category.dart';
+import 'package:app/pages/work_editor/widgets/steps/step_content/step_content.dart';
+import 'package:app/pages/work_editor/widgets/steps/step_publish/step_publish.dart';
 import 'package:app/stores/device_info.dart';
-import 'package:app/stores/preference_store.dart';
-import 'package:app/util/creator_draft_storage.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/language_util/index.dart';
-import 'package:app/util/upload_file.dart';
+import 'package:app/util/log_util.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'editor_form_manager.dart';
+import 'editor_file_handler.dart';
 import 'style.dart';
 import 'widgets/editor_step_indicator.dart';
 
-/// TODO 创建或编辑小说的三步交互页面。
+/// 创建或编辑小说的三步交互页面。
 ///
 /// 当前页面只负责 Flutter UI 和本地状态：
 /// 1. 基本资料与封面；
 /// 2. 长篇章节或短篇正文；
 /// 3. 审核通过后的发布方式。
+///
+/// 表单逻辑抽离到 [WorkEditorFormMixin]，文件处理抽离到 [WorkEditorFileMixin]。
 class CreatorWorkEditorPage extends StatefulWidget {
-  /// TODO 已有作品；为空表示创建新作品。
+  /// 已有作品；为空表示创建新作品。
   final CreatorWorkDraft? initial_work;
 
   const CreatorWorkEditorPage({super.key, this.initial_work});
@@ -49,96 +42,143 @@ class CreatorWorkEditorPage extends StatefulWidget {
   State<CreatorWorkEditorPage> createState() => _CreatorWorkEditorPageState();
 }
 
-class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
-  /// TODO 设备主题状态。
+class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
+    with WorkEditorFormMixin, WorkEditorFileMixin {
+  /// 设备主题状态。
   final DeviceInfo _device_info = Get.find<DeviceInfo>();
 
-  /// TODO 页面步骤控制器。
+  /// 页面步骤控制器。
   final PageController _page_controller = PageController();
 
-  /// TODO 封面选择器。
+  /// 封面选择器。
   final ImagePicker _image_picker = ImagePicker();
 
-  /// TODO 标题输入控制器。
+  /// 标题输入控制器。
   late final TextEditingController _title_controller;
 
-  /// TODO 简介输入控制器。
+  /// 简介输入控制器。
   late final TextEditingController _introduction_controller;
 
-  /// TODO 短篇正文输入控制器。
+  /// 短篇正文输入控制器。
   late final TextEditingController _short_content_controller;
 
-  /// TODO 长篇章节标题输入控制器。
+  /// 长篇章节标题输入控制器。
   late final TextEditingController _chapter_title_controller;
 
-  /// TODO 长篇章节正文输入控制器。
+  /// 长篇章节正文输入控制器。
   late final TextEditingController _chapter_content_controller;
 
-  /// TODO 当前步骤索引。
+  /// 当前步骤索引。
   int _current_step = 0;
 
-  /// TODO 当前选择的篇幅类型（从偏好 map 推导）。
-  CreatorWorkType get _work_type {
-    final int? pref_id =
-        _find_preference_group_by_item_id(WorkEditorStyle.long_work_id);
-    if (pref_id == null) return CreatorWorkType.short;
-    final Set<int> selected = _selected_preference_map[pref_id] ?? <int>{};
-    return selected.contains(WorkEditorStyle.long_work_id)
-        ? CreatorWorkType.long
-        : CreatorWorkType.short;
-  }
-
-  /// TODO 根据选项 ID 查找其所属偏好分组 ID。
-  int? _find_preference_group_by_item_id(int item_id) {
-    final PreferenceStore store = Get.find<PreferenceStore>();
-    for (final Preference pref in store.preference_list) {
-      for (final PreferenceItem item in pref.data_list) {
-        if (item.id == item_id) {
-          return pref.id;
-        }
-      }
-    }
-    return null;
-  }
-
-  /// TODO 是否完结。
+  /// 是否完结。
   late bool _is_completed;
 
-  /// TODO 当前原始创作语种。
+  /// 当前原始创作语种。
   late String _language_code;
 
-  /// TODO 当前选择的分类 id（从偏好 map 中提取）。
-  Set<int> get _selected_category_ids {
-    return _selected_preference_map[WorkEditorStyle.preference_category_id] ??
-        <int>{};
-  }
-
-  /// TODO 各偏好分类的选中项（key 为偏好类别 id，value 为已选选项 id 集合）。
+  /// 各偏好分类的选中项。
   late Map<int, Set<int>> _selected_preference_map;
 
-  /// TODO 长篇章节列表。
+  /// 长篇章节列表。
   late List<CreatorChapterDraft> _chapters;
 
-  /// TODO 发布方式。
+  /// 发布方式。
   late CreatorReleaseMode _release_mode;
 
-  /// TODO 定时发布时刻。
+  /// 定时发布时刻。
   DateTime? _scheduled_publish_time;
 
-  /// TODO 是否已确认原创和授权声明。
+  /// 是否已确认原创和授权声明。
   bool _rights_confirmed = false;
 
-  /// TODO 本地封面图片路径（上传中使用）。
+  /// 本地封面图片路径。
   String? _cover_local_path;
 
-  /// TODO 已上传的封面 URL。
+  /// 已上传的封面 URL。
   String? _cover_url;
 
-  /// TODO 是否正在上传封面。
+  /// 是否正在上传封面。
   bool _is_uploading_cover = false;
 
-  /// TODO 存在错误的步骤索引集合。
+  /// 存在错误的步骤索引集合。
   final Set<int> _error_steps = <int>{};
+
+  /// 后端作品ID（保存后更新）。
+  int? _novel_id;
+
+  /// 后端修订版本ID（保存后更新）。
+  int? _revision_id;
+
+  /// 后端语种版本ID（保存后更新）。
+  int? _novel_language_id;
+
+  /// 乐观锁版本号（保存后更新）。
+  int? _lock_version;
+
+  // ==================== Mixin 接口实现 ====================
+
+  @override
+  void Function(void Function()) get notifyStateChanged => setState;
+
+  @override
+  DeviceInfo get device_info => _device_info;
+
+  @override
+  ImagePicker get image_picker => _image_picker;
+
+  @override
+  List<CreatorChapterDraft> get chapters => _chapters;
+
+  @override
+  String? get cover_local_path => _cover_local_path;
+
+  @override
+  set cover_local_path(String? value) => _cover_local_path = value;
+
+  @override
+  String? get cover_url => _cover_url;
+
+  @override
+  set cover_url(String? value) => _cover_url = value;
+
+  @override
+  bool get is_uploading_cover => _is_uploading_cover;
+
+  @override
+  set is_uploading_cover(bool value) => _is_uploading_cover = value;
+
+  @override
+  Map<int, Set<int>> get selected_preference_map => _selected_preference_map;
+
+  @override
+  bool get rights_confirmed => _rights_confirmed;
+
+  @override
+  CreatorReleaseMode get release_mode => _release_mode;
+
+  @override
+  DateTime? get scheduled_publish_time => _scheduled_publish_time;
+
+  @override
+  Set<int> get error_steps => _error_steps;
+
+  @override
+  dynamic get title_controller => _title_controller;
+
+  @override
+  dynamic get introduction_controller => _introduction_controller;
+
+  @override
+  dynamic get short_content_controller => _short_content_controller;
+
+  @override
+  dynamic get chapter_title_controller => _chapter_title_controller;
+
+  @override
+  dynamic get chapter_content_controller => _chapter_content_controller;
+
+  // ==================== 生命周期 ====================
 
   @override
   void initState() {
@@ -146,23 +186,15 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
 
     final CreatorWorkDraft? work = widget.initial_work;
     _title_controller = TextEditingController(text: work?.title ?? '');
-    _introduction_controller = TextEditingController(
-      text: work?.introduction ?? '',
-    );
-    _short_content_controller = TextEditingController(
-      text: work?.short_content ?? '',
-    );
-    _chapter_title_controller = TextEditingController(
-      text: work?.chapter_title ?? '',
-    );
-    _chapter_content_controller = TextEditingController(
-      text: work?.chapter_content ?? '',
-    );
+    _introduction_controller = TextEditingController(text: work?.introduction ?? '');
+    _short_content_controller = TextEditingController(text: work?.short_content ?? '');
+    _chapter_title_controller = TextEditingController(text: work?.chapter_title ?? '');
+    _chapter_content_controller = TextEditingController(text: work?.chapter_content ?? '');
     _is_completed = work?.is_completed ?? false;
     _language_code = work?.language_code ?? 'zh';
     _chapters = <CreatorChapterDraft>[...?work?.chapters];
 
-    /// 恢复所有偏好选择。
+    // 恢复所有偏好选择。
     if (work != null && work.preferences.isNotEmpty) {
       _selected_preference_map = <int, Set<int>>{};
       work.preferences.forEach((key, value) {
@@ -176,22 +208,27 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
         2: <int>{...?work?.category_ids},
       };
 
-      /// 编辑模式下，根据 work_type 设置篇幅偏好。
+      // 编辑模式下，根据 work_type 设置篇幅偏好。
       if (work != null && work.work_type == CreatorWorkType.long) {
-        _selected_preference_map[WorkEditorStyle.short_work_id] =
-            <int>{WorkEditorStyle.long_work_id};
+        _selected_preference_map[WorkEditorStyle.short_work_id] = <int>{WorkEditorStyle.long_work_id};
       }
 
-      /// 新增作品时，设置各偏好默认值。
+      // 新增作品时，设置各偏好默认值。
       if (work == null) {
-        _set_default_preferences();
+        set_default_preferences();
       }
     }
     _release_mode = work?.release_mode ?? CreatorReleaseMode.immediate;
     _scheduled_publish_time = work?.scheduled_publish_time;
     _rights_confirmed = work?.rights_confirmed ?? false;
 
-    /// 恢复保存时的步骤进度。
+    // 初始化后端ID
+    _novel_id = work?.novel_id;
+    _revision_id = work?.revision_id;
+    _novel_language_id = work?.novel_language_id;
+    _lock_version = work?.lock_version;
+
+    // 恢复保存时的步骤进度。
     if (work != null && work.saved_step > 0) {
       _current_step = work.saved_step;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -199,14 +236,14 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
       });
     }
 
-    /// 恢复完成后刷新错误状态（标记未填步骤）。
-    _refresh_error_steps();
+    // 恢复完成后刷新错误状态（标记未填步骤）。
+    refresh_error_steps();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    /// 新增作品时，首次设置默认语种为 app 当前语种。
+    // 新增作品时，首次设置默认语种为 app 当前语种。
     if (widget.initial_work == null && _language_code == 'zh') {
       _language_code = context.locale.languageCode;
     }
@@ -223,15 +260,17 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
     super.dispose();
   }
 
-  /// TODO 是否处于编辑已有作品状态。
+  // ==================== 计算属性 ====================
+
+  /// 是否处于编辑已有作品状态。
   bool get _is_editing => widget.initial_work != null;
 
-  /// TODO 读取短篇正文非空白字符数。
+  /// 读取短篇正文非空白字符数。
   int get _short_word_count {
     return _short_content_controller.text.replaceAll(RegExp(r'\s+'), '').length;
   }
 
-  /// TODO 读取长篇所有章节总字数。
+  /// 读取长篇所有章节总字数。
   int get _chapter_word_count {
     return _chapters.fold<int>(
       0,
@@ -239,166 +278,12 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
     );
   }
 
-  /// TODO 读取当前输入的长篇章节字数。
+  /// 读取当前输入的长篇章节字数。
   int get _current_chapter_word_count {
     return _chapter_content_controller.text.replaceAll(RegExp(r'\s+'), '').length;
   }
 
-  /// TODO 页面可选分类，取自全局偏好缓存中的「内容偏好」分组。
-  List<PreferenceItem> get _category_options => CreatorLogic.category_options;
-
-  /// TODO 新增作品时设置各偏好默认值。
-  ///
-  /// 性别偏好：无所谓（ID [WorkEditorStyle.gender_any_id]）
-  /// 篇幅：短篇（ID [WorkEditorStyle.short_work_id]）
-  /// 状态：连载中（按标题匹配）
-  void _set_default_preferences() {
-    final PreferenceStore store = Get.find<PreferenceStore>();
-
-    /// 按 ID 直接设置默认值。
-    _set_preference_by_id(store, WorkEditorStyle.gender_any_id);
-    _set_preference_by_id(store, WorkEditorStyle.short_work_id);
-
-    /// 状态（连载中）按标题匹配。
-    for (final Preference pref in store.preference_list) {
-      final String title = pref.title;
-      if (title.contains('完结') || title.toLowerCase().contains('complet')) {
-        for (final PreferenceItem item in pref.data_list) {
-          if (item.title.contains('连载') || item.title.toLowerCase().contains('serial')) {
-            _selected_preference_map[pref.id] = <int>{item.id};
-            return;
-          }
-        }
-        return;
-      }
-    }
-  }
-
-  /// TODO 根据选项 ID 设置其所属偏好分组的默认选中。
-  void _set_preference_by_id(PreferenceStore store, int item_id) {
-    for (final Preference pref in store.preference_list) {
-      for (final PreferenceItem item in pref.data_list) {
-        if (item.id == item_id) {
-          _selected_preference_map[pref.id] = <int>{item_id};
-          return;
-        }
-      }
-    }
-  }
-
-  /// TODO 判断是否为强制单选偏好（状态、篇幅）。
-  bool _is_force_single_preference(Preference pref) {
-    final String title = pref.title;
-    if (title.contains('完结') || title.toLowerCase().contains('complet')) {
-      return true;
-    }
-    return title.contains('篇幅') || title.toLowerCase().contains('length');
-  }
-
-  /// TODO 切换偏好选中状态。
-  ///
-  /// 单选偏好：已选中时再次点击不取消，保持选中。
-  /// 多选偏好：追加或移除。
-  void _toggle_preference(int preference_id, int item_id) {
-    /// 记录切换前的篇幅类型。
-    final CreatorWorkType old_type = _work_type;
-
-    setState(() {
-      final Set<int> current =
-          _selected_preference_map[preference_id] ?? <int>{};
-
-      /// 查找偏好配置判断单选/多选，本地强制单选优先。
-      final PreferenceStore store = Get.find<PreferenceStore>();
-      final Preference? pref = store.find_preference_by_id(preference_id);
-      final bool is_single =
-          pref != null ? _is_force_single_preference(pref) || pref.is_single_select : true;
-
-      if (is_single) {
-        /// 单选：已选中时不取消，直接替换。
-        if (!current.contains(item_id)) {
-          _selected_preference_map[preference_id] = <int>{item_id};
-        }
-      } else {
-        /// 多选：追加或移除。
-        final Set<int> next = Set<int>.from(current);
-        if (next.contains(item_id)) {
-          next.remove(item_id);
-        } else {
-          next.add(item_id);
-        }
-        _selected_preference_map[preference_id] = next;
-      }
-    });
-
-    /// 篇幅类型切换时，同步正文内容。
-    final CreatorWorkType new_type = _work_type;
-    if (old_type != new_type) {
-      _sync_content_between_modes(old_type, new_type);
-    }
-  }
-
-  /// TODO 切换篇幅类型时同步正文内容。
-  ///
-  /// 短篇 → 长篇：短篇正文带入长篇章节内容。
-  /// 长篇 → 短篇：长篇章节内容带入短篇正文。
-  void _sync_content_between_modes(
-    CreatorWorkType from_type,
-    CreatorWorkType to_type,
-  ) {
-    final String short_content = _short_content_controller.text;
-    final String chapter_content = _chapter_content_controller.text;
-
-    if (from_type == CreatorWorkType.short &&
-        to_type == CreatorWorkType.long) {
-      /// 短篇 → 长篇：带入正文到章节内容。
-      if (chapter_content.isEmpty && short_content.isNotEmpty) {
-        _chapter_content_controller.text = short_content;
-      }
-    } else if (from_type == CreatorWorkType.long &&
-        to_type == CreatorWorkType.short) {
-      /// 长篇 → 短篇：带入章节内容到正文。
-      if (short_content.isEmpty && chapter_content.isNotEmpty) {
-        _short_content_controller.text = chapter_content;
-      }
-    }
-  }
-
-  /// TODO 校验指定步骤是否填写完整，返回 true 表示通过。
-  bool _validate_step(int step) {
-    switch (step) {
-      case 0:
-        return _title_controller.text.trim().isNotEmpty;
-      case 1:
-        /// 分类非必填，始终通过。
-        return true;
-      case 2:
-        if (_work_type == CreatorWorkType.long) {
-          /// 有章节列表时检查列表。
-          if (_chapters.isNotEmpty) return true;
-          /// 否则检查当前输入的章节标题和内容。
-          return _chapter_title_controller.text.trim().isNotEmpty &&
-              _chapter_content_controller.text.trim().isNotEmpty;
-        }
-        return _short_content_controller.text.trim().isNotEmpty;
-      case 3:
-        if (_release_mode == CreatorReleaseMode.scheduled) {
-          return _scheduled_publish_time != null && _rights_confirmed;
-        }
-        return _rights_confirmed;
-      default:
-        return true;
-    }
-  }
-
-  /// TODO 刷新所有步骤的错误状态集合。
-  void _refresh_error_steps() {
-    _error_steps.clear();
-    for (int i = 0; i < 4; i++) {
-      if (!_validate_step(i)) {
-        _error_steps.add(i);
-      }
-    }
-  }
+  // ==================== 步骤导航 ====================
 
   Future<void> _go_to_step(int step) async {
     if (step < 0 || step > 3 || step == _current_step) return;
@@ -406,7 +291,7 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _current_step = step;
-      _refresh_error_steps();
+      refresh_error_steps();
     });
     await _page_controller.animateToPage(
       step,
@@ -415,416 +300,217 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
     );
   }
 
-  /// TODO 进入下一步，同时刷新错误状态标记未填步骤。
+  /// 进入下一步，同时刷新错误状态标记未填步骤。
   Future<void> _try_next_step() async {
-    _refresh_error_steps();
+    refresh_error_steps();
     await _go_to_step(_current_step + 1);
   }
 
-  /// TODO 上传短篇文件（txt、docx），解析内容到正文框。
-  Future<void> _upload_short_file() async {
-    try {
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['txt', 'docx'],
-        withData: true,
-      );
+  // ==================== 保存/提交 ====================
 
-      if (result == null || result.files.isEmpty) return;
+  /// 保存草稿到后端数据库。
+  Future<void> _save_draft() async {
+    refresh_error_steps();
 
-      final PlatformFile file = result.files.first;
-      final Uint8List? bytes = file.bytes;
-      if (bytes == null) return;
-
-      String content;
-      if (file.name.endsWith('.docx')) {
-        content = docxToText(bytes);
-      } else {
-        content = utf8.decode(bytes);
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        _short_content_controller.text = content;
-      });
-
-      showBottomTip(easy.tr('creator_center.file_upload_success'));
-    } catch (e) {
-      if (!mounted) return;
-      showBottomTip(easy.tr('creator_center.file_upload_failed'));
-    }
-  }
-
-  /// TODO 上传长篇文件（txt、docx），解析内容到输入框。
-  ///
-  /// 如果标题输入框为空，使用文件名（去掉扩展名）作为章节标题。
-  Future<void> _upload_long_file() async {
-    try {
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['txt', 'docx'],
-        withData: true,
-      );
-
-      if (result == null || result.files.isEmpty) return;
-
-      final PlatformFile file = result.files.first;
-      final Uint8List? bytes = file.bytes;
-      if (bytes == null) return;
-
-      String content;
-      if (file.name.endsWith('.docx')) {
-        content = docxToText(bytes);
-      } else {
-        content = utf8.decode(bytes);
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        /// 填入正文内容。
-        _chapter_content_controller.text = content;
-
-        /// 如果标题为空，使用文件名作为标题。
-        if (_chapter_title_controller.text.trim().isEmpty) {
-          final String title = file.name.replaceAll(RegExp(r'\.(txt|docx)$'), '');
-          _chapter_title_controller.text = title;
-        }
-      });
-
-      showBottomTip(easy.tr('creator_center.file_upload_success'));
-    } catch (e) {
-      if (!mounted) return;
-      showBottomTip(easy.tr('creator_center.file_upload_failed'));
-    }
-  }
-
-  /// TODO 选择相册或相机中的封面，上传到服务器。
-  Future<void> _pick_cover(ImageSource source) async {
-    if (_is_uploading_cover) return;
-
-    try {
-      final XFile? image = await _image_picker.pickImage(
-        source: source,
-        maxWidth: 1600,
-        imageQuality: 90,
-      );
-      if (image == null) return;
-
-      if (!mounted) return;
-
-      /// 立即显示本地图片。
-      setState(() {
-        _cover_local_path = image.path;
-        _is_uploading_cover = true;
-      });
-
-      /// 上传到服务器。
-      final String? url = await uploadFile(File(image.path));
-
-      if (!mounted) return;
-
-      if (url != null) {
-        setState(() {
-          _cover_url = url;
-          _cover_local_path = null;
-        });
-      } else {
-        showBottomTip(easy.tr('creator_center.cover_pick_failed'));
-        setState(() => _cover_local_path = null);
-      }
-    } catch (_) {
-      if (mounted) {
-        showBottomTip(easy.tr('creator_center.cover_pick_failed'));
-        setState(() => _cover_local_path = null);
-      }
-    } finally {
-      if (mounted) setState(() => _is_uploading_cover = false);
-    }
-  }
-
-  /// TODO 打开封面来源选择面板。
-  Future<void> _open_cover_picker() async {
-    await showImageSourceSheet(
-      context: context,
-      on_gallery: () => _pick_cover(ImageSource.gallery),
-      on_camera: () => _pick_cover(ImageSource.camera),
-    );
-  }
-
-  /// TODO 新增章节。
-  Future<void> _add_chapter() async {
-    final CreatorChapterDraft? chapter = await Navigator.of(context)
-        .push<CreatorChapterDraft>(
-          MaterialPageRoute<CreatorChapterDraft>(
-            builder: (BuildContext context) =>
-                ChapterEditorPage(chapter_number: _chapters.length + 1),
-          ),
-        );
-
-    if (chapter == null || !mounted) return;
-    setState(() => _chapters.add(chapter));
-  }
-
-  /// TODO 编辑指定章节。
-  Future<void> _edit_chapter(int index) async {
-    final CreatorChapterDraft current_chapter = _chapters[index];
-    final CreatorChapterDraft? chapter = await Navigator.of(context)
-        .push<CreatorChapterDraft>(
-          MaterialPageRoute<CreatorChapterDraft>(
-            builder: (BuildContext context) => ChapterEditorPage(
-              chapter_number: index + 1,
-              initial_chapter: current_chapter,
-            ),
-          ),
-        );
-
-    if (chapter == null || !mounted) return;
-    setState(() => _chapters[index] = chapter);
-  }
-
-  /// TODO 删除章节前二次确认，避免误触导致本地长文本丢失。
-  Future<void> _delete_chapter(int index) async {
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext dialog_context) {
-        final bool is_dark = _device_info.dark.value;
-        return AlertDialog(
-          backgroundColor: AuthorStyle.surface(is_dark),
-          title: Text(
-            easy.tr('creator_center.delete_chapter'),
-            style: TextStyle(color: AuthorStyle.primary_text(is_dark)),
-          ),
-          content: Text(
-            easy.tr('creator_center.delete_chapter_confirm'),
-            style: TextStyle(color: AuthorStyle.secondary_text(is_dark)),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialog_context).pop(false),
-              child: Text(easy.tr('common.cancel')),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(dialog_context).pop(true),
-              child: Text(
-                easy.tr('creator_center.delete'),
-                style: TextStyle(color: ColorConstants.dangerColor),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true || !mounted) return;
-    setState(() => _chapters.removeAt(index));
-  }
-
-  /// TODO 打开底部日期时间选择器。
-  Future<void> _select_schedule_time() async {
-    final DateTime now = DateTime.now();
-    final DateTime initial_time =
-        _scheduled_publish_time ?? now.add(const Duration(days: 1));
-    final bool is_dark = _device_info.dark.value;
-    final Color red = ColorConstants.dangerColor;
-
-    DateTime temp_selected = initial_time;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext sheetContext) {
-        return Container(
-          height: 340,
-          decoration: BoxDecoration(
-            color: is_dark ? const Color(0xFF1E1E2E) : Colors.white,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: <Widget>[
-              /// 标题栏。
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        easy.tr('creator_center.select_schedule_time'),
-                        style: TextStyle(
-                          color: is_dark
-                              ? Colors.white
-                              : const Color(0xFF1A1A1A),
-                          fontSize: 16,
-                          fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(sheetContext).pop(),
-                      icon: Icon(
-                        Icons.close_rounded,
-                        color: is_dark
-                            ? Colors.white54
-                            : const Color(0xFF999999),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              /// 日期时间选择器。
-              Expanded(
-                child: CupertinoDatePicker(
-                  mode: CupertinoDatePickerMode.dateAndTime,
-                  initialDateTime: temp_selected,
-                  minimumDate: now,
-                  maximumDate: now.add(const Duration(days: 365)),
-                  use24hFormat: true,
-                  onDateTimeChanged: (DateTime newDate) {
-                    temp_selected = newDate;
-                  },
-                ),
-              ),
-
-              /// 按钮栏。
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  0,
-                  20,
-                  MediaQuery.paddingOf(sheetContext).bottom + 16,
-                ),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.of(sheetContext).pop(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: red,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: Text(easy.tr('common.cancel')),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            _scheduled_publish_time = temp_selected;
-                          });
-                          Navigator.of(sheetContext).pop();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: ColorConstants.themeColor,
-                          foregroundColor: ColorConstants.lightTextColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: Text(easy.tr('common.confirm')),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// TODO 构造要返回给创作者中心的本地作品模型。
-  CreatorWorkDraft _build_work(CreatorWorkStatus status) {
-    final DateTime now = DateTime.now();
-
-    /// 将偏好 map 转为可序列化格式。
+    // 准备偏好数据
     final Map<String, List<int>> prefs = {};
     _selected_preference_map.forEach((key, value) {
       prefs[key.toString()] = value.toList();
     });
 
-    return CreatorWorkDraft(
-      local_id:
-          widget.initial_work?.local_id ?? 'work_${now.microsecondsSinceEpoch}',
-      title: _title_controller.text.trim(),
-      introduction: _introduction_controller.text.trim(),
-      work_type: _work_type,
-      is_completed: _is_completed,
-      language_code: _language_code,
-      category_ids: _selected_category_ids.toList(growable: false),
-      short_content: _work_type == CreatorWorkType.short
-          ? _short_content_controller.text.trim()
-          : '',
-      chapters: _work_type == CreatorWorkType.long
-          ? List<CreatorChapterDraft>.unmodifiable(_chapters)
-          : const <CreatorChapterDraft>[],
-      status: status,
-      release_mode: _release_mode,
-      scheduled_publish_time: _release_mode == CreatorReleaseMode.scheduled
-          ? _scheduled_publish_time
-          : null,
-      update_time: now,
-      is_demo: false,
-      cover_url: _cover_url,
-      saved_step: _current_step,
-      preferences: prefs,
-      rights_confirmed: _rights_confirmed,
-      chapter_title: _chapter_title_controller.text.trim(),
-      chapter_content: _chapter_content_controller.text.trim(),
-    );
+    // 准备分类快照
+    final List<Map<String, dynamic>> categorySnapshot = selected_category_ids
+        .map((id) => {'category_id': id})
+        .toList();
+
+    try {
+      // 如果没有 novel_id，需要先创建作品
+      if (_novel_id == null) {
+        final int languageId = await LanguageUtil.get_language_id();
+        final createResult = await CreatorWorkApi.createDraft(
+          workType: work_type == CreatorWorkType.long ? 1 : 2,
+          languageId: languageId,
+          title: _title_controller.text.trim(),
+          introduction: _introduction_controller.text.trim(),
+        );
+
+        if (!createResult.status || createResult.content == null) {
+          if (!mounted) return;
+          showBottomTip(createResult.message.isNotEmpty
+              ? createResult.message
+              : easy.tr('creator_center.draft_save_failed'));
+          return;
+        }
+
+        // 更新状态变量
+        setState(() {
+          _novel_id = _parseIntNullable(createResult.content!['novel_id']);
+          _revision_id = _parseIntNullable(createResult.content!['revision_id']);
+          _novel_language_id = _parseIntNullable(createResult.content!['novel_language_id']);
+          _lock_version = 0;
+        });
+      }
+
+      // 计算字数
+      final int wordCount = work_type == CreatorWorkType.short
+          ? _short_content_controller.text.replaceAll(RegExp(r'\s+'), '').length
+          : _chapters.fold<int>(0, (total, chapter) => total + chapter.word_count);
+
+      // 语言代码转语言ID
+      final int languageId = await _getLanguageId(_language_code);
+
+      // 短篇内容和长篇临时章节分开处理
+      final String? shortContent = work_type == CreatorWorkType.short
+          ? _short_content_controller.text
+          : null;
+      final String? tempChapterTitle = work_type == CreatorWorkType.long
+          ? _chapter_title_controller.text.trim()
+          : null;
+      final String? tempChapterContent = work_type == CreatorWorkType.long
+          ? _chapter_content_controller.text
+          : null;
+
+      // 保存草稿到后端
+      final saveResult = await CreatorWorkApi.saveDraft(
+        novelId: _novel_id!,
+        revisionId: _revision_id!,
+        title: _title_controller.text.trim(),
+        introduction: _introduction_controller.text.trim(),
+        coverUrl: _cover_url,
+        wordCount: wordCount,
+        serializationStatus: _is_completed ? 2 : 1,
+        categorySnapshot: categorySnapshot,
+        lockVersion: _lock_version,
+        preferences: prefs,
+        savedStep: _current_step,
+        rightsConfirmed: _rights_confirmed,
+        releaseMode: _release_mode == CreatorReleaseMode.immediate ? 1 : 2,
+        scheduledPublishTime: _scheduled_publish_time?.toIso8601String(),
+        tempChapterTitle: tempChapterTitle,
+        tempChapterContent: tempChapterContent,
+        languageId: languageId,
+        shortContent: shortContent,
+      );
+
+      if (!saveResult.status) {
+        if (!mounted) return;
+        showBottomTip(saveResult.message.isNotEmpty
+            ? saveResult.message
+            : easy.tr('creator_center.draft_save_failed'));
+        return;
+      }
+
+      // 更新 lock_version
+      final newLockVersion = _parseIntNullable(saveResult.content?['lock_version']);
+      if (newLockVersion != null) {
+        setState(() {
+          _lock_version = newLockVersion;
+        });
+      }
+
+      // 构建返回的草稿对象
+      final CreatorWorkDraft draft = build_work(
+        CreatorWorkStatus.draft,
+        local_id: widget.initial_work?.local_id ?? 'work_${DateTime.now().microsecondsSinceEpoch}',
+        language_code: _language_code,
+        current_step: _current_step,
+        cover_url: _cover_url,
+      ).copy_with(
+        novel_id: _novel_id,
+        revision_id: _revision_id,
+        novel_language_id: _novel_language_id,
+        lock_version: _lock_version,
+      );
+
+      if (!mounted) return;
+      showBottomTip(easy.tr('creator_center.draft_saved'));
+      Navigator.of(context).pop<CreatorWorkDraft>(draft);
+    } catch (e) {
+      logUtil(msg: '保存草稿异常: $e', type: 'e');
+      if (!mounted) return;
+      showBottomTip(easy.tr('creator_center.draft_save_failed'));
+    }
   }
 
-  /// TODO 保存本地草稿，不要求所有投稿字段已经完整。
-  Future<void> _save_draft() async {
-    /// 刷新错误状态。
-    _refresh_error_steps();
-
-    final CreatorWorkDraft draft = _build_work(CreatorWorkStatus.draft);
-
-    /// 保存到本地存储。
-    await CreatorDraftStorage.saveDraft(draft);
-
-    if (!mounted) return;
-    showBottomTip(easy.tr('creator_center.draft_saved'));
-    Navigator.of(context).pop<CreatorWorkDraft>(draft);
+  /// 安全解析可空整数
+  int? _parseIntNullable(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    if (value is double) return value.toInt();
+    return null;
   }
 
-  /// TODO 校验投稿资料并进入待审核状态。
-  void _submit_for_review() {
+  /// 语言代码转语言ID
+  Future<int> _getLanguageId(String languageCode) async {
+    // 常见语言代码映射
+    const Map<String, int> languageMap = {
+      'zh': 1,
+      'en': 2,
+      'fr': 3,
+      'es': 4,
+      'ar': 5,
+      'pt': 6,
+      'id': 7,
+      'ja': 8,
+      'ko': 9,
+      'de': 10,
+      'it': 11,
+      'tr': 12,
+      'th': 13,
+      'vi': 14,
+      'ms': 15,
+      'sw': 16,
+    };
+    return languageMap[languageCode] ?? 2; // 默认英语
+  }
+
+  /// 语言ID转语言代码
+  String _getLanguageCode(int languageId) {
+    const Map<int, String> languageMap = {
+      1: 'zh',
+      2: 'en',
+      3: 'fr',
+      4: 'es',
+      5: 'ar',
+      6: 'pt',
+      7: 'id',
+      8: 'ja',
+      9: 'ko',
+      10: 'de',
+      11: 'it',
+      12: 'tr',
+      13: 'th',
+      14: 'vi',
+      15: 'ms',
+      16: 'sw',
+    };
+    return languageMap[languageId] ?? 'en';
+  }
+
+  /// 校验投稿资料并进入待审核状态。
+  Future<void> _submit_for_review() async {
     if (_title_controller.text.trim().isEmpty) {
       _go_to_step(0);
       showBottomTip(easy.tr('creator_center.required_title'));
       return;
     }
-    if (_selected_category_ids.isEmpty) {
+    if (selected_category_ids.isEmpty) {
       _go_to_step(1);
       showBottomTip(easy.tr('creator_center.required_category'));
       return;
     }
-    if (_work_type == CreatorWorkType.long && _chapters.isEmpty) {
+    if (work_type == CreatorWorkType.long && _chapters.isEmpty) {
       _go_to_step(2);
       showBottomTip(easy.tr('creator_center.required_chapter'));
       return;
     }
-    if (_work_type == CreatorWorkType.short &&
-        _short_content_controller.text.trim().isEmpty) {
+    if (work_type == CreatorWorkType.short && _short_content_controller.text.trim().isEmpty) {
       _go_to_step(2);
       showBottomTip(easy.tr('creator_center.required_short_content'));
       return;
     }
-    if (_release_mode == CreatorReleaseMode.scheduled &&
-        _scheduled_publish_time == null) {
+    if (_release_mode == CreatorReleaseMode.scheduled && _scheduled_publish_time == null) {
       showBottomTip(easy.tr('creator_center.required_schedule'));
       return;
     }
@@ -833,18 +519,109 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
       return;
     }
 
-    final CreatorWorkDraft reviewing_work = _build_work(
-      CreatorWorkStatus.reviewing,
-    );
-    showBottomTip(easy.tr('creator_center.submitted'));
-    Navigator.of(context).pop<CreatorWorkDraft>(reviewing_work);
+    if (_novel_id == null || _revision_id == null) {
+      // 需要先保存草稿
+      await _save_draft();
+      return;
+    }
+
+    try {
+      // 先保存最新数据
+      await _save_draft_only();
+
+      // 提交审核
+      final submitResult = await CreatorWorkApi.submit(
+        novelId: _novel_id!,
+        revisionId: _revision_id!,
+        submissionType: 1, // 首次投稿
+      );
+
+      if (!submitResult.status) {
+        if (!mounted) return;
+        showBottomTip(submitResult.message.isNotEmpty
+            ? submitResult.message
+            : easy.tr('creator_center.submit_failed'));
+        return;
+      }
+
+      final CreatorWorkDraft reviewing_work = build_work(
+        CreatorWorkStatus.reviewing,
+        local_id: widget.initial_work?.local_id ?? 'work_${DateTime.now().microsecondsSinceEpoch}',
+        language_code: _language_code,
+        current_step: _current_step,
+        cover_url: _cover_url,
+      ).copy_with(
+        novel_id: _novel_id,
+        revision_id: _revision_id,
+      );
+
+      if (!mounted) return;
+      showBottomTip(easy.tr('creator_center.submitted'));
+      Navigator.of(context).pop<CreatorWorkDraft>(reviewing_work);
+    } catch (e) {
+      logUtil(msg: '提交审核异常: $e', type: 'e');
+      if (!mounted) return;
+      showBottomTip(easy.tr('creator_center.submit_failed'));
+    }
   }
+
+  /// 仅保存草稿不返回（用于提交前的自动保存）。
+  Future<bool> _save_draft_only() async {
+    if (_novel_id == null || _revision_id == null) return false;
+
+    try {
+      final Map<String, List<int>> prefs = {};
+      _selected_preference_map.forEach((key, value) {
+        prefs[key.toString()] = value.toList();
+      });
+
+      final List<Map<String, dynamic>> categorySnapshot = selected_category_ids
+          .map((id) => {'category_id': id})
+          .toList();
+
+      final int wordCount = work_type == CreatorWorkType.short
+          ? _short_content_controller.text.replaceAll(RegExp(r'\s+'), '').length
+          : _chapters.fold<int>(0, (total, chapter) => total + chapter.word_count);
+
+      final saveResult = await CreatorWorkApi.saveDraft(
+        novelId: _novel_id!,
+        revisionId: _revision_id!,
+        title: _title_controller.text.trim(),
+        introduction: _introduction_controller.text.trim(),
+        coverUrl: _cover_url,
+        wordCount: wordCount,
+        serializationStatus: _is_completed ? 2 : 1,
+        categorySnapshot: categorySnapshot,
+        lockVersion: _lock_version,
+        preferences: prefs,
+        savedStep: _current_step,
+        rightsConfirmed: _rights_confirmed,
+        releaseMode: _release_mode == CreatorReleaseMode.immediate ? 1 : 2,
+        scheduledPublishTime: _scheduled_publish_time?.toIso8601String(),
+        tempChapterTitle: _chapter_title_controller.text.trim(),
+        tempChapterContent: _chapter_content_controller.text,
+      );
+
+      if (saveResult.status) {
+        // 更新 lock_version
+        final newLockVersion = _parseIntNullable(saveResult.content?['lock_version']);
+        if (newLockVersion != null) {
+          _lock_version = newLockVersion;
+        }
+      }
+
+      return saveResult.status;
+    } catch (e) {
+      logUtil(msg: '保存草稿异常: $e', type: 'e');
+      return false;
+    }
+  }
+
+  // ==================== UI 构建 ====================
 
   @override
   Widget build(BuildContext context) {
-    final bool is_cjk = LanguageUtil.is_cjk_language(
-      context.locale.languageCode,
-    );
+    final bool is_cjk = LanguageUtil.is_cjk_language(context.locale.languageCode);
 
     return Obx(() {
       final bool is_dark = _device_info.dark.value;
@@ -918,18 +695,17 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
                     cover_local_path: _cover_local_path,
                     cover_url: _cover_url,
                     is_uploading_cover: _is_uploading_cover,
-                    on_pick_cover: _open_cover_picker,
-                    on_language_changed: (String code) =>
-                        setState(() => _language_code = code),
+                    on_pick_cover: open_cover_picker,
+                    on_language_changed: (String code) => setState(() => _language_code = code),
                   ),
                   StepCategory(
                     is_dark: is_dark,
                     selected_preference_map: _selected_preference_map,
-                    on_toggle_preference: _toggle_preference,
+                    on_toggle_preference: toggle_preference,
                   ),
                   StepContent(
                     is_dark: is_dark,
-                    work_type: _work_type,
+                    work_type: work_type,
                     is_editing: _is_editing,
                     chapters: _chapters,
                     short_content_controller: _short_content_controller,
@@ -938,19 +714,18 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
                     chapter_word_count: _chapter_word_count,
                     short_word_count: _short_word_count,
                     current_chapter_word_count: _current_chapter_word_count,
-                    on_edit_chapter: _edit_chapter,
-                    on_delete_chapter: _delete_chapter,
+                    on_edit_chapter: edit_chapter,
+                    on_delete_chapter: delete_chapter,
                     on_reorder_chapters: (int old_index, int new_index) {
                       setState(() {
-                        final CreatorChapterDraft item =
-                            _chapters.removeAt(old_index);
+                        final CreatorChapterDraft item = _chapters.removeAt(old_index);
                         _chapters.insert(new_index, item);
                       });
                     },
                     on_short_content_changed: () => setState(() {}),
                     on_chapter_content_changed: () => setState(() {}),
-                    on_short_file_upload: _upload_short_file,
-                    on_long_file_upload: _upload_long_file,
+                    on_short_file_upload: upload_short_file,
+                    on_long_file_upload: upload_long_file,
                   ),
                   StepPublish(
                     is_dark: is_dark,
@@ -960,7 +735,12 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
                     rights_confirmed: _rights_confirmed,
                     on_release_mode_changed: (CreatorReleaseMode mode) =>
                         setState(() => _release_mode = mode),
-                    on_select_schedule_time: _select_schedule_time,
+                    on_select_schedule_time: () => select_schedule_time(
+                      scheduled_publish_time: _scheduled_publish_time,
+                      on_time_selected: (DateTime? time) {
+                        setState(() => _scheduled_publish_time = time);
+                      },
+                    ),
                     on_rights_confirmed_changed: (bool value) =>
                         setState(() => _rights_confirmed = value),
                   ),
@@ -973,15 +753,14 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
       );
     });
   }
+
   Widget _build_bottom_bar(bool is_dark, bool is_cjk) {
     final String primary_title = _current_step == 3
         ? easy.tr('creator_center.submit_review')
         : easy.tr('creator_center.next');
 
     return Container(
-      constraints: const BoxConstraints(
-        minHeight: WorkEditorStyle.bottom_bar_min_height,
-      ),
+      constraints: const BoxConstraints(minHeight: WorkEditorStyle.bottom_bar_min_height),
       padding: EdgeInsets.fromLTRB(
         16,
         11,
@@ -994,9 +773,7 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: WorkEditorStyle.content_max_width,
-          ),
+          constraints: const BoxConstraints(maxWidth: WorkEditorStyle.content_max_width),
           child: Row(
             children: <Widget>[
               if (_current_step == 0)
@@ -1040,13 +817,9 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage> {
               Expanded(
                 flex: 2,
                 child: FilledButton.icon(
-                  onPressed: _current_step == 3
-                      ? _submit_for_review
-                      : _try_next_step,
+                  onPressed: _current_step == 3 ? _submit_for_review : _try_next_step,
                   icon: Icon(
-                    _current_step == 3
-                        ? Icons.send_rounded
-                        : Icons.arrow_forward_rounded,
+                    _current_step == 3 ? Icons.send_rounded : Icons.arrow_forward_rounded,
                     size: 19,
                   ),
                   label: Text(primary_title),

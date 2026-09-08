@@ -8,12 +8,10 @@ import 'package:app/stores/device_info.dart';
 
 Timer? _toastTimer;
 
-/* TODO
- * 显示底部提示弹窗。
- *
- * [message] 提示文案。
- * [duration] 展示时长，不传时默认 2 秒。
- */
+/// 显示底部提示弹窗。
+///
+/// [message] 提示文案。
+/// [duration] 展示时长，不传时默认 2 秒。
 Future<void> showBottomTip(String message, {Duration? duration}) async {
   final DeviceInfo deviceInfo = Get.find<DeviceInfo>();
   final bool isDark = deviceInfo.dark.value;
