@@ -18,6 +18,7 @@ class BackendWorkCard extends StatelessWidget {
   final VoidCallback on_tap;
   final VoidCallback? on_primary_action;
   final VoidCallback? on_delete;
+  final VoidCallback? on_withdraw;
 
   const BackendWorkCard({
     super.key,
@@ -27,6 +28,7 @@ class BackendWorkCard extends StatelessWidget {
     required this.on_tap,
     this.on_primary_action,
     this.on_delete,
+    this.on_withdraw,
   });
 
   String get _title => work.title.trim().isEmpty
@@ -35,12 +37,11 @@ class BackendWorkCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color card_bg =
-        is_dark ? const Color(0xFF1E2130) : Colors.white;
-    final Color ripple_color =
-        AuthorStyle.gold.withValues(alpha: is_dark ? 0.10 : 0.08);
-    final Color highlight_color =
-        AuthorStyle.gold.withValues(alpha: 0.04);
+    final Color card_bg = is_dark ? const Color(0xFF1E2130) : Colors.white;
+    final Color ripple_color = AuthorStyle.gold.withValues(
+      alpha: is_dark ? 0.10 : 0.08,
+    );
+    final Color highlight_color = AuthorStyle.gold.withValues(alpha: 0.04);
 
     return Material(
       color: card_bg,
@@ -170,7 +171,24 @@ class BackendWorkCard extends StatelessWidget {
                 ),
               ),
             ),
-            if (on_delete != null)
+            if (work.is_reviewing && on_withdraw != null)
+              GestureDetector(
+                onTap: on_withdraw,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Text(
+                    easy.tr('creator_center.withdraw_work'),
+                    style: TextStyle(
+                      fontSize: is_cjk ? 12 : 11,
+                      height: 1.4,
+                      fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                      color: ColorConstants.dangerColor,
+                    ),
+                  ),
+                ),
+              )
+            else if (!work.is_reviewing && on_delete != null)
               GestureDetector(
                 onTap: on_delete,
                 behavior: HitTestBehavior.opaque,
@@ -189,6 +207,30 @@ class BackendWorkCard extends StatelessWidget {
               ),
           ],
         ),
+        if (work.is_published) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            children: [
+              TextButton.icon(
+                onPressed: on_tap,
+                icon: const Icon(Icons.edit_note_rounded, size: 18),
+                label: Text(
+                  work.pending_submission != null ? '查看更新审核' : '编辑更新',
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: is_dark
+                      ? AuthorStyle.gold
+                      : AuthorStyle.deep_gold,
+                ),
+              ),
+              TextButton(
+                onPressed: on_primary_action,
+                child: const Text('阅读已发布版'),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -213,10 +255,7 @@ class BackendWorkCard extends StatelessWidget {
               : (work.is_long_novel ? 'Novel' : 'Short story'),
           color: next_color(),
         ),
-        _build_pill(
-          _status_label,
-          color: next_color(),
-        ),
+        _build_pill(_status_label, color: next_color()),
         if (work.is_long_novel && work.is_published)
           _build_pill(
             is_cjk
@@ -230,10 +269,7 @@ class BackendWorkCard extends StatelessWidget {
 
   Widget _build_pill(String label, {required Color color}) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: is_cjk ? 6 : 8,
-        vertical: 2,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: is_cjk ? 6 : 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: is_dark ? 0.16 : 0.10),
         borderRadius: BorderRadius.circular(LayoutConfig.card_radius),

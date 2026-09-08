@@ -62,6 +62,9 @@ class CreatorWorkTab extends StatefulWidget {
   /// 删除作品回调，返回 true 表示确认删除。
   final Future<bool> Function(CreatorWorkModel)? on_delete_work;
 
+  /// 放弃审核回调，返回 true 表示确认放弃。
+  final Future<bool> Function(CreatorWorkModel)? on_withdraw_work;
+
   const CreatorWorkTab({
     super.key,
     required this.tab_index,
@@ -76,6 +79,7 @@ class CreatorWorkTab extends StatefulWidget {
     required this.on_edit_work,
     required this.on_primary_action,
     this.on_delete_work,
+    this.on_withdraw_work,
     this.is_loading = false,
     this.is_loading_more = false,
     this.error_message,
@@ -452,6 +456,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
           on_edit_work: widget.on_edit_work,
           on_primary_action: widget.on_primary_action,
           on_delete_work: widget.on_delete_work,
+          on_withdraw_work: widget.on_withdraw_work,
         ),
       ),
       SliverToBoxAdapter(
@@ -741,6 +746,7 @@ class _AnimatedWorkList extends StatefulWidget {
   final ValueChanged<CreatorWorkModel> on_edit_work;
   final ValueChanged<CreatorWorkModel> on_primary_action;
   final Future<bool> Function(CreatorWorkModel)? on_delete_work;
+  final Future<bool> Function(CreatorWorkModel)? on_withdraw_work;
 
   const _AnimatedWorkList({
     required this.works,
@@ -749,6 +755,7 @@ class _AnimatedWorkList extends StatefulWidget {
     required this.on_edit_work,
     required this.on_primary_action,
     this.on_delete_work,
+    this.on_withdraw_work,
   });
 
   @override
@@ -777,6 +784,21 @@ class _AnimatedWorkListState extends State<_AnimatedWorkList>
       if (!confirmed || !mounted) return;
     }
 
+    _animate_remove(work);
+  }
+
+  Future<void> _start_withdraw(CreatorWorkModel work) async {
+    if (_removing.containsKey(work.id)) return;
+
+    if (widget.on_withdraw_work != null) {
+      final bool confirmed = await widget.on_withdraw_work!(work);
+      if (!confirmed || !mounted) return;
+    }
+
+    _animate_remove(work);
+  }
+
+  void _animate_remove(CreatorWorkModel work) {
     final controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -823,6 +845,9 @@ class _AnimatedWorkListState extends State<_AnimatedWorkList>
               on_primary_action: () => widget.on_primary_action(work),
               on_delete: widget.on_delete_work != null
                   ? () => _start_remove(work)
+                  : null,
+              on_withdraw: widget.on_withdraw_work != null
+                  ? () => _start_withdraw(work)
                   : null,
             ),
           ),

@@ -10,6 +10,13 @@ import 'draft_persistence.dart';
 /// 列表仅用于选作品；进入编辑器前必须读取完整草稿与章节正文。
 Future<CreatorWorkDraft> loadCreatorWorkDraft(int novelId) async {
   try {
+    // 既有草稿直接复用；已发布作品先建立工作副本，再读取一次完整正文。
+    final started = await CreatorWorkApi.beginEdit(novelId: novelId);
+    if (!started.status) {
+      throw CreatorDraftException(
+        creatorDraftErrorMessage(started.message, '无法开始编辑，请稍后重试'),
+      );
+    }
     final result = await CreatorWorkApi.getInfo(novelId: novelId);
     if (!result.status || result.content == null) {
       throw CreatorDraftException(
@@ -117,7 +124,9 @@ CreatorWorkDraft creatorWorkDraftFromBackend(Map<String, dynamic> data) {
               .toString()
         : '',
     chapters: chapters,
-    status: CreatorWorkStatus.draft,
+    status: _parseIntNullable(novel['public_status']) == 2
+        ? CreatorWorkStatus.published
+        : CreatorWorkStatus.draft,
     release_mode: _parseIntNullable(draft['release_mode']) == 2
         ? CreatorReleaseMode.scheduled
         : CreatorReleaseMode.immediate,

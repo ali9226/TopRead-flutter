@@ -23,6 +23,7 @@ class StepContent extends StatelessWidget {
 
   /// TODO 是否编辑模式（已有作品）。
   final bool is_editing;
+  final int active_chapter_index;
 
   /// TODO 长篇章节列表。
   final List<CreatorChapterDraft> chapters;
@@ -73,6 +74,7 @@ class StepContent extends StatelessWidget {
     required this.is_dark,
     required this.work_type,
     required this.is_editing,
+    this.active_chapter_index = -1,
     required this.chapters,
     required this.short_content_controller,
     required this.chapter_title_controller,
@@ -94,40 +96,38 @@ class StepContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool is_long = work_type == CreatorWorkType.long;
 
+    if (is_long) {
+      return LongContentEditor(
+        is_dark: is_dark,
+        is_editing: is_editing,
+        chapters: chapters,
+        active_chapter_index: active_chapter_index,
+        chapter_word_count: chapter_word_count,
+        chapter_title_controller: chapter_title_controller,
+        chapter_content_controller: chapter_content_controller,
+        current_word_count: current_chapter_word_count,
+        on_content_changed: on_chapter_content_changed,
+        on_file_upload: on_long_file_upload,
+        on_edit_chapter: on_edit_chapter,
+        on_save_current_chapter: on_save_current_chapter,
+        on_delete_chapter: on_delete_chapter,
+        on_reorder_chapters: on_reorder_chapters,
+      );
+    }
     return StepUtils.build_step_scroll_view(
       context: context,
       children: <Widget>[
         EditorSectionCard(
           title: easy.tr('creator_center.content_title'),
-          subtitle: easy.tr(
-            is_long
-                ? 'creator_center.content_long_subtitle'
-                : 'creator_center.content_short_subtitle',
-          ),
+          subtitle: easy.tr('creator_center.content_short_subtitle'),
           is_dark: is_dark,
-          child: is_long
-              ? LongContentEditor(
-                  is_dark: is_dark,
-                  is_editing: is_editing,
-                  chapters: chapters,
-                  chapter_word_count: chapter_word_count,
-                  chapter_title_controller: chapter_title_controller,
-                  chapter_content_controller: chapter_content_controller,
-                  current_word_count: current_chapter_word_count,
-                  on_content_changed: on_chapter_content_changed,
-                  on_file_upload: on_long_file_upload,
-                  on_edit_chapter: on_edit_chapter,
-                  on_save_current_chapter: on_save_current_chapter,
-                  on_delete_chapter: on_delete_chapter,
-                  on_reorder_chapters: on_reorder_chapters,
-                )
-              : ShortContentEditor(
-                  is_dark: is_dark,
-                  content_controller: short_content_controller,
-                  word_count: short_word_count,
-                  on_content_changed: on_short_content_changed,
-                  on_file_upload: on_short_file_upload,
-                ),
+          child: ShortContentEditor(
+            is_dark: is_dark,
+            content_controller: short_content_controller,
+            word_count: short_word_count,
+            on_content_changed: on_short_content_changed,
+            on_file_upload: on_short_file_upload,
+          ),
         ),
       ],
     );

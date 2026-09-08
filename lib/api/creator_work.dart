@@ -61,6 +61,17 @@ class CreatorWorkApi {
     );
   }
 
+  /// 为已发布作品创建独立的更新草稿。
+  static Future<ResultsType<Map<String, dynamic>>> beginEdit({
+    required int novelId,
+  }) {
+    return postRequest<Map<String, dynamic>>(
+      path: 'creator_work/begin_edit',
+      parameter: {'novel_id': novelId},
+      fromJson: (json) => json,
+    );
+  }
+
   /// 获取作品详情
   static Future<ResultsType<Map<String, dynamic>>> getInfo({
     required int novelId,
@@ -194,6 +205,17 @@ class CreatorWorkApi {
   }) {
     return postRequest<Map<String, dynamic>>(
       path: 'creator_work/delete',
+      parameter: {'novel_id': novelId},
+      fromJson: (json) => json,
+    );
+  }
+
+  /// 放弃审核（按 novel_id，将审核中的作品撤回为草稿）
+  static Future<ResultsType<Map<String, dynamic>>> withdrawByNovel({
+    required int novelId,
+  }) {
+    return postRequest<Map<String, dynamic>>(
+      path: 'creator_work/withdraw_by_novel',
       parameter: {'novel_id': novelId},
       fromJson: (json) => json,
     );

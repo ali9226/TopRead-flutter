@@ -6,6 +6,7 @@ import 'package:app/pages/author_center/logic.dart';
 import 'package:app/pages/author_center/creator_tab_state.dart';
 import 'package:app/pages/author_center/models/creator_backend_models.dart';
 import 'package:app/pages/work_editor/backend_draft_loader.dart';
+import 'package:app/pages/work_editor/draft_persistence.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/author_center/widgets/creator_header.dart';
 import 'package:app/pages/author_center/widgets/creator_work_tab.dart';
@@ -69,6 +70,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
 
   late final List<CreatorTabState> _tabs;
   bool _opening_work = false;
+  bool _loading_draft = false;
   late TabController _tab_controller;
 
   /// Dashboard统计数据
@@ -322,10 +324,12 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   Future<void> _open_draft(int novelId) async {
     if (_opening_work) return;
     _opening_work = true;
+    setState(() => _loading_draft = true);
     try {
       // 列表只提供摘要；进入编辑器前必须从服务端取回完整正文和章节。
       final draft = await loadCreatorWorkDraft(novelId);
       if (!mounted) return;
+      setState(() => _loading_draft = false);
       final result = await context.push<CreatorWorkDraft>(
         '/work_editor',
         extra: draft,
@@ -333,11 +337,14 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       if (!mounted) return;
       _select_result_tab(result);
       await _reload_all();
-    } catch (_) {
-      _show_error('草稿读取失败或已提交审核，请刷新后重试');
+    } catch (error) {
+      _show_error(
+        error is CreatorDraftException ? error.message : '草稿读取失败，请刷新后重试',
+      );
       if (mounted) await _reload_all();
     } finally {
       _opening_work = false;
+      if (mounted) setState(() => _loading_draft = false);
     }
   }
 
@@ -389,6 +396,30 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       if (!mounted) return;
       if (!success) {
         _show_error(easy.tr('creator_center.delete_failed'));
+      }
+      _reload_all();
+    });
+
+    return true;
+  }
+
+  Future<bool> _withdraw_work(CreatorWorkModel work) async {
+    bool confirmed = false;
+    await showMessage(
+      message: easy.tr('creator_center.withdraw_confirm_message'),
+      iconData: Icons.undo_rounded,
+      iconColor: ColorConstants.dangerColor,
+      leftButtonText: easy.tr('common.cancel'),
+      rightButtonText: easy.tr('creator_center.withdraw_work'),
+      rightButtonColor: ColorConstants.dangerColor,
+      onRightPressed: () async => confirmed = true,
+    );
+    if (!confirmed || !mounted) return false;
+
+    CreatorLogic.withdrawByNovel(work.id).then((success) {
+      if (!mounted) return;
+      if (!success) {
+        _show_error(easy.tr('creator_center.withdraw_failed'));
       }
       _reload_all();
     });
@@ -519,9 +550,13 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                       minimum_scroll_extent:
                           _header_max_extent - _header_min_extent,
                       on_create_work: _create_work,
-                      on_edit_work: _open_work,
+                      on_edit_work: (work) =>
+                          (work.is_reviewing || work.pending_submission != null)
+                          ? _show_review_status(work)
+                          : _open_draft(work.id),
                       on_primary_action: _open_work,
                       on_delete_work: _delete_work,
+                      on_withdraw_work: _withdraw_work,
                     ),
                     growable: false,
                   ),
@@ -560,6 +595,45 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                 },
               ),
             ),
+            if (_loading_draft)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: Colors.black.withValues(alpha: .18),
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 26,
+                        vertical: 22,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AuthorStyle.surface(is_dark),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              color: AuthorStyle.gold,
+                              strokeWidth: 2.5,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            '正在加载作品与章节…',
+                            style: TextStyle(
+                              color: AuthorStyle.primary_text(is_dark),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       );

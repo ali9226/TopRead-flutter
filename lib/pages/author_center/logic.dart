@@ -390,6 +390,21 @@ class CreatorLogic {
     }
   }
 
+  /// 放弃审核（将审核中的作品撤回为草稿）
+  static Future<bool> withdrawByNovel(int novelId) async {
+    try {
+      final result = await CreatorWorkApi.withdrawByNovel(novelId: novelId);
+      if (result.status) {
+        return true;
+      }
+      logUtil(msg: '放弃审核失败: ${result.message}', type: 'e');
+      return false;
+    } catch (e) {
+      logUtil(msg: '放弃审核异常: $e', type: 'e');
+      return false;
+    }
+  }
+
   /// TODO 作者投稿可选分类所在的分组 id。
   ///
   /// 对应 `novel_preference_type` 中 label 为「内容偏好」的分组，
