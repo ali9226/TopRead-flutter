@@ -72,9 +72,16 @@ class ShortContentEditor extends StatelessWidget {
         TextField(
           controller: content_controller,
           style: StepUtils.input_text_style(is_dark),
-          decoration: StepUtils.field_decoration(
-            is_dark,
-            hint: easy.tr('creator_center.short_content_hint'),
+          decoration: InputDecoration(
+            hintText: easy.tr('creator_center.short_content_hint'),
+            hintStyle: TextStyle(
+              color: AuthorStyle.secondary_text(is_dark).withValues(alpha: .65),
+            ),
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            filled: false,
+            contentPadding: EdgeInsets.zero,
           ),
           minLines: 18,
           maxLines: null,

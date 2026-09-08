@@ -46,9 +46,9 @@ class Constant {
   /// 本地调试时使用 `http://0.0.0.0:5006`，发布前需切换为正式域名。
   static String get requestUrl {
     // 本地调试地址
-    return "http://0.0.0.0:5006";
+    // return "http://0.0.0.0:5006";
     // 正式域名（发布前取消注释上面一行，注释此行）
-    // return "https://www.read.top";
+    return "https://www.read.top";
   }
 
   /// 网络请求的前缀。

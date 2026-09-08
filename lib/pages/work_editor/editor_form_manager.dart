@@ -34,6 +34,9 @@ mixin WorkEditorFormMixin {
   /// 长篇章节列表。
   List<CreatorChapterDraft> get chapters;
 
+  /// 当前编辑的章节索引。
+  int get active_chapter_index;
+
   /// 是否已确认原创和授权声明。
   bool get rights_confirmed;
 
@@ -241,6 +244,8 @@ mixin WorkEditorFormMixin {
     selected_preference_map.forEach((key, value) {
       prefs[key.toString()] = value.toList();
     });
+    // 保存当前章节索引到 preferences 中，用于恢复进度。
+    prefs['_lastChapter'] = [active_chapter_index];
 
     return CreatorWorkDraft(
       local_id: local_id,
@@ -269,6 +274,7 @@ mixin WorkEditorFormMixin {
       rights_confirmed: rights_confirmed,
       chapter_title: chapter_title_controller.text.trim(),
       chapter_content: chapter_content_controller.text,
+      lastEditedChapterIndex: active_chapter_index,
     );
   }
 }

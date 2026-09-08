@@ -180,6 +180,9 @@ class CreatorWorkDraft {
   /// TODO 长篇新增模式下的当前章节内容。
   final String chapter_content;
 
+  /// 长篇最后编辑的章节索引（用于恢复进度）。
+  final int lastEditedChapterIndex;
+
   const CreatorWorkDraft({
     required this.local_id,
     this.novel_id,
@@ -206,6 +209,7 @@ class CreatorWorkDraft {
     this.rights_confirmed = false,
     this.chapter_title = '',
     this.chapter_content = '',
+    this.lastEditedChapterIndex = 0,
   });
 
   /// 是否已保存到后端（有 novel_id 和 revision_id）。
@@ -250,6 +254,7 @@ class CreatorWorkDraft {
     int? novel_language_id,
     int? lock_version,
     int? language_id,
+    int? lastEditedChapterIndex,
   }) {
     return CreatorWorkDraft(
       local_id: local_id,
@@ -279,6 +284,7 @@ class CreatorWorkDraft {
       rights_confirmed: rights_confirmed ?? this.rights_confirmed,
       chapter_title: chapter_title ?? this.chapter_title,
       chapter_content: chapter_content ?? this.chapter_content,
+      lastEditedChapterIndex: lastEditedChapterIndex ?? this.lastEditedChapterIndex,
     );
   }
 
@@ -310,6 +316,7 @@ class CreatorWorkDraft {
       'rights_confirmed': rights_confirmed,
       'chapter_title': chapter_title,
       'chapter_content': chapter_content,
+      'lastEditedChapterIndex': lastEditedChapterIndex,
     };
   }
 
@@ -391,6 +398,9 @@ class CreatorWorkDraft {
       rights_confirmed: json['rights_confirmed'] == true,
       chapter_title: json['chapter_title']?.toString() ?? '',
       chapter_content: json['chapter_content']?.toString() ?? '',
+      lastEditedChapterIndex: json['lastEditedChapterIndex'] is int
+          ? json['lastEditedChapterIndex']
+          : int.tryParse(json['lastEditedChapterIndex']?.toString() ?? '0') ?? 0,
     );
   }
 

@@ -1,7 +1,14 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/color_config.dart';
+import 'package:app/config/font_config.dart';
+import 'package:app/config/layout_config.dart';
+import 'package:app/components/bottom_sheet_drag_handle/index.dart';
+import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
+import 'package:app/util/dialog/show_message.dart';
+import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 
 /// 正文只显示当前章，目录按需打开并虚拟化构建。
@@ -92,12 +99,90 @@ class _LongContentEditorState extends State<LongContentEditor> {
     }
   }
 
+  Future<void> _showChapterActions(BuildContext context, int index) async {
+    final dark = widget.is_dark;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: AuthorStyle.surface(dark),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              BottomSheetDragHandle(is_dark: dark),
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  leading: SvgIcon(
+                    name: 'upgrade',
+                    width: 20,
+                    height: 20,
+                    color: AuthorStyle.primary_text(dark),
+                  ),
+                  title: Text(easy.tr('creator_center.import_from_file')),
+                  onTap: () => Navigator.pop(context, 'import'),
+                ),
+              ),
+              if (index >= 0)
+                Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                    leading: SvgIcon(
+                      name: 'delete',
+                      width: 20,
+                      height: 20,
+                      color: ColorConstants.dangerColor,
+                    ),
+                    title: Text(
+                      easy.tr('creator_center.delete_this_chapter'),
+                      style: TextStyle(color: ColorConstants.dangerColor),
+                    ),
+                    onTap: () => Navigator.pop(context, 'delete'),
+                  ),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted || action == null) return;
+    if (action == 'import') {
+      widget.on_file_upload();
+    } else if (action == 'delete' && index >= 0) {
+      await _confirmDeleteChapter(index);
+    }
+  }
+
+  Future<void> _confirmDeleteChapter(int index) async {
+    bool confirmed = false;
+    await showMessage(
+      message: easy.tr('creator_center.delete_chapter_confirm'),
+      iconData: Icons.delete_outline_rounded,
+      iconColor: ColorConstants.dangerColor,
+      leftButtonText: easy.tr('common.cancel'),
+      rightButtonText: easy.tr('creator_center.delete'),
+      rightButtonColor: ColorConstants.dangerColor,
+      onRightPressed: () async => confirmed = true,
+    );
+    if (confirmed && mounted) {
+      widget.on_delete_chapter(index);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = widget.is_dark;
     final primary = AuthorStyle.primary_text(dark);
     final secondary = AuthorStyle.secondary_text(dark);
-    final accent = dark ? AuthorStyle.gold : AuthorStyle.deep_gold;
+    final accent = dark ? Colors.white : ColorConstants.lightTextColor;
     final index = widget.active_chapter_index;
     return Center(
       child: ConstrainedBox(
@@ -105,156 +190,104 @@ class _LongContentEditorState extends State<LongContentEditor> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               child: Row(
                 children: [
-                  Expanded(
-                    child: Material(
-                      color: AuthorStyle.surface(dark),
-                      borderRadius: BorderRadius.circular(16),
-                      child: InkWell(
-                        key: const ValueKey('chapter_directory_button'),
-                        onTap: _openDirectory,
-                        borderRadius: BorderRadius.circular(16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(9),
-                                decoration: BoxDecoration(
-                                  color: AuthorStyle.gold.withValues(
-                                    alpha: dark ? .13 : .18,
-                                  ),
-                                  borderRadius: BorderRadius.circular(11),
-                                ),
-                                child: Icon(
-                                  Icons.format_list_bulleted_rounded,
-                                  color: accent,
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '章节目录',
-                                      style: TextStyle(
-                                        color: primary,
-                                        fontSize: 14,
-                                        fontWeight: AuthorStyle.title_weight,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      '${widget.chapters.length} 章 · ${widget.chapter_word_count} 字',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: secondary,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                Icons.unfold_more_rounded,
-                                color: secondary,
-                                size: 18,
-                              ),
-                            ],
+                  GestureDetector(
+                    key: const ValueKey('chapter_directory_button'),
+                    onTap: _openDirectory,
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SvgIcon(
+                          name: 'bookshelf_selected',
+                          width: 18,
+                          height: 18,
+                          color: dark ? Colors.white : ColorConstants.lightTextColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          easy.tr('creator_center.chapter_directory'),
+                          style: TextStyle(
+                            color: accent,
+                            fontSize: 14,
+                            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.keyboard_arrow_down_rounded, color: accent, size: 18),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  IconButton.filled(
-                    tooltip: '新建章节',
-                    onPressed: widget.on_save_current_chapter,
-                    style: IconButton.styleFrom(
-                      backgroundColor: AuthorStyle.gold,
-                      foregroundColor: const Color(0xFF332A08),
-                      minimumSize: const Size(48, 48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: widget.on_save_current_chapter,
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: ColorConstants.themeColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.add_rounded, size: 18, color: Colors.black),
                       ),
                     ),
-                    icon: const Icon(Icons.add_rounded),
                   ),
                 ],
               ),
             ),
+            Divider(height: 1, color: AuthorStyle.border(dark)),
             Expanded(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: AuthorStyle.surface(dark),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AuthorStyle.border(dark)),
-                ),
-                clipBehavior: Clip.antiAlias,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 6, 8, 0),
+                      padding: const EdgeInsets.fromLTRB(0, 6, 0, 0),
                       child: Row(
                         children: [
                           Expanded(
                             child: Text(
-                              index < 0 ? '开始第一章' : '第 ${index + 1} 章',
+                              index < 0
+                                  ? easy.tr('creator_center.start_first_chapter')
+                                  : easy.tr('creator_center.chapter_number', namedArgs: {'number': '${index + 1}'}),
                               style: TextStyle(
                                 color: accent,
                                 fontSize: 12,
-                                fontWeight: AuthorStyle.emphasis_weight,
+                                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                               ),
                             ),
                           ),
                           IconButton(
-                            tooltip: '上一章',
+                            tooltip: easy.tr('creator_center.previous_chapter'),
                             onPressed: index > 0
                                 ? () => widget.on_edit_chapter(index - 1)
                                 : null,
                             icon: const Icon(Icons.chevron_left_rounded),
                           ),
                           IconButton(
-                            tooltip: '下一章',
+                            tooltip: easy.tr('creator_center.next_chapter'),
                             onPressed:
                                 index >= 0 && index + 1 < widget.chapters.length
                                 ? () => widget.on_edit_chapter(index + 1)
                                 : null,
                             icon: const Icon(Icons.chevron_right_rounded),
                           ),
-                          PopupMenuButton<String>(
-                            tooltip: '章节操作',
-                            icon: Icon(
-                              Icons.more_horiz_rounded,
-                              color: secondary,
-                            ),
-                            color: AuthorStyle.surface(dark),
-                            onSelected: (value) {
-                              if (value == 'import') widget.on_file_upload();
-                              if (value == 'delete' && index >= 0) {
-                                widget.on_delete_chapter(index);
-                              }
-                            },
-                            itemBuilder: (_) => [
-                              const PopupMenuItem(
-                                value: 'import',
-                                child: Text('从文件导入正文'),
+                          GestureDetector(
+                            onTap: () => _showChapterActions(context, index),
+                            behavior: HitTestBehavior.opaque,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(8, 8,3, 8),
+                              child: SvgIcon(
+                                name: 'three_dots',
+                                width: 20,
+                                height: 20,
+                                color: secondary,
                               ),
-                              if (index >= 0)
-                                const PopupMenuItem(
-                                  value: 'delete',
-                                  child: Text(
-                                    '删除本章',
-                                    style: TextStyle(color: Colors.redAccent),
-                                  ),
-                                ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
@@ -262,7 +295,7 @@ class _LongContentEditorState extends State<LongContentEditor> {
                     Expanded(
                       child: SingleChildScrollView(
                         controller: _scroll,
-                        padding: const EdgeInsets.fromLTRB(22, 4, 22, 28),
+                        padding: const EdgeInsets.fromLTRB(0, 4, 0, 28),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -274,10 +307,10 @@ class _LongContentEditorState extends State<LongContentEditor> {
                                 color: primary,
                                 fontSize: 23,
                                 height: 1.4,
-                                fontWeight: AuthorStyle.title_weight,
+                                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                               ),
                               decoration: InputDecoration(
-                                hintText: '为这一章起个名字',
+                                hintText: easy.tr('creator_center.chapter_title_hint'),
                                 hintStyle: TextStyle(
                                   color: secondary.withValues(alpha: .7),
                                   fontWeight: FontWeight.normal,
@@ -290,27 +323,6 @@ class _LongContentEditorState extends State<LongContentEditor> {
                               ),
                             ),
                             const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 24,
-                                  height: 3,
-                                  decoration: BoxDecoration(
-                                    color: AuthorStyle.gold,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ),
-                                const SizedBox(width: 9),
-                                Text(
-                                  '${widget.current_word_count} 字',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: secondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
                             TextField(
                               key: const ValueKey('chapter_content_input'),
                               controller: widget.chapter_content_controller,
@@ -325,7 +337,7 @@ class _LongContentEditorState extends State<LongContentEditor> {
                                 letterSpacing: .3,
                               ),
                               decoration: InputDecoration(
-                                hintText: '故事从这里继续…',
+                                hintText: easy.tr('creator_center.chapter_content_hint'),
                                 hintStyle: TextStyle(
                                   color: secondary.withValues(alpha: .65),
                                 ),
@@ -345,11 +357,25 @@ class _LongContentEditorState extends State<LongContentEditor> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Text(
-                '切换章节保留输入 · 点击「保存草稿」同步修改',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: secondary, fontSize: 11),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '共${widget.chapters.length}章',
+                    style: TextStyle(color: secondary, fontSize: 11),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 10,
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    color: AuthorStyle.border(dark),
+                  ),
+                  Text(
+                    '${widget.current_word_count}字',
+                    style: TextStyle(color: secondary, fontSize: 11),
+                  ),
+                ],
               ),
             ),
           ],
@@ -398,6 +424,7 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
     final dark = widget.isDark;
     final text = AuthorStyle.primary_text(dark);
     final secondary = AuthorStyle.secondary_text(dark);
+    final accent = dark ? Colors.white : ColorConstants.lightTextColor;
     final indexes = [
       for (var i = 0; i < widget.chapters.length; i++)
         if (_query.isEmpty ||
@@ -441,25 +468,28 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '章节目录',
+                              easy.tr('creator_center.chapter_directory'),
                               style: TextStyle(
                                 fontSize: 22,
-                                fontWeight: AuthorStyle.title_weight,
+                                fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
                                 color: text,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               _ordering
-                                  ? '拖动右侧手柄调整顺序'
-                                  : '共 ${widget.chapters.length} 章 · 选择一章继续写作',
+                                  ? easy.tr('creator_center.chapter_directory_reorder_hint')
+                                  : easy.tr('creator_center.chapter_summary', namedArgs: {
+                                      'count': '${widget.chapters.length}',
+                                      'words': '',
+                                    }) + ' · ' + easy.tr('creator_center.chapter_directory_hint'),
                               style: TextStyle(color: secondary, fontSize: 12),
                             ),
                           ],
                         ),
                       ),
                       IconButton(
-                        tooltip: '关闭目录',
+                        tooltip: easy.tr('creator_center.close_directory'),
                         onPressed: () => Navigator.pop(context),
                         icon: Icon(Icons.close_rounded, color: secondary),
                       ),
@@ -476,13 +506,13 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                     }),
                     style: TextStyle(color: text, fontSize: 14),
                     decoration: InputDecoration(
-                      hintText: '搜索章节名，或输入章号',
+                      hintText: easy.tr('creator_center.search_chapter_hint'),
                       hintStyle: TextStyle(color: secondary, fontSize: 13),
                       prefixIcon: Icon(Icons.search_rounded, color: secondary),
                       suffixIcon: _query.isEmpty
                           ? null
                           : IconButton(
-                              tooltip: '清除搜索',
+                              tooltip: easy.tr('creator_center.clear_search'),
                               onPressed: () {
                                 _search.clear();
                                 setState(() => _query = '');
@@ -493,11 +523,11 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                       fillColor: AuthorStyle.secondary_surface(dark),
                       isDense: true,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(13),
+                        borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
                         borderSide: BorderSide.none,
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(13),
+                        borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
                         borderSide: BorderSide.none,
                       ),
                     ),
@@ -507,7 +537,9 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                   child: indexes.isEmpty
                       ? Center(
                           child: Text(
-                            _query.isEmpty ? '还没有章节，开始你的第一章吧' : '没有找到相关章节',
+                            _query.isEmpty
+                                ? easy.tr('creator_center.no_chapters_yet')
+                                : easy.tr('creator_center.no_chapter_found'),
                             style: TextStyle(color: secondary),
                           ),
                         )
@@ -550,19 +582,16 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                             ? () => setState(() => _ordering = !_ordering)
                             : null,
                         icon: Icon(
-                          _ordering
-                              ? Icons.check_rounded
-                              : Icons.swap_vert_rounded,
+                          _ordering ? Icons.check_rounded : Icons.swap_vert_rounded,
                           size: 18,
                         ),
-                        label: Text(_ordering ? '完成排序' : '排序'),
+                        label: Text(_ordering
+                            ? easy.tr('creator_center.reorder_done')
+                            : easy.tr('creator_center.reorder')),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: text,
                           side: BorderSide(color: AuthorStyle.border(dark)),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -572,11 +601,16 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                             context,
                             const _ChapterAction('new'),
                           ),
-                          icon: const Icon(Icons.add_rounded, size: 19),
-                          label: const Text('新建章节'),
+                          icon: SvgIcon(
+                            name: 'add',
+                            width: 19,
+                            height: 19,
+                            color: dark ? const Color(0xFF1A1A18) : Colors.white,
+                          ),
+                          label: Text(easy.tr('creator_center.new_chapter')),
                           style: FilledButton.styleFrom(
-                            backgroundColor: AuthorStyle.gold,
-                            foregroundColor: const Color(0xFF332A08),
+                            backgroundColor: accent,
+                            foregroundColor: dark ? const Color(0xFF1A1A18) : Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                         ),
@@ -596,27 +630,27 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
     final chapter = widget.chapters[index];
     final active = chapter.local_id == _activeId;
     final dark = widget.isDark;
-    final accent = dark ? AuthorStyle.gold : AuthorStyle.deep_gold;
+    final accent = dark ? Colors.white : ColorConstants.lightTextColor;
     return Padding(
       key: ValueKey(chapter.local_id),
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
         color: active
-            ? AuthorStyle.gold.withValues(alpha: dark ? .10 : .11)
+            ? accent.withValues(alpha: dark ? .10 : .11)
             : AuthorStyle.surface(dark),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
         child: InkWell(
           onTap: () => Navigator.pop(context, _ChapterAction('select', index)),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             decoration: BoxDecoration(
               border: Border.all(
                 color: active
-                    ? AuthorStyle.gold.withValues(alpha: .6)
+                    ? accent.withValues(alpha: .6)
                     : AuthorStyle.border(dark),
               ),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
             ),
             child: Row(
               children: [
@@ -627,7 +661,7 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                     style: TextStyle(
                       fontSize: 15,
                       color: active ? accent : AuthorStyle.secondary_text(dark),
-                      fontWeight: AuthorStyle.emphasis_weight,
+                      fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                     ),
                   ),
                 ),
@@ -637,22 +671,24 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        chapter.title.isEmpty ? '未命名章节' : chapter.title,
+                        chapter.title.isEmpty
+                            ? easy.tr('creator_center.untitled_work')
+                            : chapter.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 14,
                           color: AuthorStyle.primary_text(dark),
-                          fontWeight: AuthorStyle.emphasis_weight,
+                          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                         ),
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        '${chapter.word_count} 字${active ? ' · 正在编辑' : ''}',
+                        '${chapter.word_count} ' +
+                            (easy.tr('creator_center.chapter_word_count', namedArgs: {'count': ''}).trim()) +
+                            (active ? ' · ${easy.tr("creator_center.editing")}' : ''),
                         style: TextStyle(
-                          color: active
-                              ? accent
-                              : AuthorStyle.secondary_text(dark),
+                          color: active ? accent : AuthorStyle.secondary_text(dark),
                           fontSize: 11,
                         ),
                       ),
@@ -672,9 +708,7 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                   )
                 else
                   Icon(
-                    active
-                        ? Icons.edit_note_rounded
-                        : Icons.chevron_right_rounded,
+                    active ? Icons.edit_note_rounded : Icons.chevron_right_rounded,
                     color: active ? accent : AuthorStyle.secondary_text(dark),
                     size: 22,
                   ),

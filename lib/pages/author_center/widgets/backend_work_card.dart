@@ -216,7 +216,9 @@ class BackendWorkCard extends StatelessWidget {
                 onPressed: on_tap,
                 icon: const Icon(Icons.edit_note_rounded, size: 18),
                 label: Text(
-                  work.pending_submission != null ? '查看更新审核' : '编辑更新',
+                  work.pending_submission != null
+                      ? easy.tr('creator_center.view_update_review')
+                      : easy.tr('creator_center.edit_update'),
                 ),
                 style: TextButton.styleFrom(
                   foregroundColor: is_dark
@@ -226,7 +228,7 @@ class BackendWorkCard extends StatelessWidget {
               ),
               TextButton(
                 onPressed: on_primary_action,
-                child: const Text('阅读已发布版'),
+                child: Text(easy.tr('creator_center.read_published')),
               ),
             ],
           ),

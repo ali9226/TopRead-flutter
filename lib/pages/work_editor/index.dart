@@ -11,6 +11,7 @@ import 'package:app/pages/work_editor/widgets/steps/step_publish/step_publish.da
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/language_store.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
+import 'package:app/util/dialog/show_message.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/log_util.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -136,6 +137,9 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
   List<CreatorChapterDraft> get chapters => _chapters;
 
   @override
+  int get active_chapter_index => _chapter_session.activeIndex;
+
+  @override
   String? get cover_local_path => _cover_local_path;
 
   @override
@@ -213,6 +217,13 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
       titleController: _chapter_title_controller,
       contentController: _chapter_content_controller,
     );
+    // 恢复上次编辑的章节索引。
+    if (work != null) {
+      final savedIndex = work.preferences['_lastChapter']?.firstOrNull ?? work.lastEditedChapterIndex;
+      if (savedIndex > 0 && savedIndex < _chapters.length) {
+        _chapter_session.select(savedIndex);
+      }
+    }
     _chapter_session.addListener(_on_chapter_changed);
 
     // 恢复所有偏好选择。
@@ -275,27 +286,15 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
       await _leave_editor(_last_saved);
       return;
     }
-    final choice = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AuthorStyle.surface(_device_info.dark.value),
-        title: const Text('保存这次修改？'),
-        content: const Text('你有尚未同步的修改，保存后下次可以继续写作。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('继续编辑'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'discard'),
-            child: const Text('不保存离开'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, 'save'),
-            child: const Text('保存并离开'),
-          ),
-        ],
-      ),
+    String? choice;
+    await showMessage(
+      message: '你有尚未同步的修改，保存后下次可以继续写作。',
+      iconData: Icons.save_outlined,
+      leftButtonText: '不保存',
+      rightButtonText: '保存并退出',
+      allowMaskDismiss: true,
+      onLeftPressed: () async => choice = 'discard',
+      onRightPressed: () async => choice = 'save',
     );
     if (!mounted) return;
     if (choice == 'save') await _persist_work(leave: true);
@@ -565,6 +564,7 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
           if (!didPop && !_is_saving) _request_leave();
         },
         child: Scaffold(
+          resizeToAvoidBottomInset: false,
           backgroundColor: AuthorStyle.background(is_dark),
           appBar: AppBar(
             backgroundColor: AuthorStyle.surface(is_dark),
@@ -612,11 +612,15 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
           ),
           body: AbsorbPointer(
             absorbing: _is_saving,
-            child: Column(
+            child: GestureDetector(
+              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+              behavior: HitTestBehavior.translucent,
+              child: Column(
               children: <Widget>[
-                if (!writingWithKeyboard &&
-                    widget.initial_work?.status == CreatorWorkStatus.published)
-                  Container(
+                _buildAnimatedCollapse(
+                  visible: !writingWithKeyboard &&
+                      widget.initial_work?.status == CreatorWorkStatus.published,
+                  child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 18,
@@ -636,8 +640,10 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
                       ),
                     ),
                   ),
-                if (!writingWithKeyboard)
-                  EditorStepIndicator(
+                ),
+                _buildAnimatedCollapse(
+                  visible: !writingWithKeyboard,
+                  child: EditorStepIndicator(
                     current_step: _current_step,
                     labels: <String>[
                       easy.tr('creator_center.step_basic'),
@@ -649,12 +655,15 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
                     error_steps: _error_steps,
                     on_step_tap: (int step) => _go_to_step(step),
                   ),
+                ),
                 Expanded(
                   child: PageView(
+                    key: const PageStorageKey<String>('work_editor_page_view'),
                     controller: _page_controller,
                     physics: const NeverScrollableScrollPhysics(),
                     children: <Widget>[
                       StepBasic(
+                        key: const ValueKey('step_basic'),
                         is_dark: is_dark,
                         is_editing: _is_editing,
                         title_controller: _title_controller,
@@ -670,11 +679,13 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
                         }),
                       ),
                       StepCategory(
+                        key: const ValueKey('step_category'),
                         is_dark: is_dark,
                         selected_preference_map: _selected_preference_map,
                         on_toggle_preference: toggle_preference,
                       ),
                       StepContent(
+                        key: const ValueKey('step_content'),
                         is_dark: is_dark,
                         work_type: work_type,
                         is_editing: _is_editing,
@@ -696,6 +707,7 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
                         on_long_file_upload: upload_long_file,
                       ),
                       StepPublish(
+                        key: const ValueKey('step_publish'),
                         is_dark: is_dark,
                         is_editing: _is_editing,
                         release_mode: _release_mode,
@@ -721,13 +733,41 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
                     ],
                   ),
                 ),
-                if (!writingWithKeyboard) _build_bottom_bar(is_dark, is_cjk),
+                _buildAnimatedCollapse(
+                  visible: !writingWithKeyboard,
+                  child: _build_bottom_bar(is_dark, is_cjk),
+                ),
               ],
+            ),
             ),
           ),
         ),
       );
     });
+  }
+
+  /// 带淡出 + 高度收缩过渡的条件显示包装器。
+  Widget _buildAnimatedCollapse({
+    required bool visible,
+    required Widget child,
+  }) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: visible ? 1.0 : 0.0),
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      builder: (context, value, _) {
+        return ClipRect(
+          child: Align(
+            heightFactor: value,
+            child: IgnorePointer(
+              ignoring: value < 0.5,
+              child: Opacity(opacity: value, child: child),
+            ),
+          ),
+        );
+      },
+      child: child,
+    );
   }
 
   Widget _build_bottom_bar(bool is_dark, bool is_cjk) {

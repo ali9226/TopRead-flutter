@@ -622,7 +622,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                           ),
                           const SizedBox(height: 14),
                           Text(
-                            '正在加载作品与章节…',
+                            easy.tr('creator_center.loading_work_chapters'),
                             style: TextStyle(
                               color: AuthorStyle.primary_text(is_dark),
                               fontSize: 13,

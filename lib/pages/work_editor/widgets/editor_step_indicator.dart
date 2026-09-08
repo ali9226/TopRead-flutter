@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/config/color_config.dart';
+import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/work_editor/style.dart';
 import 'package:flutter/material.dart';
@@ -137,19 +138,19 @@ class EditorStepIndicator extends StatelessWidget {
               color: Colors.white,
             )
           : is_active && index < current_step
-              ? const Icon(
+              ? Icon(
                   Icons.check_rounded,
                   size: 15,
-                  color: Color(0xFF1A1A18),
+                  color: is_dark ? Colors.white : ColorConstants.lightTextColor,
                 )
               : Text(
                   '${index + 1}',
                   style: TextStyle(
                     color: is_active
-                        ? const Color(0xFF1A1A18)
+                        ? (is_dark ? Colors.white : ColorConstants.lightTextColor)
                         : AuthorStyle.secondary_text(is_dark),
                     fontSize: 12,
-                    fontWeight: AuthorStyle.emphasis_weight,
+                    fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
                   ),
                 ),
     );
