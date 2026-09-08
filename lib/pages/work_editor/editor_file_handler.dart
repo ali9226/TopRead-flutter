@@ -277,121 +277,70 @@ mixin WorkEditorFileMixin {
         ? scheduled_publish_time
         : now.add(const Duration(days: 1));
     final bool is_dark = device_info.dark.value;
-    final Color red = ColorConstants.dangerColor;
 
-    DateTime temp_selected = initial_time;
-
-    await showModalBottomSheet<void>(
+    // 第一步：选择日期。
+    final DateTime? picked_date = await showDatePicker(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext sheetContext) {
-        return Container(
-          height: 340,
-          decoration: BoxDecoration(
-            color: is_dark ? const Color(0xFF1E1E2E) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      initialDate: initial_time,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+      builder: (BuildContext childContext, Widget? child) {
+        return Theme(
+          data: Theme.of(childContext).copyWith(
+            colorScheme: is_dark
+                ? ColorScheme.dark(
+                    primary: ColorConstants.themeColor,
+                    onPrimary: ColorConstants.lightTextColor,
+                    surface: const Color(0xFF1E1E2E),
+                    onSurface: Colors.white,
+                  )
+                : ColorScheme.light(
+                    primary: ColorConstants.themeColor,
+                    onPrimary: ColorConstants.lightTextColor,
+                  ),
           ),
-          child: Column(
-            children: <Widget>[
-              // 标题栏。
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        easy.tr('creator_center.select_schedule_time'),
-                        style: TextStyle(
-                          color: is_dark
-                              ? Colors.white
-                              : const Color(0xFF1A1A1A),
-                          fontSize: 16,
-                          fontWeight: FontConfig.adjustedWeight(
-                            FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(sheetContext).pop(),
-                      icon: Icon(
-                        Icons.close_rounded,
-                        color: is_dark
-                            ? Colors.white54
-                            : const Color(0xFF999999),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // 日期时间选择器。
-              Expanded(
-                child: CupertinoDatePicker(
-                  mode: CupertinoDatePickerMode.dateAndTime,
-                  initialDateTime: temp_selected,
-                  minimumDate: now,
-                  maximumDate: now.add(const Duration(days: 365)),
-                  use24hFormat: true,
-                  onDateTimeChanged: (DateTime newDate) {
-                    temp_selected = newDate;
-                  },
-                ),
-              ),
-
-              // 按钮栏。
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  0,
-                  20,
-                  MediaQuery.paddingOf(sheetContext).bottom + 16,
-                ),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.of(sheetContext).pop(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: red,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: Text(easy.tr('common.cancel')),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          on_time_selected(temp_selected);
-                          Navigator.of(sheetContext).pop();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: ColorConstants.themeColor,
-                          foregroundColor: ColorConstants.lightTextColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: Text(easy.tr('common.confirm')),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          child: child!,
         );
       },
     );
+    if (picked_date == null) return;
+
+    // 第二步：选择时间。
+    final TimeOfDay initial_time_of_day = TimeOfDay(
+      hour: initial_time.hour,
+      minute: initial_time.minute,
+    );
+    final TimeOfDay? picked_time = await showTimePicker(
+      context: context,
+      initialTime: initial_time_of_day,
+      builder: (BuildContext childContext, Widget? child) {
+        return Theme(
+          data: Theme.of(childContext).copyWith(
+            colorScheme: is_dark
+                ? ColorScheme.dark(
+                    primary: ColorConstants.themeColor,
+                    onPrimary: ColorConstants.lightTextColor,
+                    surface: const Color(0xFF1E1E2E),
+                    onSurface: Colors.white,
+                  )
+                : ColorScheme.light(
+                    primary: ColorConstants.themeColor,
+                    onPrimary: ColorConstants.lightTextColor,
+                  ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked_time == null) return;
+
+    final DateTime result = DateTime(
+      picked_date.year,
+      picked_date.month,
+      picked_date.day,
+      picked_time.hour,
+      picked_time.minute,
+    );
+    on_time_selected(result);
   }
 }

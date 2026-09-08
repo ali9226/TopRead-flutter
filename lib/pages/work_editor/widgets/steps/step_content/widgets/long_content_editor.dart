@@ -256,7 +256,7 @@ class _LongContentEditorState extends State<LongContentEditor> {
                                   : easy.tr('creator_center.chapter_number', namedArgs: {'number': '${index + 1}'}),
                               style: TextStyle(
                                 color: accent,
-                                fontSize: 12,
+                                fontSize: 15,
                                 fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                               ),
                             ),
@@ -434,7 +434,11 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
             '${i + 1}' == _query.replaceAll(RegExp(r'[第章\s]'), ''))
           i,
     ];
-    return Padding(
+    final bool keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      behavior: HitTestBehavior.translucent,
+      child: Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: DraggableScrollableSheet(
         initialChildSize: .84,
@@ -442,6 +446,7 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
         maxChildSize: .96,
         expand: false,
         builder: (context, controller) => Container(
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AuthorStyle.surface(dark),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
@@ -549,6 +554,7 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                           padding: const EdgeInsets.symmetric(horizontal: 18),
                           buildDefaultDragHandles: false,
                           itemCount: indexes.length,
+                          proxyDecorator: (child, index, animation) => child,
                           onReorderItem: (oldIndex, targetIndex) {
                             final newIndex = targetIndex > oldIndex
                                 ? targetIndex + 1
@@ -573,55 +579,57 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                           itemBuilder: (context, index) => _row(indexes[index]),
                         ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
-                  child: Row(
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _query.isEmpty && widget.chapters.length > 1
-                            ? () => setState(() => _ordering = !_ordering)
-                            : null,
-                        icon: Icon(
-                          _ordering ? Icons.check_rounded : Icons.swap_vert_rounded,
-                          size: 18,
-                        ),
-                        label: Text(_ordering
-                            ? easy.tr('creator_center.reorder_done')
-                            : easy.tr('creator_center.reorder')),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: text,
-                          side: BorderSide(color: AuthorStyle.border(dark)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: () => Navigator.pop(
-                            context,
-                            const _ChapterAction('new'),
+                if (!keyboardVisible)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
+                    child: Row(
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _query.isEmpty && widget.chapters.length > 1
+                              ? () => setState(() => _ordering = !_ordering)
+                              : null,
+                          icon: Icon(
+                            _ordering ? Icons.check_rounded : Icons.swap_vert_rounded,
+                            size: 18,
                           ),
-                          icon: SvgIcon(
-                            name: 'add',
-                            width: 19,
-                            height: 19,
-                            color: dark ? const Color(0xFF1A1A18) : Colors.white,
-                          ),
-                          label: Text(easy.tr('creator_center.new_chapter')),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: accent,
-                            foregroundColor: dark ? const Color(0xFF1A1A18) : Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          label: Text(_ordering
+                              ? easy.tr('creator_center.reorder_done')
+                              : easy.tr('creator_center.reorder')),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: text,
+                            side: BorderSide(color: AuthorStyle.border(dark)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: () => Navigator.pop(
+                              context,
+                              const _ChapterAction('new'),
+                            ),
+                            icon: SvgIcon(
+                              name: 'add',
+                              width: 19,
+                              height: 19,
+                              color: dark ? const Color(0xFF1A1A18) : Colors.white,
+                            ),
+                            label: Text(easy.tr('creator_center.new_chapter')),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: accent,
+                              foregroundColor: dark ? const Color(0xFF1A1A18) : Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
           ),
         ),
+      ),
       ),
     );
   }

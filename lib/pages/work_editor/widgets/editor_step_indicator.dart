@@ -132,22 +132,22 @@ class EditorStepIndicator extends StatelessWidget {
       ),
       alignment: Alignment.center,
       child: has_error
-          ? const Icon(
+          ? Icon(
               Icons.close_rounded,
               size: 15,
-              color: Colors.white,
+              color: is_dark ? AuthorStyle.dark_surface : Colors.white,
             )
           : is_active && index < current_step
               ? Icon(
                   Icons.check_rounded,
                   size: 15,
-                  color: is_dark ? Colors.white : ColorConstants.lightTextColor,
+                  color: is_dark ? AuthorStyle.dark_surface : ColorConstants.lightTextColor,
                 )
               : Text(
                   '${index + 1}',
                   style: TextStyle(
                     color: is_active
-                        ? (is_dark ? Colors.white : ColorConstants.lightTextColor)
+                        ? (is_dark ? AuthorStyle.dark_surface : ColorConstants.lightTextColor)
                         : AuthorStyle.secondary_text(is_dark),
                     fontSize: 12,
                     fontWeight: FontConfig.adjustedWeight(FontWeight.w600),

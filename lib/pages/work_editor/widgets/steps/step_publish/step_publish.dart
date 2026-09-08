@@ -82,7 +82,7 @@ class StepPublish extends StatelessWidget {
     required String subtitle,
   }) {
     final bool is_selected = release_mode == mode;
-    final Color red = ColorConstants.dangerColor;
+    final Color accent = is_dark ? Colors.white : ColorConstants.lightTextColor;
 
     return GestureDetector(
       onTap: () => on_release_mode_changed(mode),
@@ -91,12 +91,12 @@ class StepPublish extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
           color: is_selected
-              ? red.withValues(alpha: is_dark ? 0.12 : 0.08)
+              ? accent.withValues(alpha: is_dark ? 0.12 : 0.06)
               : AuthorStyle.secondary_surface(is_dark),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: is_selected
-                ? red.withValues(alpha: is_dark ? 0.40 : 0.50)
+                ? accent.withValues(alpha: is_dark ? 0.40 : 0.30)
                 : AuthorStyle.border(is_dark),
             width: is_selected ? 1.4 : 1.0,
           ),
@@ -108,14 +108,14 @@ class StepPublish extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(
                 color: is_selected
-                    ? red.withValues(alpha: is_dark ? 0.20 : 0.16)
+                    ? accent.withValues(alpha: is_dark ? 0.20 : 0.10)
                     : AuthorStyle.secondary_surface(is_dark),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 icon,
                 color: is_selected
-                    ? red
+                    ? accent
                     : AuthorStyle.secondary_text(is_dark),
                 size: 19,
               ),
@@ -154,7 +154,7 @@ class StepPublish extends StatelessWidget {
               onChanged: (CreatorReleaseMode? v) {
                 if (v != null) on_release_mode_changed(v);
               },
-              activeColor: red,
+              activeColor: accent,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               visualDensity: VisualDensity.compact,
             ),
@@ -185,7 +185,7 @@ class StepPublish extends StatelessWidget {
             Icon(
               Icons.event_outlined,
               color: scheduled_publish_time != null
-                  ? ColorConstants.dangerColor
+                  ? (is_dark ? Colors.white : ColorConstants.lightTextColor)
                   : AuthorStyle.secondary_text(is_dark),
               size: 20,
             ),
@@ -214,7 +214,7 @@ class StepPublish extends StatelessWidget {
   }
 
   Widget _build_rights_confirmation() {
-    final Color red = ColorConstants.dangerColor;
+    final Color accent = is_dark ? Colors.white : ColorConstants.lightTextColor;
 
     return InkWell(
       borderRadius: BorderRadius.circular(10),
@@ -229,12 +229,12 @@ class StepPublish extends StatelessWidget {
               onChanged: (bool? v) {
                 if (v != null) on_rights_confirmed_changed(v);
               },
-              activeColor: red,
-              checkColor: Colors.white,
+              activeColor: accent,
+              checkColor: is_dark ? AuthorStyle.dark_surface : Colors.white,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               visualDensity: VisualDensity.compact,
               side: BorderSide(
-                color: red,
+                color: accent,
               ),
             ),
             const SizedBox(width: 4),
