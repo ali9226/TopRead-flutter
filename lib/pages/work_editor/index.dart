@@ -537,7 +537,8 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
           if (!didPop && !_is_saving) _request_leave();
         },
         child: Scaffold(
-          resizeToAvoidBottomInset: false,
+          // 普通表单由 Scaffold 避让键盘；正文保留先收起工具栏的输入时序。
+          resizeToAvoidBottomInset: _current_step != 2,
           backgroundColor: AuthorStyle.background(is_dark),
           appBar: AppBar(
             backgroundColor: AuthorStyle.surface(is_dark),
@@ -583,6 +584,14 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
               ),
             ],
           ),
+          // 独立的底栏固定在屏幕底部，Scaffold 按键盘与底栏高度的较大值
+          // 分配表单空间，避免键盘上方再次预留一份按钮区域。
+          bottomNavigationBar: _current_step == 2
+              ? null
+              : AbsorbPointer(
+                  absorbing: _is_saving,
+                  child: _build_bottom_bar(is_dark, is_cjk),
+                ),
           body: AbsorbPointer(
             absorbing: _is_saving,
             child: GestureDetector(
@@ -704,7 +713,9 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
                     ),
                   ],
                 ),
-                footer: _build_bottom_bar(is_dark, is_cjk),
+                footer: _current_step == 2
+                    ? _build_bottom_bar(is_dark, is_cjk)
+                    : const SizedBox.shrink(),
               ),
             ),
           ),
@@ -733,6 +744,8 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
         border: Border(top: BorderSide(color: AuthorStyle.border(is_dark))),
       ),
       child: Center(
+        // 底栏在 Scaffold 中按内容收缩，避免 Center 撑满可用高度。
+        heightFactor: 1,
         child: ConstrainedBox(
           constraints: const BoxConstraints(
             maxWidth: WorkEditorStyle.content_max_width,

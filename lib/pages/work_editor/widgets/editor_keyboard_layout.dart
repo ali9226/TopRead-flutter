@@ -197,6 +197,31 @@ class _EditorKeyboardLayoutState extends State<EditorKeyboardLayout>
 
   @override
   Widget build(BuildContext context) {
+    final content_widget = Expanded(
+      child: Focus(
+        canRequestFocus: false,
+        onFocusChange: _on_focus_changed,
+        child: widget.collapse_header
+            ? widget.content
+            : LayoutBuilder(
+                builder: (context, constraints) => Column(
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: constraints.maxHeight,
+                      ),
+                      child: SingleChildScrollView(
+                        primary: false,
+                        child: widget.header,
+                      ),
+                    ),
+                    Expanded(child: widget.content),
+                  ],
+                ),
+              ),
+      ),
+    );
+
     return ValueListenableBuilder<bool>(
       valueListenable: _input_enabled,
       builder: (context, input_enabled, child) => _EditorKeyboardScope(
@@ -204,40 +229,26 @@ class _EditorKeyboardLayoutState extends State<EditorKeyboardLayout>
         request_input: _request_input,
         child: child!,
       ),
-      child: Padding(
-        padding: EdgeInsets.only(bottom: _keyboard_inset),
-        child: Column(
-          children: [
-            if (widget.collapse_header) _chrome(widget.header, alignment: -1),
-            Expanded(
-              child: Focus(
-                canRequestFocus: false,
-                onFocusChange: _on_focus_changed,
-                child: widget.collapse_header
-                    ? widget.content
-                    : LayoutBuilder(
-                        builder: (context, constraints) => Column(
-                          children: [
-                            // 横屏或大字号下，标题与搜索仍可滚动到可见区域。
-                            ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxHeight: constraints.maxHeight,
-                              ),
-                              child: SingleChildScrollView(
-                                primary: false,
-                                child: widget.header,
-                              ),
-                            ),
-                            Expanded(child: widget.content),
-                          ],
-                        ),
-                      ),
+      child: widget.collapse_header
+          ? Padding(
+              // 普通表单已由外层 Scaffold 避让，只有正文需要自行处理键盘。
+              padding: EdgeInsets.only(
+                bottom: widget.collapse_when_editing ? _keyboard_inset : 0,
               ),
+              child: Column(
+                children: [
+                  _chrome(widget.header, alignment: -1),
+                  content_widget,
+                  _chrome(widget.footer, alignment: 1),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                content_widget,
+                _chrome(widget.footer, alignment: 1),
+              ],
             ),
-            _chrome(widget.footer, alignment: 1),
-          ],
-        ),
-      ),
     );
   }
 

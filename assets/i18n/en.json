@@ -520,7 +520,15 @@
     "upload_file": "Upload File",
     "file_upload_success": "File content parsed and filled",
     "file_upload_failed": "File parsing failed, please retry",
-    "file_upload_coming_soon": "File upload feature coming soon"
+    "file_upload_coming_soon": "File upload feature coming soon",
+    "loading_works": "Loading your works…",
+    "works_load_failed": "Works could not be loaded",
+    "reload": "Reload",
+    "load_more_failed": "Failed to load more, tap to retry",
+    "sort_by_recent": "Most recently updated",
+    "all_works_shown": "All works are shown",
+    "all_drafts_shown": "All drafts are shown",
+    "load_more": "Load more"
   },
   "customer_service_sheet": {
     "title": "Online Support",
@@ -680,7 +688,6 @@
   "bill": {
     "title": "Bills",
     "empty": "No Data",
-    "reload": "Reload",
     "load_more": "More",
     "no_more": "No more",
     "copy_success": "Copied",

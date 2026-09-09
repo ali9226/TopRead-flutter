@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 
 import 'models/creator_backend_models.dart';
@@ -73,9 +74,9 @@ class CreatorTabState extends ChangeNotifier {
     } catch (_) {
       if (_disposed || generation != _generation) return;
       if (refresh) {
-        error = '作品加载失败，请下拉刷新或点击重试';
+        error = tr('creator_center.works_load_failed');
       } else {
-        loadMoreError = '加载更多失败，点击重试';
+        loadMoreError = tr('creator_center.load_more_failed');
       }
     } finally {
       if (!_disposed && generation == _generation) {

@@ -530,7 +530,15 @@
     "upload_file": "Télécharger un fichier",
     "file_upload_success": "Contenu du fichier analysé et rempli",
     "file_upload_failed": "Échec de l'analyse du fichier, veuillez réessayer",
-    "file_upload_coming_soon": "La fonction de téléchargement de fichier arrive bientôt"
+    "file_upload_coming_soon": "La fonction de téléchargement de fichier arrive bientôt",
+    "loading_works": "Chargement de vos œuvres…",
+    "works_load_failed": "Les œuvres n'ont pas pu être chargées",
+    "reload": "Recharger",
+    "load_more_failed": "Échec du chargement, appuyez pour réessayer",
+    "sort_by_recent": "Trié par mise à jour récente",
+    "all_works_shown": "Toutes les œuvres sont affichées",
+    "all_drafts_shown": "Tous les brouillons sont affichés",
+    "load_more": "Charger plus"
   },
   "customer_service_sheet": {
     "title": "Support en ligne",
@@ -690,7 +698,6 @@
   "bill": {
     "title": "Liste des factures",
     "empty": "Aucune donnée",
-    "reload": "Recharger",
     "load_more": "Charger plus",
     "no_more": "Plus de données",
     "copy_success": "Copié avec succès",

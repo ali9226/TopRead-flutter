@@ -197,11 +197,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   }
 
   Future<void> _refresh_tab(int index) async {
-    await Future.wait([
-      _tabs[index].refresh(),
-      _load_dashboard_data(),
-      if (index != 2) _tabs[2].refresh(),
-    ]);
+    await _tabs[index].refresh();
   }
 
   /// 测量文本在给定宽度下的实际行数。

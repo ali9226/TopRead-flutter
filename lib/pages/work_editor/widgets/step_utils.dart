@@ -78,6 +78,7 @@ class StepUtils {
     required BuildContext context,
     required List<Widget> children,
   }) {
+    final bottom_safe = MediaQuery.paddingOf(context).bottom;
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       behavior: HitTestBehavior.translucent,
@@ -86,7 +87,8 @@ class StepUtils {
           WorkEditorStyle.page_padding,
           WorkEditorStyle.section_spacing,
           WorkEditorStyle.page_padding,
-          WorkEditorStyle.section_spacing + MediaQuery.paddingOf(context).bottom,
+          // 键盘高度由页面布局统一处理，滚动内容只保留正常间距与安全区。
+          WorkEditorStyle.section_spacing + bottom_safe,
         ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(

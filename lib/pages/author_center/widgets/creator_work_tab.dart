@@ -3,6 +3,8 @@
 import 'package:app/components/floating_back_to_top/index.dart';
 import 'package:app/components/floating_back_to_top/style.dart'
     as floating_back_to_top_style;
+import 'package:app/components/svg_icon/index.dart';
+import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/models/creator_backend_models.dart';
 import 'package:app/pages/author_center/widgets/backend_work_card.dart';
@@ -220,7 +222,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
     try {
       await widget.on_refresh!();
     } catch (_) {
-      if (mounted) setState(() => _local_refresh_error = '作品加载失败，请稍后重试');
+      if (mounted) setState(() => _local_refresh_error = easy.tr('creator_center.works_load_failed'));
     }
   }
 
@@ -536,7 +538,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
               ),
               const SizedBox(height: 3),
               Text(
-                widget.is_cjk ? '按最近更新时间排序' : 'Most recently updated',
+                easy.tr('creator_center.sort_by_recent'),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -549,22 +551,28 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
           ),
         ),
         const SizedBox(width: 12),
-        Container(
-          constraints: const BoxConstraints(minWidth: 34),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: AuthorStyle.selected_tab_surface(widget.is_dark),
-            borderRadius: BorderRadius.circular(AuthorStyle.pill_radius),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '${widget.total_count ?? widget.works.length}',
-            style: TextStyle(
-              color: AuthorStyle.selected_tab_text(widget.is_dark),
-              fontSize: 12,
-              fontWeight: AuthorStyle.title_weight,
-            ),
-          ),
+        Builder(
+          builder: (context) {
+            final Color tag_color = ColorConstants.tagColorList[widget.tab_index % ColorConstants.tagColorList.length];
+            final Color tag_bg = tag_color.withValues(alpha: 0.12);
+            return Container(
+              constraints: const BoxConstraints(minWidth: 34),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: tag_bg,
+                borderRadius: BorderRadius.circular(AuthorStyle.pill_radius),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '${widget.total_count ?? widget.works.length}',
+                style: TextStyle(
+                  color: tag_color,
+                  fontSize: 12,
+                  fontWeight: AuthorStyle.title_weight,
+                ),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -580,7 +588,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
             _build_progress(),
             const SizedBox(height: 15),
             Text(
-              widget.is_cjk ? '正在加载作品…' : 'Loading your works…',
+              easy.tr('creator_center.loading_works'),
               style: TextStyle(
                 color: AuthorStyle.secondary_text(widget.is_dark),
                 fontSize: 13,
@@ -606,15 +614,18 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
                 color: AuthorStyle.secondary_surface(widget.is_dark),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: Icon(
-                Icons.cloud_off_rounded,
-                color: AuthorStyle.secondary_text(widget.is_dark),
-                size: 32,
+              child: Center(
+                child: SvgIcon(
+                  name: 'offline',
+                  width: 32,
+                  height: 32,
+                  color: AuthorStyle.secondary_text(widget.is_dark),
+                ),
               ),
             ),
             const SizedBox(height: 18),
             Text(
-              '作品暂时没有加载出来',
+              easy.tr('creator_center.works_load_failed'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AuthorStyle.primary_text(widget.is_dark),
@@ -633,12 +644,19 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
               ),
             ),
             const SizedBox(height: 18),
-            OutlinedButton.icon(
-              onPressed: widget.on_refresh == null ? null : _refresh,
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('重新加载'),
-              style: _retry_button_style(),
-            ),
+            widget.is_dark
+                ? OutlinedButton.icon(
+                    onPressed: widget.on_refresh == null ? null : _refresh,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(easy.tr('creator_center.reload')),
+                    style: _retry_button_style(),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: widget.on_refresh == null ? null : _refresh,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(easy.tr('creator_center.reload')),
+                    style: _retry_button_style(),
+                  ),
           ],
         ),
       ),
@@ -667,14 +685,15 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
           style: TextButton.styleFrom(
             foregroundColor: AuthorStyle.selected_tab_text(widget.is_dark),
           ),
-          child: Text(widget.is_cjk ? '加载更多' : 'Load more'),
+          child: Text(easy.tr('creator_center.load_more')),
         ),
       );
     }
+    final bool is_draft_tab = widget.tab_index == 2;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Text(
-        widget.is_cjk ? '已显示全部作品' : 'All works are shown',
+        easy.tr(is_draft_tab ? 'creator_center.all_drafts_shown' : 'creator_center.all_works_shown'),
         textAlign: TextAlign.center,
         style: TextStyle(
           color: AuthorStyle.secondary_text(widget.is_dark),
@@ -717,19 +736,27 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
     );
   }
 
-  ButtonStyle _retry_button_style() => OutlinedButton.styleFrom(
-    foregroundColor: AuthorStyle.selected_tab_text(widget.is_dark),
-    side: BorderSide(color: AuthorStyle.border(widget.is_dark)),
-    minimumSize: const Size(120, 44),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-  );
+  ButtonStyle _retry_button_style() => widget.is_dark
+      ? OutlinedButton.styleFrom(
+          foregroundColor: ColorConstants.themeColor,
+          side: BorderSide(color: AuthorStyle.border(widget.is_dark)),
+          minimumSize: const Size(120, 44),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        )
+      : ElevatedButton.styleFrom(
+          backgroundColor: ColorConstants.themeColor,
+          foregroundColor: Colors.black,
+          elevation: 0,
+          minimumSize: const Size(120, 44),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        );
 
   Widget _build_progress() {
     return SizedBox.square(
       dimension: 24,
       child: CircularProgressIndicator(
         strokeWidth: 2,
-        color: widget.is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
+        color: ColorConstants.themeColor,
       ),
     );
   }

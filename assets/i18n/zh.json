@@ -520,7 +520,15 @@
     "upload_file": "上传文件",
     "file_upload_success": "文件内容已解析并填入",
     "file_upload_failed": "文件解析失败，请重试",
-    "file_upload_coming_soon": "文件上传功能即将上线"
+    "file_upload_coming_soon": "文件上传功能即将上线",
+    "loading_works": "正在加载作品…",
+    "works_load_failed": "作品暂时没有加载出来",
+    "reload": "重新加载",
+    "load_more_failed": "加载更多失败，点击重试",
+    "sort_by_recent": "按最近更新时间排序",
+    "all_works_shown": "已显示全部作品",
+    "all_drafts_shown": "已显示全部草稿",
+    "load_more": "加载更多"
   },
   "customer_service_sheet": {
     "title": "在线客服",
@@ -680,7 +688,6 @@
   "bill": {
     "title": "账单列表",
     "empty": "暂无数据",
-    "reload": "重新加载",
     "load_more": "加载更多数据",
     "no_more": "没有更多数据",
     "copy_success": "复制成功",

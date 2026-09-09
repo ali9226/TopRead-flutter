@@ -499,7 +499,15 @@
     "upload_file": "Pakia Faili",
     "file_upload_success": "Maudhui ya faili yamechambuliwa na kujazwa",
     "file_upload_failed": "Uchambuzi wa faili umeshindwa, tafadhali jaribu tena",
-    "file_upload_coming_soon": "Kipakiaji cha faili kinakuja hivi karibuni"
+    "file_upload_coming_soon": "Kipakiaji cha faili kinakuja hivi karibuni",
+    "loading_works": "Inapakia kazi zako…",
+    "works_load_failed": "Kazi hazijaweza kupakiwa",
+    "reload": "Pakia tena",
+    "load_more_failed": "Imeshindwa kupakia zaidi, gonga ili jaribu tena",
+    "sort_by_recent": "Ilipangwa kwa sasisha za hivi karibuni",
+    "all_works_shown": "Kazi zote zinaonyeshwa",
+    "all_drafts_shown": "Rasimu zote zinaonyeshwa",
+    "load_more": "Pakia zaidi"
   },
   "customer_service_sheet": {
     "title": "Msaada Mtandaoni",
@@ -659,7 +667,6 @@
   "bill": {
     "title": "Orodha ya Bili",
     "empty": "Hakuna Data",
-    "reload": "Pakia tena",
     "load_more": "Pakia Zaidi",
     "no_more": "Hakuna Data Zaidi",
     "copy_success": "Imenakiliwa",
