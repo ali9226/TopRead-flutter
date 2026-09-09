@@ -62,10 +62,17 @@ class StepPublish extends StatelessWidget {
                 title: easy.tr('creator_center.release_scheduled_title'),
                 subtitle: easy.tr('creator_center.release_scheduled_subtitle'),
               ),
-              if (release_mode == CreatorReleaseMode.scheduled) ...<Widget>[
-                const SizedBox(height: 12),
-                _build_schedule_picker(context),
-              ],
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: release_mode == CreatorReleaseMode.scheduled
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: _build_schedule_picker(context),
+                      )
+                    : const SizedBox.shrink(),
+              ),
               const SizedBox(height: WorkEditorStyle.field_spacing),
               _build_rights_confirmation(),
             ],
@@ -82,13 +89,13 @@ class StepPublish extends StatelessWidget {
     required String subtitle,
   }) {
     final bool is_selected = release_mode == mode;
-    final Color accent = is_dark ? Colors.white : ColorConstants.lightTextColor;
+    final Color accent = is_dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
 
     return GestureDetector(
       onTap: () => on_release_mode_changed(mode),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           color: is_selected
               ? accent.withValues(alpha: is_dark ? 0.12 : 0.06)
@@ -174,7 +181,7 @@ class StepPublish extends StatelessWidget {
       onTap: on_select_schedule_time,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           color: AuthorStyle.secondary_surface(is_dark),
           borderRadius: BorderRadius.circular(14),
@@ -185,7 +192,7 @@ class StepPublish extends StatelessWidget {
             Icon(
               Icons.event_outlined,
               color: scheduled_publish_time != null
-                  ? (is_dark ? Colors.white : ColorConstants.lightTextColor)
+                  ? (is_dark ? ColorConstants.themeColor : ColorConstants.lightTextColor)
                   : AuthorStyle.secondary_text(is_dark),
               size: 20,
             ),
@@ -214,7 +221,7 @@ class StepPublish extends StatelessWidget {
   }
 
   Widget _build_rights_confirmation() {
-    final Color accent = is_dark ? Colors.white : ColorConstants.lightTextColor;
+    final Color accent = is_dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
 
     return InkWell(
       borderRadius: BorderRadius.circular(10),

@@ -24,6 +24,7 @@ import 'chapter_editing_session.dart';
 import 'editor_form_manager.dart';
 import 'editor_file_handler.dart';
 import 'widgets/editor_step_indicator.dart';
+import 'widgets/editor_keyboard_layout.dart';
 
 /// 创建或编辑小说的三步交互页面。
 ///
@@ -219,7 +220,9 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
     );
     // 恢复上次编辑的章节索引。
     if (work != null) {
-      final savedIndex = work.preferences['_lastChapter']?.firstOrNull ?? work.lastEditedChapterIndex;
+      final savedIndex =
+          work.preferences['_lastChapter']?.firstOrNull ??
+          work.lastEditedChapterIndex;
       if (savedIndex > 0 && savedIndex < _chapters.length) {
         _chapter_session.select(savedIndex);
       }
@@ -288,10 +291,10 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
     }
     String? choice;
     await showMessage(
-      message: '你有尚未同步的修改，保存后下次可以继续写作。',
+      message: easy.tr('creator_center.unsaved_changes_message'),
       iconData: Icons.save_outlined,
-      leftButtonText: '不保存',
-      rightButtonText: '保存并退出',
+      leftButtonText: easy.tr('creator_center.no_save'),
+      rightButtonText: easy.tr('creator_center.save_and_exit'),
       allowMaskDismiss: true,
       onLeftPressed: () async => choice = 'discard',
       onRightPressed: () async => choice = 'save',
@@ -344,14 +347,6 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
     return _short_content_controller.text.replaceAll(RegExp(r'\s+'), '').length;
   }
 
-  /// 读取长篇所有章节总字数。
-  int get _chapter_word_count {
-    return _chapters.fold<int>(
-      0,
-      (int total, CreatorChapterDraft chapter) => total + chapter.word_count,
-    );
-  }
-
   /// 读取当前输入的长篇章节字数。
   int get _current_chapter_word_count {
     return _chapter_content_controller.text
@@ -399,7 +394,7 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
           .find_supported_language_by_code(_language_code);
       if (language != null && language.id > 0) return language.id;
     }
-    throw const CreatorDraftException('语种配置尚未加载，请稍后重试');
+    throw CreatorDraftException(easy.tr('creator_center.config_not_loaded'));
   }
 
   Future<void> _persist_work({
@@ -408,7 +403,7 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
   }) async {
     if (_is_saving) return;
     if (_is_uploading_cover) {
-      showBottomTip('封面正在上传，请稍候');
+      showBottomTip(easy.tr('creator_center.cover_uploading'));
       return;
     }
     FocusManager.instance.primaryFocus?.unfocus();
@@ -435,7 +430,7 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
         submitForReview: submitForReview,
       );
       if (!mounted) return;
-      showBottomTip(submitForReview ? '已提交审核' : '草稿已保存');
+      showBottomTip(easy.tr(submitForReview ? 'creator_center.submitted' : 'creator_center.draft_saved'));
       setState(() {
         _has_changes = false;
         _last_saved = saved;
@@ -447,7 +442,7 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
       showBottomTip(
         error is CreatorDraftException
             ? error.message
-            : (submitForReview ? '提交审核失败，请重试' : '保存草稿失败，请重试'),
+            : (submitForReview ? easy.tr('creator_center.submit_review_failed') : easy.tr('creator_center.save_draft_failed')),
       );
     } finally {
       if (mounted) setState(() => _is_saving = false);
@@ -470,32 +465,14 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
   }
 
   Future<void> _remove_chapter(int index) async {
+    if (!mounted || index < 0 || index >= _chapters.length) return;
     final chapter = _chapters[index];
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AuthorStyle.surface(_device_info.dark.value),
-        title: const Text('删除这一章？'),
-        content: Text(
-          '“${chapter.title.isEmpty ? '未命名章节' : chapter.title}”将从草稿中移除。已发布的内容会在更新审核通过后删除。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('保留章节'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除', style: TextStyle(color: Colors.redAccent)),
-          ),
-        ],
-      ),
+    final current = _chapters.indexWhere(
+      (c) => c.local_id == chapter.local_id,
     );
-    if (confirmed == true && mounted) {
-      final current = _chapters.indexWhere(
-        (c) => c.local_id == chapter.local_id,
-      );
+    if (current >= 0) {
       _chapter_session.remove(current);
+      setState(() {});
     }
   }
 
@@ -503,12 +480,12 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
     if (_is_saving) return;
     if (_title_controller.text.trim().isEmpty) {
       _go_to_step(0);
-      showBottomTip('请填写作品标题');
+      showBottomTip(easy.tr('creator_center.required_title'));
       return;
     }
     if (selected_category_ids.isEmpty) {
       _go_to_step(1);
-      showBottomTip('请选择作品分类');
+      showBottomTip(easy.tr('creator_center.required_category'));
       return;
     }
     if (work_type == CreatorWorkType.long) {
@@ -518,24 +495,24 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
                 chapter.title.trim().isEmpty || chapter.content.trim().isEmpty,
           )) {
         _go_to_step(2);
-        showBottomTip('请至少完成一个章节，并补全章节标题和正文');
+        showBottomTip(easy.tr('creator_center.required_chapter'));
         return;
       }
     } else if (_short_content_controller.text.trim().isEmpty) {
       _go_to_step(2);
-      showBottomTip('请填写短篇正文');
+      showBottomTip(easy.tr('creator_center.required_short_content'));
       return;
     }
     if (_release_mode == CreatorReleaseMode.scheduled &&
         (_scheduled_publish_time == null ||
             !_scheduled_publish_time!.isAfter(DateTime.now()))) {
       _go_to_step(3);
-      showBottomTip('请选择未来的发布时间');
+      showBottomTip(easy.tr('creator_center.required_schedule'));
       return;
     }
     if (!_rights_confirmed) {
       _go_to_step(3);
-      showBottomTip('请确认原创及授权声明');
+      showBottomTip(easy.tr('creator_center.required_rights'));
       return;
     }
     await _persist_work(submitForReview: true);
@@ -549,10 +526,6 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
       context.locale.languageCode,
     );
 
-    final writingWithKeyboard =
-        _current_step == 2 &&
-        work_type == CreatorWorkType.long &&
-        MediaQuery.viewInsetsOf(context).bottom > 0;
     return Obx(() {
       final bool is_dark = _device_info.dark.value;
 
@@ -615,159 +588,129 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
             child: GestureDetector(
               onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
               behavior: HitTestBehavior.translucent,
-              child: Column(
-              children: <Widget>[
-                _buildAnimatedCollapse(
-                  visible: !writingWithKeyboard &&
-                      widget.initial_work?.status == CreatorWorkStatus.published,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 10,
-                    ),
-                    color: AuthorStyle.gold.withValues(
-                      alpha: is_dark ? .10 : .13,
-                    ),
-                    child: Text(
-                      '正在编辑更新草稿 · 审核通过前，读者仍看到已发布版本',
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.5,
-                        color: is_dark
-                            ? AuthorStyle.gold
-                            : AuthorStyle.deep_gold,
-                      ),
-                    ),
-                  ),
-                ),
-                _buildAnimatedCollapse(
-                  visible: !writingWithKeyboard,
-                  child: EditorStepIndicator(
-                    current_step: _current_step,
-                    labels: <String>[
-                      easy.tr('creator_center.step_basic'),
-                      easy.tr('creator_center.step_category'),
-                      easy.tr('creator_center.step_content'),
-                      easy.tr('creator_center.step_publish'),
-                    ],
-                    is_dark: is_dark,
-                    error_steps: _error_steps,
-                    on_step_tap: (int step) => _go_to_step(step),
-                  ),
-                ),
-                Expanded(
-                  child: PageView(
-                    key: const PageStorageKey<String>('work_editor_page_view'),
-                    controller: _page_controller,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: <Widget>[
-                      StepBasic(
-                        key: const ValueKey('step_basic'),
-                        is_dark: is_dark,
-                        is_editing: _is_editing,
-                        title_controller: _title_controller,
-                        introduction_controller: _introduction_controller,
-                        language_code: _language_code,
-                        cover_local_path: _cover_local_path,
-                        cover_url: _cover_url,
-                        is_uploading_cover: _is_uploading_cover,
-                        on_pick_cover: open_cover_picker,
-                        on_language_changed: (String code) => setState(() {
-                          _language_code = code;
-                          _has_changes = true;
-                        }),
-                      ),
-                      StepCategory(
-                        key: const ValueKey('step_category'),
-                        is_dark: is_dark,
-                        selected_preference_map: _selected_preference_map,
-                        on_toggle_preference: toggle_preference,
-                      ),
-                      StepContent(
-                        key: const ValueKey('step_content'),
-                        is_dark: is_dark,
-                        work_type: work_type,
-                        is_editing: _is_editing,
-                        chapters: _chapters,
-                        short_content_controller: _short_content_controller,
-                        chapter_title_controller: _chapter_title_controller,
-                        chapter_content_controller: _chapter_content_controller,
-                        chapter_word_count: _chapter_word_count,
-                        short_word_count: _short_word_count,
-                        current_chapter_word_count: _current_chapter_word_count,
-                        on_save_current_chapter: _chapter_session.add,
-                        active_chapter_index: _chapter_session.activeIndex,
-                        on_edit_chapter: _select_chapter,
-                        on_delete_chapter: _remove_chapter,
-                        on_reorder_chapters: _chapter_session.reorder,
-                        on_short_content_changed: () => setState(() {}),
-                        on_chapter_content_changed: () => setState(() {}),
-                        on_short_file_upload: upload_short_file,
-                        on_long_file_upload: upload_long_file,
-                      ),
-                      StepPublish(
-                        key: const ValueKey('step_publish'),
-                        is_dark: is_dark,
-                        is_editing: _is_editing,
-                        release_mode: _release_mode,
-                        scheduled_publish_time: _scheduled_publish_time,
-                        rights_confirmed: _rights_confirmed,
-                        on_release_mode_changed: (CreatorReleaseMode mode) =>
-                            setState(() {
-                              _release_mode = mode;
-                              _has_changes = true;
-                            }),
-                        on_select_schedule_time: () => select_schedule_time(
-                          scheduled_publish_time: _scheduled_publish_time,
-                          on_time_selected: (DateTime? time) {
-                            setState(() => _scheduled_publish_time = time);
-                          },
+              child: EditorKeyboardLayout(
+                collapse_when_editing: _current_step == 2,
+                header: Column(
+                  children: [
+                    if (widget.initial_work?.status ==
+                        CreatorWorkStatus.published)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
                         ),
-                        on_rights_confirmed_changed: (bool value) =>
-                            setState(() {
-                              _rights_confirmed = value;
-                              _has_changes = true;
-                            }),
+                        color: AuthorStyle.gold.withValues(
+                          alpha: is_dark ? .10 : .13,
+                        ),
+                        child: Text(
+                          easy.tr('creator_center.editing_draft_hint'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.5,
+                            color: is_dark
+                                ? AuthorStyle.gold
+                                : AuthorStyle.deep_gold,
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
+                    EditorStepIndicator(
+                      current_step: _current_step,
+                      labels: <String>[
+                        easy.tr('creator_center.step_basic'),
+                        easy.tr('creator_center.step_category'),
+                        easy.tr('creator_center.step_content'),
+                        easy.tr('creator_center.step_publish'),
+                      ],
+                      is_dark: is_dark,
+                      error_steps: _error_steps,
+                      on_step_tap: (int step) => _go_to_step(step),
+                    ),
+                  ],
                 ),
-                _buildAnimatedCollapse(
-                  visible: !writingWithKeyboard,
-                  child: _build_bottom_bar(is_dark, is_cjk),
+                content: PageView(
+                  key: const PageStorageKey<String>('work_editor_page_view'),
+                  controller: _page_controller,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: <Widget>[
+                    StepBasic(
+                      key: const ValueKey('step_basic'),
+                      is_dark: is_dark,
+                      is_editing: _is_editing,
+                      title_controller: _title_controller,
+                      introduction_controller: _introduction_controller,
+                      language_code: _language_code,
+                      cover_local_path: _cover_local_path,
+                      cover_url: _cover_url,
+                      is_uploading_cover: _is_uploading_cover,
+                      on_pick_cover: open_cover_picker,
+                      on_language_changed: (String code) => setState(() {
+                        _language_code = code;
+                        _has_changes = true;
+                      }),
+                    ),
+                    StepCategory(
+                      key: const ValueKey('step_category'),
+                      is_dark: is_dark,
+                      selected_preference_map: _selected_preference_map,
+                      on_toggle_preference: toggle_preference,
+                    ),
+                    StepContent(
+                      key: const ValueKey('step_content'),
+                      is_dark: is_dark,
+                      work_type: work_type,
+                      is_editing: _is_editing,
+                      chapters: _chapters,
+                      short_content_controller: _short_content_controller,
+                      chapter_title_controller: _chapter_title_controller,
+                      chapter_content_controller: _chapter_content_controller,
+                      short_word_count: _short_word_count,
+                      current_chapter_word_count: _current_chapter_word_count,
+                      on_save_current_chapter: _chapter_session.add,
+                      active_chapter_index: _chapter_session.activeIndex,
+                      on_edit_chapter: _select_chapter,
+                      on_delete_chapter: _remove_chapter,
+                      on_reorder_chapters: _chapter_session.reorder,
+                      on_short_content_changed: () => setState(() {}),
+                      on_chapter_content_changed: () => setState(() {}),
+                      on_short_file_upload: upload_short_file,
+                      on_long_file_upload: upload_long_file,
+                    ),
+                    StepPublish(
+                      key: const ValueKey('step_publish'),
+                      is_dark: is_dark,
+                      is_editing: _is_editing,
+                      release_mode: _release_mode,
+                      scheduled_publish_time: _scheduled_publish_time,
+                      rights_confirmed: _rights_confirmed,
+                      on_release_mode_changed: (CreatorReleaseMode mode) =>
+                          setState(() {
+                            _release_mode = mode;
+                            _has_changes = true;
+                          }),
+                      on_select_schedule_time: () => select_schedule_time(
+                        scheduled_publish_time: _scheduled_publish_time,
+                        on_time_selected: (DateTime? time) {
+                          setState(() {
+                            _scheduled_publish_time = time;
+                            _has_changes = true;
+                          });
+                        },
+                      ),
+                      on_rights_confirmed_changed: (bool value) => setState(() {
+                        _rights_confirmed = value;
+                        _has_changes = true;
+                      }),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+                footer: _build_bottom_bar(is_dark, is_cjk),
+              ),
             ),
           ),
         ),
       );
     });
-  }
-
-  /// 带淡出 + 高度收缩过渡的条件显示包装器。
-  Widget _buildAnimatedCollapse({
-    required bool visible,
-    required Widget child,
-  }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(end: visible ? 1.0 : 0.0),
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-      builder: (context, value, _) {
-        return ClipRect(
-          child: Align(
-            heightFactor: value,
-            child: IgnorePointer(
-              ignoring: value < 0.5,
-              child: Opacity(opacity: value, child: child),
-            ),
-          ),
-        );
-      },
-      child: child,
-    );
   }
 
   Widget _build_bottom_bar(bool is_dark, bool is_cjk) {
@@ -783,7 +726,7 @@ class _CreatorWorkEditorPageState extends State<CreatorWorkEditorPage>
         16,
         11,
         16,
-        11 + MediaQuery.paddingOf(context).bottom,
+        11 + MediaQuery.viewPaddingOf(context).bottom,
       ),
       decoration: BoxDecoration(
         color: AuthorStyle.surface(is_dark),

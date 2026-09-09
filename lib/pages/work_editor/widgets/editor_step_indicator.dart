@@ -36,7 +36,7 @@ class EditorStepIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: AuthorStyle.surface(is_dark),
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 15),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 15),
       child: Row(
         children: List<Widget>.generate(labels.length, (int index) {
           final bool is_active = index <= current_step;

@@ -37,9 +37,6 @@ class StepContent extends StatelessWidget {
   /// TODO 长篇章节正文控制器。
   final TextEditingController chapter_content_controller;
 
-  /// TODO 长篇章节总字数。
-  final int chapter_word_count;
-
   /// TODO 短篇字数。
   final int short_word_count;
 
@@ -79,7 +76,6 @@ class StepContent extends StatelessWidget {
     required this.short_content_controller,
     required this.chapter_title_controller,
     required this.chapter_content_controller,
-    required this.chapter_word_count,
     required this.short_word_count,
     required this.current_chapter_word_count,
     required this.on_edit_chapter,
@@ -102,7 +98,6 @@ class StepContent extends StatelessWidget {
         is_editing: is_editing,
         chapters: chapters,
         active_chapter_index: active_chapter_index,
-        chapter_word_count: chapter_word_count,
         chapter_title_controller: chapter_title_controller,
         chapter_content_controller: chapter_content_controller,
         current_word_count: current_chapter_word_count,

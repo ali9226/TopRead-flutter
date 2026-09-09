@@ -3,6 +3,7 @@
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
+import 'package:app/pages/work_editor/widgets/editor_keyboard_input.dart';
 import 'package:app/pages/work_editor/widgets/step_utils.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
@@ -62,32 +63,41 @@ class ShortContentEditor extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
+
             /// 文件上传按钮。
             _build_file_upload_button(),
           ],
         ),
         const SizedBox(height: 8),
 
-        /// 正文输入框。
-        TextField(
-          controller: content_controller,
-          style: StepUtils.input_text_style(is_dark),
-          decoration: InputDecoration(
-            hintText: easy.tr('creator_center.short_content_hint'),
-            hintStyle: TextStyle(
-              color: AuthorStyle.secondary_text(is_dark).withValues(alpha: .65),
+        /// 与长篇共用输入准入：步骤和导航收起完成后，再建立键盘连接。
+        EditorKeyboardInput(
+          builder: (read_only, on_tap) => TextField(
+            key: const ValueKey('short_content_input'),
+            readOnly: read_only,
+            onTap: on_tap,
+            onTapAlwaysCalled: true,
+            controller: content_controller,
+            style: StepUtils.input_text_style(is_dark),
+            decoration: InputDecoration(
+              hintText: easy.tr('creator_center.short_content_hint'),
+              hintStyle: TextStyle(
+                color: AuthorStyle.secondary_text(
+                  is_dark,
+                ).withValues(alpha: .65),
+              ),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              filled: false,
+              contentPadding: EdgeInsets.zero,
             ),
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            filled: false,
-            contentPadding: EdgeInsets.zero,
+            minLines: 18,
+            maxLines: null,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.newline,
+            onChanged: (_) => on_content_changed(),
           ),
-          minLines: 18,
-          maxLines: null,
-          keyboardType: TextInputType.multiline,
-          textInputAction: TextInputAction.newline,
-          onChanged: (_) => on_content_changed(),
         ),
       ],
     );

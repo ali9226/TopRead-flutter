@@ -363,7 +363,7 @@ class StepBasic extends StatelessWidget {
       onTap: () => _show_language_sheet(context),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           color: AuthorStyle.secondary_surface(is_dark),
           borderRadius: BorderRadius.circular(14),
@@ -461,7 +461,7 @@ class StepBasic extends StatelessWidget {
               BottomSheetDragHandle(is_dark: is_dark),
               Padding(
                 padding:
-                    const EdgeInsets.only(left: 20, right: 20, bottom: 8),
+                    const EdgeInsets.only(left: 12, right: 12, bottom: 8),
                 child: Row(
                   children: <Widget>[
                     Text(
@@ -488,9 +488,9 @@ class StepBasic extends StatelessWidget {
                 child: ListView.separated(
                   shrinkWrap: true,
                   padding: EdgeInsets.fromLTRB(
-                    20,
+                    12,
                     8,
-                    20,
+                    12,
                     MediaQuery.paddingOf(sheet_context).bottom + 16,
                   ),
                   itemCount: languages.length,
@@ -508,7 +508,7 @@ class StepBasic extends StatelessWidget {
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
+                          horizontal: 12,
                           vertical: 12,
                         ),
                         decoration: BoxDecoration(

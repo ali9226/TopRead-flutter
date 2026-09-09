@@ -58,7 +58,7 @@ class StepUtils {
       ),
       filled: true,
       fillColor: AuthorStyle.secondary_surface(is_dark),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: AuthorStyle.border(is_dark)),

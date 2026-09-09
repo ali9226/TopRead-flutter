@@ -27,7 +27,7 @@ class WorkEditorStyle {
   static const double content_max_width = 720;
 
   /// TODO 页面水平留白。
-  static const double page_padding = 16;
+  static const double page_padding = 12;
 
   /// TODO 表单卡片圆角。
   static const double section_radius = 20;
@@ -49,6 +49,19 @@ class WorkEditorStyle {
 
   /// TODO 底部操作栏最小高度。
   static const double bottom_bar_min_height = 78;
+
+  /// 工具栏随焦点立即开始过渡；键盘位移使用系统逐帧尺寸，不叠加缓动。
+  static const Duration keyboard_chrome_duration = Duration(milliseconds: 220);
+  static const Curve keyboard_chrome_curve = Curves.easeInOutCubic;
+
+  /// 目录采用稳定的高面板，列表滚动不再改变面板高度或压缩搜索框。
+  static const double chapter_directory_height_factor = .92;
+
+  /// 目录标题在不同文字体系下保持单行，给键盘上方的搜索结果留出空间。
+  static const double directory_title_size_cjk = 22;
+  static const double directory_title_size_alphabetic = 20;
+  static const double directory_hint_size_cjk = 12;
+  static const double directory_hint_size_alphabetic = 11;
 
   /// TODO CJK 步骤标题字号。
   static const double step_label_size_cjk = 12;

@@ -87,9 +87,13 @@ class ChapterEditingSession extends ChangeNotifier {
     if (index < 0 || index >= chapters.length) return;
     final removed = chapters.removeAt(index);
     if (removed.local_id == _activeId) {
-      _activeId = chapters.isEmpty
-          ? null
-          : chapters[index.clamp(0, chapters.length - 1)].local_id;
+      if (chapters.isEmpty) {
+        _activeId = null;
+      } else {
+        // 优先选上一章，没有上一章时选下一章。
+        final next_index = (index - 1).clamp(0, chapters.length - 1);
+        _activeId = chapters[next_index].local_id;
+      }
       _loadSelection();
     }
     changeVersion++;

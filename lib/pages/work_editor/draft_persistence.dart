@@ -1,6 +1,7 @@
 import 'package:app/api/creator_work.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 /// 编辑器只在完整保存成功后提交，创建成功的 ID 会保留以供失败重试。
 class CreatorDraftPersistence {
@@ -24,12 +25,12 @@ class CreatorDraftPersistence {
     required int languageId,
     bool submitForReview = false,
   }) async {
-    if (_busy) throw const CreatorDraftException('正在保存，请稍候');
+    if (_busy) throw CreatorDraftException(tr('creator_center.busy_saving'));
     _busy = true;
     try {
       if (_novelId == null) {
         final created = await backend.create(work, languageId);
-        _requireSuccess(created, '创建草稿失败，请重试');
+        _requireSuccess(created, tr('creator_center.create_draft_failed'));
         _novelId = _parseIntNullable(created.content?['novel_id']);
         _revisionId = _parseIntNullable(created.content?['revision_id']);
         _novelLanguageId = _parseIntNullable(
@@ -38,7 +39,7 @@ class CreatorDraftPersistence {
         _lockVersion = _parseIntNullable(created.content?['lock_version']) ?? 0;
       }
       if (_novelId == null || _revisionId == null) {
-        throw const CreatorDraftException('草稿信息不完整，请返回创作者中心重新打开');
+        throw CreatorDraftException(tr('creator_center.draft_incomplete'));
       }
       var saved = work.copy_with(
         novel_id: _novelId,
@@ -49,7 +50,7 @@ class CreatorDraftPersistence {
         status: CreatorWorkStatus.draft,
       );
       final result = await backend.save(saved, languageId);
-      _requireSuccess(result, '保存草稿失败，请重试');
+      _requireSuccess(result, tr('creator_center.save_draft_failed_generic'));
       _lockVersion =
           _parseIntNullable(result.content?['lock_version']) ?? _lockVersion;
       saved = saved.copy_with(
@@ -58,7 +59,7 @@ class CreatorDraftPersistence {
       );
       if (submitForReview) {
         final submitted = await backend.submit(saved);
-        _requireSuccess(submitted, '提交审核失败，请重试');
+        _requireSuccess(submitted, tr('creator_center.submit_review_failed_generic'));
         saved = saved.copy_with(status: CreatorWorkStatus.reviewing);
       }
       return saved;

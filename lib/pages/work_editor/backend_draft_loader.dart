@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:app/api/creator_work.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/stores/language_store.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:get/get.dart';
 
 import 'draft_persistence.dart';
@@ -14,20 +15,20 @@ Future<CreatorWorkDraft> loadCreatorWorkDraft(int novelId) async {
     final started = await CreatorWorkApi.beginEdit(novelId: novelId);
     if (!started.status) {
       throw CreatorDraftException(
-        creatorDraftErrorMessage(started.message, '无法开始编辑，请稍后重试'),
+        creatorDraftErrorMessage(started.message, tr('creator_center.cannot_start_edit')),
       );
     }
     final result = await CreatorWorkApi.getInfo(novelId: novelId);
     if (!result.status || result.content == null) {
       throw CreatorDraftException(
-        creatorDraftErrorMessage(result.message, '获取草稿失败，请稍后重试'),
+        creatorDraftErrorMessage(result.message, tr('creator_center.fetch_draft_failed')),
       );
     }
     return creatorWorkDraftFromBackend(result.content!);
   } on CreatorDraftException {
     rethrow;
   } catch (_) {
-    throw const CreatorDraftException('获取草稿失败，请稍后重试');
+    throw CreatorDraftException(tr('creator_center.fetch_draft_failed'));
   }
 }
 
@@ -40,7 +41,7 @@ CreatorWorkDraft creatorWorkDraftFromBackend(Map<String, dynamic> data) {
       novelId == null ||
       revisionId == null ||
       (_parseIntNullable(draft['revision_status']) ?? 1) != 1) {
-    throw const CreatorDraftException('该作品已提交审核或没有可编辑的草稿');
+    throw CreatorDraftException(tr('creator_center.no_editable_draft'));
   }
   final workType =
       _parseIntNullable(draft['work_type'] ?? novel['work_type']) == 1
@@ -79,18 +80,18 @@ CreatorWorkDraft creatorWorkDraftFromBackend(Map<String, dynamic> data) {
   final chapters = <CreatorChapterDraft>[];
   if (workType == CreatorWorkType.long) {
     if (data['chapters'] is! List) {
-      throw const CreatorDraftException('章节数据不完整，请稍后重试');
+      throw CreatorDraftException(tr('creator_center.chapter_data_incomplete'));
     }
     for (final raw in _list(data['chapters'])) {
       final chapter = _map(raw);
       final content = chapter['content'];
       if (content is! String) {
-        throw const CreatorDraftException('章节正文未加载完成，请稍后重试');
+        throw CreatorDraftException(tr('creator_center.chapter_content_not_loaded'));
       }
       final localId = (chapter['local_id'] ?? chapter['chapter_uid'] ?? '')
           .toString();
       if (localId.isEmpty) {
-        throw const CreatorDraftException('章节信息不完整，请稍后重试');
+        throw CreatorDraftException(tr('creator_center.chapter_info_incomplete'));
       }
       chapters.add(
         CreatorChapterDraft(

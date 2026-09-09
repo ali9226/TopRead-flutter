@@ -6,8 +6,12 @@ import 'package:app/config/layout_config.dart';
 import 'package:app/components/bottom_sheet_drag_handle/index.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/author_center/author_style.dart';
+import 'package:app/pages/work_editor/widgets/editor_keyboard_layout.dart';
+import 'package:app/pages/work_editor/widgets/editor_keyboard_input.dart';
+import 'package:app/pages/work_editor/style.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/util/dialog/show_message.dart';
+import 'package:app/util/language_util/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 
@@ -17,7 +21,6 @@ class LongContentEditor extends StatefulWidget {
   final bool is_editing;
   final List<CreatorChapterDraft> chapters;
   final int active_chapter_index;
-  final int chapter_word_count;
   final TextEditingController chapter_title_controller;
   final TextEditingController chapter_content_controller;
   final int current_word_count;
@@ -34,7 +37,6 @@ class LongContentEditor extends StatefulWidget {
     required this.is_editing,
     required this.chapters,
     this.active_chapter_index = -1,
-    required this.chapter_word_count,
     required this.chapter_title_controller,
     required this.chapter_content_controller,
     required this.current_word_count,
@@ -129,7 +131,7 @@ class _LongContentEditorState extends State<LongContentEditor> {
                   onTap: () => Navigator.pop(context, 'import'),
                 ),
               ),
-              if (index >= 0)
+              if (index >= 0 && widget.chapters.length > 1)
                 Material(
                   color: Colors.transparent,
                   child: ListTile(
@@ -182,7 +184,7 @@ class _LongContentEditorState extends State<LongContentEditor> {
     final dark = widget.is_dark;
     final primary = AuthorStyle.primary_text(dark);
     final secondary = AuthorStyle.secondary_text(dark);
-    final accent = dark ? Colors.white : ColorConstants.lightTextColor;
+    final accent = dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
     final index = widget.active_chapter_index;
     return Center(
       child: ConstrainedBox(
@@ -204,19 +206,32 @@ class _LongContentEditorState extends State<LongContentEditor> {
                           name: 'bookshelf_selected',
                           width: 18,
                           height: 18,
-                          color: dark ? Colors.white : ColorConstants.lightTextColor,
+                          color: dark
+                              ? Colors.white
+                              : ColorConstants.lightTextColor,
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          easy.tr('creator_center.chapter_directory'),
-                          style: TextStyle(
-                            color: accent,
-                            fontSize: 14,
-                            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 180),
+                          child: Text(
+                            easy.tr('creator_center.chapter_directory'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: accent,
+                              fontSize: 14,
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.keyboard_arrow_down_rounded, color: accent, size: 18),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: accent,
+                          size: 18,
+                        ),
                       ],
                     ),
                   ),
@@ -232,7 +247,11 @@ class _LongContentEditorState extends State<LongContentEditor> {
                         shape: BoxShape.circle,
                       ),
                       child: const Center(
-                        child: Icon(Icons.add_rounded, size: 18, color: Colors.black),
+                        child: Icon(
+                          Icons.add_rounded,
+                          size: 18,
+                          color: Colors.black,
+                        ),
                       ),
                     ),
                   ),
@@ -252,12 +271,19 @@ class _LongContentEditorState extends State<LongContentEditor> {
                           Expanded(
                             child: Text(
                               index < 0
-                                  ? easy.tr('creator_center.start_first_chapter')
-                                  : easy.tr('creator_center.chapter_number', namedArgs: {'number': '${index + 1}'}),
+                                  ? easy.tr(
+                                      'creator_center.start_first_chapter',
+                                    )
+                                  : easy.tr(
+                                      'creator_center.chapter_number',
+                                      namedArgs: {'number': '${index + 1}'},
+                                    ),
                               style: TextStyle(
                                 color: accent,
                                 fontSize: 15,
-                                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                                fontWeight: FontConfig.adjustedWeight(
+                                  FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
@@ -280,7 +306,7 @@ class _LongContentEditorState extends State<LongContentEditor> {
                             onTap: () => _showChapterActions(context, index),
                             behavior: HitTestBehavior.opaque,
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(8, 8,3, 8),
+                              padding: const EdgeInsets.fromLTRB(8, 8, 3, 8),
                               child: SvgIcon(
                                 name: 'three_dots',
                                 width: 20,
@@ -299,53 +325,71 @@ class _LongContentEditorState extends State<LongContentEditor> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            TextField(
-                              key: const ValueKey('chapter_title_input'),
-                              controller: widget.chapter_title_controller,
-                              maxLines: null,
-                              style: TextStyle(
-                                color: primary,
-                                fontSize: 23,
-                                height: 1.4,
-                                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                              ),
-                              decoration: InputDecoration(
-                                hintText: easy.tr('creator_center.chapter_title_hint'),
-                                hintStyle: TextStyle(
-                                  color: secondary.withValues(alpha: .7),
-                                  fontWeight: FontWeight.normal,
+                            EditorKeyboardInput(
+                              builder: (read_only, on_tap) => TextField(
+                                readOnly: read_only,
+                                onTap: on_tap,
+                                onTapAlwaysCalled: true,
+                                key: const ValueKey('chapter_title_input'),
+                                controller: widget.chapter_title_controller,
+                                maxLines: null,
+                                style: TextStyle(
+                                  color: primary,
+                                  fontSize: 23,
+                                  height: 1.4,
+                                  fontWeight: FontConfig.adjustedWeight(
+                                    FontWeight.w500,
+                                  ),
                                 ),
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                filled: false,
-                                contentPadding: EdgeInsets.zero,
+                                decoration: InputDecoration(
+                                  hintText: easy.tr(
+                                    'creator_center.chapter_title_hint',
+                                  ),
+                                  hintStyle: TextStyle(
+                                    color: secondary.withValues(alpha: .7),
+                                    fontWeight: FontConfig.adjustedWeight(
+                                      FontWeight.w400,
+                                    ),
+                                  ),
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  filled: false,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 14),
-                            TextField(
-                              key: const ValueKey('chapter_content_input'),
-                              controller: widget.chapter_content_controller,
-                              minLines: 16,
-                              maxLines: null,
-                              keyboardType: TextInputType.multiline,
-                              textInputAction: TextInputAction.newline,
-                              style: TextStyle(
-                                color: primary,
-                                fontSize: 16,
-                                height: 1.9,
-                                letterSpacing: .3,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: easy.tr('creator_center.chapter_content_hint'),
-                                hintStyle: TextStyle(
-                                  color: secondary.withValues(alpha: .65),
+                            EditorKeyboardInput(
+                              builder: (read_only, on_tap) => TextField(
+                                readOnly: read_only,
+                                onTap: on_tap,
+                                onTapAlwaysCalled: true,
+                                key: const ValueKey('chapter_content_input'),
+                                controller: widget.chapter_content_controller,
+                                minLines: 16,
+                                maxLines: null,
+                                keyboardType: TextInputType.multiline,
+                                textInputAction: TextInputAction.newline,
+                                style: TextStyle(
+                                  color: primary,
+                                  fontSize: 16,
+                                  height: 1.9,
+                                  letterSpacing: .3,
                                 ),
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                filled: false,
-                                contentPadding: EdgeInsets.zero,
+                                decoration: InputDecoration(
+                                  hintText: easy.tr(
+                                    'creator_center.chapter_content_hint',
+                                  ),
+                                  hintStyle: TextStyle(
+                                    color: secondary.withValues(alpha: .65),
+                                  ),
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  filled: false,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
                               ),
                             ),
                           ],
@@ -362,7 +406,7 @@ class _LongContentEditorState extends State<LongContentEditor> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '共${widget.chapters.length}章',
+                    easy.tr('creator_center.chapters_count', namedArgs: {'count': '${widget.chapters.length}'}),
                     style: TextStyle(color: secondary, fontSize: 11),
                   ),
                   Container(
@@ -372,7 +416,7 @@ class _LongContentEditorState extends State<LongContentEditor> {
                     color: AuthorStyle.border(dark),
                   ),
                   Text(
-                    '${widget.current_word_count}字',
+                    easy.tr('creator_center.chapter_word_count', namedArgs: {'count': '${widget.current_word_count}'}),
                     style: TextStyle(color: secondary, fontSize: 11),
                   ),
                 ],
@@ -408,6 +452,7 @@ class _ChapterDirectory extends StatefulWidget {
 
 class _ChapterDirectoryState extends State<_ChapterDirectory> {
   final _search = TextEditingController();
+  final _directory_scroll = ScrollController();
   String _query = '';
   bool _ordering = false;
   late final String? _activeId = widget.activeIndex < 0
@@ -416,6 +461,7 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
   @override
   void dispose() {
     _search.dispose();
+    _directory_scroll.dispose();
     super.dispose();
   }
 
@@ -424,36 +470,40 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
     final dark = widget.isDark;
     final text = AuthorStyle.primary_text(dark);
     final secondary = AuthorStyle.secondary_text(dark);
-    final accent = dark ? Colors.white : ColorConstants.lightTextColor;
+    final accent = dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
+    final is_cjk = LanguageUtil.is_cjk_language(
+      easy.EasyLocalization.of(context)?.locale.languageCode ?? 'zh',
+    );
+    final normalized_query = _query.toLowerCase();
+    final chapter_number_query = _query.replaceAll(RegExp(r'[第章\s]'), '');
+    final summary = easy.tr(
+      'creator_center.chapter_count',
+      namedArgs: {'count': '${widget.chapters.length}'},
+    );
+    final directory_hint = easy.tr('creator_center.chapter_directory_hint');
     final indexes = [
       for (var i = 0; i < widget.chapters.length; i++)
         if (_query.isEmpty ||
-            widget.chapters[i].title.toLowerCase().contains(
-              _query.toLowerCase(),
-            ) ||
-            '${i + 1}' == _query.replaceAll(RegExp(r'[第章\s]'), ''))
+            widget.chapters[i].title.toLowerCase().contains(normalized_query) ||
+            '${i + 1}' == chapter_number_query)
           i,
     ];
-    final bool keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     return GestureDetector(
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       behavior: HitTestBehavior.translucent,
-      child: Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: DraggableScrollableSheet(
-        initialChildSize: .84,
-        minChildSize: .5,
-        maxChildSize: .96,
-        expand: false,
-        builder: (context, controller) => Container(
+      child: FractionallySizedBox(
+        heightFactor: WorkEditorStyle.chapter_directory_height_factor,
+        child: Container(
+          key: const ValueKey('chapter_directory_surface'),
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AuthorStyle.surface(dark),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
           ),
-          child: SafeArea(
-            top: false,
-            child: Column(
+          child: EditorKeyboardLayout(
+            collapse_header: false,
+            header: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 10),
                 Container(
@@ -465,7 +515,7 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 16, 10, 8),
+                  padding: const EdgeInsets.fromLTRB(12, 16, 10, 8),
                   child: Row(
                     children: [
                       Expanded(
@@ -474,21 +524,35 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                           children: [
                             Text(
                               easy.tr('creator_center.chapter_directory'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
+                                fontSize: is_cjk
+                                    ? WorkEditorStyle.directory_title_size_cjk
+                                    : WorkEditorStyle
+                                          .directory_title_size_alphabetic,
+                                fontWeight: FontConfig.adjustedWeight(
+                                  FontWeight.w600,
+                                ),
                                 color: text,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               _ordering
-                                  ? easy.tr('creator_center.chapter_directory_reorder_hint')
-                                  : easy.tr('creator_center.chapter_summary', namedArgs: {
-                                      'count': '${widget.chapters.length}',
-                                      'words': '',
-                                    }) + ' · ' + easy.tr('creator_center.chapter_directory_hint'),
-                              style: TextStyle(color: secondary, fontSize: 12),
+                                  ? easy.tr(
+                                      'creator_center.chapter_directory_reorder_hint',
+                                    )
+                                  : '$summary · $directory_hint',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: secondary,
+                                fontSize: is_cjk
+                                    ? WorkEditorStyle.directory_hint_size_cjk
+                                    : WorkEditorStyle
+                                          .directory_hint_size_alphabetic,
+                              ),
                             ),
                           ],
                         ),
@@ -502,134 +566,105 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
-                  child: TextField(
-                    controller: _search,
-                    onChanged: (value) => setState(() {
-                      _query = value.trim();
-                      _ordering = false;
-                    }),
-                    style: TextStyle(color: text, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: easy.tr('creator_center.search_chapter_hint'),
-                      hintStyle: TextStyle(color: secondary, fontSize: 13),
-                      prefixIcon: Icon(Icons.search_rounded, color: secondary),
-                      suffixIcon: _query.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: easy.tr('creator_center.clear_search'),
-                              onPressed: () {
-                                _search.clear();
-                                setState(() => _query = '');
-                              },
-                              icon: const Icon(Icons.close_rounded, size: 18),
-                            ),
-                      filled: true,
-                      fillColor: AuthorStyle.secondary_surface(dark),
-                      isDense: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
-                        borderSide: BorderSide.none,
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  child: EditorKeyboardInput(
+                    builder: (read_only, on_tap) => TextField(
+                      readOnly: read_only,
+                      onTap: on_tap,
+                      onTapAlwaysCalled: true,
+                      key: const ValueKey('chapter_directory_search'),
+                      controller: _search,
+                      onChanged: (value) => setState(() {
+                        _query = value.trim();
+                        _ordering = false;
+                      }),
+                      style: TextStyle(color: text, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: easy.tr('creator_center.search_chapter_hint'),
+                        hintStyle: TextStyle(color: secondary, fontSize: 13),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: secondary,
+                        ),
+                        suffixIcon: _query.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: easy.tr('creator_center.clear_search'),
+                                onPressed: () {
+                                  _search.clear();
+                                  setState(() => _query = '');
+                                },
+                                icon: const Icon(Icons.close_rounded, size: 18),
+                              ),
+                        filled: true,
+                        fillColor: AuthorStyle.secondary_surface(dark),
+                        isDense: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(
+                            LayoutConfig.section_radius,
+                          ),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(
+                            LayoutConfig.section_radius,
+                          ),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                   ),
                 ),
-                Expanded(
-                  child: indexes.isEmpty
-                      ? Center(
-                          child: Text(
-                            _query.isEmpty
-                                ? easy.tr('creator_center.no_chapters_yet')
-                                : easy.tr('creator_center.no_chapter_found'),
-                            style: TextStyle(color: secondary),
-                          ),
-                        )
-                      : _ordering
-                      ? ReorderableListView.builder(
-                          scrollController: controller,
-                          padding: const EdgeInsets.symmetric(horizontal: 18),
-                          buildDefaultDragHandles: false,
-                          itemCount: indexes.length,
-                          proxyDecorator: (child, index, animation) => child,
-                          onReorderItem: (oldIndex, targetIndex) {
-                            final newIndex = targetIndex > oldIndex
-                                ? targetIndex + 1
-                                : targetIndex;
-                            widget.onReorder(oldIndex, newIndex);
-                            setState(() {
-                              final chapter = widget.chapters.removeAt(
-                                oldIndex,
-                              );
-                              widget.chapters.insert(
-                                newIndex > oldIndex ? newIndex - 1 : newIndex,
-                                chapter,
-                              );
-                            });
-                          },
-                          itemBuilder: (context, index) => _row(index),
-                        )
-                      : ListView.builder(
-                          controller: controller,
-                          padding: const EdgeInsets.symmetric(horizontal: 18),
-                          itemCount: indexes.length,
-                          itemBuilder: (context, index) => _row(indexes[index]),
-                        ),
-                ),
-                if (!keyboardVisible)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
-                    child: Row(
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: _query.isEmpty && widget.chapters.length > 1
-                              ? () => setState(() => _ordering = !_ordering)
-                              : null,
-                          icon: Icon(
-                            _ordering ? Icons.check_rounded : Icons.swap_vert_rounded,
-                            size: 18,
-                          ),
-                          label: Text(_ordering
-                              ? easy.tr('creator_center.reorder_done')
-                              : easy.tr('creator_center.reorder')),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: text,
-                            side: BorderSide(color: AuthorStyle.border(dark)),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: () => Navigator.pop(
-                              context,
-                              const _ChapterAction('new'),
-                            ),
-                            icon: SvgIcon(
-                              name: 'add',
-                              width: 19,
-                              height: 19,
-                              color: dark ? const Color(0xFF1A1A18) : Colors.white,
-                            ),
-                            label: Text(easy.tr('creator_center.new_chapter')),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: accent,
-                              foregroundColor: dark ? const Color(0xFF1A1A18) : Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
               ],
+            ),
+            content: indexes.isEmpty
+                ? Center(
+                    child: Text(
+                      _query.isEmpty
+                          ? easy.tr('creator_center.no_chapters_yet')
+                          : easy.tr('creator_center.no_chapter_found'),
+                      style: TextStyle(color: secondary),
+                    ),
+                  )
+                : _ordering
+                ? ReorderableListView.builder(
+                    scrollController: _directory_scroll,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    buildDefaultDragHandles: false,
+                    itemCount: indexes.length,
+                    proxyDecorator: (child, index, animation) => child,
+                    onReorderItem: (oldIndex, targetIndex) {
+                      final newIndex = targetIndex > oldIndex
+                          ? targetIndex + 1
+                          : targetIndex;
+                      widget.onReorder(oldIndex, newIndex);
+                      setState(() {
+                        final chapter = widget.chapters.removeAt(oldIndex);
+                        widget.chapters.insert(
+                          newIndex > oldIndex ? newIndex - 1 : newIndex,
+                          chapter,
+                        );
+                      });
+                    },
+                    itemBuilder: (context, index) => _row(index),
+                  )
+                : ListView.builder(
+                    controller: _directory_scroll,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: indexes.length,
+                    itemBuilder: (context, index) => _row(indexes[index]),
+                  ),
+            footer: _DirectoryFooter(
+              is_dark: dark,
+              ordering: _ordering,
+              has_chapters: widget.chapters.length > 1,
+              query_empty: _query.isEmpty,
+              on_reorder_toggle: () => setState(() => _ordering = !_ordering),
+              on_new_chapter: () =>
+                  Navigator.pop(context, const _ChapterAction('new')),
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -638,7 +673,7 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
     final chapter = widget.chapters[index];
     final active = chapter.local_id == _activeId;
     final dark = widget.isDark;
-    final accent = dark ? Colors.white : ColorConstants.lightTextColor;
+    final accent = dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
     return Padding(
       key: ValueKey(chapter.local_id),
       padding: const EdgeInsets.only(bottom: 8),
@@ -687,16 +722,19 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                         style: TextStyle(
                           fontSize: 14,
                           color: AuthorStyle.primary_text(dark),
-                          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                          fontWeight: FontConfig.adjustedWeight(
+                            FontWeight.w500,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        '${chapter.word_count} ' +
-                            (easy.tr('creator_center.chapter_word_count', namedArgs: {'count': ''}).trim()) +
-                            (active ? ' · ${easy.tr("creator_center.editing")}' : ''),
+                        '${easy.tr('creator_center.chapter_word_count', namedArgs: {'count': '${chapter.word_count}'})}'
+                        '${active ? ' · ${easy.tr("creator_center.editing")}' : ''}',
                         style: TextStyle(
-                          color: active ? accent : AuthorStyle.secondary_text(dark),
+                          color: active
+                              ? accent
+                              : AuthorStyle.secondary_text(dark),
                           fontSize: 11,
                         ),
                       ),
@@ -716,12 +754,130 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                   )
                 else
                   Icon(
-                    active ? Icons.edit_note_rounded : Icons.chevron_right_rounded,
+                    active
+                        ? Icons.edit_note_rounded
+                        : Icons.chevron_right_rounded,
                     color: active ? accent : AuthorStyle.secondary_text(dark),
                     size: 22,
                   ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 目录底部按钮：键盘弹出时整体下滑消失，收起时上滑复位。
+///
+/// 内部使用 [TweenAnimationBuilder] 驱动位移与裁剪，外层
+/// [EditorKeyboardLayout] 的 [SizeTransition] 负责回收布局高度。
+class _DirectoryFooter extends StatelessWidget {
+  const _DirectoryFooter({
+    required this.is_dark,
+    required this.ordering,
+    required this.has_chapters,
+    required this.query_empty,
+    required this.on_reorder_toggle,
+    required this.on_new_chapter,
+  });
+
+  final bool is_dark;
+  final bool ordering;
+  final bool has_chapters;
+  final bool query_empty;
+  final VoidCallback on_reorder_toggle;
+  final VoidCallback on_new_chapter;
+
+  /// 滑出距离（逻辑像素）。
+  static const double _slide_offset = 60.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = AuthorStyle.primary_text(is_dark);
+    final accent = is_dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
+    final keyboard_visible = MediaQuery.viewInsetsOf(context).bottom > 0;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: keyboard_visible ? 1.0 : 0.0),
+      duration: WorkEditorStyle.keyboard_chrome_duration,
+      curve: WorkEditorStyle.keyboard_chrome_curve,
+      builder: (context, value, child) {
+        return ClipRect(
+          child: Align(
+            alignment: Alignment.topCenter,
+            heightFactor: value < 1.0 ? 1.0 : 0.0,
+            child: Transform.translate(
+              offset: Offset(0, value * _slide_offset),
+              child: Opacity(
+                opacity: 1.0 - value,
+                child: child,
+              ),
+            ),
+          ),
+        );
+      },
+      child: SafeArea(
+        top: false,
+        maintainBottomViewPadding: true,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: query_empty && has_chapters
+                      ? on_reorder_toggle
+                      : null,
+                  icon: Icon(
+                    ordering
+                        ? Icons.check_rounded
+                        : Icons.swap_vert_rounded,
+                    size: 18,
+                  ),
+                  label: Text(
+                    ordering
+                        ? easy.tr('creator_center.reorder_done')
+                        : easy.tr('creator_center.reorder'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: text,
+                    side: BorderSide(color: AuthorStyle.border(is_dark)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: on_new_chapter,
+                  icon: SvgIcon(
+                    name: 'add',
+                    width: 19,
+                    height: 19,
+                    color: is_dark ? const Color(0xFF1A1A18) : Colors.white,
+                  ),
+                  label: Text(
+                    easy.tr('creator_center.new_chapter'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: is_dark
+                        ? const Color(0xFF1A1A18)
+                        : Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

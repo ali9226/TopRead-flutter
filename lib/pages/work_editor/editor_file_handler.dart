@@ -10,6 +10,7 @@ import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/chapter_editor/index.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
+import 'package:app/pages/work_editor/widgets/steps/step_publish/widgets/schedule_time/picker.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/upload_file.dart';
@@ -94,7 +95,7 @@ mixin WorkEditorFileMixin {
       showBottomTip(easy.tr('creator_center.file_upload_success'));
     } catch (e) {
       if (!mounted) return;
-      showBottomTip('文件读取失败，请重试');
+      showBottomTip(easy.tr('creator_center.file_read_failed'));
     }
   }
 
@@ -141,7 +142,7 @@ mixin WorkEditorFileMixin {
       showBottomTip(easy.tr('creator_center.file_upload_success'));
     } catch (e) {
       if (!mounted) return;
-      showBottomTip('文件读取失败，请重试');
+      showBottomTip(easy.tr('creator_center.file_read_failed'));
     }
   }
 
@@ -176,12 +177,12 @@ mixin WorkEditorFileMixin {
           cover_local_path = null;
         });
       } else {
-        showBottomTip('封面上传失败，请重试');
+        showBottomTip(easy.tr('creator_center.cover_upload_failed'));
         notifyStateChanged(() => cover_local_path = null);
       }
     } catch (_) {
       if (mounted) {
-        showBottomTip('封面上传失败，请重试');
+        showBottomTip(easy.tr('creator_center.cover_upload_failed'));
         notifyStateChanged(() => cover_local_path = null);
       }
     } finally {
@@ -271,76 +272,16 @@ mixin WorkEditorFileMixin {
     required DateTime? scheduled_publish_time,
     required void Function(DateTime?) on_time_selected,
   }) async {
-    final DateTime now = DateTime.now();
-    final DateTime initial_time =
-        scheduled_publish_time != null && scheduled_publish_time.isAfter(now)
-        ? scheduled_publish_time
-        : now.add(const Duration(days: 1));
     final bool is_dark = device_info.dark.value;
 
-    // 第一步：选择日期。
-    final DateTime? picked_date = await showDatePicker(
+    final DateTime? result = await show_schedule_time_picker(
       context: context,
-      initialDate: initial_time,
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365)),
-      builder: (BuildContext childContext, Widget? child) {
-        return Theme(
-          data: Theme.of(childContext).copyWith(
-            colorScheme: is_dark
-                ? ColorScheme.dark(
-                    primary: ColorConstants.themeColor,
-                    onPrimary: ColorConstants.lightTextColor,
-                    surface: const Color(0xFF1E1E2E),
-                    onSurface: Colors.white,
-                  )
-                : ColorScheme.light(
-                    primary: ColorConstants.themeColor,
-                    onPrimary: ColorConstants.lightTextColor,
-                  ),
-          ),
-          child: child!,
-        );
-      },
+      is_dark: is_dark,
+      initial_time: scheduled_publish_time,
     );
-    if (picked_date == null) return;
 
-    // 第二步：选择时间。
-    final TimeOfDay initial_time_of_day = TimeOfDay(
-      hour: initial_time.hour,
-      minute: initial_time.minute,
-    );
-    final TimeOfDay? picked_time = await showTimePicker(
-      context: context,
-      initialTime: initial_time_of_day,
-      builder: (BuildContext childContext, Widget? child) {
-        return Theme(
-          data: Theme.of(childContext).copyWith(
-            colorScheme: is_dark
-                ? ColorScheme.dark(
-                    primary: ColorConstants.themeColor,
-                    onPrimary: ColorConstants.lightTextColor,
-                    surface: const Color(0xFF1E1E2E),
-                    onSurface: Colors.white,
-                  )
-                : ColorScheme.light(
-                    primary: ColorConstants.themeColor,
-                    onPrimary: ColorConstants.lightTextColor,
-                  ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked_time == null) return;
-
-    final DateTime result = DateTime(
-      picked_date.year,
-      picked_date.month,
-      picked_date.day,
-      picked_time.hour,
-      picked_time.minute,
-    );
-    on_time_selected(result);
+    if (result != null) {
+      on_time_selected(result);
+    }
   }
 }
