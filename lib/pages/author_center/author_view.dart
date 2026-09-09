@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'package:app/config/color_config.dart';
+import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/logic.dart';
 import 'package:app/pages/author_center/creator_tab_state.dart';
@@ -854,59 +855,78 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext ctx) {
-        return SafeArea(
-          top: false,
-          child: Container(
-            margin: const EdgeInsets.all(12),
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
-            decoration: BoxDecoration(
-              color: AuthorStyle.surface(is_dark),
-              borderRadius: BorderRadius.circular(AuthorStyle.section_radius),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Center(
-                  child: Container(
-                    width: 46,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: AuthorStyle.border(is_dark),
-                      borderRadius: BorderRadius.circular(999),
+        return Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: AuthorStyle.surface(is_dark),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AuthorStyle.border(is_dark),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        easy.tr('creator_center.creator_guide'),
+                        style: TextStyle(
+                          color: AuthorStyle.primary_text(is_dark),
+                          fontSize: 19,
+                          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                        ),
+                      ),
                     ),
-                  ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: AuthorStyle.secondary_text(is_dark),
+                        size: 22,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 18),
-                Text(
-                  easy.tr('creator_center.creator_guide'),
-                  style: TextStyle(
-                    color: AuthorStyle.primary_text(is_dark),
-                    fontSize: 19,
-                    fontWeight: AuthorStyle.title_weight,
-                  ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+                child: Column(
+                  children: [
+                    _guide_item(
+                      is_dark,
+                      0,
+                      Icons.cloud_done_outlined,
+                      easy.tr('creator_center.guide_draft_title'),
+                      easy.tr('creator_center.guide_draft_desc'),
+                    ),
+                    _guide_item(
+                      is_dark,
+                      1,
+                      Icons.fact_check_outlined,
+                      easy.tr('creator_center.guide_review_title'),
+                      easy.tr('creator_center.guide_review_desc'),
+                    ),
+                    _guide_item(
+                      is_dark,
+                      2,
+                      Icons.schedule_rounded,
+                      easy.tr('creator_center.guide_schedule_title'),
+                      easy.tr('creator_center.guide_schedule_desc'),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                _guide_item(
-                  is_dark,
-                  Icons.cloud_done_outlined,
-                  easy.tr('creator_center.guide_draft_title'),
-                  easy.tr('creator_center.guide_draft_desc'),
-                ),
-                _guide_item(
-                  is_dark,
-                  Icons.fact_check_outlined,
-                  easy.tr('creator_center.guide_review_title'),
-                  easy.tr('creator_center.guide_review_desc'),
-                ),
-                _guide_item(
-                  is_dark,
-                  Icons.schedule_rounded,
-                  easy.tr('creator_center.guide_schedule_title'),
-                  easy.tr('creator_center.guide_schedule_desc'),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -915,10 +935,13 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
 
   Widget _guide_item(
     bool is_dark,
+    int index,
     IconData icon,
     String title,
     String subtitle,
   ) {
+    final Color tag_color = ColorConstants.tagColorList[index % ColorConstants.tagColorList.length];
+    final Color tag_bg = tag_color.withValues(alpha: 0.12);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -928,13 +951,13 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AuthorStyle.gold.withValues(alpha: 0.10),
+              color: tag_bg,
               borderRadius: BorderRadius.circular(12),
             ),
             alignment: Alignment.center,
             child: Icon(
               icon,
-              color: is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
+              color: tag_color,
               size: 20,
             ),
           ),
@@ -948,7 +971,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                   style: TextStyle(
                     color: AuthorStyle.primary_text(is_dark),
                     fontSize: 14,
-                    fontWeight: AuthorStyle.emphasis_weight,
+                    fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                   ),
                 ),
                 const SizedBox(height: 4),

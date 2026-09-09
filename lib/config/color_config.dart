@@ -57,8 +57,8 @@ class ColorConstants {
   static final List<Color> tagColorList = <Color>[
     const Color(0xFF5C9DFF), // 活力蓝
     const Color(0xFFFF7A59), // 珊瑚橙
-    const Color(0xFFFFB020), // 琥珀黄
     const Color(0xFF4CBF8A), // 翡翠绿
+    const Color(0xFFFFB020), // 琥珀黄
     const Color(0xFFE85D75), // 玫瑰红
   ];
 
