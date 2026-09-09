@@ -64,7 +64,7 @@ class CreatorEmptyState extends StatelessWidget {
             FilledButton.icon(
               onPressed: on_create_work,
               icon: const Icon(Icons.add_rounded, size: 18),
-              label: Text(is_cjk ? '开始创作' : 'Start writing'),
+              label: Text(easy.tr('creator_center.start_writing')),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(120, 40),
                 padding: const EdgeInsets.symmetric(
@@ -91,23 +91,14 @@ class CreatorEmptyState extends StatelessWidget {
   }
 
   String get _title => switch (tab_index) {
-    0 => is_cjk ? '还没有已发布的作品' : 'Your stories belong here',
-    1 => is_cjk ? '暂无待审核作品' : 'Nothing in review',
+    0 => easy.tr('creator_center.empty_published_title'),
+    1 => easy.tr('creator_center.empty_reviewing_title'),
     _ => easy.tr('creator_center.empty_my_drafts'),
   };
 
   String get _subtitle => switch (tab_index) {
-    0 =>
-      is_cjk
-          ? '作品通过审核并发布后，就会在这里与读者见面。'
-          : 'Your published stories will appear here, ready for readers.',
-    1 =>
-      is_cjk
-          ? '草稿提交审核后，可在这里查看作品的审核状态。'
-          : 'Submit a draft to follow its review status here.',
-    _ =>
-      is_cjk
-          ? '随时保存每一次灵感，多份草稿都能安心续写。'
-          : 'Save your ideas as drafts and pick up wherever you left off.',
+    0 => easy.tr('creator_center.empty_published_subtitle'),
+    1 => easy.tr('creator_center.empty_reviewing_subtitle'),
+    _ => easy.tr('creator_center.empty_my_drafts_hint'),
   };
 }

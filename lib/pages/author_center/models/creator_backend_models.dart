@@ -1,5 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:easy_localization/easy_localization.dart';
+
 /// 后端返回的作品数据模型
 class CreatorWorkModel {
   /// 作品ID
@@ -77,6 +79,9 @@ class CreatorWorkModel {
   /// 待审核的审核单
   final Map<String, dynamic>? pending_submission;
 
+  /// 定时发布时间
+  final String? scheduled_publish_time;
+
   CreatorWorkModel({
     required this.id,
     required this.title,
@@ -103,6 +108,7 @@ class CreatorWorkModel {
     this.draft_revision_id,
     this.draft_status,
     this.pending_submission,
+    this.scheduled_publish_time,
   });
 
   /// 从JSON解析
@@ -133,6 +139,7 @@ class CreatorWorkModel {
       draft_revision_id: _parseIntNullable(json['draft_revision_id']),
       draft_status: _parseIntNullable(json['draft_status']),
       pending_submission: json['pending_submission'],
+      scheduled_publish_time: json['scheduled_publish_time'],
     );
   }
 
@@ -181,23 +188,34 @@ class CreatorWorkModel {
   /// 是否已下架
   bool get is_off_shelf => public_status == 3 || public_status == 4;
 
+  /// 是否待发布（已审核通过但未公开，等待定时发布）
+  bool get is_pending_publish =>
+      is_approved && public_status == 1 && scheduled_publish_time != null;
+
+  /// 获取定时发布时间
+  DateTime? get scheduled_publish_datetime {
+    if (scheduled_publish_time == null) return null;
+    return DateTime.tryParse(scheduled_publish_time!)?.toLocal();
+  }
+
   /// 获取状态文本
   String get status_text {
-    if (is_draft) return '草稿';
-    if (is_reviewing) return '待审核';
-    if (is_rejected) return '已驳回';
-    if (is_off_shelf) return '已下架';
-    if (is_published) return '已发布';
-    if (is_approved) return '已通过';
-    return '未发布';
+    if (is_draft) return tr('creator_center.status_draft');
+    if (is_reviewing) return tr('creator_center.status_reviewing');
+    if (is_rejected) return tr('creator_center.status_rejected');
+    if (is_off_shelf) return tr('creator_center.status_off_shelf');
+    if (is_pending_publish) return tr('creator_center.pending_publish');
+    if (is_published) return tr('creator_center.status_published');
+    if (is_approved) return tr('creator_center.status_approved');
+    return tr('creator_center.status_unpublished');
   }
 
   /// 获取作品类型文本
-  String get work_type_text => is_long_novel ? '长篇' : '短篇';
+  String get work_type_text => is_long_novel ? tr('creator_center.work_type_long') : tr('creator_center.work_type_short');
 
   /// 获取连载状态文本
   String get serialization_status_text =>
-      serialization_status == 1 ? '连载中' : '已完结';
+      serialization_status == 1 ? tr('creator_center.serialization_ongoing') : tr('creator_center.serialization_completed');
 
   static int _parseInt(dynamic value) => _parseIntNullable(value) ?? 0;
 
@@ -296,11 +314,11 @@ class CreatorChapterModel {
 
   /// 获取状态文本
   String get status_text {
-    if (is_draft) return '草稿';
-    if (is_reviewing) return '审核中';
-    if (is_published) return '已发布';
-    if (is_rejected) return '已驳回';
-    return '未知';
+    if (is_draft) return tr('creator_center.chapter_status_draft');
+    if (is_reviewing) return tr('creator_center.chapter_status_reviewing');
+    if (is_published) return tr('creator_center.chapter_status_published');
+    if (is_rejected) return tr('creator_center.chapter_status_rejected');
+    return tr('creator_center.status_unknown');
   }
 
   static int _parseInt(dynamic value) => _parseIntNullable(value) ?? 0;
@@ -423,17 +441,17 @@ class CreatorSubmissionModel {
   String get status_text {
     switch (status) {
       case 1:
-        return '待审核';
+        return tr('creator_center.submission_status_pending');
       case 2:
-        return '审核中';
+        return tr('creator_center.submission_status_reviewing');
       case 3:
-        return '已通过';
+        return tr('creator_center.submission_status_approved');
       case 4:
-        return '已驳回';
+        return tr('creator_center.submission_status_rejected');
       case 5:
-        return '已撤回';
+        return tr('creator_center.submission_status_withdrawn');
       default:
-        return '未知';
+        return tr('creator_center.status_unknown');
     }
   }
 
@@ -441,17 +459,17 @@ class CreatorSubmissionModel {
   String get submission_type_text {
     switch (submission_type) {
       case 1:
-        return '首次投稿';
+        return tr('creator_center.submission_type_first');
       case 2:
-        return '资料更新';
+        return tr('creator_center.submission_type_update');
       case 3:
-        return '新增章节';
+        return tr('creator_center.submission_type_add_chapter');
       case 4:
-        return '章节修改';
+        return tr('creator_center.submission_type_edit_chapter');
       case 5:
-        return '章节删除';
+        return tr('creator_center.submission_type_delete_chapter');
       default:
-        return '未知';
+        return tr('creator_center.status_unknown');
     }
   }
 

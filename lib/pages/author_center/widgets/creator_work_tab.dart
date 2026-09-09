@@ -262,7 +262,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
     try {
       await widget.on_load_more!();
     } catch (_) {
-      if (mounted) _local_load_more_error = '加载更多失败，请重试';
+      if (mounted) _local_load_more_error = easy.tr('creator_center.load_more_failed');
     } finally {
       if (mounted) setState(() => _load_more_in_flight = false);
     }
@@ -729,7 +729,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
               foregroundColor: AuthorStyle.selected_tab_text(widget.is_dark),
             ),
             icon: const Icon(Icons.refresh_rounded, size: 17),
-            label: const Text('点击重试'),
+            label: Text(easy.tr('creator_center.reload')),
           ),
         ],
       ),

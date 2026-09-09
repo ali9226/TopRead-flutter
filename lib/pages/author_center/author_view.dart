@@ -128,7 +128,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     _tabs = [
       CreatorTabState(
         loadPage: (page) =>
-            CreatorLogic.getMyWorks(publicStatus: 2, page: page),
+            CreatorLogic.getMyWorks(includePendingPublish: true, page: page),
       ),
       CreatorTabState(
         loadPage: (page) =>
@@ -336,7 +336,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       await _reload_all();
     } catch (error) {
       _show_error(
-        error is CreatorDraftException ? error.message : '草稿读取失败，请刷新后重试',
+        error is CreatorDraftException ? error.message : easy.tr('creator_center.draft_load_failed'),
       );
       if (mounted) await _reload_all();
     } finally {
@@ -353,7 +353,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       final result = await CreatorLogic.getDraftList(page: 1, pageSize: 1);
       if (!mounted) return;
       if (result == null) {
-        _show_error('获取最近草稿失败，请稍后重试');
+        _show_error(easy.tr('creator_center.recent_draft_failed'));
         return;
       }
       final list = result['list'] as List? ?? [];
@@ -363,7 +363,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         return;
       }
       novelId = int.tryParse('${list.first['novel_id']}');
-      if (novelId == null) _show_error('草稿信息不完整，请刷新后重试');
+      if (novelId == null) _show_error(easy.tr('creator_center.draft_info_incomplete'));
     } finally {
       _opening_work = false;
     }
@@ -431,17 +431,17 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       final info = await CreatorLogic.getWorkInfo(work.id);
       if (!mounted) return;
       if (info == null) {
-        _show_error('审核信息加载失败，请稍后重试');
+        _show_error(easy.tr('creator_center.review_info_load_failed'));
         return;
       }
       final submissions = info['recent_submissions'] as List? ?? [];
       final latest = submissions.isEmpty ? null : submissions.first as Map;
       final status = int.tryParse('${latest?['status']}');
       final statusText = switch (status) {
-        3 => '审核已通过',
-        4 => '审核未通过',
-        5 => '审核已撤回',
-        _ => '作品待审核',
+        3 => easy.tr('creator_center.review_approved'),
+        4 => easy.tr('creator_center.review_rejected'),
+        5 => easy.tr('creator_center.review_withdrawn'),
+        _ => easy.tr('creator_center.review_pending'),
       };
       final isDark = _device_info.dark.value;
       await showModalBottomSheet<void>(
@@ -463,7 +463,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  work.title.isEmpty ? '未命名作品' : work.title,
+                  work.title.isEmpty ? easy.tr('creator_center.unnamed_work') : work.title,
                   style: TextStyle(
                     fontSize: 20,
                     color: AuthorStyle.primary_text(isDark),

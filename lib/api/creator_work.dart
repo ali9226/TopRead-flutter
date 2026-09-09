@@ -41,6 +41,7 @@ class CreatorWorkApi {
     int? initialAuditStatus,
     int? serializationStatus,
     String? keyword,
+    bool includePendingPublish = false,
     int page = 1,
     int pageSize = 20,
   }) {
@@ -54,6 +55,7 @@ class CreatorWorkApi {
         if (serializationStatus != null)
           'serialization_status': serializationStatus,
         if (keyword != null && keyword.isNotEmpty) 'keyword': keyword,
+        if (includePendingPublish) 'include_pending_publish': true,
         'page': page,
         'page_size': pageSize,
       },

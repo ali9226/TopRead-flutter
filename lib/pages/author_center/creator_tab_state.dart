@@ -46,7 +46,7 @@ class CreatorTabState extends ChangeNotifier {
       final result = await loadPage(nextPage);
       if (_disposed || generation != _generation) return;
       if (result == null || result['list'] is! List) {
-        throw const FormatException('作品列表加载失败');
+        throw FormatException(tr('creator_center.works_load_failed'));
       }
       final incoming = (result['list'] as List).map((item) {
         final json = Map<String, dynamic>.from(item as Map);

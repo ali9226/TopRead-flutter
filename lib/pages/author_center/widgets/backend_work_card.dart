@@ -32,7 +32,7 @@ class BackendWorkCard extends StatelessWidget {
   });
 
   String get _title => work.title.trim().isEmpty
-      ? (is_cjk ? '未命名作品' : 'Untitled work')
+      ? easy.tr('creator_center.unnamed_work')
       : work.title.trim();
 
   @override
@@ -207,6 +207,8 @@ class BackendWorkCard extends StatelessWidget {
               ),
           ],
         ),
+        // 待发布倒计时
+        if (_build_countdown() != null) _build_countdown()!,
         if (work.is_published) ...[
           const SizedBox(height: 8),
           Wrap(
@@ -289,22 +291,50 @@ class BackendWorkCard extends StatelessWidget {
 
   String _build_meta_text() {
     final List<String> parts = <String>[
-      is_cjk ? '${work.word_count}字' : '${work.word_count} words',
+      easy.tr('creator_center.chapter_editor_word_count', namedArgs: {'count': '${work.word_count}'}),
       if (work.is_long_novel)
-        is_cjk ? '${work.chapter_count}章' : '${work.chapter_count} ch',
+        easy.tr('creator_center.work_detail_chapter_count', namedArgs: {'count': '${work.chapter_count}'}),
       _updated_time,
     ];
     return parts.join(' · ');
   }
 
+  /// 构建倒计时组件
+  Widget? _build_countdown() {
+    final countdown = _countdown_text;
+    if (countdown == null) return null;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AuthorStyle.gold.withValues(alpha: is_dark ? 0.15 : 0.10),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.schedule_rounded,
+            size: 14,
+            color: is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '${easy.tr("creator_center.publish_countdown")} $countdown',
+            style: TextStyle(
+              fontSize: is_cjk ? 12 : 11,
+              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+              color: is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String get _status_label {
-    if (is_cjk) return work.is_reviewing ? '待审核' : work.status_text;
-    if (work.is_draft) return 'Draft';
-    if (work.is_reviewing) return 'In review';
-    if (work.is_rejected) return 'Rejected';
-    if (work.is_off_shelf) return 'Unlisted';
-    if (work.is_published) return 'Published';
-    return 'Unpublished';
+    return work.status_text;
   }
 
   String get _updated_time {
@@ -318,7 +348,34 @@ class BackendWorkCard extends StatelessWidget {
           orElse: () => '',
         );
     final DateTime? time = DateTime.tryParse(value);
-    if (time == null) return is_cjk ? '暂无记录' : 'Unknown';
+    if (time == null) return easy.tr('creator_center.status_unknown');
     return DateFormat('yyyy-MM-dd HH:mm').format(time.toLocal());
+  }
+
+  /// 获取倒计时文本
+  String? get _countdown_text {
+    if (!work.is_pending_publish) return null;
+    final publishTime = work.scheduled_publish_datetime;
+    if (publishTime == null) return null;
+
+    final now = DateTime.now();
+    if (publishTime.isBefore(now)) return null;
+
+    final diff = publishTime.difference(now);
+    final days = diff.inDays;
+    final hours = diff.inHours % 24;
+    final minutes = diff.inMinutes % 60;
+    final seconds = diff.inSeconds % 60;
+
+    if (days > 0) {
+      return easy.tr('creator_center.publish_countdown_days',
+          namedArgs: {'days': '$days', 'hours': '$hours', 'minutes': '$minutes'});
+    } else if (hours > 0) {
+      return easy.tr('creator_center.publish_countdown_hours',
+          namedArgs: {'hours': '$hours', 'minutes': '$minutes'});
+    } else {
+      return easy.tr('creator_center.publish_countdown_minutes',
+          namedArgs: {'minutes': '$minutes', 'seconds': '$seconds'});
+    }
   }
 }

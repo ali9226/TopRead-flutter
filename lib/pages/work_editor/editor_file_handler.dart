@@ -8,7 +8,7 @@ import 'package:app/components/image_source_sheet/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
-import 'package:app/pages/author_center/chapter_editor/index.dart';
+import 'package:app/pages/work_editor/chapter_editor/index.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/work_editor/widgets/steps/step_publish/widgets/schedule_time/picker.dart';
 import 'package:app/stores/device_info.dart';
