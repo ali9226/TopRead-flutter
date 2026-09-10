@@ -25,6 +25,8 @@ import 'package:app/pages/about_topread/index.dart';
 import 'package:app/pages/debug/index.dart';
 import 'package:app/pages/author_apply/index.dart';
 import 'package:app/pages/author_center/index.dart';
+import 'package:app/pages/author_center/editor_route.dart';
+import 'package:app/pages/work_editor/published_long_novel_editor/index.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/work_editor/index.dart';
 import 'package:app/stores/device_info.dart';
@@ -268,6 +270,31 @@ class RouteConfig {
           name: 'author_center',
           pageBuilder: (context, state) =>
               buildRoutePage(state: state, child: const AuthorCenterPage()),
+        ),
+        // TODO 长短篇独立路由，短篇新增和编辑仅通过 id 区分。
+        for (final entry in <String, CreatorWorkType>{
+          'short_novel_editor': CreatorWorkType.short,
+          'long_novel_editor': CreatorWorkType.long,
+        }.entries)
+          GoRoute(
+            path: '/${entry.key}',
+            name: entry.key,
+            pageBuilder: (context, state) => buildRoutePage(
+              state: state,
+              child: CreatorEditorRoute(
+                work_type: entry.value,
+                novel_id: int.tryParse(state.uri.queryParameters['id'] ?? ''),
+                initial_work: state.extra is CreatorWorkDraft ? state.extra as CreatorWorkDraft : null,
+              ),
+            ),
+          ),
+        GoRoute(
+          path: '/published_long_novel/:id',
+          name: 'published_long_novel_editor',
+          pageBuilder: (context, state) => buildRoutePage(
+            state: state,
+            child: PublishedLongNovelEditorPage(novel_id: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+          ),
         ),
         GoRoute(
           path: '/work_editor',

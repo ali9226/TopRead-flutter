@@ -513,9 +513,9 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
       case 0:
         return 'creator_center.list_title_published';
       case 1:
-        return 'creator_center.list_title_reviewing';
+        return 'creator_center.filter_long_unpublished';
       default:
-        return 'creator_center.list_title_draft';
+        return 'creator_center.filter_short_unpublished';
     }
   }
 
@@ -689,11 +689,11 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
         ),
       );
     }
-    final bool is_draft_tab = widget.tab_index == 2;
+    final bool is_draft_tab = widget.tab_index != 0;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Text(
-        easy.tr(is_draft_tab ? 'creator_center.all_drafts_shown' : 'creator_center.all_works_shown'),
+        easy.tr(is_draft_tab ? 'creator_center.all_unpublished_shown' : 'creator_center.all_works_shown'),
         textAlign: TextAlign.center,
         style: TextStyle(
           color: AuthorStyle.secondary_text(widget.is_dark),

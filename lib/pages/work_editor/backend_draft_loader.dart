@@ -9,22 +9,28 @@ import 'package:get/get.dart';
 import 'draft_persistence.dart';
 
 /// 列表仅用于选作品；进入编辑器前必须读取完整草稿与章节正文。
-Future<CreatorWorkDraft> loadCreatorWorkDraft(int novelId) async {
+Future<CreatorWorkDraft> loadCreatorWorkDraft(
+  int novelId, {
+  bool includeChapters = true,
+}) async {
   try {
-    // 既有草稿直接复用；已发布作品先建立工作副本，再读取一次完整正文。
-    final started = await CreatorWorkApi.beginEdit(novelId: novelId);
-    if (!started.status) {
-      throw CreatorDraftException(
-        creatorDraftErrorMessage(started.message, tr('creator_center.cannot_start_edit')),
-      );
-    }
-    final result = await CreatorWorkApi.getInfo(novelId: novelId);
+    // TODO 打开页面只读取当前编辑快照；不能为已发布或已排期作品隐式创建草稿。
+    final result = await CreatorWorkApi.getInfo(
+      novelId: novelId,
+      includeChapters: includeChapters,
+    );
     if (!result.status || result.content == null) {
       throw CreatorDraftException(
-        creatorDraftErrorMessage(result.message, tr('creator_center.fetch_draft_failed')),
+        creatorDraftErrorMessage(
+          result.message,
+          tr('creator_center.fetch_draft_failed'),
+        ),
       );
     }
-    return creatorWorkDraftFromBackend(result.content!);
+    return creatorWorkDraftFromBackend(
+      result.content!,
+      includeChapters: includeChapters,
+    );
   } on CreatorDraftException {
     rethrow;
   } catch (_) {
@@ -32,15 +38,44 @@ Future<CreatorWorkDraft> loadCreatorWorkDraft(int novelId) async {
   }
 }
 
-CreatorWorkDraft creatorWorkDraftFromBackend(Map<String, dynamic> data) {
-  final draft = _map(data['draft']);
+CreatorWorkDraft creatorWorkDraftFromBackend(
+  Map<String, dynamic> data, {
+  bool includeChapters = true,
+}) {
   final novel = _map(data['novel']);
+  final draft = _map(
+    data['editor'] ??
+        data['draft'] ??
+        data['scheduled_revision'] ??
+        data['published'],
+  );
   final novelId = _parseIntNullable(draft['novel_id'] ?? novel['id']);
   final revisionId = _parseIntNullable(draft['id'] ?? draft['revision_id']);
+  final revisionStatus = _parseIntNullable(draft['revision_status']) ?? 1;
+  final publicStatus = _parseIntNullable(novel['public_status']);
+  final hasPublished =
+      data['is_published'] == true ||
+      (publicStatus != null && publicStatus != 1) ||
+      novel['first_publish_time'] != null ||
+      _parseIntNullable(novel['published_revision_id']) != null;
+  final pending = _map(data['pending_submission']);
+  final isScheduled =
+      !hasPublished &&
+      (data['is_scheduled'] == true ||
+          (data['is_scheduled'] == null &&
+              _parseIntNullable(pending['status']) == 3 &&
+              _parseIntNullable(pending['release_mode']) == 2 &&
+              pending['scheduled_publish_time'] != null &&
+              (_parseIntNullable(pending['workflow_version']) == 2
+                  ? [
+                      2,
+                      5,
+                    ].contains(_parseIntNullable(pending['release_status']))
+                  : _parseIntNullable(pending['release_status']) == 1)));
   if (draft.isEmpty ||
       novelId == null ||
-      revisionId == null ||
-      (_parseIntNullable(draft['revision_status']) ?? 1) != 1) {
+      (!hasPublished && revisionId == null) ||
+      ![1, 2, 3, 4].contains(revisionStatus)) {
     throw CreatorDraftException(tr('creator_center.no_editable_draft'));
   }
   final workType =
@@ -78,20 +113,24 @@ CreatorWorkDraft creatorWorkDraftFromBackend(Map<String, dynamic> data) {
   // ID 仍保存在模型中；缺少语种配置时不会以界面语种覆盖原始语种。
   if (languageCode.isEmpty) languageCode = 'zh';
   final chapters = <CreatorChapterDraft>[];
-  if (workType == CreatorWorkType.long) {
-    if (data['chapters'] is! List) {
+  if (workType == CreatorWorkType.long && includeChapters) {
+    if (data['chapters'] is! List || data['chapters_loaded'] == false) {
       throw CreatorDraftException(tr('creator_center.chapter_data_incomplete'));
     }
     for (final raw in _list(data['chapters'])) {
       final chapter = _map(raw);
       final content = chapter['content'];
       if (content is! String) {
-        throw CreatorDraftException(tr('creator_center.chapter_content_not_loaded'));
+        throw CreatorDraftException(
+          tr('creator_center.chapter_content_not_loaded'),
+        );
       }
       final localId = (chapter['local_id'] ?? chapter['chapter_uid'] ?? '')
           .toString();
       if (localId.isEmpty) {
-        throw CreatorDraftException(tr('creator_center.chapter_info_incomplete'));
+        throw CreatorDraftException(
+          tr('creator_center.chapter_info_incomplete'),
+        );
       }
       chapters.add(
         CreatorChapterDraft(
@@ -125,13 +164,19 @@ CreatorWorkDraft creatorWorkDraftFromBackend(Map<String, dynamic> data) {
               .toString()
         : '',
     chapters: chapters,
-    status: _parseIntNullable(novel['public_status']) == 2
+    status: hasPublished
         ? CreatorWorkStatus.published
+        : isScheduled
+        ? CreatorWorkStatus.scheduled
         : CreatorWorkStatus.draft,
-    release_mode: _parseIntNullable(draft['release_mode']) == 2
+    release_mode: isScheduled || _parseIntNullable(draft['release_mode']) == 2
         ? CreatorReleaseMode.scheduled
         : CreatorReleaseMode.immediate,
-    scheduled_publish_time: _date(draft['scheduled_publish_time']),
+    scheduled_publish_time: _date(
+      data['scheduled_publish_time'] ??
+          draft['scheduled_publish_time'] ??
+          pending['scheduled_publish_time'],
+    ),
     update_time:
         _date(draft['update_time']) ?? DateTime.fromMillisecondsSinceEpoch(0),
     cover_url: draft['cover_url']?.toString(),
@@ -140,6 +185,7 @@ CreatorWorkDraft creatorWorkDraftFromBackend(Map<String, dynamic> data) {
     rights_confirmed:
         draft['rights_confirmed'] == true ||
         _parseIntNullable(draft['rights_confirmed']) == 1,
+    lastEditedChapterIndex: preferences['_lastChapter']?.firstOrNull ?? 0,
     chapter_title: workType == CreatorWorkType.long
         ? draft['temp_chapter_title']?.toString() ?? ''
         : '',

@@ -84,6 +84,7 @@ class CreatorLogic {
     int? serializationStatus,
     String? keyword,
     bool includePendingPublish = false,
+    bool unpublishedOnly = false,
     int page = 1,
     int pageSize = 20,
   }) async {
@@ -95,6 +96,7 @@ class CreatorLogic {
         serializationStatus: serializationStatus,
         keyword: keyword,
         includePendingPublish: includePendingPublish,
+        unpublishedOnly: unpublishedOnly,
         page: page,
         pageSize: pageSize,
       );

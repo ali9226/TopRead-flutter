@@ -50,6 +50,24 @@ class WorkEditorStyle {
   /// TODO 底部操作栏最小高度。
   static const double bottom_bar_min_height = 78;
 
+  /// 共用编辑按钮保留原有视觉参数，集中维护两种篇幅的布局。
+  static const double bottom_bar_horizontal_padding = 16;
+  static const double bottom_bar_vertical_padding = 11;
+  static const double action_height = 52;
+  static const double action_radius = 16;
+  static const double action_spacing = 12;
+  static const double action_font_size_cjk = 14;
+  static const double action_font_size_alphabetic = 12.5;
+  static const Color action_foreground = Color(0xFF1A1A18);
+  static const double save_button_radius = 6;
+  static const double save_button_font_size = 12;
+  static const EdgeInsets save_button_padding = EdgeInsets.symmetric(
+    horizontal: 10,
+    vertical: 6,
+  );
+  static const Duration step_animation_duration = Duration(milliseconds: 260);
+  static const double publish_sheet_height_factor = .8;
+
   /// 工具栏随焦点立即开始过渡；键盘位移使用系统逐帧尺寸，不叠加缓动。
   static const Duration keyboard_chrome_duration = Duration(milliseconds: 220);
   static const Curve keyboard_chrome_curve = Curves.easeInOutCubic;
@@ -71,6 +89,10 @@ class WorkEditorStyle {
 
   /// TODO 步骤指示器圆圈固定高度（最大圆直径）。
   static const double step_indicator_height = 30;
+  // TODO 圆点切换只在固定占位内缩放。
+  static const Duration step_indicator_animation_duration = Duration(
+    milliseconds: 220,
+  );
 
   /// TODO 步骤指示器最大圆直径。
   static const double step_circle_size_large = 30;

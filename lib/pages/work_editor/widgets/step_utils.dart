@@ -1,7 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/config/color_config.dart';
-import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/work_editor/style.dart';
 import 'package:app/util/language_util/index.dart';
@@ -38,12 +37,11 @@ class StepUtils {
   }
 
   /// 输入框文字样式。
-  /// 输入框文字样式。
   static TextStyle input_text_style(bool is_dark) {
     return TextStyle(
       color: AuthorStyle.primary_text(is_dark),
       fontSize: 15,
-      fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+      fontWeight: FontWeight.w400,
     );
   }
 
@@ -58,7 +56,7 @@ class StepUtils {
       ),
       filled: true,
       fillColor: AuthorStyle.secondary_surface(is_dark),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: AuthorStyle.border(is_dark)),
@@ -72,30 +70,23 @@ class StepUtils {
   }
 
   /// 构建步骤内统一的滚动容器。
-  ///
-  /// 点击空白区域自动取消焦点，收起输入法。
   static Widget build_step_scroll_view({
     required BuildContext context,
     required List<Widget> children,
   }) {
-    final bottom_safe = MediaQuery.paddingOf(context).bottom;
-    return GestureDetector(
-      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-      behavior: HitTestBehavior.translucent,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          WorkEditorStyle.page_padding,
-          WorkEditorStyle.section_spacing,
-          WorkEditorStyle.page_padding,
-          // 键盘高度由页面布局统一处理，滚动内容只保留正常间距与安全区。
-          WorkEditorStyle.section_spacing + bottom_safe,
-        ),
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        WorkEditorStyle.page_padding,
+        WorkEditorStyle.section_spacing,
+        WorkEditorStyle.page_padding,
+        WorkEditorStyle.section_spacing + MediaQuery.paddingOf(context).bottom,
+      ),
+      child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(
             maxWidth: WorkEditorStyle.content_max_width,
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: children
                 .expand(
                   (Widget child) => <Widget>[

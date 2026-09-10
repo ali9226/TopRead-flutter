@@ -4,6 +4,42 @@ import 'package:app/pages/work_editor/draft_persistence.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('旧审核修订状态2不能覆盖服务端未定时标记，仍可保存草稿', () {
+    final data = _data();
+    data['is_scheduled'] = false;
+    (data['draft'] as Map)['revision_status'] = 2;
+    final work = creatorWorkDraftFromBackend(data);
+    expect(work.status, CreatorWorkStatus.draft);
+    expect(work.can_save_draft, isTrue);
+  });
+
+  test('旧审核状态不带定时批次时不能推断为定时发布', () {
+    final data = _data();
+    (data['draft'] as Map)['revision_status'] = 2;
+    data['pending_submission'] = {'status': 1, 'release_status': 2};
+    expect(creatorWorkDraftFromBackend(data).status, CreatorWorkStatus.draft);
+  });
+  test('历史已发布作品没有修订指针时仍可编辑，不伪造修订编号', () {
+    final data = _data();
+    (data['novel'] as Map)['public_status'] = 3;
+    (data['draft'] as Map)['id'] = null;
+    (data['draft'] as Map)['revision_status'] = 3;
+    final work = creatorWorkDraftFromBackend(data);
+    expect(work.status, CreatorWorkStatus.published);
+    expect(work.revision_id, isNull);
+    expect(work.can_save_draft, isFalse);
+  });
+
+  test('定时发布预览使用发布批次时间并禁止草稿保存', () {
+    final data = _data();
+    data['is_scheduled'] = true;
+    data['scheduled_publish_time'] = '2099-01-01T01:00:00Z';
+    (data['draft'] as Map)['revision_status'] = 2;
+    final work = creatorWorkDraftFromBackend(data);
+    expect(work.status, CreatorWorkStatus.scheduled);
+    expect(work.scheduled_publish_time, DateTime.utc(2099, 1, 1, 1));
+    expect(work.can_save_draft, isFalse);
+  });
   test('恢复短篇正文、数字字符串 ID、封面、偏好和步骤', () {
     final work = creatorWorkDraftFromBackend(_data());
     expect(work.novel_id, 12);

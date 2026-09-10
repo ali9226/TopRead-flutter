@@ -8,6 +8,8 @@
  */
 class ResultsType<T> {
   bool status = false;
+  // TODO 服务端明确拒绝与网络结果不明分开，便于安全重试草稿保存。
+  bool serverRejected = false;
   T? content;
   String message = '';
   int? count;

@@ -298,6 +298,7 @@ class NovelChapterInfo {
   final String create_time;
   final String update_time;
   final int remove_status;
+  final String? published_revision_id;
 
   NovelChapterInfo({
     required this.id,
@@ -311,6 +312,7 @@ class NovelChapterInfo {
     required this.create_time,
     required this.update_time,
     required this.remove_status,
+    this.published_revision_id,
   });
 
   factory NovelChapterInfo.from_json(Map<String, dynamic> json) {
@@ -326,6 +328,7 @@ class NovelChapterInfo {
       create_time: json['create_time']?.toString() ?? '',
       update_time: json['update_time']?.toString() ?? '',
       remove_status: _parse_int(json['remove_status']),
+      published_revision_id: json['published_revision_id']?.toString(),
     );
   }
 

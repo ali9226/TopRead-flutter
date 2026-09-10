@@ -14,29 +14,33 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 
-/// TODO 步骤2：偏好选择。
+/// 步骤2：偏好选择。
 ///
 /// 布局结构（与兴趣偏好页面一致）：
 /// 1. 标题 + 副标题
 /// 2. 性别偏好（单选）
 /// 3. 状态（单选，原「完结偏好」）
-/// 4. 篇幅（单选，原「篇幅偏好」）
+/// 4. 篇幅（单选，原「篇幅偏好」）- 可选显示
 /// 5. 分类（多选，最多5个，原「内容偏好」）
 class StepCategory extends StatelessWidget {
-  /// TODO 是否夜间主题。
+  /// 是否夜间主题。
   final bool is_dark;
 
-  /// TODO 各偏好分类的选中项（key 为偏好类别 id，value 为已选选项 id 集合）。
+  /// 各偏好分类的选中项（key 为偏好类别 id，value 为已选选项 id 集合）。
   final Map<int, Set<int>> selected_preference_map;
 
-  /// TODO 偏好切换回调（参数：偏好类别 id、选项 id）。
+  /// 偏好切换回调（参数：偏好类别 id、选项 id）。
   final void Function(int preference_id, int item_id) on_toggle_preference;
+
+  /// 是否显示篇幅选择（默认 true，独立编辑器中设为 false）。
+  final bool showLength;
 
   const StepCategory({
     super.key,
     required this.is_dark,
     required this.selected_preference_map,
     required this.on_toggle_preference,
+    this.showLength = true,
   });
 
   @override
@@ -60,18 +64,25 @@ class StepCategory extends StatelessWidget {
     );
   }
 
-  /// TODO 构建所有偏好分类区块。
+  /// 构建所有偏好分类区块。
   List<Widget> _build_preference_sections(List<Preference> preferences) {
     if (preferences.isEmpty) return <Widget>[];
 
     final List<Widget> sections = <Widget>[];
+    int displayIndex = 0;
     for (int i = 0; i < preferences.length; i++) {
       final Preference pref = preferences[i];
+
+      // 如果不显示篇幅，跳过篇幅偏好
+      if (!showLength && _isLengthPreference(pref)) {
+        continue;
+      }
+
       final String display_title = _get_display_title(pref);
       final bool force_single = _is_force_single(pref);
 
       /// 第一个区块间距10px，其余20px。
-      sections.add(SizedBox(height: i == 0 ? 10 : 20));
+      sections.add(SizedBox(height: displayIndex == 0 ? 10 : 20));
 
       sections.add(
         _build_preference_section(
@@ -80,11 +91,18 @@ class StepCategory extends StatelessWidget {
           force_single: force_single,
         ),
       );
+      displayIndex++;
     }
     return sections;
   }
 
-  /// TODO 判断是否强制单选（状态、篇幅）。
+  /// 判断是否是篇幅偏好。
+  bool _isLengthPreference(Preference preference) {
+    final String original = preference.title;
+    return original.contains('篇幅') || original.toLowerCase().contains('length');
+  }
+
+  /// 判断是否强制单选（状态、篇幅）。
   bool _is_force_single(Preference preference) {
     final String original = preference.title;
     /// 状态（完结偏好）强制单选。
@@ -95,7 +113,7 @@ class StepCategory extends StatelessWidget {
     return original.contains('篇幅') || original.toLowerCase().contains('length');
   }
 
-  /// TODO 获取显示标题（覆盖特定偏好标题）。
+  /// 获取显示标题（覆盖特定偏好标题）。
   String _get_display_title(Preference preference) {
     final String original = preference.title;
 
@@ -114,7 +132,7 @@ class StepCategory extends StatelessWidget {
     return original;
   }
 
-  /// TODO 构建单个偏好分类区块。
+  /// 构建单个偏好分类区块。
   Widget _build_preference_section({
     required Preference preference,
     required String display_title,
@@ -183,7 +201,7 @@ class StepCategory extends StatelessWidget {
     );
   }
 
-  /// TODO 构建标签网格（左对齐）。
+  /// 构建标签网格（左对齐）。
   Widget _build_chip_grid({
     required Preference preference,
     required Set<int> selected_set,
@@ -197,142 +215,33 @@ class StepCategory extends StatelessWidget {
         .toList();
 
     return LayoutBuilder(
-      builder: (BuildContext ctx, BoxConstraints constraints) {
-        final double availableWidth = constraints.maxWidth;
-        final int columns =
-            InterestPreferenceStyle.columnsByWidth(availableWidth);
-        final double chipWidth =
-            InterestPreferenceStyle.chipWidthByColumns(availableWidth, columns);
-
-        final bool is_cjk = LanguageUtil.is_cjk_language(
-          ctx.locale.languageCode,
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double available_width = constraints.maxWidth;
+        final int columns = InterestPreferenceStyle.columnsByWidth(
+          available_width,
         );
-        final double chip_font_size = is_cjk
-            ? InterestPreferenceStyle.chipFontSizeCjk
-            : InterestPreferenceStyle.chipFontSizeAlphabetic;
-        final double chip_h_padding = is_cjk
-            ? InterestPreferenceStyle.chipHorizontalPaddingCjk
-            : InterestPreferenceStyle.chipHorizontalPaddingAlphabetic;
-        final double textAreaWidth = chipWidth - chip_h_padding * 2;
-
-        final List<double> textHeights = _measure_text_heights(
-          labels: labels,
-          fontSize: chip_font_size,
-          maxWidth: textAreaWidth,
+        final double chip_width = InterestPreferenceStyle.chipWidthByColumns(
+          available_width,
+          columns,
         );
 
-        final Map<int, double> rowHeights = _compute_row_heights(
-          textHeights: textHeights,
-          columns: columns,
-          verticalPadding: SelectionChipStyle.verticalPadding,
-        );
+        return Wrap(
+          spacing: InterestPreferenceStyle.chipSpacing,
+          runSpacing: InterestPreferenceStyle.chipRunSpacing,
+          children: List<Widget>.generate(labels.length, (int index) {
+            final int item_id = item_ids[index];
+            final bool is_selected = selected_set.contains(item_id);
 
-        final List<Widget> children = [];
-        int rowIndex = 0;
-        int chipInRow = 0;
-
-        for (int i = 0; i < labels.length; i++) {
-          final double rowHeight = rowHeights[rowIndex] ?? 0;
-
-          children.add(SizedBox(
-            height: rowHeight > 0 ? rowHeight : null,
-            child: SelectionChip(
-              label: labels[i],
-              selected: selected_set.contains(item_ids[i]),
+            return SelectionChip(
+              label: labels[index],
+              selected: is_selected,
               isDark: is_dark,
-              fixedWidth: chipWidth,
-              horizontalPadding: chip_h_padding,
-              fontSize: chip_font_size,
-              maxLines: 2,
-              borderRadius: InterestPreferenceStyle.chipBorderRadius,
-              onTap: () => _handle_toggle(
-                preference: preference,
-                item_id: item_ids[i],
-                is_single: is_single,
-              ),
-            ),
-          ));
-
-          chipInRow++;
-          if (chipInRow >= columns && i < labels.length - 1) {
-            rowIndex++;
-            chipInRow = 0;
-          }
-        }
-
-        /// 左对齐：使用 Align 包裹 Wrap。
-        return Align(
-          alignment: Alignment.centerLeft,
-          child: Wrap(
-            spacing: InterestPreferenceStyle.chipSpacing,
-            runSpacing: InterestPreferenceStyle.chipRunSpacing,
-            children: children,
-          ),
+              fixedWidth: chip_width,
+              onTap: () => on_toggle_preference(preference.id, item_id),
+            );
+          }),
         );
       },
     );
-  }
-
-  /// TODO 处理标签切换。
-  void _handle_toggle({
-    required Preference preference,
-    required int item_id,
-    required bool is_single,
-  }) {
-    final Set<int> current =
-        selected_preference_map[preference.id] ?? <int>{};
-
-    /// 多选时检查上限。
-    if (!is_single && !current.contains(item_id) && current.length >= 5) {
-      showBottomTip(easy.tr('creator_center.category_limit'));
-      return;
-    }
-
-    on_toggle_preference(preference.id, item_id);
-  }
-
-  List<double> _measure_text_heights({
-    required List<String> labels,
-    required double fontSize,
-    required double maxWidth,
-  }) {
-    return labels.map((String label) {
-      final TextPainter painter = TextPainter(
-        text: TextSpan(
-          text: label,
-          style: TextStyle(fontSize: fontSize, height: 1.3),
-        ),
-        maxLines: 2,
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: maxWidth);
-      return painter.size.height;
-    }).toList();
-  }
-
-  Map<int, double> _compute_row_heights({
-    required List<double> textHeights,
-    required int columns,
-    required double verticalPadding,
-  }) {
-    final Map<int, double> heights = {};
-    int rowIndex = 0;
-
-    for (int i = 0; i < textHeights.length; i += columns) {
-      double maxHeight = 0;
-      final int end =
-          (i + columns > textHeights.length) ? textHeights.length : i + columns;
-
-      for (int j = i; j < end; j++) {
-        final double chipHeight = textHeights[j] + verticalPadding * 2;
-        if (chipHeight > maxHeight) {
-          maxHeight = chipHeight;
-        }
-      }
-
-      heights[rowIndex] = maxHeight;
-      rowIndex++;
-    }
-
-    return heights;
   }
 }

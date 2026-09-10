@@ -1,3 +1,9 @@
+import 'package:app/pages/work_editor/long_novel_editor/index.dart';
+import 'package:app/pages/work_editor/short_novel_editor/index.dart';
+import 'package:app/pages/work_editor/backend_draft_loader.dart';
+import 'package:app/pages/work_editor/work_recovery.dart';
+import 'package:app/api/creator_workspace.dart';
+import 'package:app/components/svg_icon/index.dart';
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'package:app/config/color_config.dart';
@@ -6,8 +12,6 @@ import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/logic.dart';
 import 'package:app/pages/author_center/creator_tab_state.dart';
 import 'package:app/pages/author_center/models/creator_backend_models.dart';
-import 'package:app/pages/work_editor/backend_draft_loader.dart';
-import 'package:app/pages/work_editor/draft_persistence.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/author_center/widgets/creator_header.dart';
 import 'package:app/pages/author_center/widgets/creator_work_tab.dart';
@@ -128,15 +132,14 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     _tabs = [
       CreatorTabState(
         loadPage: (page) =>
-            CreatorLogic.getMyWorks(includePendingPublish: true, page: page),
+            CreatorLogic.getMyWorks(publicStatus: 2, page: page),
       ),
       CreatorTabState(
         loadPage: (page) =>
-            CreatorLogic.getMyWorks(initialAuditStatus: 2, page: page),
+            CreatorLogic.getMyWorks(workType: 1, unpublishedOnly: true, page: page),
       ),
       CreatorTabState(
-        loadPage: (page) => CreatorLogic.getDraftList(page: page),
-        isDraftList: true,
+        loadPage: (page) => CreatorLogic.getMyWorks(workType: 2, unpublishedOnly: true, page: page),
       ),
     ];
     for (final tab in _tabs) {
@@ -186,7 +189,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   void _on_data_changed() {
     if (!mounted) return;
     setState(() {
-      _has_draft = _tabs[2].works.isNotEmpty;
+      _has_draft = _tabs.skip(1).any((tab) => tab.works.any((work) => work.is_draft));
     });
   }
 
@@ -288,7 +291,21 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     if (_opening_work) return;
     _opening_work = true;
     try {
-      final result = await context.push<CreatorWorkDraft>('/work_editor');
+      final bool is_dark = _device_info.dark.value;
+      final choice = await showModalBottomSheet<String>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (context) => _buildNovelTypeSheet(is_dark),
+      );
+      if (!mounted || choice == null) {
+        _opening_work = false;
+        return;
+      }
+
+      final result = await context.pushNamed<CreatorWorkDraft>(
+        choice == 'long' ? 'long_novel_editor' : 'short_novel_editor',
+      );
+
       if (!mounted) return;
       _select_result_tab(result);
       await _reload_all();
@@ -297,48 +314,181 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     }
   }
 
-  void _select_result_tab(CreatorWorkDraft? result) {
-    if (result == null) return;
-    _tab_controller.animateTo(
-      result.status == CreatorWorkStatus.reviewing ? 1 : 2,
+  Widget _buildNovelTypeSheet(bool is_dark) {
+    final List<Color> tagColors = ColorConstants.tagColorList;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AuthorStyle.surface(is_dark),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AuthorStyle.secondary_text(is_dark).withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  easy.tr('creator_center.choose_novel_type'),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                    color: AuthorStyle.primary_text(is_dark),
+                  ),
+                ),
+              ),
+            ),
+            _buildNovelTypeOption(
+              is_dark: is_dark,
+              iconName: 'book',
+              iconColor: tagColors[0 % tagColors.length],
+              title: easy.tr('creator_center.long_novel'),
+              subtitle: easy.tr('creator_center.long_novel_desc'),
+              onTap: () => Navigator.pop(context, 'long'),
+            ),
+            const SizedBox(height: 12),
+            _buildNovelTypeOption(
+              is_dark: is_dark,
+              iconName: 'short_story',
+              iconColor: tagColors[1 % tagColors.length],
+              title: easy.tr('creator_center.short_novel'),
+              subtitle: easy.tr('creator_center.short_novel_desc'),
+              onTap: () => Navigator.pop(context, 'short'),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
     );
   }
 
-  Future<void> _open_work(CreatorWorkModel work) async {
-    if (work.is_draft || work.is_rejected) {
-      await _open_draft(work.id);
-    } else if (work.is_published) {
-      final location = work.is_short_novel
-          ? '/short_story_read?id=${work.id}'
-          : '/read?id=${work.id}&title=${Uri.encodeComponent(work.title)}';
-      await context.push<void>(location);
-      if (mounted) await _reload_all();
-    } else {
-      await _show_review_status(work);
-    }
+  Widget _buildNovelTypeOption({
+    required bool is_dark,
+    required String iconName,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: AuthorStyle.border(is_dark)),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: is_dark ? 0.20 : 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: SvgIcon(
+                    name: iconName,
+                    width: 24,
+                    height: 24,
+                    color: iconColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                        color: AuthorStyle.primary_text(is_dark),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AuthorStyle.secondary_text(is_dark),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: AuthorStyle.secondary_text(is_dark),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
+
+  void _select_result_tab(CreatorWorkDraft? result) {
+    if (result == null) return;
+    _tab_controller.animateTo(result.status == CreatorWorkStatus.published
+        ? 0 : result.work_type == CreatorWorkType.long ? 1 : 2);
+  }
+
+  // TODO 所有列表共用入口，先读取服务端状态，避免过期卡片将已发布作品当作草稿打开。
+  Future<void> _open_work(CreatorWorkModel work) => _open_draft(work.id);
 
   Future<void> _open_draft(int novelId) async {
     if (_opening_work) return;
     _opening_work = true;
     setState(() => _loading_draft = true);
     try {
-      // 列表只提供摘要；进入编辑器前必须从服务端取回完整正文和章节。
-      final draft = await loadCreatorWorkDraft(novelId);
+      final info = await CreatorWorkspaceApi.call('creator_work/get_info', {
+        'novel_id': novelId,
+        'include_chapters': false,
+      });
+      final summary = creatorWorkDraftFromBackend(info, includeChapters: false);
       if (!mounted) return;
-      setState(() => _loading_draft = false);
-      final result = await context.push<CreatorWorkDraft>(
-        '/work_editor',
-        extra: draft,
-      );
-      if (!mounted) return;
-      _select_result_tab(result);
-      await _reload_all();
-    } catch (error) {
-      _show_error(
-        error is CreatorDraftException ? error.message : easy.tr('creator_center.draft_load_failed'),
-      );
+      if (summary.work_type == CreatorWorkType.long && summary.status == CreatorWorkStatus.published) {
+        setState(() => _loading_draft = false);
+        await context.pushNamed('published_long_novel_editor', pathParameters: {'id': '$novelId'});
+      } else {
+        // TODO 长篇整本草稿必须读取章节正文；目录摘要不能作为空章节继续保存。
+        final draft = summary.work_type == CreatorWorkType.long
+            ? await loadCreatorWorkDraft(novelId) : summary;
+        if (!mounted) return;
+        final recovery = await restoreCreatorWork(context, draft,
+          _user_information.userInfo.value?.id ?? 0);
+        if (!mounted) return;
+        setState(() => _loading_draft = false);
+        final result = await Navigator.push<CreatorWorkDraft>(context, MaterialPageRoute(
+          settings: RouteSettings(name: '/${draft.work_type == CreatorWorkType.long ? 'long_novel_editor' : 'short_novel_editor'}?id=$novelId'),
+          builder: (_) => draft.work_type == CreatorWorkType.long
+              ? LongNovelEditorPage(initial_work: recovery.draft, restorePending: recovery.restored)
+              : ShortNovelEditorPage(initial_work: recovery.draft, restorePending: recovery.restored),
+        ));
+        if (mounted) _select_result_tab(result);
+      }
       if (mounted) await _reload_all();
+    } catch (error) {
+      _show_error('$error');
     } finally {
       _opening_work = false;
       if (mounted) setState(() => _loading_draft = false);
@@ -359,15 +509,21 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       final list = result['list'] as List? ?? [];
       setState(() => _has_draft = list.isNotEmpty);
       if (list.isEmpty) {
-        await _tabs[2].refresh();
+        await Future.wait(_tabs.skip(1).map((tab) => tab.refresh()));
         return;
       }
-      novelId = int.tryParse('${list.first['novel_id']}');
-      if (novelId == null) _show_error(easy.tr('creator_center.draft_info_incomplete'));
+      final firstDraft = list.first;
+      novelId = int.tryParse('${firstDraft['novel_id']}');
+      if (novelId == null) {
+        _show_error(easy.tr('creator_center.draft_info_incomplete'));
+        return;
+      }
     } finally {
       _opening_work = false;
     }
-    if (mounted && novelId != null) await _open_draft(novelId);
+    if (mounted && novelId != null) {
+      await _open_draft(novelId);
+    }
   }
 
   void _show_error(String message) {
@@ -398,105 +554,6 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     });
 
     return true;
-  }
-
-  Future<bool> _withdraw_work(CreatorWorkModel work) async {
-    bool confirmed = false;
-    await showMessage(
-      message: easy.tr('creator_center.withdraw_confirm_message'),
-      iconData: Icons.undo_rounded,
-      iconColor: ColorConstants.dangerColor,
-      leftButtonText: easy.tr('common.cancel'),
-      rightButtonText: easy.tr('creator_center.withdraw_work'),
-      rightButtonColor: ColorConstants.dangerColor,
-      onRightPressed: () async => confirmed = true,
-    );
-    if (!confirmed || !mounted) return false;
-
-    CreatorLogic.withdrawByNovel(work.id).then((success) {
-      if (!mounted) return;
-      if (!success) {
-        _show_error(easy.tr('creator_center.withdraw_failed'));
-      }
-      _reload_all();
-    });
-
-    return true;
-  }
-
-  Future<void> _show_review_status(CreatorWorkModel work) async {
-    if (_opening_work) return;
-    _opening_work = true;
-    try {
-      final info = await CreatorLogic.getWorkInfo(work.id);
-      if (!mounted) return;
-      if (info == null) {
-        _show_error(easy.tr('creator_center.review_info_load_failed'));
-        return;
-      }
-      final submissions = info['recent_submissions'] as List? ?? [];
-      final latest = submissions.isEmpty ? null : submissions.first as Map;
-      final status = int.tryParse('${latest?['status']}');
-      final statusText = switch (status) {
-        3 => easy.tr('creator_center.review_approved'),
-        4 => easy.tr('creator_center.review_rejected'),
-        5 => easy.tr('creator_center.review_withdrawn'),
-        _ => easy.tr('creator_center.review_pending'),
-      };
-      final isDark = _device_info.dark.value;
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: AuthorStyle.surface(isDark),
-        showDragHandle: true,
-        builder: (context) => SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.fact_check_outlined,
-                  size: 36,
-                  color: isDark ? AuthorStyle.gold : AuthorStyle.deep_gold,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  work.title.isEmpty ? easy.tr('creator_center.unnamed_work') : work.title,
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: AuthorStyle.primary_text(isDark),
-                    fontWeight: AuthorStyle.title_weight,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AuthorStyle.primary_text(isDark),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  latest?['review_note']?.toString().trim().isNotEmpty == true
-                      ? latest!['review_note'].toString()
-                      : '提交的内容已保存。审核通过并发布后，读者即可浏览这部作品。',
-                  style: TextStyle(
-                    height: 1.6,
-                    color: AuthorStyle.secondary_text(isDark),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-      if (mounted) await _reload_all();
-    } finally {
-      _opening_work = false;
-    }
   }
 
   // ───────────────────────── build ─────────────────────────
@@ -547,13 +604,9 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                       minimum_scroll_extent:
                           _header_max_extent - _header_min_extent,
                       on_create_work: _create_work,
-                      on_edit_work: (work) =>
-                          (work.is_reviewing || work.pending_submission != null)
-                          ? _show_review_status(work)
-                          : _open_draft(work.id),
+                      on_edit_work: (work) => _open_draft(work.id),
                       on_primary_action: _open_work,
                       on_delete_work: _delete_work,
-                      on_withdraw_work: _withdraw_work,
                     ),
                     growable: false,
                   ),
@@ -883,7 +936,9 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                         style: TextStyle(
                           color: AuthorStyle.primary_text(is_dark),
                           fontSize: 19,
-                          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                          fontWeight: FontConfig.adjustedWeight(
+                            FontWeight.w500,
+                          ),
                         ),
                       ),
                     ),
@@ -912,9 +967,9 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                     _guide_item(
                       is_dark,
                       1,
-                      Icons.fact_check_outlined,
-                      easy.tr('creator_center.guide_review_title'),
-                      easy.tr('creator_center.guide_review_desc'),
+                      Icons.publish_outlined,
+                      easy.tr('creator_center.guide_publish_title'),
+                      easy.tr('creator_center.guide_publish_desc'),
                     ),
                     _guide_item(
                       is_dark,
@@ -940,7 +995,8 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     String title,
     String subtitle,
   ) {
-    final Color tag_color = ColorConstants.tagColorList[index % ColorConstants.tagColorList.length];
+    final Color tag_color =
+        ColorConstants.tagColorList[index % ColorConstants.tagColorList.length];
     final Color tag_bg = tag_color.withValues(alpha: 0.12);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -955,11 +1011,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(12),
             ),
             alignment: Alignment.center,
-            child: Icon(
-              icon,
-              color: tag_color,
-              size: 20,
-            ),
+            child: Icon(icon, color: tag_color, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(

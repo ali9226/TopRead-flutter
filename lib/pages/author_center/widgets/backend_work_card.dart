@@ -171,24 +171,7 @@ class BackendWorkCard extends StatelessWidget {
                 ),
               ),
             ),
-            if (work.is_reviewing && on_withdraw != null)
-              GestureDetector(
-                onTap: on_withdraw,
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Text(
-                    easy.tr('creator_center.withdraw_work'),
-                    style: TextStyle(
-                      fontSize: is_cjk ? 12 : 11,
-                      height: 1.4,
-                      fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                      color: ColorConstants.dangerColor,
-                    ),
-                  ),
-                ),
-              )
-            else if (!work.is_reviewing && on_delete != null)
+            if (!work.is_published && !work.is_pending_publish && on_delete != null)
               GestureDetector(
                 onTap: on_delete,
                 behavior: HitTestBehavior.opaque,
@@ -217,11 +200,7 @@ class BackendWorkCard extends StatelessWidget {
               TextButton.icon(
                 onPressed: on_tap,
                 icon: const Icon(Icons.edit_note_rounded, size: 18),
-                label: Text(
-                  work.pending_submission != null
-                      ? easy.tr('creator_center.view_update_review')
-                      : easy.tr('creator_center.edit_update'),
-                ),
+                label: Text(easy.tr('creator_workspace.manage')),
                 style: TextButton.styleFrom(
                   foregroundColor: is_dark
                       ? AuthorStyle.gold
@@ -260,6 +239,16 @@ class BackendWorkCard extends StatelessWidget {
           color: next_color(),
         ),
         _build_pill(_status_label, color: next_color()),
+        if (work.draftChapterCount > 0 || work.workDraftCount > 0)
+          _build_pill(
+            '${easy.tr('creator_workspace.has_draft')} ${work.draftChapterCount > 0 ? work.draftChapterCount : ''}',
+            color: next_color(),
+          ),
+        if (work.is_pending_publish)
+          _build_pill(
+            easy.tr('creator_workspace.scheduled'),
+            color: next_color(),
+          ),
         if (work.is_long_novel && work.is_published)
           _build_pill(
             is_cjk
@@ -291,9 +280,15 @@ class BackendWorkCard extends StatelessWidget {
 
   String _build_meta_text() {
     final List<String> parts = <String>[
-      easy.tr('creator_center.chapter_editor_word_count', namedArgs: {'count': '${work.word_count}'}),
+      easy.tr(
+        'creator_center.chapter_editor_word_count',
+        namedArgs: {'count': '${work.word_count}'},
+      ),
       if (work.is_long_novel)
-        easy.tr('creator_center.work_detail_chapter_count', namedArgs: {'count': '${work.chapter_count}'}),
+        easy.tr(
+          'creator_center.work_detail_chapter_count',
+          namedArgs: {'count': '${work.chapter_count}'},
+        ),
       _updated_time,
     ];
     return parts.join(' · ');
@@ -334,7 +329,9 @@ class BackendWorkCard extends StatelessWidget {
   }
 
   String get _status_label {
-    return work.status_text;
+    return work.is_published
+        ? easy.tr('creator_workspace.published')
+        : work.status_text;
   }
 
   String get _updated_time {
@@ -368,14 +365,20 @@ class BackendWorkCard extends StatelessWidget {
     final seconds = diff.inSeconds % 60;
 
     if (days > 0) {
-      return easy.tr('creator_center.publish_countdown_days',
-          namedArgs: {'days': '$days', 'hours': '$hours', 'minutes': '$minutes'});
+      return easy.tr(
+        'creator_center.publish_countdown_days',
+        namedArgs: {'days': '$days', 'hours': '$hours', 'minutes': '$minutes'},
+      );
     } else if (hours > 0) {
-      return easy.tr('creator_center.publish_countdown_hours',
-          namedArgs: {'hours': '$hours', 'minutes': '$minutes'});
+      return easy.tr(
+        'creator_center.publish_countdown_hours',
+        namedArgs: {'hours': '$hours', 'minutes': '$minutes'},
+      );
     } else {
-      return easy.tr('creator_center.publish_countdown_minutes',
-          namedArgs: {'minutes': '$minutes', 'seconds': '$seconds'});
+      return easy.tr(
+        'creator_center.publish_countdown_minutes',
+        namedArgs: {'minutes': '$minutes', 'seconds': '$seconds'},
+      );
     }
   }
 }

@@ -92,13 +92,13 @@ class CreatorEmptyState extends StatelessWidget {
 
   String get _title => switch (tab_index) {
     0 => easy.tr('creator_center.empty_published_title'),
-    1 => easy.tr('creator_center.empty_reviewing_title'),
-    _ => easy.tr('creator_center.empty_my_drafts'),
+    1 => easy.tr('creator_center.empty_long_unpublished'),
+    _ => easy.tr('creator_center.empty_short_unpublished'),
   };
 
   String get _subtitle => switch (tab_index) {
     0 => easy.tr('creator_center.empty_published_subtitle'),
-    1 => easy.tr('creator_center.empty_reviewing_subtitle'),
-    _ => easy.tr('creator_center.empty_my_drafts_hint'),
+    1 => easy.tr('creator_center.empty_unpublished_hint'),
+    _ => easy.tr('creator_center.empty_unpublished_hint'),
   };
 }

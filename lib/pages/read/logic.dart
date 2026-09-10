@@ -673,6 +673,7 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
   Future<String> _load_chapter_content(int index, {required bool force}) async {
     final NovelChapterInfo chapter = _store.chapter_list[index];
     final String chapter_id = chapter.id;
+    final String? published_revision_id = chapter.published_revision_id;
 
     if (!force) {
       final String? cached = _store.get_cached_chapter_content(index);
@@ -680,7 +681,10 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
     }
 
     if (!force) {
-      final String? disk_cached = await ChapterCache.read(chapter_id);
+      final String? disk_cached = await ChapterCache.read(
+        chapter_id,
+        published_revision_id: published_revision_id,
+      );
       if (disk_cached != null && disk_cached.isNotEmpty) {
         _store.cache_chapter_content(index, disk_cached);
         return disk_cached;
@@ -690,7 +694,11 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
     final String content = await _chapter_content_loader(chapter_id);
     if (content.isNotEmpty) {
       _store.cache_chapter_content(index, content);
-      await ChapterCache.write(chapter_id, content);
+      await ChapterCache.write(
+        chapter_id,
+        content,
+        published_revision_id: published_revision_id,
+      );
     }
     return content;
   }

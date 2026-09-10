@@ -138,6 +138,7 @@ Future<ResultsType<T>> postRequest<T>({
 
     final Map<String, dynamic> data = responseData;
     results.status = _parse_post_request_bool(data['status']);
+    results.serverRejected = !results.status;
     results.message = data['message']?.toString() ?? '';
     results.count = _parse_post_request_int(data['count']);
 

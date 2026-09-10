@@ -26,6 +26,12 @@ class NovelContentPayload {
   /// AES-256-GCM 加密后的正文。
   final String ciphertext;
 
+  /// 当前公开的修订版本ID，用于客户端缓存版本校验。
+  final String? published_revision_id;
+
+  /// 正文ID，用于查询段落信息。
+  final String? body_id;
+
   const NovelContentPayload({
     required this.protocol,
     required this.algorithm,
@@ -35,6 +41,8 @@ class NovelContentPayload {
     required this.iv,
     required this.auth_tag,
     required this.ciphertext,
+    this.published_revision_id,
+    this.body_id,
   });
 
   /// 从正文接口响应解析混合加密数据。
@@ -48,6 +56,8 @@ class NovelContentPayload {
       iv: json['iv']?.toString() ?? '',
       auth_tag: json['auth_tag']?.toString() ?? '',
       ciphertext: json['ciphertext']?.toString() ?? '',
+      published_revision_id: json['published_revision_id']?.toString(),
+      body_id: json['body_id']?.toString(),
     );
   }
 }

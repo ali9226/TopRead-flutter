@@ -309,7 +309,8 @@ class ShortStoryReadLogic {
       return disk_text;
     }
 
-    final String text = await get_short_story_content(novel_language_id);
+    final result = await get_short_story_content_with_version(novel_language_id);
+    final String text = result.content;
     if (text.isNotEmpty) {
       _write_memory_cache<String>(
         _content_memory_cache,
@@ -317,7 +318,11 @@ class ShortStoryReadLogic {
         text,
         _content_memory_cache_capacity,
       );
-      await ShortStoryContentCache.write(novel_language_id, text);
+      await ShortStoryContentCache.write(
+        novel_language_id,
+        text,
+        published_revision_id: result.published_revision_id,
+      );
       return text;
     }
 

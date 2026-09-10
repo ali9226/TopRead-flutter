@@ -18,12 +18,14 @@ class CreatorWorkApi {
     String? title,
     String? subtitle,
     String? introduction,
+    String? requestKey,
   }) {
     return postRequest<Map<String, dynamic>>(
       path: 'creator_work/create_draft',
       showTips: false,
       parameter: {
         'work_type': workType,
+        if (requestKey != null) 'request_key': requestKey,
         'language_id': languageId,
         'work_language_id': languageId,
         if (title != null && title.isNotEmpty) 'title': title,
@@ -42,6 +44,7 @@ class CreatorWorkApi {
     int? serializationStatus,
     String? keyword,
     bool includePendingPublish = false,
+    bool unpublishedOnly = false,
     int page = 1,
     int pageSize = 20,
   }) {
@@ -56,6 +59,7 @@ class CreatorWorkApi {
           'serialization_status': serializationStatus,
         if (keyword != null && keyword.isNotEmpty) 'keyword': keyword,
         if (includePendingPublish) 'include_pending_publish': true,
+        if (unpublishedOnly) 'unpublished_only': true,
         'page': page,
         'page_size': pageSize,
       },
@@ -77,11 +81,12 @@ class CreatorWorkApi {
   /// 获取作品详情
   static Future<ResultsType<Map<String, dynamic>>> getInfo({
     required int novelId,
+    bool includeChapters = true,
   }) {
     return postRequest<Map<String, dynamic>>(
       path: 'creator_work/get_info',
       showTips: false,
-      parameter: {'novel_id': novelId},
+      parameter: {'novel_id': novelId, 'include_chapters': includeChapters},
       fromJson: (json) => json,
     );
   }
@@ -101,6 +106,7 @@ class CreatorWorkApi {
     int? serializationStatus,
     List<Map<String, dynamic>>? categorySnapshot,
     int? lockVersion,
+    String? requestKey,
     Map<String, List<int>>? preferences,
     int? savedStep,
     bool? rightsConfirmed,
@@ -119,6 +125,7 @@ class CreatorWorkApi {
       parameter: {
         'novel_id': novelId,
         'revision_id': revisionId,
+        if (requestKey != null) 'request_key': requestKey,
         if (title != null) 'title': title,
         if (subtitle != null) 'subtitle': subtitle,
         if (introduction != null) 'introduction': introduction,
@@ -150,7 +157,26 @@ class CreatorWorkApi {
     );
   }
 
-  /// 提交审核
+  // TODO 短篇与长篇使用独立发布接口，参数在持久化边界构建，避免正文在路由间丢失。
+  static Future<ResultsType<Map<String, dynamic>>> publishShort(
+    Map<String, dynamic> parameters,
+  ) => postRequest<Map<String, dynamic>>(
+    path: 'creator_work/publish_short',
+    showTips: false,
+    parameter: parameters,
+    fromJson: (json) => json,
+  );
+
+  static Future<ResultsType<Map<String, dynamic>>> publishLong(
+    Map<String, dynamic> parameters,
+  ) => postRequest<Map<String, dynamic>>(
+    path: 'creator_work/publish_long',
+    showTips: false,
+    parameter: parameters,
+    fromJson: (json) => json,
+  );
+
+  /// 兼容旧调用，服务端已改为直接发布。
   static Future<ResultsType<Map<String, dynamic>>> submit({
     required int novelId,
     required int revisionId,
@@ -191,12 +217,13 @@ class CreatorWorkApi {
 
   /// 获取草稿列表
   static Future<ResultsType<Map<String, dynamic>>> getDraftList({
+    int? workType,
     int page = 1,
     int pageSize = 20,
   }) {
     return postRequest<Map<String, dynamic>>(
       path: 'creator_work/get_draft_list',
-      parameter: {'page': page, 'page_size': pageSize},
+      parameter: {'page': page, 'page_size': pageSize, if (workType != null) 'work_type': workType},
       fromJson: (json) => json,
     );
   }

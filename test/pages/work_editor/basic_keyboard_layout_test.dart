@@ -38,6 +38,63 @@ void main() {
             as Map<String, dynamic>;
   });
 
+  for (final type in [CreatorWorkType.long, CreatorWorkType.short]) {
+    testWidgets('管理页编辑 ${type.name}：只展示对应步骤，审核由管理页提交', (tester) async {
+      addTearDown(Get.reset);
+      Get.put<DeviceInfo>(_TestDeviceInfo());
+      Get.put<LanguageStore>(_TestLanguageStore());
+      Get.put<PreferenceStore>(PreferenceStore());
+      await tester.pumpWidget(
+        EasyLocalization(
+          supportedLocales: const [Locale('zh')],
+          startLocale: const Locale('zh'),
+          path: 'assets/i18n',
+          assetLoader: _EditorAssetLoader(translations),
+          child: Builder(
+            builder: (context) => MaterialApp(
+              locale: context.locale,
+              supportedLocales: context.supportedLocales,
+              localizationsDelegates: context.localizationDelegates,
+              home: CreatorWorkEditorPage(
+                metadataOnly: type == CreatorWorkType.long,
+                saveOnly: true,
+                initial_work: CreatorWorkDraft(
+                  local_id: 'manage_test',
+                  title: '作品',
+                  introduction: '',
+                  work_type: type,
+                  is_completed: false,
+                  language_code: 'zh',
+                  language_id: 1,
+                  category_ids: const [],
+                  short_content: '原文',
+                  chapters: const [],
+                  status: CreatorWorkStatus.draft,
+                  release_mode: CreatorReleaseMode.immediate,
+                  scheduled_publish_time: null,
+                  update_time: DateTime(2026),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final steps = tester.widget<EditorStepIndicator>(
+        find.byType(EditorStepIndicator),
+      );
+      expect(steps.labels.length, type == CreatorWorkType.long ? 2 : 3);
+      steps.on_step_tap!(steps.labels.length - 1);
+      await tester.pumpAndSettle();
+      expect(find.text('保存并返回'), findsOneWidget);
+      expect(find.byKey(const ValueKey('step_publish')), findsNothing);
+      if (type == CreatorWorkType.long)
+        expect(find.byKey(const ValueKey('step_content')), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
   for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
     for (final is_dark in [false, true]) {
       testWidgets(

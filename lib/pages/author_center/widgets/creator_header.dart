@@ -736,8 +736,8 @@ class _CreatorFilterTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<String> titles = <String>[
       easy.tr('creator_center.filter_novel_list'),
-      easy.tr('creator_center.filter_reviewing'),
-      easy.tr('creator_center.filter_draft'),
+      easy.tr('creator_center.filter_long_unpublished'),
+      easy.tr('creator_center.filter_short_unpublished'),
     ];
 
     return Container(

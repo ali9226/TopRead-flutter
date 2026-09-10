@@ -79,6 +79,11 @@ class CreatorWorkModel {
   /// 待审核的审核单
   final Map<String, dynamic>? pending_submission;
 
+  // TODO 编辑进度与公开状态独立，已发布作品也可存在章节草稿。
+  final int draftChapterCount;
+  final int pendingChapterCount;
+  final int workDraftCount;
+
   /// 定时发布时间
   final String? scheduled_publish_time;
 
@@ -109,6 +114,9 @@ class CreatorWorkModel {
     this.draft_status,
     this.pending_submission,
     this.scheduled_publish_time,
+    this.draftChapterCount = 0,
+    this.pendingChapterCount = 0,
+    this.workDraftCount = 0,
   });
 
   /// 从JSON解析
@@ -140,6 +148,9 @@ class CreatorWorkModel {
       draft_status: _parseIntNullable(json['draft_status']),
       pending_submission: json['pending_submission'],
       scheduled_publish_time: json['scheduled_publish_time'],
+      draftChapterCount: _parseInt(json['draft_chapter_count']),
+      pendingChapterCount: _parseInt(json['pending_chapter_count']),
+      workDraftCount: _parseInt(json['work_draft_count']),
     );
   }
 
@@ -150,13 +161,11 @@ class CreatorWorkModel {
   factory CreatorWorkModel.fromDraftJson(Map<String, dynamic> json) {
     return CreatorWorkModel.fromJson({
       ...json,
-      'id': json['novel_id'],
-      'draft_revision_id': json['revision_id'] ?? json['id'],
-      'draft_status': json['revision_status'] ?? 1,
-      'initial_audit_status': _parseInt(json['initial_audit_status']) == 4
-          ? 4
-          : 1,
-      'public_status': 1,
+      'id': json['novel_id'] ?? json['id'],
+      'public_status': json['public_status'] ?? 1,
+      'initial_audit_status': json['initial_audit_status'] ?? 1,
+      'draft_status': json['draft_status'] ?? json['revision_status'],
+      'draft_revision_id': json['draft_revision_id'] ?? json['revision_id'],
       'creator_update_time': json['update_time'] ?? json['creator_update_time'],
     });
   }
@@ -170,52 +179,36 @@ class CreatorWorkModel {
   /// 是否为短篇
   bool get is_short_novel => work_type == 2;
 
-  /// 是否为草稿
-  bool get is_draft => initial_audit_status == 1;
-
-  /// 是否待审核
-  bool get is_reviewing => initial_audit_status == 2;
-
-  /// 是否已通过审核
+  // TODO 发布记录及公开时间决定可编辑状态，旧审核字段仅保留数据兼容。
+  bool get is_draft => !has_published_version && !is_pending_publish;
+  bool get is_reviewing => false;
   bool get is_approved => initial_audit_status == 3;
-
-  /// 是否被驳回
-  bool get is_rejected => initial_audit_status == 4;
-
-  /// 是否已公开
+  bool get is_rejected => false;
   bool get is_published => public_status == 2;
-
-  /// 是否已下架
+  bool get has_published_version => is_published || first_publish_time != null || is_off_shelf;
   bool get is_off_shelf => public_status == 3 || public_status == 4;
+  bool get is_pending_publish => scheduled_publish_time != null ||
+      '${pending_submission?['release_status']}' == '2';
 
-  /// 是否待发布（已审核通过但未公开，等待定时发布）
-  bool get is_pending_publish =>
-      is_approved && public_status == 1 && scheduled_publish_time != null;
+  DateTime? get scheduled_publish_datetime => DateTime.tryParse(
+      scheduled_publish_time ?? '${pending_submission?['scheduled_publish_time']}')?.toLocal();
 
-  /// 获取定时发布时间
-  DateTime? get scheduled_publish_datetime {
-    if (scheduled_publish_time == null) return null;
-    return DateTime.tryParse(scheduled_publish_time!)?.toLocal();
-  }
-
-  /// 获取状态文本
   String get status_text {
-    if (is_draft) return tr('creator_center.status_draft');
-    if (is_reviewing) return tr('creator_center.status_reviewing');
-    if (is_rejected) return tr('creator_center.status_rejected');
     if (is_off_shelf) return tr('creator_center.status_off_shelf');
-    if (is_pending_publish) return tr('creator_center.pending_publish');
     if (is_published) return tr('creator_center.status_published');
-    if (is_approved) return tr('creator_center.status_approved');
-    return tr('creator_center.status_unpublished');
+    if (is_pending_publish) return tr('creator_center.pending_publish');
+    return tr('creator_center.status_draft');
   }
 
   /// 获取作品类型文本
-  String get work_type_text => is_long_novel ? tr('creator_center.work_type_long') : tr('creator_center.work_type_short');
+  String get work_type_text => is_long_novel
+      ? tr('creator_center.work_type_long')
+      : tr('creator_center.work_type_short');
 
   /// 获取连载状态文本
-  String get serialization_status_text =>
-      serialization_status == 1 ? tr('creator_center.serialization_ongoing') : tr('creator_center.serialization_completed');
+  String get serialization_status_text => serialization_status == 1
+      ? tr('creator_center.serialization_ongoing')
+      : tr('creator_center.serialization_completed');
 
   static int _parseInt(dynamic value) => _parseIntNullable(value) ?? 0;
 
@@ -315,9 +308,9 @@ class CreatorChapterModel {
   /// 获取状态文本
   String get status_text {
     if (is_draft) return tr('creator_center.chapter_status_draft');
-    if (is_reviewing) return tr('creator_center.chapter_status_reviewing');
+    if (is_reviewing) return tr('creator_center.pending_publish');
     if (is_published) return tr('creator_center.chapter_status_published');
-    if (is_rejected) return tr('creator_center.chapter_status_rejected');
+    if (is_rejected) return tr('creator_center.chapter_status_draft');
     return tr('creator_center.status_unknown');
   }
 

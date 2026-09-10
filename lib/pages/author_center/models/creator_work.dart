@@ -16,25 +16,25 @@ enum CreatorWorkStatus {
   /// TODO 仅作者可见的草稿。
   draft,
 
-  /// TODO 已提交且等待后台审核。
+  /// TODO 历史待审状态，仅用于兼容本机存储。
   reviewing,
 
-  /// TODO 审核通过并等待指定时间发布。
+  /// TODO 已提交并等待指定时间发布。
   scheduled,
 
   /// TODO 已经公开发布。
   published,
 
-  /// TODO 审核被驳回，可继续修改后重新提交。
+  /// TODO 历史驳回状态，兼容为未发布草稿。
   rejected,
 }
 
-/// TODO 审核通过后的发布方式。
+/// TODO 作者选择的发布方式。
 enum CreatorReleaseMode {
-  /// TODO 审核通过后立即发布。
+  /// TODO 提交后立即发布。
   immediate,
 
-  /// TODO 审核通过后到指定时间再发布。
+  /// TODO 到指定时间再发布。
   scheduled,
 }
 
@@ -150,7 +150,7 @@ class CreatorWorkDraft {
   /// TODO 当前作品状态。
   final CreatorWorkStatus status;
 
-  /// TODO 审核通过后的发布方式。
+  /// TODO 作者选择的发布方式。
   final CreatorReleaseMode release_mode;
 
   /// TODO 定时发布时刻；立即发布时为空。
@@ -211,6 +211,9 @@ class CreatorWorkDraft {
     this.chapter_content = '',
     this.lastEditedChapterIndex = 0,
   });
+
+  // TODO 已公开和已排期的作品不能重新保存为草稿。
+  bool get can_save_draft => status == CreatorWorkStatus.draft || status == CreatorWorkStatus.rejected;
 
   /// 是否已保存到后端（有 novel_id 和 revision_id）。
   bool get is_saved_to_backend => novel_id != null && revision_id != null;
