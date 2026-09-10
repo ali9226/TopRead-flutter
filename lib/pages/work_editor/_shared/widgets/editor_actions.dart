@@ -60,6 +60,7 @@ class EditorBottomBar extends StatelessWidget {
     required this.on_primary,
     required this.on_previous,
     this.on_save_draft,
+    this.primary_icon,
   });
 
   final bool is_dark;
@@ -70,6 +71,9 @@ class EditorBottomBar extends StatelessWidget {
   final VoidCallback? on_primary;
   final VoidCallback on_previous;
   final VoidCallback? on_save_draft;
+
+  /// 管理页可使用新增或编辑图标；未指定时保持步骤导航原有图标。
+  final IconData? primary_icon;
 
   @override
   Widget build(BuildContext context) {
@@ -138,9 +142,10 @@ class EditorBottomBar extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: on_primary,
                   icon: Icon(
-                    is_last_step
-                        ? Icons.send_rounded
-                        : Icons.arrow_forward_rounded,
+                    primary_icon ??
+                        (is_last_step
+                            ? Icons.send_rounded
+                            : Icons.arrow_forward_rounded),
                     size: 19,
                   ),
                   label: Text(primary_title),

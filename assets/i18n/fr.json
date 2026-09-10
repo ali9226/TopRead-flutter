@@ -1226,5 +1226,14 @@
     "leave_local": "Conserver une copie locale et quitter",
     "leave_recovery": "L’enregistrement en ligne a échoué. Une copie locale pourra être restaurée à votre retour. Vous pouvez aussi copier le texte maintenant.",
     "reopen_merge": "Copie locale conservée. Revenez puis rouvrez pour comparer et restaurer."
+  },
+  "published_editor": {
+    "retry": "Réessayer",
+    "settings": "Paramètres",
+    "update": "Mettre à jour",
+    "updated": "Mise à jour réussie",
+    "descending": "Plus récents en premier",
+    "ascending": "Plus anciens en premier",
+    "immediate_hint": "La mise à jour applique immédiatement vos modifications au chapitre."
   }
 }

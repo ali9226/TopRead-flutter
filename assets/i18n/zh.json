@@ -1202,5 +1202,14 @@
     "leave_local": "保留本机副本并离开",
     "leave_recovery": "云端尚未保存成功，本机恢复副本已保留。下次打开可以恢复，也可以先复制正文。",
     "reopen_merge": "本机内容已保留，返回后重新打开可比较并恢复"
+  },
+  "published_editor": {
+    "retry": "重试",
+    "settings": "类型与分类",
+    "update": "立即更新",
+    "updated": "更新成功",
+    "descending": "倒序 · 最新在前",
+    "ascending": "正序 · 最早在前",
+    "immediate_hint": "修改后点击立即更新，章节内容将立即生效。"
   }
 }

@@ -14,6 +14,8 @@ import 'package:app/util/dialog/show_message.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
+import '../../../long_chapter_fields.dart';
+import '../../../long_chapter_tile.dart';
 
 /// 正文只显示当前章，目录按需打开并虚拟化构建。
 class LongContentEditor extends StatefulWidget {
@@ -182,9 +184,10 @@ class _LongContentEditorState extends State<LongContentEditor> {
   @override
   Widget build(BuildContext context) {
     final dark = widget.is_dark;
-    final primary = AuthorStyle.primary_text(dark);
     final secondary = AuthorStyle.secondary_text(dark);
-    final accent = dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
+    final accent = dark
+        ? ColorConstants.themeColor
+        : ColorConstants.lightTextColor;
     final index = widget.active_chapter_index;
     return Center(
       child: ConstrainedBox(
@@ -322,77 +325,10 @@ class _LongContentEditorState extends State<LongContentEditor> {
                       child: SingleChildScrollView(
                         controller: _scroll,
                         padding: const EdgeInsets.fromLTRB(0, 4, 0, 28),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            EditorKeyboardInput(
-                              builder: (read_only, on_tap) => TextField(
-                                readOnly: read_only,
-                                onTap: on_tap,
-                                onTapAlwaysCalled: true,
-                                key: const ValueKey('chapter_title_input'),
-                                controller: widget.chapter_title_controller,
-                                maxLines: null,
-                                style: TextStyle(
-                                  color: primary,
-                                  fontSize: 23,
-                                  height: 1.4,
-                                  fontWeight: FontConfig.adjustedWeight(
-                                    FontWeight.w500,
-                                  ),
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: easy.tr(
-                                    'creator_center.chapter_title_hint',
-                                  ),
-                                  hintStyle: TextStyle(
-                                    color: secondary.withValues(alpha: .7),
-                                    fontWeight: FontConfig.adjustedWeight(
-                                      FontWeight.w400,
-                                    ),
-                                  ),
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  filled: false,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            EditorKeyboardInput(
-                              builder: (read_only, on_tap) => TextField(
-                                readOnly: read_only,
-                                onTap: on_tap,
-                                onTapAlwaysCalled: true,
-                                key: const ValueKey('chapter_content_input'),
-                                controller: widget.chapter_content_controller,
-                                minLines: 16,
-                                maxLines: null,
-                                keyboardType: TextInputType.multiline,
-                                textInputAction: TextInputAction.newline,
-                                style: TextStyle(
-                                  color: primary,
-                                  fontSize: 16,
-                                  height: 1.9,
-                                  letterSpacing: .3,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: easy.tr(
-                                    'creator_center.chapter_content_hint',
-                                  ),
-                                  hintStyle: TextStyle(
-                                    color: secondary.withValues(alpha: .65),
-                                  ),
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  filled: false,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                              ),
-                            ),
-                          ],
+                        child: LongChapterFields(
+                          title_controller: widget.chapter_title_controller,
+                          content_controller: widget.chapter_content_controller,
+                          is_dark: dark,
                         ),
                       ),
                     ),
@@ -406,7 +342,10 @@ class _LongContentEditorState extends State<LongContentEditor> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    easy.tr('creator_center.chapters_count', namedArgs: {'count': '${widget.chapters.length}'}),
+                    easy.tr(
+                      'creator_center.chapters_count',
+                      namedArgs: {'count': '${widget.chapters.length}'},
+                    ),
                     style: TextStyle(color: secondary, fontSize: 11),
                   ),
                   Container(
@@ -416,7 +355,10 @@ class _LongContentEditorState extends State<LongContentEditor> {
                     color: AuthorStyle.border(dark),
                   ),
                   Text(
-                    easy.tr('creator_center.chapter_word_count', namedArgs: {'count': '${widget.current_word_count}'}),
+                    easy.tr(
+                      'creator_center.chapter_word_count',
+                      namedArgs: {'count': '${widget.current_word_count}'},
+                    ),
                     style: TextStyle(color: secondary, fontSize: 11),
                   ),
                 ],
@@ -470,7 +412,6 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
     final dark = widget.isDark;
     final text = AuthorStyle.primary_text(dark);
     final secondary = AuthorStyle.secondary_text(dark);
-    final accent = dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
     final is_cjk = LanguageUtil.is_cjk_language(
       easy.EasyLocalization.of(context)?.locale.languageCode ?? 'zh',
     );
@@ -673,98 +614,17 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
     final chapter = widget.chapters[index];
     final active = chapter.local_id == _activeId;
     final dark = widget.isDark;
-    final accent = dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
-    return Padding(
+    return LongChapterTile(
       key: ValueKey(chapter.local_id),
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: active
-            ? accent.withValues(alpha: dark ? .10 : .11)
-            : AuthorStyle.surface(dark),
-        borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
-        child: InkWell(
-          onTap: () => Navigator.pop(context, _ChapterAction('select', index)),
-          borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: active
-                    ? accent.withValues(alpha: .6)
-                    : AuthorStyle.border(dark),
-              ),
-              borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 36,
-                  child: Text(
-                    '${index + 1}'.padLeft(2, '0'),
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: active ? accent : AuthorStyle.secondary_text(dark),
-                      fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        chapter.title.isEmpty
-                            ? easy.tr('creator_center.untitled_work')
-                            : chapter.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AuthorStyle.primary_text(dark),
-                          fontWeight: FontConfig.adjustedWeight(
-                            FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        '${easy.tr('creator_center.chapter_word_count', namedArgs: {'count': '${chapter.word_count}'})}'
-                        '${active ? ' · ${easy.tr("creator_center.editing")}' : ''}',
-                        style: TextStyle(
-                          color: active
-                              ? accent
-                              : AuthorStyle.secondary_text(dark),
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_ordering)
-                  ReorderableDragStartListener(
-                    index: index,
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Icon(
-                        Icons.drag_handle_rounded,
-                        color: AuthorStyle.secondary_text(dark),
-                      ),
-                    ),
-                  )
-                else
-                  Icon(
-                    active
-                        ? Icons.edit_note_rounded
-                        : Icons.chevron_right_rounded,
-                    color: active ? accent : AuthorStyle.secondary_text(dark),
-                    size: 22,
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      title: chapter.title,
+      number: '${index + 1}',
+      subtitle:
+          '${easy.tr('creator_center.chapter_word_count', namedArgs: {'count': '${chapter.word_count}'})}${active ? ' · ${easy.tr("creator_center.editing")}' : ''}',
+      dark: dark,
+      active: active,
+      index: index,
+      ordering: _ordering,
+      on_open: () => Navigator.pop(context, _ChapterAction('select', index)),
     );
   }
 }
@@ -796,7 +656,9 @@ class _DirectoryFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = AuthorStyle.primary_text(is_dark);
-    final accent = is_dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
+    final accent = is_dark
+        ? ColorConstants.themeColor
+        : ColorConstants.lightTextColor;
     final keyboard_visible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     return TweenAnimationBuilder<double>(
@@ -810,10 +672,7 @@ class _DirectoryFooter extends StatelessWidget {
             heightFactor: value < 1.0 ? 1.0 : 0.0,
             child: Transform.translate(
               offset: Offset(0, value * _slide_offset),
-              child: Opacity(
-                opacity: 1.0 - value,
-                child: child,
-              ),
+              child: Opacity(opacity: 1.0 - value, child: child),
             ),
           ),
         );
@@ -831,9 +690,7 @@ class _DirectoryFooter extends StatelessWidget {
                       ? on_reorder_toggle
                       : null,
                   icon: Icon(
-                    ordering
-                        ? Icons.check_rounded
-                        : Icons.swap_vert_rounded,
+                    ordering ? Icons.check_rounded : Icons.swap_vert_rounded,
                     size: 18,
                   ),
                   label: Text(

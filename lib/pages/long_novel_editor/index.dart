@@ -18,14 +18,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../_shared/draft_persistence.dart';
-import '../_shared/editor_publish_policy.dart';
-import '../_shared/widgets/editor_actions.dart';
+import '../work_editor/_shared/draft_persistence.dart';
+import '../work_editor/_shared/editor_publish_policy.dart';
+import '../work_editor/_shared/widgets/editor_actions.dart';
 import 'chapter_editing_session.dart';
-import '../_shared/editor_form_manager.dart';
-import '../_shared/editor_file_handler.dart';
-import '../_shared/widgets/editor_step_indicator.dart';
-import '../_shared/widgets/editor_keyboard_layout.dart';
+import '../work_editor/_shared/editor_form_manager.dart';
+import '../work_editor/_shared/editor_file_handler.dart';
+import '../work_editor/_shared/widgets/editor_step_indicator.dart';
+import '../work_editor/_shared/widgets/editor_keyboard_layout.dart';
 
 /// 长篇小说编辑页面。
 ///

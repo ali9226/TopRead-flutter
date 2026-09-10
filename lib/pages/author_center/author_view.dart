@@ -1,4 +1,4 @@
-import 'package:app/pages/work_editor/long_novel_editor/index.dart';
+import 'package:app/pages/long_novel_editor/index.dart';
 import 'package:app/pages/short_novel_editor/index.dart';
 import 'package:app/pages/work_editor/_shared/backend_draft_loader.dart';
 import 'package:app/pages/work_editor/_shared/work_recovery.dart';
@@ -1024,6 +1024,12 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                       Icons.cloud_done_outlined,
                       easy.tr('creator_center.guide_draft_title'),
                       easy.tr('creator_center.guide_draft_desc'),
+                      iconWidget: SvgIcon(
+                        name: 'upgrade',
+                        width: 20,
+                        height: 20,
+                        color: ColorConstants.tagColorList[0],
+                      ),
                     ),
                     _guide_item(
                       is_dark,
@@ -1031,6 +1037,12 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                       Icons.publish_outlined,
                       easy.tr('creator_center.guide_publish_title'),
                       easy.tr('creator_center.guide_publish_desc'),
+                      iconWidget: SvgIcon(
+                        name: 'check_03',
+                        width: 20,
+                        height: 20,
+                        color: ColorConstants.tagColorList[1],
+                      ),
                     ),
                     _guide_item(
                       is_dark,
@@ -1054,8 +1066,9 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     int index,
     IconData icon,
     String title,
-    String subtitle,
-  ) {
+    String subtitle, {
+    Widget? iconWidget,
+  }) {
     final Color tag_color =
         ColorConstants.tagColorList[index % ColorConstants.tagColorList.length];
     final Color tag_bg = tag_color.withValues(alpha: 0.12);
@@ -1072,7 +1085,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(12),
             ),
             alignment: Alignment.center,
-            child: Icon(icon, color: tag_color, size: 20),
+            child: iconWidget ?? Icon(icon, color: tag_color, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1155,7 +1168,7 @@ class _WorkActionSheet extends StatelessWidget {
 
             /// 标题。
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
+              padding: EdgeInsets.fromLTRB(AuthorStyle.page_padding, 16, AuthorStyle.page_padding, 12),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1241,7 +1254,7 @@ class _WorkActionSheet extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(horizontal: AuthorStyle.page_padding),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),

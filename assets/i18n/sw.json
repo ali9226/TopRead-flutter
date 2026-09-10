@@ -1194,5 +1194,14 @@
     "leave_local": "Hifadhi nakala kwenye kifaa na uondoke",
     "leave_recovery": "Uhifadhi wa mtandaoni haujafaulu. Nakala imehifadhiwa kwenye kifaa kwa urejeshaji utakaporudi. Unaweza pia kunakili maandishi sasa.",
     "reopen_merge": "Nakala imehifadhiwa kwenye kifaa. Rudi na ufungue tena ili kulinganisha na kurejesha."
+  },
+  "published_editor": {
+    "retry": "Jaribu tena",
+    "settings": "Mipangilio",
+    "update": "Sasisha sasa",
+    "updated": "Imesasishwa",
+    "descending": "Mpya kwanza",
+    "ascending": "Za zamani kwanza",
+    "immediate_hint": "Kusasisha sasa kunatumia mabadiliko ya sura mara moja."
   }
 }

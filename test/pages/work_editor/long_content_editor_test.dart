@@ -6,7 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'dart:ui' as ui;
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
-import 'package:app/pages/work_editor/long_novel_editor/chapter_editing_session.dart';
+import 'package:app/pages/long_novel_editor/chapter_editing_session.dart';
 import 'package:app/pages/work_editor/_shared/widgets/steps/step_content/widgets/long_content_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';

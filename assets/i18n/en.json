@@ -1202,5 +1202,14 @@
     "leave_local": "Keep local copy and leave",
     "leave_recovery": "Cloud saving has not succeeded. A local recovery copy is retained for your next visit. You can also copy the text now.",
     "reopen_merge": "Local content retained. Return and reopen to compare and restore."
+  },
+  "published_editor": {
+    "retry": "Retry",
+    "settings": "Settings",
+    "update": "Update now",
+    "updated": "Updated successfully",
+    "descending": "Newest first",
+    "ascending": "Oldest first",
+    "immediate_hint": "Update now applies your chapter changes immediately."
   }
 }

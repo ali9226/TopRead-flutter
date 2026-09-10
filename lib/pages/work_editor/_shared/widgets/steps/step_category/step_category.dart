@@ -1,18 +1,16 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/common_style/selection_chip/index.dart';
-import 'package:app/common_style/selection_chip/style.dart';
 import 'package:app/models/preference.dart';
 import 'package:app/pages/author_center/author_style.dart';
+import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:app/pages/interest_preference/style.dart';
 import 'package:app/pages/work_editor/_shared/widgets/editor_section_card.dart';
 import 'package:app/pages/work_editor/_shared/widgets/step_utils.dart';
 import 'package:app/stores/preference_store.dart';
-import 'package:app/util/language_util/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:app/util/dialog/show_bottom_tip.dart';
 
 /// 步骤2：偏好选择。
 ///
@@ -98,6 +96,14 @@ class StepCategory extends StatelessWidget {
 
   /// 判断是否是篇幅偏好。
   bool _isLengthPreference(Preference preference) {
+    // 用选项标识识别篇幅，避免法语等界面漏掉隐藏规则。
+    if (preference.data_list.any(
+      (item) =>
+          item.id == WorkEditorStyle.long_work_id ||
+          item.id == WorkEditorStyle.short_work_id,
+    )) {
+      return true;
+    }
     final String original = preference.title;
     return original.contains('篇幅') || original.toLowerCase().contains('length');
   }
@@ -105,10 +111,12 @@ class StepCategory extends StatelessWidget {
   /// 判断是否强制单选（状态、篇幅）。
   bool _is_force_single(Preference preference) {
     final String original = preference.title;
+
     /// 状态（完结偏好）强制单选。
     if (original.contains('完结') || original.toLowerCase().contains('complet')) {
       return true;
     }
+
     /// 篇幅强制单选。
     return original.contains('篇幅') || original.toLowerCase().contains('length');
   }
@@ -189,7 +197,8 @@ class StepCategory extends StatelessWidget {
           ],
         ),
         const SizedBox(
-            height: InterestPreferenceStyle.sectionTitleBottomSpacing),
+          height: InterestPreferenceStyle.sectionTitleBottomSpacing,
+        ),
 
         /// 标签网格（左对齐）。
         _build_chip_grid(

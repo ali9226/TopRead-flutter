@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app/api/creator_workspace.dart';
@@ -8,6 +10,11 @@ import 'package:app/pages/work_editor/single_chapter/index.dart';
 import 'package:app/pages/work_editor/single_chapter/logic.dart';
 import 'package:go_router/go_router.dart';
 import 'logic.dart';
+import 'style.dart';
+import 'widgets/workspace_details.dart';
+import 'widgets/workspace_directory.dart';
+import '../_shared/widgets/editor_actions.dart';
+import 'package:app/util/language_util/index.dart';
 import '../_shared/work_recovery.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
@@ -25,6 +32,8 @@ class _CreatorWorkspacePageState extends State<CreatorWorkspacePage> {
   late final WorkspaceController model;
   final DeviceInfo _device_info = Get.find<DeviceInfo>();
   bool working = false;
+  int _section = 0;
+  bool _section_initialized = false;
   @override
   void initState() {
     super.initState();
@@ -33,7 +42,14 @@ class _CreatorWorkspacePageState extends State<CreatorWorkspacePage> {
   }
 
   void _changed() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {
+        if (!_section_initialized && model.data.isNotEmpty) {
+          _section_initialized = true;
+          _section = model.isLong && model.isPublished ? 1 : 0;
+        }
+      });
+    }
   }
 
   @override
@@ -165,199 +181,37 @@ class _CreatorWorkspacePageState extends State<CreatorWorkspacePage> {
       'request_key': creatorRequestKey(),
     });
   });
-  String _chapterState(Map<String, dynamic> row) {
-    if (creatorNumber(row['release_status']) == 2 ||
-        row['is_scheduled'] == true) {
-      return tr('creator_workspace.scheduled');
-    }
-    return tr(
-      creatorNumber(row['chapter_id']) > 0
-          ? 'creator_workspace.published'
-          : 'creator_workspace.new_draft',
-    );
-  }
 
-  Widget _details() => ListView(
-    padding: const EdgeInsets.all(20),
-    children: [
-      Text(
-        '${model.novel['language_title'] ?? model.novel['title'] ?? ''}',
-        style: Theme.of(context).textTheme.headlineSmall,
-      ),
-      const SizedBox(height: 8),
-      Text(
-        tr(
-          model.isPublished
-              ? 'creator_workspace.published'
-              : 'creator_workspace.unpublished',
-        ),
-      ),
-      const SizedBox(height: 12),
-      Text('${model.novel['introduction'] ?? ''}'),
-      if (model.draft.isNotEmpty && !model.isPublished)
-        Card(
-          child: ListTile(
-            title: Text(tr('creator_workspace.has_work_draft')),
-            subtitle: Text('${model.draft['title']}'),
-          ),
-        ),
-      const SizedBox(height: 20),
-      FilledButton.icon(
-        onPressed: working || model.data['can_edit_work'] != true
-            ? null
-            : _editWork,
-        icon: const Icon(Icons.edit_note),
-        label: Text(
-          tr(
+  /// 资料沿用原有编辑流程，章节管理始终按单章读写。
+  Widget _details(bool is_dark, bool is_cjk) => WorkspaceDetails(
+    novel: model.novel,
+    is_dark: is_dark,
+    is_cjk: is_cjk,
+    is_published: model.isPublished,
+    draft_title: model.draft.isNotEmpty && !model.isPublished
+        ? '${model.draft['title'] ?? ''}'
+        : null,
+    on_read: !model.isPublished || working
+        ? null
+        : () => context.push(
             model.isLong
-                ? 'creator_workspace.edit_details'
-                : 'creator_workspace.edit_short',
-          ),
-        ),
-      ),
-      if (model.isPublished)
-        TextButton(
-          onPressed: () => context.push(
-            model.isLong
-                ? '/read?id=${widget.novelId}&title=${Uri.encodeComponent('${model.novel['title']}')}'
+                ? '/read?id=${widget.novelId}&title=${Uri.encodeComponent('${model.novel['language_title'] ?? model.novel['title'] ?? ''}')}'
                 : '/short_story_read?id=${widget.novelId}',
           ),
-          child: Text(tr('creator_workspace.read_public')),
-        ),
-      if (model.data['can_delete'] == true)
-        TextButton(
-          onPressed: working
-              ? null
-              : () => _act(() async {
-                  if (!await _confirm(
-                    tr('creator_workspace.delete_work_hint'),
-                  )) {
-                    return;
-                  }
-                  await CreatorWorkspaceApi.call('creator_work/delete', {
-                    'novel_id': widget.novelId,
-                    'request_key': creatorRequestKey(),
-                  });
-                  if (mounted) Navigator.pop(context);
-                }),
-          child: Text(tr('creator_workspace.delete_work')),
-        ),
-    ],
-  );
-  Widget _chapters() => Column(
-    children: [
-      Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: tr('creator_workspace.search'),
-                  prefixIcon: const Icon(Icons.search),
-                ),
-                onSubmitted: (value) => model.loadChapters(search: value),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: working || model.busy
-                  ? null
-                  : () => _editChapter(null),
-              tooltip: tr('creator_workspace.new_chapter'),
-              icon: const Icon(Icons.add),
-            ),
-          ],
-        ),
-      ),
-      Wrap(
-        spacing: 8,
-        children: ['all', 'draft', 'scheduled']
-            .map(
-              (state) => ChoiceChip(
-                label: Text(tr('creator_workspace.filter_$state')),
-                selected: model.filter == state,
-                onSelected: model.busy
-                    ? null
-                    : (_) => model.loadChapters(state: state),
-              ),
-            )
-            .toList(),
-      ),
-      Expanded(
-        child: ListView.builder(
-          itemCount: model.chapters.length + 1,
-          itemBuilder: (context, index) {
-            if (index == model.chapters.length) {
-              return model.hasMore
-                  ? TextButton(
-                      onPressed: model.busy
-                          ? null
-                          : () => model.loadChapters(more: true),
-                      child: Text(tr('creator_workspace.load_more')),
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Text(
-                        tr(
-                          model.chapters.isEmpty
-                              ? 'creator_workspace.empty_chapters'
-                              : 'creator_workspace.end',
-                        ),
-                      ),
-                    );
+    on_delete: model.data['can_delete'] != true || working || model.busy
+        ? null
+        : () => _act(() async {
+            if (!await _confirm(tr('creator_workspace.delete_work_hint'))) {
+              return;
             }
-            final row = model.chapters[index];
-            final state = creatorNumber(row['revision_status']);
-            final scheduled =
-                creatorNumber(row['release_status']) == 2 ||
-                row['is_scheduled'] == true;
-            return ListTile(
-              leading: Icon(
-                scheduled ? Icons.schedule : Icons.article_outlined,
-              ),
-              title: Text(
-                '${creatorNumber(row['chapter_no']) > 0 ? '${row['chapter_no']}. ' : ''}${'${row['title']}'.isEmpty ? tr('creator_workspace.untitled') : row['title']}',
-              ),
-              subtitle: Text(
-                '${_chapterState(row)} · ${row['word_count']} ${tr('creator_workspace.characters')}'
-                '${scheduled && row['scheduled_publish_time'] != null ? '\n${_scheduleTime(row['scheduled_publish_time'])}' : ''}',
-              ),
-              onTap: working || model.busy ? null : () => _editChapter(row),
-              trailing: scheduled
-                  ? const Icon(Icons.edit_outlined)
-                  : PopupMenuButton<String>(
-                      onSelected: (value) => _chapterAction(row, value),
-                      itemBuilder: (_) => [
-                        if (state == 1 && creatorNumber(row['chapter_id']) == 0)
-                          PopupMenuItem(
-                            value: 'discard',
-                            child: Text(
-                              tr('creator_workspace.discard_chapter'),
-                            ),
-                          ),
-                        if (creatorNumber(row['chapter_id']) > 0) ...[
-                          PopupMenuItem(
-                            value: 'up',
-                            child: Text(tr('creator_workspace.move_up')),
-                          ),
-                          PopupMenuItem(
-                            value: 'down',
-                            child: Text(tr('creator_workspace.move_down')),
-                          ),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Text(tr('creator_workspace.request_delete')),
-                          ),
-                        ],
-                      ],
-                    ),
-            );
-          },
-        ),
-      ),
-    ],
+            await CreatorWorkspaceApi.call('creator_work/delete', {
+              'novel_id': widget.novelId,
+              'request_key': creatorRequestKey(),
+            });
+            if (mounted) Navigator.pop(context);
+          }),
   );
+
   String _scheduleTime(dynamic raw) {
     final date = DateTime.tryParse('$raw');
     return date == null
@@ -366,86 +220,141 @@ class _CreatorWorkspacePageState extends State<CreatorWorkspacePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final bool is_dark = _device_info.dark.value;
-
-    return DefaultTabController(
-      length: model.isLong ? 2 : 1,
-      child: Scaffold(
-        backgroundColor: AuthorStyle.background(is_dark),
-        appBar: AppBar(
-          backgroundColor: AuthorStyle.surface(is_dark),
-          surfaceTintColor: Colors.transparent,
-          foregroundColor: AuthorStyle.primary_text(is_dark),
-          elevation: 0,
-          title: Text(
-            tr('creator_workspace.title'),
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: AuthorStyle.title_weight,
-            ),
-          ),
-          actions: [
-            IconButton(
-              onPressed: model.busy || working ? null : model.refresh,
-              icon: const Icon(Icons.refresh),
-            ),
-          ],
-          bottom: TabBar(
-            indicatorColor: AuthorStyle.gold,
-            labelColor: AuthorStyle.primary_text(is_dark),
-            unselectedLabelColor: AuthorStyle.secondary_text(is_dark),
-            tabs: [
-              Tab(text: tr('creator_workspace.details')),
-              if (model.isLong) Tab(text: tr('creator_workspace.chapters')),
-            ],
-          ),
+  Widget build(BuildContext context) => Obx(() {
+    final is_dark = _device_info.dark.value;
+    final is_cjk = LanguageUtil.is_cjk_language(context.locale.languageCode);
+    final locked = working || model.busy;
+    final has_data = model.data.isNotEmpty;
+    final chapters_selected = model.isLong && _section == 1;
+    return Scaffold(
+      backgroundColor: AuthorStyle.background(is_dark),
+      appBar: AppBar(
+        backgroundColor: AuthorStyle.surface(is_dark),
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: AuthorStyle.primary_text(is_dark),
+        elevation: 0,
+        title: Text(
+          tr('creator_center.edit_work_title'),
+          style: WorkspaceStyle.body(
+            is_dark,
+            is_cjk,
+          ).copyWith(fontWeight: AuthorStyle.title_weight),
         ),
-        body: model.data.isEmpty
+        actions: [
+          IconButton(
+            onPressed: locked ? null : model.refresh,
+            tooltip: MaterialLocalizations.of(
+              context,
+            ).refreshIndicatorSemanticLabel,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+      bottomNavigationBar: !has_data
+          ? null
+          : EditorBottomBar(
+              is_dark: is_dark,
+              is_cjk: is_cjk,
+              current_step: 0,
+              is_last_step: true,
+              primary_icon: chapters_selected
+                  ? Icons.add_rounded
+                  : Icons.edit_outlined,
+              primary_title: tr(
+                chapters_selected
+                    ? 'creator_workspace.new_chapter'
+                    : model.isLong
+                    ? 'creator_workspace.edit_details'
+                    : 'creator_workspace.edit_short',
+              ),
+              on_primary:
+                  locked ||
+                      (!chapters_selected &&
+                          model.data['can_edit_work'] != true)
+                  ? null
+                  : chapters_selected
+                  ? () => _editChapter(null)
+                  : _editWork,
+              on_previous: () {},
+            ),
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: !has_data
             ? Center(
                 child: model.error == null
-                    ? CircularProgressIndicator(color: AuthorStyle.gold)
-                    : Text(
-                        model.error!,
-                        style: TextStyle(
-                          color: AuthorStyle.secondary_text(is_dark),
+                    ? const CircularProgressIndicator(color: AuthorStyle.gold)
+                    : Padding(
+                        padding: WorkspaceStyle.padding,
+                        child: Text(
+                          model.error!,
+                          style: WorkspaceStyle.body(is_dark, is_cjk),
                         ),
                       ),
               )
             : Column(
                 children: [
-                  if (model.busy || working)
+                  if (model.isLong)
+                    Material(
+                      color: AuthorStyle.surface(is_dark),
+                      child: DefaultTabController(
+                        length: 2,
+                        initialIndex: _section,
+                        child: TabBar(
+                          onTap: (index) => setState(() => _section = index),
+                          indicatorColor: AuthorStyle.gold,
+                          dividerColor: AuthorStyle.border(is_dark),
+                          labelColor: AuthorStyle.primary_text(is_dark),
+                          unselectedLabelColor: AuthorStyle.secondary_text(
+                            is_dark,
+                          ),
+                          labelStyle: WorkspaceStyle.body(
+                            is_dark,
+                            is_cjk,
+                          ).copyWith(fontWeight: AuthorStyle.emphasis_weight),
+                          tabs: [
+                            Tab(text: tr('creator_workspace.details')),
+                            Tab(text: tr('creator_workspace.chapters')),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (locked)
                     LinearProgressIndicator(
                       color: AuthorStyle.gold,
-                      backgroundColor: AuthorStyle.gold.withValues(alpha: 0.2),
+                      backgroundColor: AuthorStyle.selected_tab_surface(
+                        is_dark,
+                      ),
                     ),
                   if (model.error != null)
                     Padding(
-                      padding: const EdgeInsets.all(8),
+                      padding: WorkspaceStyle.padding,
                       child: Text(
                         model.error!,
-                        style: TextStyle(color: AuthorStyle.coral),
+                        style: WorkspaceStyle.caption(is_dark, is_cjk),
                       ),
                     ),
                   if (creatorNumber(model.pending['release_status']) == 2)
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      color: AuthorStyle.gold.withValues(
-                        alpha: is_dark ? .10 : .13,
-                      ),
+                      padding: WorkspaceStyle.padding,
+                      color: AuthorStyle.selected_tab_surface(is_dark),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(tr('creator_center.scheduled_edit_hint')),
+                          Text(
+                            tr('creator_center.scheduled_edit_hint'),
+                            style: WorkspaceStyle.caption(is_dark, is_cjk),
+                          ),
                           if (model.pending['scheduled_publish_time'] != null)
                             Text(
                               _scheduleTime(
                                 model.pending['scheduled_publish_time'],
                               ),
+                              style: WorkspaceStyle.caption(is_dark, is_cjk),
                             ),
                           TextButton(
-                            onPressed: working ? null : _cancelSchedule,
+                            onPressed: locked ? null : _cancelSchedule,
                             child: Text(
                               tr('creator_workspace.cancel_schedule'),
                             ),
@@ -454,13 +363,25 @@ class _CreatorWorkspacePageState extends State<CreatorWorkspacePage> {
                       ),
                     ),
                   Expanded(
-                    child: TabBarView(
-                      children: [_details(), if (model.isLong) _chapters()],
+                    child: IndexedStack(
+                      index: chapters_selected ? 1 : 0,
+                      children: [
+                        _details(is_dark, is_cjk),
+                        if (model.isLong)
+                          WorkspaceDirectory(
+                            model: model,
+                            is_dark: is_dark,
+                            is_cjk: is_cjk,
+                            working: working,
+                            on_open: _editChapter,
+                            on_action: _chapterAction,
+                          ),
+                      ],
                     ),
                   ),
                 ],
               ),
       ),
     );
-  }
+  });
 }

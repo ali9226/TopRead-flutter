@@ -2,7 +2,7 @@
 
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/work_editor/_shared/backend_draft_loader.dart';
-import 'package:app/pages/work_editor/long_novel_editor/index.dart';
+import 'package:app/pages/long_novel_editor/index.dart';
 import 'package:app/pages/published_long_novel_editor/index.dart';
 import 'package:app/pages/short_novel_editor/index.dart';
 import 'package:flutter/material.dart';

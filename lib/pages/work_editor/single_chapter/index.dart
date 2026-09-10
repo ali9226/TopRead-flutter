@@ -1,4 +1,13 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:convert';
+import 'published_chapter_editor.dart';
+import 'package:app/pages/author_center/author_style.dart';
+import 'package:app/util/language_util/index.dart';
+import '../_shared/widgets/editor_actions.dart';
+import '../_shared/widgets/editor_keyboard_layout.dart';
+import '../workspace/style.dart';
+import 'widgets/chapter_writing_surface.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/stores/device_info.dart';
 import '../_shared/widgets/chapter_publish_sheet.dart';
@@ -13,8 +22,21 @@ import 'logic.dart';
 
 /* TODO 单章编辑路由：只读取当前章；原章发布即时生效，新章节可独立定时发布。 */
 class SingleChapterPage extends StatefulWidget {
-  const SingleChapterPage({super.key, required this.revisionId});
-  final int revisionId;
+  const SingleChapterPage({
+    super.key,
+    this.revisionId,
+    this.novel_id,
+    this.novel_language_id,
+    this.chapter_id,
+    this.scheduled_revision_id,
+  }) : assert(
+         revisionId != null || (novel_id != null && novel_language_id != null),
+       );
+  final int? revisionId;
+  final int? novel_id;
+  final int? novel_language_id;
+  final int? chapter_id;
+  final int? scheduled_revision_id;
   @override
   State<SingleChapterPage> createState() => _SingleChapterPageState();
 }
@@ -38,7 +60,7 @@ class _SingleChapterPageState extends State<SingleChapterPage> {
   void initState() {
     super.initState();
     owner = Get.find<UserInformation>().userInfo.value?.id ?? 0;
-    _load();
+    if (widget.novel_id == null) _load();
   }
 
   Future<Map<String, dynamic>> _fetch() => CreatorWorkspaceApi.call(
@@ -63,13 +85,14 @@ class _SingleChapterPageState extends State<SingleChapterPage> {
       };
       if (!mounted) return;
       draft = ChapterDraftController(
-        revisionId: widget.revisionId,
+        revisionId: widget.revisionId!,
         auto_save: !is_published && !is_scheduled,
         lockVersion: creatorNumber(row['lock_version']),
         initial: initial,
         send: (parameters) {
-          if (Get.find<UserInformation>().userInfo.value?.id != owner)
+          if (Get.find<UserInformation>().userInfo.value?.id != owner) {
             throw const CreatorWorkspaceException('登录账号已变化，请重新进入编辑器');
+          }
           return CreatorWorkspaceApi.call(
             'creator_chapter/save_draft',
             parameters,
@@ -177,10 +200,11 @@ class _SingleChapterPageState extends State<SingleChapterPage> {
       draft!.update(title.text, content.text);
       await draft!.save();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('$e')));
+      }
     }
   }
 
@@ -341,115 +365,157 @@ class _SingleChapterPageState extends State<SingleChapterPage> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: allowPop,
-    onPopInvokedWithResult: (didPop, _) {
-      if (!didPop) _leave();
-    },
-    child: Scaffold(
-      appBar: AppBar(
-        title: Text(
-          tr(
-            readOnly
-                ? 'creator_workspace.preview'
-                : 'creator_workspace.edit_chapter',
-          ),
-        ),
-        actions: [
-          if (!readOnly && draft != null && !is_published && !is_scheduled)
-            TextButton(
-              onPressed:
-                  draft!.saving || is_publishing || publish_request != null
-                  ? null
-                  : draft!.save,
-              child: Text(tr('creator_workspace.save_chapter')),
-            ),
-          if (!readOnly && draft != null)
-            TextButton(
-              onPressed: is_publishing || draft!.saving ? null : _publish,
-              child: Text(
-                tr(
-                  is_publishing
-                      ? 'creator_workspace.publishing'
-                      : 'creator_center.publish',
+  Widget build(BuildContext context) => widget.novel_id != null
+      ? PublishedChapterEditor(
+          novel_id: widget.novel_id!,
+          novel_language_id: widget.novel_language_id!,
+          chapter_id: widget.chapter_id,
+          scheduled_revision_id: widget.scheduled_revision_id,
+        )
+      : Obx(() {
+          final is_dark = Get.find<DeviceInfo>().dark.value;
+          final is_cjk = LanguageUtil.is_cjk_language(
+            context.locale.languageCode,
+          );
+          final locked = readOnly || is_publishing || publish_request != null;
+          return PopScope(
+            canPop: allowPop,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) _leave();
+            },
+            child: Scaffold(
+              resizeToAvoidBottomInset: false,
+              backgroundColor: AuthorStyle.background(is_dark),
+              appBar: AppBar(
+                backgroundColor: AuthorStyle.surface(is_dark),
+                surfaceTintColor: Colors.transparent,
+                foregroundColor: AuthorStyle.primary_text(is_dark),
+                elevation: 0,
+                title: Text(
+                  tr(
+                    readOnly
+                        ? 'creator_workspace.preview'
+                        : 'creator_workspace.edit_chapter',
+                  ),
+                  style: WorkspaceStyle.body(
+                    is_dark,
+                    is_cjk,
+                  ).copyWith(fontWeight: AuthorStyle.title_weight),
                 ),
+                actions: [
+                  if (!readOnly &&
+                      draft != null &&
+                      !is_published &&
+                      !is_scheduled)
+                    EditorSaveDraftButton(
+                      is_saving: draft!.saving || locked,
+                      on_save: () => draft!.save(),
+                    ),
+                ],
+              ),
+              body: SafeArea(
+                top: false,
+                bottom: false,
+                child: draft == null
+                    ? Center(
+                        child: failure == null
+                            ? const CircularProgressIndicator(
+                                color: AuthorStyle.gold,
+                              )
+                            : Padding(
+                                padding: WorkspaceStyle.padding,
+                                child: Text(
+                                  failure!,
+                                  style: WorkspaceStyle.body(is_dark, is_cjk),
+                                ),
+                              ),
+                      )
+                    : EditorKeyboardLayout(
+                        header: Container(
+                          width: double.infinity,
+                          padding: WorkspaceStyle.padding,
+                          color: AuthorStyle.surface(is_dark),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                draft!.error ??
+                                    tr(
+                                      readOnly
+                                          ? 'creator_workspace.fixed_preview'
+                                          : is_scheduled
+                                          ? 'creator_center.scheduled_edit_hint'
+                                          : is_published
+                                          ? 'creator_center.editing_published_hint'
+                                          : draft!.saving
+                                          ? 'creator_workspace.saving'
+                                          : draft!.dirty
+                                          ? 'creator_workspace.not_synced'
+                                          : 'creator_workspace.saved',
+                                    ),
+                                style: WorkspaceStyle.caption(is_dark, is_cjk),
+                              ),
+                              if (failure != null)
+                                Text(
+                                  failure!,
+                                  style: WorkspaceStyle.caption(
+                                    is_dark,
+                                    is_cjk,
+                                  ),
+                                ),
+                              if (draft!.conflict)
+                                TextButton(
+                                  onPressed: locked ? null : _merge,
+                                  child: Text(
+                                    tr('creator_workspace.compare_merge'),
+                                  ),
+                                ),
+                              ValueListenableBuilder<TextEditingValue>(
+                                valueListenable: content,
+                                builder: (context, value, _) => Text(
+                                  tr(
+                                    'creator_center.chapter_word_count',
+                                    namedArgs: {
+                                      'count':
+                                          '${value.text.replaceAll(RegExp(r'\s+'), '').length}',
+                                    },
+                                  ),
+                                  style: WorkspaceStyle.caption(
+                                    is_dark,
+                                    is_cjk,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        content: ChapterWritingSurface(
+                          title_controller: title,
+                          content_controller: content,
+                          is_dark: is_dark,
+                          is_cjk: is_cjk,
+                          read_only: locked,
+                        ),
+                        footer: readOnly
+                            ? const SizedBox.shrink()
+                            : EditorBottomBar(
+                                is_dark: is_dark,
+                                is_cjk: is_cjk,
+                                current_step: 0,
+                                is_last_step: true,
+                                primary_title: tr(
+                                  is_publishing
+                                      ? 'creator_workspace.publishing'
+                                      : 'creator_center.publish',
+                                ),
+                                on_primary: is_publishing || draft!.saving
+                                    ? null
+                                    : _publish,
+                                on_previous: () {},
+                              ),
+                      ),
               ),
             ),
-        ],
-      ),
-      body: draft == null
-          ? Center(
-              child: failure == null
-                  ? const CircularProgressIndicator()
-                  : Text(failure!),
-            )
-          : Column(
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: Text(
-                    draft!.error ??
-                        tr(
-                          readOnly
-                              ? 'creator_workspace.fixed_preview'
-                              : is_scheduled
-                              ? 'creator_center.scheduled_edit_hint'
-                              : is_published
-                              ? 'creator_center.editing_published_hint'
-                              : draft!.saving
-                              ? 'creator_workspace.saving'
-                              : draft!.dirty
-                              ? 'creator_workspace.not_synced'
-                              : 'creator_workspace.saved',
-                        ),
-                  ),
-                ),
-                if (failure != null)
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Text(failure!),
-                  ),
-                if (draft!.conflict)
-                  TextButton(
-                    onPressed: _merge,
-                    child: Text(tr('creator_workspace.compare_merge')),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: TextField(
-                    controller: title,
-                    readOnly:
-                        readOnly || is_publishing || publish_request != null,
-                    maxLength: 255,
-                    decoration: InputDecoration(
-                      labelText: tr('creator_workspace.chapter_title'),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: TextField(
-                      controller: content,
-                      readOnly:
-                          readOnly || is_publishing || publish_request != null,
-                      expands: true,
-                      maxLines: null,
-                      minLines: null,
-                      textAlignVertical: TextAlignVertical.top,
-                      keyboardType: TextInputType.multiline,
-                      style: const TextStyle(fontSize: 17, height: 1.8),
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        hintText: tr('creator_workspace.write_content'),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-    ),
-  );
+          );
+        });
 }
