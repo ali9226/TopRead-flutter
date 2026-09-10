@@ -2,7 +2,7 @@
 
 import 'dart:ui' show FlutterView;
 
-import 'package:app/pages/work_editor/style.dart';
+import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:flutter/material.dart';
 
 /// 编辑区独立接收键盘尺寸，避免每帧重建正文、章节列表和表单。

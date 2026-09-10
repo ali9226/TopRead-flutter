@@ -2,7 +2,7 @@
 
 import 'package:app/models/preference.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
-import 'package:app/pages/work_editor/style.dart';
+import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:app/stores/preference_store.dart';
 import 'package:get/get.dart';
 

@@ -5,9 +5,9 @@ import 'dart:math' as math;
 
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/work_editor/index.dart';
-import 'package:app/pages/work_editor/style.dart';
-import 'package:app/pages/work_editor/widgets/editor_step_indicator.dart';
-import 'package:app/pages/work_editor/widgets/steps/step_basic/step_basic.dart';
+import 'package:app/pages/work_editor/_shared/style.dart';
+import 'package:app/pages/work_editor/_shared/widgets/editor_step_indicator.dart';
+import 'package:app/pages/work_editor/_shared/widgets/steps/step_basic/step_basic.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/language_store.dart';
 import 'package:app/stores/preference_store.dart';

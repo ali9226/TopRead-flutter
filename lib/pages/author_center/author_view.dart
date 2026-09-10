@@ -1,7 +1,7 @@
 import 'package:app/pages/work_editor/long_novel_editor/index.dart';
 import 'package:app/pages/work_editor/short_novel_editor/index.dart';
-import 'package:app/pages/work_editor/backend_draft_loader.dart';
-import 'package:app/pages/work_editor/work_recovery.dart';
+import 'package:app/pages/work_editor/_shared/backend_draft_loader.dart';
+import 'package:app/pages/work_editor/_shared/work_recovery.dart';
 import 'package:app/api/creator_workspace.dart';
 import 'package:app/components/svg_icon/index.dart';
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names

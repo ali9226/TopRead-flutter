@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:app/api/results_type.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
-import 'package:app/pages/work_editor/draft_persistence.dart';
+import 'package:app/pages/work_editor/_shared/draft_persistence.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

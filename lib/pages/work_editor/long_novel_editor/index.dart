@@ -2,11 +2,11 @@
 
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
-import 'package:app/pages/work_editor/style.dart';
-import 'package:app/pages/work_editor/widgets/steps/step_basic/step_basic.dart';
-import 'package:app/pages/work_editor/widgets/steps/step_category/step_category.dart';
-import 'package:app/pages/work_editor/widgets/steps/step_content/step_content.dart';
-import 'package:app/pages/work_editor/widgets/steps/step_publish/step_publish.dart';
+import 'package:app/pages/work_editor/_shared/style.dart';
+import 'package:app/pages/work_editor/_shared/widgets/steps/step_basic/step_basic.dart';
+import 'package:app/pages/work_editor/_shared/widgets/steps/step_category/step_category.dart';
+import 'package:app/pages/work_editor/_shared/widgets/steps/step_content/step_content.dart';
+import 'package:app/pages/work_editor/_shared/widgets/steps/step_publish/step_publish.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/language_store.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
@@ -18,14 +18,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../draft_persistence.dart';
-import '../editor_publish_policy.dart';
-import '../widgets/editor_actions.dart';
-import '../chapter_editing_session.dart';
-import '../editor_form_manager.dart';
-import '../editor_file_handler.dart';
-import '../widgets/editor_step_indicator.dart';
-import '../widgets/editor_keyboard_layout.dart';
+import '../_shared/draft_persistence.dart';
+import '../_shared/editor_publish_policy.dart';
+import '../_shared/widgets/editor_actions.dart';
+import 'chapter_editing_session.dart';
+import '../_shared/editor_form_manager.dart';
+import '../_shared/editor_file_handler.dart';
+import '../_shared/widgets/editor_step_indicator.dart';
+import '../_shared/widgets/editor_keyboard_layout.dart';
 
 /// 长篇小说编辑页面。
 ///

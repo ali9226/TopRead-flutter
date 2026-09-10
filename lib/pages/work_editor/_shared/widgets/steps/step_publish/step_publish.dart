@@ -3,9 +3,9 @@
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
-import 'package:app/pages/work_editor/style.dart';
-import 'package:app/pages/work_editor/widgets/editor_section_card.dart';
-import 'package:app/pages/work_editor/widgets/step_utils.dart';
+import 'package:app/pages/work_editor/_shared/style.dart';
+import 'package:app/pages/work_editor/_shared/widgets/editor_section_card.dart';
+import 'package:app/pages/work_editor/_shared/widgets/step_utils.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';

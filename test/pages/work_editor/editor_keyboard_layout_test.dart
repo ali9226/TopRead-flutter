@@ -1,7 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'package:app/pages/work_editor/widgets/editor_keyboard_layout.dart';
-import 'package:app/pages/work_editor/widgets/editor_keyboard_input.dart';
+import 'package:app/pages/work_editor/_shared/widgets/editor_keyboard_layout.dart';
+import 'package:app/pages/work_editor/_shared/widgets/editor_keyboard_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

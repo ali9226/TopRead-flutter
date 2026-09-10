@@ -1,7 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/pages/author_center/author_style.dart';
-import 'package:app/pages/work_editor/style.dart';
+import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:flutter/material.dart';
 
 /// 作品编辑页的统一表单区块。

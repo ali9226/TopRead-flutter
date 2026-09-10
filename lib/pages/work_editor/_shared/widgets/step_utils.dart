@@ -2,7 +2,7 @@
 
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
-import 'package:app/pages/work_editor/style.dart';
+import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';

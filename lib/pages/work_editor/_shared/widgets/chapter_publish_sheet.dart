@@ -2,7 +2,7 @@
 
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
-import 'package:app/pages/work_editor/style.dart';
+import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'steps/step_publish/step_publish.dart';

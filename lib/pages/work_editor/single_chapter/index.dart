@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/stores/device_info.dart';
-import '../widgets/chapter_publish_sheet.dart';
+import '../_shared/widgets/chapter_publish_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:app/api/creator_workspace.dart';
 import 'package:app/util/storage_util/index.dart';

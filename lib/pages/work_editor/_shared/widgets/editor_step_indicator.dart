@@ -2,7 +2,7 @@
 
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
-import 'package:app/pages/work_editor/style.dart';
+import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:flutter/material.dart';
 
 /// TODO 长短篇共用步骤指示器，切换时固定布局高度，仅圆点内部缩放。

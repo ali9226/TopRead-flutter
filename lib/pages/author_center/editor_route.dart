@@ -1,7 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/pages/author_center/models/creator_work.dart';
-import 'package:app/pages/work_editor/backend_draft_loader.dart';
+import 'package:app/pages/work_editor/_shared/backend_draft_loader.dart';
 import 'package:app/pages/work_editor/long_novel_editor/index.dart';
 import 'package:app/pages/work_editor/published_long_novel_editor/index.dart';
 import 'package:app/pages/work_editor/short_novel_editor/index.dart';

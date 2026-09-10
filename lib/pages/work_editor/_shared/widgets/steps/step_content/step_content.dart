@@ -1,8 +1,8 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/pages/author_center/models/creator_work.dart';
-import 'package:app/pages/work_editor/widgets/editor_section_card.dart';
-import 'package:app/pages/work_editor/widgets/step_utils.dart';
+import 'package:app/pages/work_editor/_shared/widgets/editor_section_card.dart';
+import 'package:app/pages/work_editor/_shared/widgets/step_utils.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 

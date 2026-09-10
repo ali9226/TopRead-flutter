@@ -1,4 +1,4 @@
-import 'package:app/pages/work_editor/widgets/editor_step_indicator.dart';
+import 'package:app/pages/work_editor/_shared/widgets/editor_step_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -3,8 +3,8 @@
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
-import 'package:app/pages/work_editor/widgets/editor_keyboard_input.dart';
-import 'package:app/pages/work_editor/widgets/step_utils.dart';
+import 'package:app/pages/work_editor/_shared/widgets/editor_keyboard_input.dart';
+import 'package:app/pages/work_editor/_shared/widgets/step_utils.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 
