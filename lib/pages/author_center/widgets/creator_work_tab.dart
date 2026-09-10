@@ -58,14 +58,8 @@ class CreatorWorkTab extends StatefulWidget {
   /// 编辑作品回调。
   final ValueChanged<CreatorWorkModel> on_edit_work;
 
-  /// 作品主操作回调。
-  final ValueChanged<CreatorWorkModel> on_primary_action;
-
-  /// 删除作品回调，返回 true 表示确认删除。
-  final Future<bool> Function(CreatorWorkModel)? on_delete_work;
-
-  /// 放弃审核回调，返回 true 表示确认放弃。
-  final Future<bool> Function(CreatorWorkModel)? on_withdraw_work;
+  /// 长按作品回调（弹出操作菜单）。
+  final ValueChanged<CreatorWorkModel> on_long_press_work;
 
   const CreatorWorkTab({
     super.key,
@@ -79,9 +73,7 @@ class CreatorWorkTab extends StatefulWidget {
     required this.minimum_scroll_extent,
     required this.on_create_work,
     required this.on_edit_work,
-    required this.on_primary_action,
-    this.on_delete_work,
-    this.on_withdraw_work,
+    required this.on_long_press_work,
     this.is_loading = false,
     this.is_loading_more = false,
     this.error_message,
@@ -456,9 +448,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
           is_dark: widget.is_dark,
           is_cjk: widget.is_cjk,
           on_edit_work: widget.on_edit_work,
-          on_primary_action: widget.on_primary_action,
-          on_delete_work: widget.on_delete_work,
-          on_withdraw_work: widget.on_withdraw_work,
+          on_long_press_work: widget.on_long_press_work,
         ),
       ),
       SliverToBoxAdapter(
@@ -514,8 +504,10 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
         return 'creator_center.list_title_published';
       case 1:
         return 'creator_center.filter_long_unpublished';
-      default:
+      case 2:
         return 'creator_center.filter_short_unpublished';
+      default:
+        return 'creator_center.filter_off_shelf';
     }
   }
 
@@ -689,11 +681,16 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
         ),
       );
     }
-    final bool is_draft_tab = widget.tab_index != 0;
+    final bool is_published_tab = widget.tab_index == 0;
+    final bool is_off_shelf_tab = widget.tab_index == 3;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Text(
-        easy.tr(is_draft_tab ? 'creator_center.all_unpublished_shown' : 'creator_center.all_works_shown'),
+        easy.tr(is_off_shelf_tab
+            ? 'creator_center.status_off_shelf'
+            : is_published_tab
+                ? 'creator_center.all_works_shown'
+                : 'creator_center.all_unpublished_shown'),
         textAlign: TextAlign.center,
         style: TextStyle(
           color: AuthorStyle.secondary_text(widget.is_dark),
@@ -762,27 +759,23 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
   }
 }
 
-/// 支持乐观删除动画的作品列表。
+/// 作品列表。
 ///
-/// 使用 [GlobalKey] 追踪每个卡片的高度，删除时先测量高度，
-/// 再通过 [SizeTransition] 播放收起动画。
+/// 支持乐观删除动画：使用 [GlobalKey] 追踪每个卡片的高度，
+/// 删除时先测量高度，再通过 [SizeTransition] 播放收起动画。
 class _AnimatedWorkList extends StatefulWidget {
   final List<CreatorWorkModel> works;
   final bool is_dark;
   final bool is_cjk;
   final ValueChanged<CreatorWorkModel> on_edit_work;
-  final ValueChanged<CreatorWorkModel> on_primary_action;
-  final Future<bool> Function(CreatorWorkModel)? on_delete_work;
-  final Future<bool> Function(CreatorWorkModel)? on_withdraw_work;
+  final ValueChanged<CreatorWorkModel> on_long_press_work;
 
   const _AnimatedWorkList({
     required this.works,
     required this.is_dark,
     required this.is_cjk,
     required this.on_edit_work,
-    required this.on_primary_action,
-    this.on_delete_work,
-    this.on_withdraw_work,
+    required this.on_long_press_work,
   });
 
   @override
@@ -802,30 +795,13 @@ class _AnimatedWorkListState extends State<_AnimatedWorkList>
     super.dispose();
   }
 
-  Future<void> _start_remove(CreatorWorkModel work) async {
+  /// 触发删除动画（由外部确认后调用）。
+  void animate_remove(CreatorWorkModel work) {
     if (_removing.containsKey(work.id)) return;
-
-    // 先调用确认回调，用户取消则不播放动画
-    if (widget.on_delete_work != null) {
-      final bool confirmed = await widget.on_delete_work!(work);
-      if (!confirmed || !mounted) return;
-    }
-
-    _animate_remove(work);
+    _animate_remove_impl(work);
   }
 
-  Future<void> _start_withdraw(CreatorWorkModel work) async {
-    if (_removing.containsKey(work.id)) return;
-
-    if (widget.on_withdraw_work != null) {
-      final bool confirmed = await widget.on_withdraw_work!(work);
-      if (!confirmed || !mounted) return;
-    }
-
-    _animate_remove(work);
-  }
-
-  void _animate_remove(CreatorWorkModel work) {
+  void _animate_remove_impl(CreatorWorkModel work) {
     final controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -869,13 +845,7 @@ class _AnimatedWorkListState extends State<_AnimatedWorkList>
               is_dark: widget.is_dark,
               is_cjk: widget.is_cjk,
               on_tap: () => widget.on_edit_work(work),
-              on_primary_action: () => widget.on_primary_action(work),
-              on_delete: widget.on_delete_work != null
-                  ? () => _start_remove(work)
-                  : null,
-              on_withdraw: widget.on_withdraw_work != null
-                  ? () => _start_withdraw(work)
-                  : null,
+              on_long_press: () => widget.on_long_press_work(work),
             ),
           ),
         );

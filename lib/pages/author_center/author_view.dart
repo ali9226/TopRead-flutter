@@ -1,5 +1,5 @@
 import 'package:app/pages/work_editor/long_novel_editor/index.dart';
-import 'package:app/pages/work_editor/short_novel_editor/index.dart';
+import 'package:app/pages/short_novel_editor/index.dart';
 import 'package:app/pages/work_editor/_shared/backend_draft_loader.dart';
 import 'package:app/pages/work_editor/_shared/work_recovery.dart';
 import 'package:app/api/creator_workspace.dart';
@@ -117,7 +117,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   late double _header_min_extent;
 
   /// 创作中心固定状态 Tab 数量。
-  static const int _tab_count = 3;
+  static const int _tab_count = 4;
 
   /// 是否有服务器上可继续编辑的草稿。
   bool _has_draft = false;
@@ -140,6 +140,9 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       ),
       CreatorTabState(
         loadPage: (page) => CreatorLogic.getMyWorks(workType: 2, unpublishedOnly: true, page: page),
+      ),
+      CreatorTabState(
+        loadPage: (page) => CreatorLogic.getMyWorks(publicStatus: 3, page: page),
       ),
     ];
     for (final tab in _tabs) {
@@ -556,6 +559,65 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     return true;
   }
 
+  /// 下架已发布作品。
+  Future<void> _off_shelf_work(CreatorWorkModel work) async {
+    bool confirmed = false;
+    await showMessage(
+      message: easy.tr('creator_center.off_shelf_confirm_message'),
+      iconData: Icons.visibility_off_rounded,
+      iconColor: ColorConstants.dangerColor,
+      leftButtonText: easy.tr('common.cancel'),
+      rightButtonText: easy.tr('creator_center.off_shelf_work'),
+      rightButtonColor: ColorConstants.dangerColor,
+      onRightPressed: () async => confirmed = true,
+    );
+    if (!confirmed || !mounted) return;
+
+    final error = await CreatorLogic.offShelfWork(work.id);
+    if (!mounted) return;
+    if (error != null) {
+      _show_error(error);
+    } else {
+      _show_error(easy.tr('creator_center.off_shelf_success'));
+    }
+    _reload_all();
+  }
+
+  /// 长按作品卡片弹出操作菜单。
+  void _show_work_action_sheet(CreatorWorkModel work) {
+    final bool is_dark = _device_info.dark.value;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _WorkActionSheet(
+        work: work,
+        is_dark: is_dark,
+        on_edit: () {
+          _open_draft(work.id);
+        },
+        on_read_published: work.is_published
+            ? () {
+                if (work.is_short_novel) {
+                  context.push('/short_story_read?id=${work.id}');
+                } else {
+                  context.push('/read?id=${work.id}&title=${Uri.encodeComponent(work.title.trim())}');
+                }
+              }
+            : null,
+        on_off_shelf: work.is_published
+            ? () => _off_shelf_work(work)
+            : null,
+        on_delete: (!work.is_published && !work.is_pending_publish)
+            ? () async {
+                final deleted = await _delete_work(work);
+                if (deleted && mounted) _reload_all();
+              }
+            : null,
+      ),
+    );
+  }
+
   // ───────────────────────── build ─────────────────────────
 
   @override
@@ -605,8 +667,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                           _header_max_extent - _header_min_extent,
                       on_create_work: _create_work,
                       on_edit_work: (work) => _open_draft(work.id),
-                      on_primary_action: _open_work,
-                      on_delete_work: _delete_work,
+                      on_long_press_work: _show_work_action_sheet,
                     ),
                     growable: false,
                   ),
@@ -1040,6 +1101,193 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 作品操作底部弹窗。
+///
+/// 长按作品卡片后从底部弹出，展示可执行的操作选项。
+/// UI 风格与选择作品类型弹窗一致。
+class _WorkActionSheet extends StatelessWidget {
+  final CreatorWorkModel work;
+  final bool is_dark;
+  final VoidCallback on_edit;
+  final VoidCallback? on_read_published;
+  final VoidCallback? on_off_shelf;
+  final VoidCallback? on_delete;
+
+  const _WorkActionSheet({
+    required this.work,
+    required this.is_dark,
+    required this.on_edit,
+    this.on_read_published,
+    this.on_off_shelf,
+    this.on_delete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final String manage_label = work.is_published
+        ? easy.tr('creator_workspace.manage')
+        : easy.tr('creator_center.manage_draft');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AuthorStyle.surface(is_dark),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            /// 拖拽指示条。
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AuthorStyle.secondary_text(is_dark).withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            /// 标题。
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  easy.tr('creator_center.choose_action'),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                    color: AuthorStyle.primary_text(is_dark),
+                  ),
+                ),
+              ),
+            ),
+
+            /// 管理草稿 / 管理作品。
+            _buildOption(
+              context: context,
+              iconName: 'book',
+              iconColor: const Color(0xFF5C9DFF),
+              label: manage_label,
+              onTap: () {
+                Navigator.pop(context);
+                on_edit();
+              },
+            ),
+
+            /// 阅读已发布。
+            if (on_read_published != null) ...[
+              const SizedBox(height: 8),
+              _buildOption(
+                context: context,
+                iconName: 'book',
+                iconColor: AuthorStyle.green,
+                label: easy.tr('creator_center.read_published'),
+                onTap: () {
+                  Navigator.pop(context);
+                  on_read_published!.call();
+                },
+              ),
+            ],
+
+            /// 下架作品。
+            if (on_off_shelf != null) ...[
+              const SizedBox(height: 8),
+              _buildOption(
+                context: context,
+                iconName: 'delete',
+                iconColor: ColorConstants.dangerColor,
+                label: easy.tr('creator_center.off_shelf_work'),
+                onTap: () {
+                  Navigator.pop(context);
+                  on_off_shelf!.call();
+                },
+              ),
+            ],
+
+            /// 删除。
+            if (on_delete != null) ...[
+              const SizedBox(height: 8),
+              _buildOption(
+                context: context,
+                iconName: 'delete',
+                iconColor: ColorConstants.dangerColor,
+                label: easy.tr('creator_center.delete_work'),
+                onTap: () {
+                  Navigator.pop(context);
+                  on_delete!.call();
+                },
+              ),
+            ],
+
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOption({
+    required BuildContext context,
+    required String iconName,
+    required Color iconColor,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: AuthorStyle.border(is_dark)),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: is_dark ? 0.20 : 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(
+                  child: SvgIcon(
+                    name: iconName,
+                    width: 20,
+                    height: 20,
+                    color: iconColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                    color: AuthorStyle.primary_text(is_dark),
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: AuthorStyle.secondary_text(is_dark),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

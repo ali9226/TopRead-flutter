@@ -26,7 +26,7 @@ import 'package:app/pages/debug/index.dart';
 import 'package:app/pages/author_apply/index.dart';
 import 'package:app/pages/author_center/index.dart';
 import 'package:app/pages/author_center/editor_route.dart';
-import 'package:app/pages/work_editor/published_long_novel_editor/index.dart';
+import 'package:app/pages/published_long_novel_editor/index.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/work_editor/index.dart';
 import 'package:app/stores/device_info.dart';

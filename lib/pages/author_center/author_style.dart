@@ -113,17 +113,20 @@ class AuthorStyle {
   /// Tab 标签的水平内边距。
   static const double tab_horizontal_padding = 4;
 
+  /// Tab 下划线厚度；绘制区域必须位于滚动视口内，避免标签溢出时被裁剪。
+  static const double tab_indicator_width = 3;
+
   /// CJK Tab 字号。
   static const double tab_font_size_cjk = 15;
 
   /// 非 CJK Tab 字号。
-  static const double tab_font_size_alphabetic = 15;
+  static const double tab_font_size_alphabetic = 13;
 
   /// CJK Tab 选中时的文字缩放比例。
   static const double tab_selected_scale_cjk = 1.3;
 
   /// 非 CJK Tab 选中时的文字缩放比例。
-  static const double tab_selected_scale_alphabetic = 1.5;
+  static const double tab_selected_scale_alphabetic = 1.3;
 
   /// 滚动距离比较容差。
   static const double scroll_extent_tolerance = 0.5;

@@ -249,4 +249,15 @@ class CreatorWorkApi {
       fromJson: (json) => json,
     );
   }
+
+  /// 作者下架已发布作品（作品内容保留，读者侧不可见）
+  static Future<ResultsType<Map<String, dynamic>>> requestOffShelf({
+    required int novelId,
+  }) {
+    return postRequest<Map<String, dynamic>>(
+      path: 'creator_work/request_off_shelf',
+      parameter: {'novel_id': novelId},
+      fromJson: (json) => json,
+    );
+  }
 }

@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/widgets/nickname_badge.dart';
@@ -738,6 +739,7 @@ class _CreatorFilterTabBar extends StatelessWidget {
       easy.tr('creator_center.filter_novel_list'),
       easy.tr('creator_center.filter_long_unpublished'),
       easy.tr('creator_center.filter_short_unpublished'),
+      easy.tr('creator_center.filter_off_shelf'),
     ];
 
     return Container(
@@ -754,9 +756,13 @@ class _CreatorFilterTabBar extends StatelessWidget {
         ),
         labelPadding: EdgeInsets.symmetric(horizontal: is_cjk ? 20 : 16),
         indicatorSize: TabBarIndicatorSize.label,
-        indicator: const UnderlineTabIndicator(
-          borderSide: BorderSide(width: 3, color: AuthorStyle.gold),
-          insets: EdgeInsets.only(bottom: -3),
+        indicator: UnderlineTabIndicator(
+          borderSide: BorderSide(
+            width: AuthorStyle.tab_indicator_width,
+            color: ColorConstants.themeColor,
+          ),
+          // 负底部间距会把下划线推到视口外，新增 Tab 触发横向滚动后被裁剪。
+          insets: EdgeInsets.zero,
         ),
         labelColor: AuthorStyle.primary_text(is_dark),
         unselectedLabelColor: AuthorStyle.secondary_text(is_dark),

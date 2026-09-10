@@ -1,5 +1,8 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/api/creator_work.dart';
+import 'package:app/components/svg_icon/index.dart';
+import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/work_editor/_shared/style.dart';
@@ -18,13 +21,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../_shared/draft_persistence.dart';
-import '../_shared/editor_publish_policy.dart';
-import '../_shared/widgets/editor_actions.dart';
-import '../_shared/editor_form_manager.dart';
-import '../_shared/editor_file_handler.dart';
-import '../_shared/widgets/editor_step_indicator.dart';
-import '../_shared/widgets/editor_keyboard_layout.dart';
+import '../work_editor/_shared/draft_persistence.dart';
+import '../work_editor/_shared/editor_publish_policy.dart';
+import '../work_editor/_shared/widgets/editor_actions.dart';
+import '../work_editor/_shared/editor_form_manager.dart';
+import '../work_editor/_shared/editor_file_handler.dart';
+import '../work_editor/_shared/widgets/editor_step_indicator.dart';
+import '../work_editor/_shared/widgets/editor_keyboard_layout.dart';
 
 /// 短篇小说编辑页面。
 ///
@@ -269,6 +272,36 @@ class _ShortNovelEditorPageState extends State<ShortNovelEditorPage>
     if (context.mounted) Navigator.of(context).pop<CreatorWorkDraft>(result);
   }
 
+  /// 删除当前作品并退出编辑器。
+  Future<void> _delete_work() async {
+    bool confirmed = false;
+    await showMessage(
+      message: easy.tr('creator_center.delete_confirm_message'),
+      iconData: Icons.delete_outline_rounded,
+      iconColor: ColorConstants.dangerColor,
+      leftButtonText: easy.tr('common.cancel'),
+      rightButtonText: easy.tr('creator_center.delete_work'),
+      rightButtonColor: ColorConstants.dangerColor,
+      onRightPressed: () async => confirmed = true,
+    );
+    if (!confirmed || !mounted) return;
+
+    final novelId = widget.initial_work?.novel_id;
+    if (novelId == null) return;
+
+    try {
+      final result = await CreatorWorkApi.deleteWork(novelId: novelId);
+      if (!mounted) return;
+      if (result.status) {
+        _leave_editor();
+      } else {
+        showBottomTip(result.message ?? easy.tr('creator_center.delete_failed'));
+      }
+    } catch (e) {
+      if (mounted) showBottomTip(easy.tr('creator_center.delete_failed'));
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -461,20 +494,51 @@ class _ShortNovelEditorPageState extends State<ShortNovelEditorPage>
             surfaceTintColor: Colors.transparent,
             foregroundColor: AuthorStyle.primary_text(is_dark),
             elevation: 0,
-            title: Text(
-              _is_editing
-                  ? easy.tr('creator_center.edit_work_title')
-                  : easy.tr('creator_center.short_novel_editor_title'),
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: AuthorStyle.title_weight,
-              ),
+            title: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _is_editing
+                      ? easy.tr('creator_center.edit_work_title')
+                      : easy.tr('creator_center.short_novel_editor_title'),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: AuthorStyle.title_weight,
+                  ),
+                ),
+                if (_policy.is_published || _policy.is_scheduled)
+                  Text(
+                    easy.tr(
+                      _policy.is_scheduled
+                          ? 'creator_center.scheduled_edit_hint'
+                          : 'creator_center.editing_published_hint',
+                    ),
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.3,
+                      fontWeight: AuthorStyle.body_weight,
+                      color: AuthorStyle.secondary_text(is_dark),
+                    ),
+                  ),
+              ],
             ),
             actions: <Widget>[
               if (_policy.can_save_draft)
                 EditorSaveDraftButton(
                   is_saving: _is_saving,
                   on_save: _save_draft,
+              ),
+              if (_is_editing && widget.initial_work?.novel_id != null)
+                IconButton(
+                  icon: SvgIcon(
+                    name: 'delete',
+                    width: 22,
+                    height: 22,
+                    color: ColorConstants.dangerColor,
+                  ),
+                  tooltip: easy.tr('creator_center.delete_work'),
+                  onPressed: _delete_work,
                 ),
             ],
           ),
@@ -493,31 +557,6 @@ class _ShortNovelEditorPageState extends State<ShortNovelEditorPage>
                 collapse_when_editing: _current_step == 2,
                 header: Column(
                   children: [
-                    if (_policy.is_published || _policy.is_scheduled)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        color: AuthorStyle.gold.withValues(
-                          alpha: is_dark ? .10 : .13,
-                        ),
-                        child: Text(
-                          easy.tr(
-                            _policy.is_scheduled
-                                ? 'creator_center.scheduled_edit_hint'
-                                : 'creator_center.editing_published_hint',
-                          ),
-                          style: TextStyle(
-                            fontSize: 12,
-                            height: 1.5,
-                            color: is_dark
-                                ? AuthorStyle.gold
-                                : AuthorStyle.deep_gold,
-                          ),
-                        ),
-                      ),
                     EditorStepIndicator(
                       current_step: _current_step,
                       labels: <String>[

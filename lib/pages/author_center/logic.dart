@@ -394,6 +394,20 @@ class CreatorLogic {
     }
   }
 
+  /// 作者下架已发布作品
+  static Future<String?> offShelfWork(int novelId) async {
+    try {
+      final result = await CreatorWorkApi.requestOffShelf(novelId: novelId);
+      if (result.status) {
+        return null;
+      }
+      return result.message;
+    } catch (e) {
+      logUtil(msg: '下架作品异常: $e', type: 'e');
+      return '下架失败，请稍后重试';
+    }
+  }
+
   /// 放弃审核（将审核中的作品撤回为草稿）
   static Future<bool> withdrawByNovel(int novelId) async {
     try {

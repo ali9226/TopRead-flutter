@@ -3,8 +3,8 @@
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/work_editor/_shared/backend_draft_loader.dart';
 import 'package:app/pages/work_editor/long_novel_editor/index.dart';
-import 'package:app/pages/work_editor/published_long_novel_editor/index.dart';
-import 'package:app/pages/work_editor/short_novel_editor/index.dart';
+import 'package:app/pages/published_long_novel_editor/index.dart';
+import 'package:app/pages/short_novel_editor/index.dart';
 import 'package:flutter/material.dart';
 
 // TODO 同一路由支持新增与带编号编辑；直接打开链接时仍以服务端状态选择编辑方式。
