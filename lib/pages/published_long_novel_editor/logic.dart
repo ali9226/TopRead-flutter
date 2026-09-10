@@ -257,7 +257,7 @@ class PublishedNovelController extends ChangeNotifier {
   /// 排序模式固定正序，未公开的定时章节不占据公开章节位置。
   void toggle_ordering() {
     if (locked) return;
-    if (!ordering) {
+    if (!ordering && !order_dirty) {
       chapters.sort(
         (a, b) => creatorNumber(
           a['chapter_no'],

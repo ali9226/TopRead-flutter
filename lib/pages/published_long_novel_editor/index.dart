@@ -7,6 +7,7 @@ import 'package:app/pages/work_editor/_shared/widgets/editor_actions.dart';
 import 'package:app/pages/work_editor/_shared/widgets/steps/step_basic/step_basic.dart';
 import 'package:app/pages/work_editor/_shared/widgets/steps/step_category/step_category.dart';
 import 'package:app/pages/work_editor/single_chapter/index.dart';
+import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:app/pages/work_editor/workspace/logic.dart';
 import 'package:app/pages/work_editor/workspace/style.dart';
 import 'package:app/stores/device_info.dart';
@@ -141,37 +142,55 @@ class _PublishedLongNovelEditorPageState
   }
 
   /// 每个 Tab 拥有自己的操作栏，横向切换时与内容一起移动。
-  Widget _section(int section, Widget child, bool dark, bool cjk) => Column(
+  Widget _section(int section, Widget child, bool dark, bool cjk) => Stack(
     children: [
-      Expanded(
+      Positioned.fill(
         child: AbsorbPointer(absorbing: model.locked, child: child),
       ),
-      EditorBottomBar(
-        key: ValueKey('published_section_action_$section'),
-        is_dark: dark,
-        is_cjk: cjk,
-        current_step: 0,
-        is_last_step: true,
-        primary_title: tr(
-          section == 2 && !model.order_dirty
-              ? 'creator_workspace.new_chapter'
-              : 'published_editor.update',
+      Positioned(
+        left: WorkEditorStyle.page_padding,
+        right: WorkEditorStyle.page_padding,
+        bottom: MediaQuery.viewPaddingOf(context).bottom + 14,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: WorkEditorStyle.content_max_width,
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed:
+                    model.loading ||
+                        model.chapters_loading ||
+                        model.saving ||
+                        model.uploading ||
+                        (model.pending_section != null &&
+                            model.pending_section != section)
+                    ? null
+                    : () => _update(section),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(
+                    WorkEditorStyle.action_height,
+                  ),
+                  backgroundColor: AuthorStyle.gold,
+                  foregroundColor: WorkEditorStyle.action_foreground,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                      WorkEditorStyle.action_radius,
+                    ),
+                  ),
+                  textStyle: TextStyle(
+                    fontSize: cjk
+                        ? WorkEditorStyle.action_font_size_cjk
+                        : WorkEditorStyle.action_font_size_alphabetic,
+                    fontWeight: AuthorStyle.title_weight,
+                  ),
+                ),
+                child: Text(tr('published_editor.update')),
+              ),
+            ),
+          ),
         ),
-        primary_icon: section == 2 && !model.order_dirty
-            ? Icons.add_rounded
-            : Icons.check_rounded,
-        on_primary:
-            model.loading ||
-                model.chapters_loading ||
-                model.saving ||
-                model.uploading ||
-                (model.pending_section != null &&
-                    model.pending_section != section)
-            ? null
-            : section == 2 && !model.order_dirty
-            ? _chapter
-            : () => _update(section),
-        on_previous: () {},
       ),
     ],
   );

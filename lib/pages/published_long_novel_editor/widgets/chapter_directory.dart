@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/work_editor/_shared/style.dart';
@@ -56,6 +57,26 @@ class PublishedChapterDirectory extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (!model.ordering && rows.length > 1) ...[
+                  GestureDetector(
+                    onTap: model.locked
+                        ? null
+                        : () {
+                            model.descending = !model.descending;
+                            model.notifyListeners();
+                          },
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: SvgIcon(
+                        name: 'move',
+                        width: 20,
+                        height: 20,
+                        color: secondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
                 GestureDetector(
                   onTap: model.locked || model.saved == null
                       ? null
@@ -121,13 +142,6 @@ class PublishedChapterDirectory extends StatelessWidget {
             on_cancel_order: model.order_dirty || model.error != null
                 ? model.cancel_order
                 : null,
-            descending: model.descending,
-            on_toggle_descending: model.locked
-                ? null
-                : () {
-                    model.descending = !model.descending;
-                    model.notifyListeners();
-                  },
           ),
         ],
       );
@@ -171,8 +185,6 @@ class _DirectoryFooter extends StatelessWidget {
     required this.on_reorder_toggle,
     required this.on_new_chapter,
     required this.on_cancel_order,
-    required this.descending,
-    required this.on_toggle_descending,
   });
 
   final bool is_dark;
@@ -181,16 +193,9 @@ class _DirectoryFooter extends StatelessWidget {
   final VoidCallback on_reorder_toggle;
   final VoidCallback on_new_chapter;
   final VoidCallback? on_cancel_order;
-  final bool descending;
-  final VoidCallback? on_toggle_descending;
 
   @override
   Widget build(BuildContext context) {
-    final text = AuthorStyle.primary_text(is_dark);
-    final accent = is_dark
-        ? ColorConstants.themeColor
-        : ColorConstants.lightTextColor;
-
     return SafeArea(
       top: false,
       maintainBottomViewPadding: true,
@@ -213,7 +218,7 @@ class _DirectoryFooter extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: text,
+                  foregroundColor: AuthorStyle.primary_text(is_dark),
                   side: BorderSide(color: AuthorStyle.border(is_dark)),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -230,23 +235,6 @@ class _DirectoryFooter extends StatelessWidget {
                 icon: const Icon(Icons.refresh_rounded),
               ),
             ],
-            if (!ordering && on_toggle_descending != null) ...[
-              const SizedBox(width: 8),
-              IconButton(
-                tooltip: tr(
-                  descending
-                      ? 'published_editor.descending'
-                      : 'published_editor.ascending',
-                ),
-                onPressed: on_toggle_descending,
-                icon: Icon(
-                  descending
-                      ? Icons.south_rounded
-                      : Icons.north_rounded,
-                  color: AuthorStyle.secondary_text(is_dark),
-                ),
-              ),
-            ],
             const SizedBox(width: 8),
             Expanded(
               child: FilledButton.icon(
@@ -258,9 +246,8 @@ class _DirectoryFooter extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 style: FilledButton.styleFrom(
-                  backgroundColor: accent,
-                  foregroundColor:
-                      is_dark ? const Color(0xFF1A1A18) : Colors.white,
+                  backgroundColor: AuthorStyle.gold,
+                  foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
