@@ -1,17 +1,21 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/api/creator_workspace.dart';
+import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/work_editor/_shared/widgets/chapter_publish_sheet.dart';
 import 'package:app/pages/work_editor/_shared/widgets/editor_actions.dart';
+import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:app/pages/work_editor/_shared/widgets/editor_keyboard_layout.dart';
 import 'package:app/pages/work_editor/workspace/style.dart';
 import 'package:app/stores/device_info.dart';
+import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/dialog/show_message.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'logic.dart';
 import 'widgets/chapter_writing_surface.dart';
@@ -45,6 +49,9 @@ class _PublishedChapterEditorState extends State<PublishedChapterEditor> {
   String? error;
   bool get is_new =>
       widget.chapter_id == null && widget.scheduled_revision_id == null;
+
+  bool get _has_input =>
+      title.text.trim().isNotEmpty || content.text.trim().isNotEmpty;
 
   @override
   void initState() {
@@ -93,7 +100,6 @@ class _PublishedChapterEditorState extends State<PublishedChapterEditor> {
       return;
     }
     FocusManager.instance.primaryFocus?.unfocus();
-    // 包括设置发布方式期间也禁用重复提交。
     setState(() => saving = true);
     try {
       if (pending == null) {
@@ -143,8 +149,27 @@ class _PublishedChapterEditorState extends State<PublishedChapterEditor> {
     }
   }
 
+  Future<void> _save_and_exit() async {
+    if (saving) return;
+    if (title.text.trim().isEmpty) {
+      showBottomTip(tr('creator_center.required_chapter_title'));
+      return;
+    }
+    if (content.text.trim().isEmpty) {
+      showBottomTip(tr('creator_center.required_chapter_content'));
+      return;
+    }
+    await _submit();
+  }
+
   Future<void> _leave() async {
     if (saving) return;
+    if (!_has_input) {
+      setState(() => allow_pop = true);
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted) Navigator.pop(context);
+      return;
+    }
     if (dirty) {
       String? action;
       await showMessage(
@@ -193,29 +218,94 @@ class _PublishedChapterEditorState extends State<PublishedChapterEditor> {
         child: Scaffold(
           resizeToAvoidBottomInset: false,
           backgroundColor: AuthorStyle.background(dark),
-          appBar: AppBar(
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            leading: BackButton(onPressed: _leave),
-            backgroundColor: AuthorStyle.background(dark),
-            surfaceTintColor: Colors.transparent,
-            foregroundColor: AuthorStyle.primary_text(dark),
-            title: Text(
-              tr(
-                is_new
-                    ? 'creator_workspace.new_chapter'
-                    : 'creator_workspace.edit_chapter',
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(kToolbarHeight),
+            child: AnnotatedRegion<SystemUiOverlayStyle>(
+              value: (dark
+                      ? SystemUiOverlayStyle.light
+                      : SystemUiOverlayStyle.dark)
+                  .copyWith(statusBarColor: Colors.transparent),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: AuthorStyle.hero_gradient(dark),
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      right: -AuthorStyle.header_glow_size * 0.28,
+                      top: -AuthorStyle.header_glow_size * 0.34,
+                      child: Container(
+                        width: AuthorStyle.header_glow_size,
+                        height: AuthorStyle.header_glow_size,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AuthorStyle.gold.withValues(
+                            alpha: dark ? 0.08 : 0.20,
+                          ),
+                          boxShadow: <BoxShadow>[
+                            BoxShadow(
+                              color: AuthorStyle.gold.withValues(
+                                alpha: dark ? 0.10 : 0.16,
+                              ),
+                              blurRadius: AuthorStyle.header_glow_blur,
+                              spreadRadius:
+                                  AuthorStyle.header_glow_blur * 0.16,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SafeArea(
+                      bottom: false,
+                      child: SizedBox(
+                        height: kToolbarHeight,
+                        child: Row(
+                          children: [
+                            BackButton(
+                              onPressed: _leave,
+                              color: AuthorStyle.primary_text(dark),
+                            ),
+                            Expanded(
+                              child: Text(
+                                tr(
+                                  is_new
+                                      ? 'creator_workspace.new_chapter'
+                                      : 'creator_workspace.edit_chapter',
+                                ),
+                                style: WorkspaceStyle.body(dark, cjk),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: GestureDetector(
+                                onTap: saving ? null : _save_and_exit,
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: AuthorStyle.gold,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: SvgIcon(
+                                      name: 'check_04',
+                                      width: 9,
+                                      height: 9,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              style: WorkspaceStyle.body(dark, cjk),
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.keyboard_hide_rounded),
-                tooltip: tr('common.done'),
-                onPressed: () =>
-                    FocusManager.instance.primaryFocus?.unfocus(),
-              ),
-            ],
           ),
           body: loading
               ? const Center(
@@ -245,25 +335,87 @@ class _PublishedChapterEditorState extends State<PublishedChapterEditor> {
                     is_cjk: cjk,
                     read_only: saving || pending != null,
                   ),
-                  footer: EditorBottomBar(
+                  footer: _ChapterBottomBar(
                     is_dark: dark,
                     is_cjk: cjk,
-                    current_step: 0,
-                    is_last_step: true,
-                    primary_title: tr(
-                      is_new
-                          ? 'creator_center.publish'
-                          : 'published_editor.update',
-                    ),
-                    primary_icon: is_new
-                        ? Icons.send_rounded
-                        : Icons.check_rounded,
-                    on_primary: saving ? null : _submit,
-                    on_previous: () {},
+                    is_new: is_new,
+                    saving: saving,
+                    on_submit: _submit,
                   ),
                 ),
         ),
       ),
     );
   });
+}
+
+class _ChapterBottomBar extends StatelessWidget {
+  const _ChapterBottomBar({
+    required this.is_dark,
+    required this.is_cjk,
+    required this.is_new,
+    required this.saving,
+    required this.on_submit,
+  });
+
+  final bool is_dark;
+  final bool is_cjk;
+  final bool is_new;
+  final bool saving;
+  final VoidCallback on_submit;
+
+  @override
+  Widget build(BuildContext context) {
+    final font_size = is_cjk
+        ? WorkEditorStyle.action_font_size_cjk
+        : WorkEditorStyle.action_font_size_alphabetic;
+
+    return Container(
+      constraints: const BoxConstraints(
+        minHeight: WorkEditorStyle.bottom_bar_min_height,
+      ),
+      padding: EdgeInsets.fromLTRB(
+        WorkEditorStyle.bottom_bar_horizontal_padding,
+        WorkEditorStyle.bottom_bar_vertical_padding,
+        WorkEditorStyle.bottom_bar_horizontal_padding,
+        WorkEditorStyle.bottom_bar_vertical_padding +
+            MediaQuery.viewPaddingOf(context).bottom,
+      ),
+      decoration: BoxDecoration(
+        color: AuthorStyle.surface(is_dark),
+        border: Border(top: BorderSide(color: AuthorStyle.border(is_dark))),
+      ),
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: WorkEditorStyle.content_max_width,
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: saving ? null : on_submit,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(WorkEditorStyle.action_height),
+                backgroundColor: AuthorStyle.gold,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    WorkEditorStyle.action_radius,
+                  ),
+                ),
+                textStyle: TextStyle(
+                  fontSize: font_size,
+                  fontWeight: AuthorStyle.title_weight,
+                ),
+              ),
+              child: Text(
+                tr(is_new ? 'creator_center.publish' : 'published_editor.update'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

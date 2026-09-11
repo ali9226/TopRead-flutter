@@ -65,13 +65,28 @@ class PublishedChapterDirectory extends StatelessWidget {
                             model.descending = !model.descending;
                             model.notifyListeners();
                           },
+                    behavior: HitTestBehavior.opaque,
                     child: Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: SvgIcon(
-                        name: 'move',
-                        width: 20,
-                        height: 20,
-                        color: secondary,
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _Triangle(
+                            direction: _TriangleDirection.up,
+                            color: model.descending
+                                ? AuthorStyle.gold
+                                : secondary.withValues(alpha: 0.4),
+                            size: 13,
+                          ),
+                          const SizedBox(height: 1),
+                          _Triangle(
+                            direction: _TriangleDirection.down,
+                            color: !model.descending
+                                ? AuthorStyle.gold
+                                : secondary.withValues(alpha: 0.4),
+                            size: 13,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -257,4 +272,69 @@ class _DirectoryFooter extends StatelessWidget {
       ),
     );
   }
+}
+
+enum _TriangleDirection { up, down }
+
+class _Triangle extends StatelessWidget {
+  const _Triangle({
+    required this.direction,
+    required this.color,
+    required this.size,
+  });
+
+  final _TriangleDirection direction;
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    size: Size(size, size * 0.75),
+    painter: _TrianglePainter(direction: direction, color: color),
+  );
+}
+
+class _TrianglePainter extends CustomPainter {
+  _TrianglePainter({required this.direction, required this.color});
+
+  final _TriangleDirection direction;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final w = size.width;
+    final h = size.height;
+    final r = w * 0.10;
+
+    final path = Path();
+    if (direction == _TriangleDirection.up) {
+      path.moveTo(w / 2, r);
+      path.quadraticBezierTo(w / 2, 0, w / 2 + r * 0.8, r * 0.6);
+      path.lineTo(w - r * 0.3, h - r * 0.3);
+      path.quadraticBezierTo(w, h, w - r * 0.7, h);
+      path.lineTo(r * 0.7, h);
+      path.quadraticBezierTo(0, h, r * 0.3, h - r * 0.3);
+      path.lineTo(w / 2 - r * 0.8, r * 0.6);
+      path.quadraticBezierTo(w / 2, 0, w / 2, r);
+    } else {
+      path.moveTo(r * 0.7, 0);
+      path.quadraticBezierTo(0, 0, r * 0.3, r * 0.3);
+      path.lineTo(w / 2 - r * 0.8, h - r * 0.6);
+      path.quadraticBezierTo(w / 2, h, w / 2, h - r);
+      path.quadraticBezierTo(w / 2, h, w / 2 + r * 0.8, h - r * 0.6);
+      path.lineTo(w - r * 0.3, r * 0.3);
+      path.quadraticBezierTo(w, 0, w - r * 0.7, 0);
+    }
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrianglePainter oldDelegate) =>
+      color != oldDelegate.color || direction != oldDelegate.direction;
 }

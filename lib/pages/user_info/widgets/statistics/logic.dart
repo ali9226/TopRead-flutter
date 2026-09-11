@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:get/get.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
+import 'package:app/pages/author_center/logic.dart';
 import 'package:app/stores/message_store.dart';
 import 'package:app/stores/shell_tab_info.dart';
 import 'package:app/util/router/router_util.dart';
@@ -19,7 +20,24 @@ class Logic {
   /// Shell 层级的 tab 状态仓库。
   final ShellTabInfo shell_tab_info = Get.find<ShellTabInfo>();
 
+  /// 作者 Dashboard 统计数据。
+  final total_works = 0.obs;
+  final total_favorites = 0.obs;
+  final total_comments = 0.obs;
+
   Logic();
+
+  /// 加载作者 Dashboard 统计数据。
+  Future<void> load_dashboard() async {
+    try {
+      final result = await CreatorLogic.getDashboard();
+      if (result != null) {
+        total_works.value = int.tryParse('${result['total_works']}') ?? 0;
+        total_favorites.value = int.tryParse('${result['total_favorites']}') ?? 0;
+        total_comments.value = int.tryParse('${result['total_comments']}') ?? 0;
+      }
+    } catch (_) {}
+  }
 
   /// 切换到消息页并应用指定筛选。
   ///

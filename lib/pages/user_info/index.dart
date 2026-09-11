@@ -49,6 +49,9 @@ class _UserInfoState extends State<UserInfo> {
   /// 顶部用户信息组件的 key，用于调用其方法。
   final GlobalKey _userInfoTopKey = GlobalKey();
 
+  /// 统计组件的 key，用于调用其刷新方法。
+  final GlobalKey _statisticsKey = GlobalKey();
+
   /// 监听“用户中心 tab 被再次激活”的 worker。
   Worker? _tabActivationWorker;
 
@@ -98,6 +101,12 @@ class _UserInfoState extends State<UserInfo> {
     try {
       /// 调用逻辑层刷新用户资料。
       await logic.refreshUserInfo(showSuccessTip: showSuccessTip);
+
+      /// 刷新统计数据。
+      final statisticsState = _statisticsKey.currentState as dynamic;
+      if (statisticsState != null) {
+        statisticsState.refresh();
+      }
 
       /// 下拉刷新时更新随机头像。
       if (updateAvatar) {
@@ -166,7 +175,7 @@ class _UserInfoState extends State<UserInfo> {
                             child: Column(
                               children: [
                                 /// 只有登录后才展示统计区。
-                                if (isLoggedIn) Statistics(),
+                                if (isLoggedIn) Statistics(key: _statisticsKey),
 
                                 /// 常用操作入口列表。
                                 OperationList(),

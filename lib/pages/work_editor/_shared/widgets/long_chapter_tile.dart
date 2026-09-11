@@ -44,11 +44,6 @@ class LongChapterTile extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             decoration: BoxDecoration(
-              border: Border.all(
-                color: active
-                    ? accent.withValues(alpha: .6)
-                    : AuthorStyle.border(dark),
-              ),
               borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
             ),
             child: Row(
@@ -79,7 +74,7 @@ class LongChapterTile extends StatelessWidget {
                         title.isEmpty
                             ? easy.tr('creator_center.untitled_work')
                             : title,
-                        maxLines: 1,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 14,

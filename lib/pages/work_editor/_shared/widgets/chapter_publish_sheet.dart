@@ -66,6 +66,16 @@ show_chapter_publish_sheet({
                                 (time?.isAfter(DateTime.now()) ?? false))
                         ? () => Navigator.pop(context, (mode: mode, time: time))
                         : null,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(WorkEditorStyle.action_height),
+                      backgroundColor: AuthorStyle.gold,
+                      foregroundColor: Colors.black,
+                      disabledBackgroundColor: AuthorStyle.gold.withValues(alpha: 0.5),
+                      disabledForegroundColor: Colors.black.withValues(alpha: 0.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(WorkEditorStyle.action_radius),
+                      ),
+                    ),
                     child: Text(tr('creator_center.publish')),
                   ),
                 ),

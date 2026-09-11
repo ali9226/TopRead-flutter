@@ -17,10 +17,10 @@ class Statistics extends StatefulWidget {
   const Statistics({super.key});
 
   @override
-  State<Statistics> createState() => _StatisticsState();
+  State<Statistics> createState() => StatisticsState();
 }
 
-class _StatisticsState extends State<Statistics> {
+class StatisticsState extends State<Statistics> {
   /// TODO 设备主题仓库。
   final deviceInfo = Get.find<DeviceInfo>();
 
@@ -32,6 +32,25 @@ class _StatisticsState extends State<Statistics> {
 
   /// TODO 当前登录用户资料，用于识别已认证作者。
   final UserInformation user_information = Get.find<UserInformation>();
+
+  @override
+  void initState() {
+    super.initState();
+    _load_if_author();
+  }
+
+  /// 外部调用：刷新统计数据。
+  void refresh() {
+    _load_if_author();
+  }
+
+  void _load_if_author() {
+    final bool is_author = user_information.userInfo.value?.author == 2 &&
+        projectConfigStore.current.is_creator_enabled;
+    if (is_author) {
+      logic.load_dashboard();
+    }
+  }
 
   /// 作者作品数量颜色（清透蓝）。
   static const Color _work_color = Color(0xFF6596FF);
@@ -80,7 +99,7 @@ class _StatisticsState extends State<Statistics> {
                 child: GestureDetector(
                   onTap: logic.go_to_creator_center,
                   child: _StatCard(
-                    value: '0',
+                    value: '${logic.total_works.value}',
                     unread: 0,
                     label: easy.tr('creator_center.stats_works'),
                     accentColor: _work_color,
@@ -98,38 +117,44 @@ class _StatisticsState extends State<Statistics> {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _StatCard(
-                  value: '0',
-                  unread: 0,
-                  label: easy.tr('creator_center.stats_favorites'),
-                  accentColor: _favorite_color,
-                  startColor: isDark
-                      ? const Color(0xFF262113)
-                      : const Color(0xFFFFF4D3),
-                  endColor: isDark
-                      ? const Color(0xFF17140E)
-                      : const Color(0xFFFFFCF0),
-                  titleColor: titleColor,
-                  subtitleColor: subtitleColor,
-                  is_cjk: is_cjk,
+                child: GestureDetector(
+                  onTap: () => logic.go_to_message(5),
+                  child: _StatCard(
+                    value: '${logic.total_favorites.value}',
+                    unread: 0,
+                    label: easy.tr('creator_center.stats_favorites'),
+                    accentColor: _favorite_color,
+                    startColor: isDark
+                        ? const Color(0xFF262113)
+                        : const Color(0xFFFFF4D3),
+                    endColor: isDark
+                        ? const Color(0xFF17140E)
+                        : const Color(0xFFFFFCF0),
+                    titleColor: titleColor,
+                    subtitleColor: subtitleColor,
+                    is_cjk: is_cjk,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _StatCard(
-                  value: '0',
-                  unread: 0,
-                  label: easy.tr('creator_center.stats_comments'),
-                  accentColor: _comment_color,
-                  startColor: isDark
-                      ? const Color(0xFF18222F)
-                      : const Color(0xFFF2F7FF),
-                  endColor: isDark
-                      ? const Color(0xFF101721)
-                      : const Color(0xFFFBFDFF),
-                  titleColor: titleColor,
-                  subtitleColor: subtitleColor,
-                  is_cjk: is_cjk,
+                child: GestureDetector(
+                  onTap: () => logic.go_to_message(2),
+                  child: _StatCard(
+                    value: '${logic.total_comments.value}',
+                    unread: 0,
+                    label: easy.tr('creator_center.stats_comments'),
+                    accentColor: _comment_color,
+                    startColor: isDark
+                        ? const Color(0xFF18222F)
+                        : const Color(0xFFF2F7FF),
+                    endColor: isDark
+                        ? const Color(0xFF101721)
+                        : const Color(0xFFFBFDFF),
+                    titleColor: titleColor,
+                    subtitleColor: subtitleColor,
+                    is_cjk: is_cjk,
+                  ),
                 ),
               ),
             ],

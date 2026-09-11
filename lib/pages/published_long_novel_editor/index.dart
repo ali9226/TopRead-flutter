@@ -37,13 +37,23 @@ class _PublishedLongNovelEditorPageState
   late final PublishedNovelController model;
   late final TabController tabs;
   bool _allow_pop = false;
+  int _last_tab_index = 0;
 
   @override
   void initState() {
     super.initState();
-    tabs = TabController(length: 3, vsync: this)..addListener(_changed);
+    tabs = TabController(length: 3, vsync: this)
+      ..addListener(_on_tab_changed);
     model = PublishedNovelController(widget.novel_id)..addListener(_changed);
     model.load();
+  }
+
+  void _on_tab_changed() {
+    if (tabs.index != _last_tab_index) {
+      _last_tab_index = tabs.index;
+      FocusManager.instance.primaryFocus?.unfocus();
+    }
+    _changed();
   }
 
   void _changed() {
@@ -53,23 +63,35 @@ class _PublishedLongNovelEditorPageState
   Future<void> _leave() async {
     if (model.saving || model.uploading) return;
     if (model.dirty || model.pending_section != null) {
-      final discard = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(tr('creator_center.unsaved_changes_message')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(tr('common.cancel')),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(tr('creator_center.no_save')),
-            ),
-          ],
-        ),
+      String? action;
+      await showMessage(
+        message: tr('creator_center.unsaved_changes_message'),
+        iconData: Icons.info_outline_rounded,
+        leftButtonText: tr('creator_center.no_save'),
+        rightButtonText: tr('creator_center.save_and_exit'),
+        onLeftPressed: () async => action = 'discard',
+        onRightPressed: () async {
+          action = 'save';
+          // 乐观锁：发起保存请求后立即退出，不等结果
+          for (final section in [0, 1]) {
+            if (section == 0 && model.details_dirty) {
+              model.update_section(section).then((_) {
+                if (model.error == null) showBottomTip(tr('published_editor.updated'));
+              }).catchError((_) {});
+            } else if (section == 1 && model.settings_dirty) {
+              model.update_section(section).then((_) {
+                if (model.error == null) showBottomTip(tr('published_editor.updated'));
+              }).catchError((_) {});
+            }
+          }
+          if (model.order_dirty) {
+            model.update_order().then((_) {
+              if (model.error == null) showBottomTip(tr('published_editor.updated'));
+            }).catchError((_) {});
+          }
+        },
       );
-      if (discard != true || !mounted) return;
+      if (action == null || !mounted) return;
     }
     setState(() => _allow_pop = true);
     await WidgetsBinding.instance.endOfFrame;
@@ -77,6 +99,7 @@ class _PublishedLongNovelEditorPageState
   }
 
   Future<void> _update(int section) async {
+    if (model.saving || model.uploading) return;
     try {
       if (section == 2) {
         await model.update_order();
@@ -142,58 +165,65 @@ class _PublishedLongNovelEditorPageState
   }
 
   /// 每个 Tab 拥有自己的操作栏，横向切换时与内容一起移动。
-  Widget _section(int section, Widget child, bool dark, bool cjk) => Stack(
-    children: [
-      Positioned.fill(
-        child: AbsorbPointer(absorbing: model.locked, child: child),
-      ),
-      Positioned(
-        left: WorkEditorStyle.page_padding,
-        right: WorkEditorStyle.page_padding,
-        bottom: MediaQuery.viewPaddingOf(context).bottom + 14,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: WorkEditorStyle.content_max_width,
-            ),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed:
-                    model.loading ||
-                        model.chapters_loading ||
-                        model.saving ||
-                        model.uploading ||
-                        (model.pending_section != null &&
-                            model.pending_section != section)
-                    ? null
-                    : () => _update(section),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(
-                    WorkEditorStyle.action_height,
-                  ),
-                  backgroundColor: AuthorStyle.gold,
-                  foregroundColor: WorkEditorStyle.action_foreground,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                      WorkEditorStyle.action_radius,
+  Widget _section(int section, Widget child, bool dark, bool cjk) {
+    final bottom_inset = MediaQuery.viewInsetsOf(context).bottom;
+    final safe_bottom = MediaQuery.viewPaddingOf(context).bottom;
+    final button_bottom = bottom_inset > 0
+        ? bottom_inset + 8
+        : safe_bottom + 14;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: AbsorbPointer(absorbing: model.locked, child: child),
+        ),
+        Positioned(
+          left: WorkEditorStyle.page_padding,
+          right: WorkEditorStyle.page_padding,
+          bottom: button_bottom,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: WorkEditorStyle.content_max_width,
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed:
+                      model.loading ||
+                          model.chapters_loading ||
+                          model.saving ||
+                          model.uploading ||
+                          (model.pending_section != null &&
+                              model.pending_section != section)
+                      ? null
+                      : () => _update(section),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(
+                      WorkEditorStyle.action_height,
+                    ),
+                    backgroundColor: AuthorStyle.gold,
+                    foregroundColor: WorkEditorStyle.action_foreground,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        WorkEditorStyle.action_radius,
+                      ),
+                    ),
+                    textStyle: TextStyle(
+                      fontSize: cjk
+                          ? WorkEditorStyle.action_font_size_cjk
+                          : WorkEditorStyle.action_font_size_alphabetic,
+                      fontWeight: AuthorStyle.title_weight,
                     ),
                   ),
-                  textStyle: TextStyle(
-                    fontSize: cjk
-                        ? WorkEditorStyle.action_font_size_cjk
-                        : WorkEditorStyle.action_font_size_alphabetic,
-                    fontWeight: AuthorStyle.title_weight,
-                  ),
+                  child: Text(tr('published_editor.update')),
                 ),
-                child: Text(tr('published_editor.update')),
               ),
             ),
           ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 
   @override
   void dispose() {
@@ -211,9 +241,12 @@ class _PublishedLongNovelEditorPageState
       onPopInvokedWithResult: (did_pop, _) {
         if (!did_pop) _leave();
       },
-      child: Scaffold(
-        backgroundColor: AuthorStyle.background(dark),
-        body: Column(
+      child: GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: Scaffold(
+          backgroundColor: AuthorStyle.background(dark),
+          body: Column(
           children: [
             PublishedEditorHeader(
               controller: tabs,
@@ -315,6 +348,7 @@ class _PublishedLongNovelEditorPageState
                     ),
             ),
           ],
+        ),
         ),
       ),
     );

@@ -1,4 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
+import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/work_editor/_shared/widgets/long_chapter_fields.dart';
@@ -22,65 +23,92 @@ class ChapterWritingSurface extends StatelessWidget {
   final String? chapter_label;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 800),
-      child: Column(
-        children: [
-          if (chapter_label != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-              child: SizedBox(
-                height: kMinInteractiveDimension,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    chapter_label!,
-                    style: TextStyle(
-                      color: is_dark
-                          ? ColorConstants.themeColor
-                          : ColorConstants.lightTextColor,
-                      fontSize: 15,
-                      fontWeight: AuthorStyle.emphasis_weight,
+  Widget build(BuildContext context) {
+    final keyboard_visible = MediaQuery.viewInsetsOf(context).bottom > 0;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 800),
+        child: Column(
+          children: [
+            if (chapter_label != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+                child: SizedBox(
+                  height: kMinInteractiveDimension,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      chapter_label!,
+                      style: TextStyle(
+                        color: is_dark
+                            ? ColorConstants.themeColor
+                            : ColorConstants.lightTextColor,
+                        fontSize: 15,
+                        fontWeight: AuthorStyle.emphasis_weight,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 28),
-              child: LongChapterFields(
-                title_controller: title_controller,
-                content_controller: content_controller,
-                is_dark: is_dark,
-                locked: read_only,
-                title_key: const ValueKey('single_chapter_title'),
-                content_key: const ValueKey('single_chapter_content'),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: ValueListenableBuilder<TextEditingValue>(
-              valueListenable: content_controller,
-              builder: (context, value, _) => Text(
-                tr(
-                  'creator_center.chapter_word_count',
-                  namedArgs: {
-                    'count':
-                        '${value.text.replaceAll(RegExp(r'\s+'), '').length}',
-                  },
-                ),
-                style: TextStyle(
-                  color: AuthorStyle.secondary_text(is_dark),
-                  fontSize: 11,
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 28),
+                child: LongChapterFields(
+                  title_controller: title_controller,
+                  content_controller: content_controller,
+                  is_dark: is_dark,
+                  locked: read_only,
+                  title_key: const ValueKey('single_chapter_title'),
+                  content_key: const ValueKey('single_chapter_content'),
                 ),
               ),
             ),
-          ),
-        ],
+            GestureDetector(
+              onTap: keyboard_visible
+                  ? () => FocusManager.instance.primaryFocus?.unfocus()
+                  : null,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: content_controller,
+                        builder: (context, value, _) => Text(
+                          tr(
+                            'creator_center.chapter_word_count',
+                            namedArgs: {
+                              'count':
+                                  '${value.text.replaceAll(RegExp(r'\s+'), '').length}',
+                            },
+                          ),
+                          style: TextStyle(
+                            color: AuthorStyle.secondary_text(is_dark),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (keyboard_visible)
+                      Transform.rotate(
+                        angle: 1.5708,
+                        child: SvgIcon(
+                          name: 'right',
+                          width: 14,
+                          height: 14,
+                          color: AuthorStyle.secondary_text(is_dark),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
