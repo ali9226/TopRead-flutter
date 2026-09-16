@@ -33,12 +33,16 @@ class StepCategory extends StatelessWidget {
   /// 是否显示篇幅选择（默认 true，独立编辑器中设为 false）。
   final bool showLength;
 
+  /// 是否显示区块标题和副标题。
+  final bool show_header;
+
   const StepCategory({
     super.key,
     required this.is_dark,
     required this.selected_preference_map,
     required this.on_toggle_preference,
     this.showLength = true,
+    this.show_header = true,
   });
 
   @override
@@ -53,6 +57,7 @@ class StepCategory extends StatelessWidget {
           title: easy.tr('creator_center.category_step_title'),
           subtitle: easy.tr('creator_center.category_step_subtitle'),
           is_dark: is_dark,
+          show_header: show_header,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: _build_preference_sections(preferences),

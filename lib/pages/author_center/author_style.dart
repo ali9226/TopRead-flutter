@@ -116,6 +116,11 @@ class AuthorStyle {
   /// Tab 下划线厚度；绘制区域必须位于滚动视口内，避免标签溢出时被裁剪。
   static const double tab_indicator_width = 3;
 
+  /// Tab 下划线距标签底部的统一偏移量。
+  ///
+  /// 所有页面的 TabBar 下划线应使用此常量，保证全局视觉一致。
+  static const double tab_indicator_bottom_offset = 4;
+
   /// CJK Tab 字号。
   static const double tab_font_size_cjk = 15;
 

@@ -70,16 +70,22 @@ class StepUtils {
   }
 
   /// 构建步骤内统一的滚动容器。
+  ///
+  /// [extra_bottom_padding] 可传入浮动操作栏等叠加元素的高度，
+  /// 避免滚动内容被遮挡。
   static Widget build_step_scroll_view({
     required BuildContext context,
     required List<Widget> children,
+    double extra_bottom_padding = 0,
   }) {
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         WorkEditorStyle.page_padding,
         WorkEditorStyle.section_spacing,
         WorkEditorStyle.page_padding,
-        WorkEditorStyle.section_spacing + MediaQuery.paddingOf(context).bottom,
+        WorkEditorStyle.section_spacing +
+            MediaQuery.paddingOf(context).bottom +
+            extra_bottom_padding,
       ),
       child: Center(
         child: ConstrainedBox(

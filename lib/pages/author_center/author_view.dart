@@ -82,6 +82,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   int _total_works = 0;
   int _total_favorites = 0;
   int _total_comments = 0;
+  bool _dashboard_loaded = false;
 
   /// 每个 Tab 独占的滚动控制器。
   late final List<_CreatorTabScrollController> _tab_scroll_controllers;
@@ -182,6 +183,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
           _total_works = int.tryParse('${result['total_works']}') ?? 0;
           _total_favorites = int.tryParse('${result['total_favorites']}') ?? 0;
           _total_comments = int.tryParse('${result['total_comments']}') ?? 0;
+          _dashboard_loaded = true;
         });
       }
     } catch (e) {
@@ -455,8 +457,15 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         ? 0 : result.work_type == CreatorWorkType.long ? 1 : 2);
   }
 
-  // TODO 所有列表共用入口，先读取服务端状态，避免过期卡片将已发布作品当作草稿打开。
-  Future<void> _open_work(CreatorWorkModel work) => _open_draft(work.id);
+  Future<void> _open_work(CreatorWorkModel work) {
+    if (work.is_long_novel && work.is_published) {
+      return context.pushNamed(
+        'published_long_novel_editor',
+        pathParameters: {'id': '${work.id}'},
+      );
+    }
+    return _open_draft(work.id);
+  }
 
   Future<void> _open_draft(int novelId) async {
     if (_opening_work) return;
@@ -594,7 +603,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         work: work,
         is_dark: is_dark,
         on_edit: () {
-          _open_draft(work.id);
+          _open_work(work);
         },
         on_read_published: work.is_published
             ? () {
@@ -666,7 +675,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                       minimum_scroll_extent:
                           _header_max_extent - _header_min_extent,
                       on_create_work: _create_work,
-                      on_edit_work: (work) => _open_draft(work.id),
+                      on_edit_work: (work) => _open_work(work),
                       on_long_press_work: _show_work_action_sheet,
                     ),
                     growable: false,
@@ -695,6 +704,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                     works_count: _total_works,
                     favorites_count: _total_favorites.toString(),
                     comments_count: _total_comments.toString(),
+                    dashboard_loaded: _dashboard_loaded,
                     on_back: () => routerBack(context),
                     on_create_work: _create_work,
                     on_continue_writing: _continue_latest_draft,

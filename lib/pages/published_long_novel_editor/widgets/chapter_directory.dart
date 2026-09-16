@@ -150,6 +150,7 @@ class PublishedChapterDirectory extends StatelessWidget {
           ),
           _DirectoryFooter(
             is_dark: is_dark,
+            is_cjk: is_cjk,
             ordering: model.ordering,
             has_chapters: rows.length > 1,
             on_reorder_toggle: model.toggle_ordering,
@@ -195,6 +196,7 @@ class PublishedChapterDirectory extends StatelessWidget {
 class _DirectoryFooter extends StatelessWidget {
   const _DirectoryFooter({
     required this.is_dark,
+    required this.is_cjk,
     required this.ordering,
     required this.has_chapters,
     required this.on_reorder_toggle,
@@ -203,6 +205,7 @@ class _DirectoryFooter extends StatelessWidget {
   });
 
   final bool is_dark;
+  final bool is_cjk;
   final bool ordering;
   final bool has_chapters;
   final VoidCallback on_reorder_toggle;
@@ -239,6 +242,12 @@ class _DirectoryFooter extends StatelessWidget {
                     horizontal: 16,
                     vertical: 14,
                   ),
+                  textStyle: TextStyle(
+                    fontSize: is_cjk
+                        ? WorkEditorStyle.action_font_size_cjk
+                        : WorkEditorStyle.action_font_size_alphabetic,
+                    fontWeight: AuthorStyle.title_weight,
+                  ),
                 ),
               ),
             ),
@@ -264,6 +273,12 @@ class _DirectoryFooter extends StatelessWidget {
                   backgroundColor: AuthorStyle.gold,
                   foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 14),
+                  textStyle: TextStyle(
+                    fontSize: is_cjk
+                        ? WorkEditorStyle.action_font_size_cjk
+                        : WorkEditorStyle.action_font_size_alphabetic,
+                    fontWeight: AuthorStyle.title_weight,
+                  ),
                 ),
               ),
             ),

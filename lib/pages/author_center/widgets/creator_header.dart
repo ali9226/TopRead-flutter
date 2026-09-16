@@ -62,6 +62,9 @@ class CreatorHeaderOverlay extends StatelessWidget {
   /// 随机头像索引（0-9）。
   final int random_avatar_index;
 
+  /// Dashboard 数据是否已加载完成。
+  final bool dashboard_loaded;
+
   const CreatorHeaderOverlay({
     super.key,
     required this.tab_controller,
@@ -79,6 +82,7 @@ class CreatorHeaderOverlay extends StatelessWidget {
     this.has_draft = false,
     this.avatar_url,
     this.random_avatar_index = 0,
+    this.dashboard_loaded = false,
   });
 
   /// 测量文本在给定宽度下的实际行数。
@@ -174,6 +178,7 @@ class CreatorHeaderOverlay extends StatelessWidget {
                 works_count: works_count,
                 favorites_count: favorites_count,
                 comments_count: comments_count,
+                dashboard_loaded: dashboard_loaded,
                 on_back: on_back,
                 on_create_work: on_create_work,
                 on_continue_writing: on_continue_writing,
@@ -269,6 +274,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
   final int works_count;
   final String favorites_count;
   final String comments_count;
+  final bool dashboard_loaded;
   final VoidCallback on_back;
   final VoidCallback on_create_work;
   final VoidCallback on_continue_writing;
@@ -285,6 +291,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
     required this.works_count,
     required this.favorites_count,
     required this.comments_count,
+    required this.dashboard_loaded,
     required this.on_back,
     required this.on_create_work,
     required this.on_continue_writing,
@@ -501,7 +508,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: _build_metric(
-                  value: '$works_count',
+                  value: dashboard_loaded ? '$works_count' : '—',
                   label: easy.tr('creator_center.stats_works'),
                   accent_color: AuthorStyle.blue,
                 ),
@@ -509,7 +516,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
               const SizedBox(width: AuthorStyle.metric_card_spacing),
               Expanded(
                 child: _build_metric(
-                  value: favorites_count,
+                  value: dashboard_loaded ? favorites_count : '—',
                   label: easy.tr('creator_center.stats_favorites'),
                   accent_color: AuthorStyle.gold,
                 ),
@@ -517,7 +524,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
               const SizedBox(width: AuthorStyle.metric_card_spacing),
               Expanded(
                 child: _build_metric(
-                  value: comments_count,
+                  value: dashboard_loaded ? comments_count : '—',
                   label: easy.tr('creator_center.stats_comments'),
                   accent_color: AuthorStyle.coral,
                 ),
@@ -527,32 +534,50 @@ class _CreatorFlexibleHeader extends StatelessWidget {
           const SizedBox(height: 18),
 
           /// 操作按钮：创建作品、继续写作（有草稿时显示）。
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: _HeaderActionButton(
-                  icon: Icons.add_rounded,
-                  label: easy.tr('creator_center.create_work'),
-                  is_primary: true,
-                  is_dark: is_dark,
-                  is_cjk: is_cjk,
-                  on_tap: on_create_work,
-                ),
-              ),
-              if (has_draft) ...<Widget>[
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _HeaderActionButton(
-                    icon: Icons.edit_note_rounded,
-                    label: easy.tr('creator_center.continue_writing'),
-                    is_primary: false,
-                    is_dark: is_dark,
-                    is_cjk: is_cjk,
-                    on_tap: on_continue_writing,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final double total = constraints.maxWidth;
+              final double gap = 10;
+              final double half = (total - gap) / 2;
+              return Row(
+                children: <Widget>[
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOutCubic,
+                    width: has_draft ? half : total,
+                    child: _HeaderActionButton(
+                      icon: Icons.add_rounded,
+                      label: easy.tr('creator_center.create_work'),
+                      is_primary: true,
+                      is_dark: is_dark,
+                      is_cjk: is_cjk,
+                      on_tap: on_create_work,
+                    ),
                   ),
-                ),
-              ],
-            ],
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOutCubic,
+                    alignment: Alignment.centerLeft,
+                    child: has_draft
+                        ? SizedBox(
+                            width: half,
+                            child: Padding(
+                              padding: EdgeInsets.only(left: gap),
+                              child: _HeaderActionButton(
+                                icon: Icons.edit_note_rounded,
+                                label: easy.tr('creator_center.continue_writing'),
+                                is_primary: false,
+                                is_dark: is_dark,
+                                is_cjk: is_cjk,
+                                on_tap: on_continue_writing,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -761,8 +786,7 @@ class _CreatorFilterTabBar extends StatelessWidget {
             width: AuthorStyle.tab_indicator_width,
             color: ColorConstants.themeColor,
           ),
-          // 负底部间距会把下划线推到视口外，新增 Tab 触发横向滚动后被裁剪。
-          insets: EdgeInsets.zero,
+          insets: const EdgeInsets.only(bottom: AuthorStyle.tab_indicator_bottom_offset),
         ),
         labelColor: AuthorStyle.primary_text(is_dark),
         unselectedLabelColor: AuthorStyle.secondary_text(is_dark),

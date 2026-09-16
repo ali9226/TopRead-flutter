@@ -8,6 +8,7 @@ import 'package:app/pages/work_editor/_shared/widgets/steps/step_basic/step_basi
 import 'package:app/pages/work_editor/_shared/widgets/steps/step_category/step_category.dart';
 import 'package:app/pages/work_editor/single_chapter/index.dart';
 import 'package:app/pages/work_editor/_shared/style.dart';
+import 'package:app/pages/published_long_novel_editor/widgets/skeleton_content.dart';
 import 'package:app/pages/work_editor/workspace/logic.dart';
 import 'package:app/pages/work_editor/workspace/style.dart';
 import 'package:app/stores/device_info.dart';
@@ -166,11 +167,7 @@ class _PublishedLongNovelEditorPageState
 
   /// 每个 Tab 拥有自己的操作栏，横向切换时与内容一起移动。
   Widget _section(int section, Widget child, bool dark, bool cjk) {
-    final bottom_inset = MediaQuery.viewInsetsOf(context).bottom;
-    final safe_bottom = MediaQuery.viewPaddingOf(context).bottom;
-    final button_bottom = bottom_inset > 0
-        ? bottom_inset + 8
-        : safe_bottom + 14;
+    final button_bottom = MediaQuery.viewPaddingOf(context).bottom + 14;
     return Stack(
       children: [
         Positioned.fill(
@@ -236,6 +233,8 @@ class _PublishedLongNovelEditorPageState
   Widget build(BuildContext context) => Obx(() {
     final dark = Get.find<DeviceInfo>().dark.value;
     final cjk = LanguageUtil.is_cjk_language(context.locale.languageCode);
+    final bottom_inset = MediaQuery.viewInsetsOf(context).bottom;
+    final button_reserve = WorkEditorStyle.action_height + 8 + bottom_inset;
     return PopScope(
       canPop: _allow_pop,
       onPopInvokedWithResult: (did_pop, _) {
@@ -245,6 +244,7 @@ class _PublishedLongNovelEditorPageState
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         behavior: HitTestBehavior.translucent,
         child: Scaffold(
+          resizeToAvoidBottomInset: false,
           backgroundColor: AuthorStyle.background(dark),
           body: Column(
           children: [
@@ -252,6 +252,7 @@ class _PublishedLongNovelEditorPageState
               controller: tabs,
               is_dark: dark,
               is_cjk: cjk,
+              loading: model.saved == null && model.loading,
               on_back: _leave,
               on_delete:
                   model.saved == null ||
@@ -265,23 +266,19 @@ class _PublishedLongNovelEditorPageState
             ),
             Expanded(
               child: model.saved == null
-                  ? Center(
-                      child: model.loading
-                          ? const CircularProgressIndicator(
-                              color: AuthorStyle.gold,
-                            )
-                          : TextButton(
-                              onPressed: model.load,
-                              child: Text(
-                                model.error ?? tr('published_editor.retry'),
-                              ),
+                  ? model.loading
+                      ? SkeletonContent(is_dark: dark, tab_index: tabs.index)
+                      : Center(
+                          child: TextButton(
+                            onPressed: model.load,
+                            child: Text(
+                              model.error ?? tr('published_editor.retry'),
                             ),
-                    )
+                          ),
+                        )
                   : Column(
                       children: [
-                        if (model.saving ||
-                            model.loading ||
-                            model.chapters_loading)
+                        if (model.saving)
                           const LinearProgressIndicator(
                             color: AuthorStyle.gold,
                           ),
@@ -316,6 +313,8 @@ class _PublishedLongNovelEditorPageState
                                         model.pick_cover(ImageSource.camera),
                                   ),
                                   on_language_changed: model.set_language,
+                                  extra_bottom_padding: button_reserve,
+                                  show_header: false,
                                 ),
                                 dark,
                                 cjk,
@@ -327,6 +326,7 @@ class _PublishedLongNovelEditorPageState
                                   selected_preference_map: model.preferences,
                                   on_toggle_preference: model.toggle_preference,
                                   showLength: false,
+                                  show_header: false,
                                 ),
                                 dark,
                                 cjk,

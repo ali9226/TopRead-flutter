@@ -571,25 +571,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
   }
 
   Widget _build_initial_loading() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 48, 24, 72),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            _build_progress(),
-            const SizedBox(height: 15),
-            Text(
-              easy.tr('creator_center.loading_works'),
-              style: TextStyle(
-                color: AuthorStyle.secondary_text(widget.is_dark),
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return _ListSkeleton(is_dark: widget.is_dark);
   }
 
   Widget _build_initial_error(String message) {
@@ -928,5 +910,118 @@ class _MeasureSizeState extends State<_MeasureSize> {
       }
     });
     return widget.child;
+  }
+}
+
+/// 作品列表骨架屏，替代加载转圈，与 [BackendWorkCard] 布局一致。
+class _ListSkeleton extends StatefulWidget {
+  final bool is_dark;
+  const _ListSkeleton({required this.is_dark});
+  @override
+  State<_ListSkeleton> createState() => _ListSkeletonState();
+}
+
+class _ListSkeletonState extends State<_ListSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final Color base = widget.is_dark
+            ? const Color(0xFF2A2A2A)
+            : const Color(0xFFE8E8E8);
+        final Color highlight = widget.is_dark
+            ? const Color(0xFF3A3A3A)
+            : const Color(0xFFF5F5F5);
+        final double t = _controller.value;
+        final Gradient gradient = LinearGradient(
+          begin: const Alignment(-1.0, 0.0),
+          end: const Alignment(1.0, 0.0),
+          colors: <Color>[
+            base,
+            Color.lerp(base, highlight, t)!,
+            base,
+          ],
+          stops: const <double>[0.0, 0.5, 1.0],
+        );
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 72),
+          itemCount: 4,
+          itemBuilder: (_, __) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _build_card_skeleton(gradient),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _build_card_skeleton(Gradient gradient) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: widget.is_dark
+            ? const Color(0xFF1E1E1E)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          _shimmer(gradient, width: 180, height: 18, radius: 4),
+          const SizedBox(height: 8),
+          _shimmer(gradient, width: double.infinity, height: 14, radius: 4),
+          const SizedBox(height: 4),
+          _shimmer(gradient, width: 220, height: 14, radius: 4),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              _shimmer(gradient, width: 48, height: 22, radius: 11),
+              const SizedBox(width: 8),
+              _shimmer(gradient, width: 64, height: 22, radius: 11),
+              const Spacer(),
+              _shimmer(gradient, width: 80, height: 12, radius: 4),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _shimmer(
+    Gradient gradient, {
+    required double width,
+    required double height,
+    required double radius,
+  }) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        gradient: gradient,
+      ),
+    );
   }
 }

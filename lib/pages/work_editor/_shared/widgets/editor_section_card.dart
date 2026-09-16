@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 /// 作品编辑页的统一表单区块。
 ///
 /// 简洁设计：无卡片边框、无阴影、无图标。
+/// [show_header] 控制是否显示标题和副标题，默认为 true；
+/// 已发布编辑器等场景可设为 false 以获得更紧凑的布局。
 class EditorSectionCard extends StatelessWidget {
   /// 区块标题。
   final String title;
@@ -23,6 +25,9 @@ class EditorSectionCard extends StatelessWidget {
   /// 当前是否夜间主题。
   final bool is_dark;
 
+  /// 是否显示标题和副标题。
+  final bool show_header;
+
   const EditorSectionCard({
     super.key,
     required this.title,
@@ -30,6 +35,7 @@ class EditorSectionCard extends StatelessWidget {
     this.icon,
     required this.child,
     required this.is_dark,
+    this.show_header = true,
   });
 
   @override
@@ -37,33 +43,33 @@ class EditorSectionCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        /// 标题区域
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                title,
-                style: TextStyle(
-                  color: AuthorStyle.primary_text(is_dark),
-                  fontSize: 20,
-                  fontWeight: WorkEditorStyle.section_title_weight,
+        if (show_header)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: AuthorStyle.primary_text(is_dark),
+                    fontSize: 20,
+                    fontWeight: WorkEditorStyle.section_title_weight,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  color: AuthorStyle.secondary_text(is_dark),
-                  fontSize: 13,
-                  height: 1.45,
-                  fontWeight: AuthorStyle.body_weight,
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: AuthorStyle.secondary_text(is_dark),
+                    fontSize: 13,
+                    height: 1.45,
+                    fontWeight: AuthorStyle.body_weight,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
 
         /// 正文内容
         child,

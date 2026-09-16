@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:app/config/color_config.dart';
+import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/home/widgets/home_tab_bar/style.dart';
 import 'package:app/stores/home_store.dart';
 import 'package:app/stores/redis_request.dart';
@@ -148,7 +149,7 @@ class _HomeTabBarState extends State<HomeTabBar> {
               width: 3,
               color: ColorConstants.themeColor,
             ),
-            insets: const EdgeInsets.only(bottom: 4),
+            insets: const EdgeInsets.only(bottom: AuthorStyle.tab_indicator_bottom_offset),
           ),
           dividerHeight: 0,
           tabAlignment: TabAlignment.start,

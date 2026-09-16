@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'published_chapter_editor.dart';
+import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/util/language_util/index.dart';
 import '../_shared/widgets/editor_actions.dart';
@@ -400,7 +401,7 @@ class _SingleChapterPageState extends State<SingleChapterPage> {
                   style: WorkspaceStyle.body(
                     is_dark,
                     is_cjk,
-                  ).copyWith(fontWeight: AuthorStyle.title_weight),
+                  ).copyWith(fontWeight: FontWeight.w500),
                 ),
                 actions: [
                   if (!readOnly &&

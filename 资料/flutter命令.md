@@ -1,7 +1,7 @@
 
 
 # 打包APK
-    flutter build apk --release
+    fvm flutter build apk --release
 
 # 打包abb文件
     fvm flutter build appbundle --release

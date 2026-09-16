@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app/config/layout_config.dart';
+import 'package:app/pages/author_center/author_style.dart';
 
 /// 书架页样式常量。
 class Style {
@@ -98,8 +99,8 @@ class Style {
   /// Tab 指示条高度。
   static const double tab_indicator_height = 3;
 
-  /// Tab 指示条底部偏移。
-  static const double tab_indicator_bottom_offset = 4;
+  /// Tab 指示条底部偏移，全局统一，修改请调整 [AuthorStyle.tab_indicator_bottom_offset]。
+  static const double tab_indicator_bottom_offset = AuthorStyle.tab_indicator_bottom_offset;
 
   /// 渐变遮罩宽度。
   static const double gradient_width = 20.0;

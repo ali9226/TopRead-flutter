@@ -50,6 +50,12 @@ class StepBasic extends StatelessWidget {
   /// TODO 语种切换回调。
   final ValueChanged<String> on_language_changed;
 
+  /// 额外底部内边距，用于为浮动操作栏预留空间。
+  final double extra_bottom_padding;
+
+  /// 是否显示区块标题和副标题。
+  final bool show_header;
+
   const StepBasic({
     super.key,
     required this.is_dark,
@@ -62,17 +68,21 @@ class StepBasic extends StatelessWidget {
     required this.is_uploading_cover,
     required this.on_pick_cover,
     required this.on_language_changed,
+    this.extra_bottom_padding = 0,
+    this.show_header = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return StepUtils.build_step_scroll_view(
       context: context,
+      extra_bottom_padding: extra_bottom_padding,
       children: <Widget>[
         EditorSectionCard(
           title: easy.tr('creator_center.basic_title'),
           subtitle: easy.tr('creator_center.basic_subtitle'),
           is_dark: is_dark,
+          show_header: show_header,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -513,18 +523,12 @@ class StepBasic extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: is_selected
-                              ? (is_dark
-                                      ? AuthorStyle.gold
-                                      : AuthorStyle.deep_gold)
-                                  .withValues(alpha: 0.10)
+                              ? ColorConstants.themeColor.withValues(alpha: 0.10)
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                           border: is_selected
                               ? Border.all(
-                                  color: (is_dark
-                                          ? AuthorStyle.gold
-                                          : AuthorStyle.deep_gold)
-                                      .withValues(alpha: 0.30),
+                                  color: ColorConstants.themeColor.withValues(alpha: 0.30),
                                 )
                               : null,
                         ),
@@ -539,7 +543,7 @@ class StepBasic extends StatelessWidget {
                                   color: AuthorStyle.primary_text(is_dark),
                                   fontSize: 15,
                                   fontWeight: is_selected
-                                      ? FontConfig.adjustedWeight(FontWeight.w600)
+                                      ? FontConfig.adjustedWeight(FontWeight.w500)
                                       : AuthorStyle.body_weight,
                                 ),
                               ),
@@ -547,9 +551,7 @@ class StepBasic extends StatelessWidget {
                             if (is_selected)
                               Icon(
                                 Icons.check_circle_rounded,
-                                color: is_dark
-                                    ? AuthorStyle.gold
-                                    : AuthorStyle.deep_gold,
+                                color: ColorConstants.themeColor,
                                 size: 20,
                               ),
                           ],
