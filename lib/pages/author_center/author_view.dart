@@ -1,4 +1,5 @@
 import 'package:app/pages/long_novel_editor/index.dart';
+import 'package:app/pages/published_long_novel_editor/index.dart';
 import 'package:app/pages/short_novel_editor/index.dart';
 import 'package:app/pages/work_editor/_shared/backend_draft_loader.dart';
 import 'package:app/pages/work_editor/_shared/work_recovery.dart';
@@ -459,9 +460,11 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
 
   Future<void> _open_work(CreatorWorkModel work) {
     if (work.is_long_novel && work.is_published) {
-      return context.pushNamed(
-        'published_long_novel_editor',
-        pathParameters: {'id': '${work.id}'},
+      return Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PublishedLongNovelEditorPage(novel_id: work.id),
+        ),
       );
     }
     return _open_draft(work.id);
@@ -478,9 +481,15 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       });
       final summary = creatorWorkDraftFromBackend(info, includeChapters: false);
       if (!mounted) return;
+      Object? result;
       if (summary.work_type == CreatorWorkType.long && summary.status == CreatorWorkStatus.published) {
         setState(() => _loading_draft = false);
-        await context.pushNamed('published_long_novel_editor', pathParameters: {'id': '$novelId'});
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PublishedLongNovelEditorPage(novel_id: novelId),
+          ),
+        );
       } else {
         // TODO 长篇整本草稿必须读取章节正文；目录摘要不能作为空章节继续保存。
         final draft = summary.work_type == CreatorWorkType.long
@@ -490,15 +499,15 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
           _user_information.userInfo.value?.id ?? 0);
         if (!mounted) return;
         setState(() => _loading_draft = false);
-        final result = await Navigator.push<CreatorWorkDraft>(context, MaterialPageRoute(
+        result = await Navigator.push<CreatorWorkDraft>(context, MaterialPageRoute(
           settings: RouteSettings(name: '/${draft.work_type == CreatorWorkType.long ? 'long_novel_editor' : 'short_novel_editor'}?id=$novelId'),
           builder: (_) => draft.work_type == CreatorWorkType.long
               ? LongNovelEditorPage(initial_work: recovery.draft, restorePending: recovery.restored)
               : ShortNovelEditorPage(initial_work: recovery.draft, restorePending: recovery.restored),
         ));
-        if (mounted) _select_result_tab(result);
+        if (mounted) _select_result_tab(result as CreatorWorkDraft?);
       }
-      if (mounted) await _reload_all();
+      if (mounted && result == true) await _reload_all();
     } catch (error) {
       _show_error('$error');
     } finally {

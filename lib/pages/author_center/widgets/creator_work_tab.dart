@@ -383,6 +383,31 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
     );
     final String? refresh_error = widget.error_message ?? _local_refresh_error;
 
+    if (widget.is_loading) {
+      return <Widget>[
+        header_spacer,
+        SliverToBoxAdapter(
+          child: _constrain_content(
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: AuthorStyle.list_header_top_spacing,
+                    bottom: 30,
+                  ),
+                  child: _build_list_header(),
+                ),
+                _build_initial_loading(),
+              ],
+            ),
+          ),
+        ),
+        _build_minimum_scroll_extent_filler(),
+      ];
+    }
+
     if (widget.works.isEmpty) {
       return <Widget>[
         header_spacer,
@@ -399,9 +424,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
                   ),
                   child: _build_list_header(),
                 ),
-                widget.is_loading
-                    ? _build_initial_loading()
-                    : refresh_error != null
+                refresh_error != null
                     ? _build_initial_error(refresh_error)
                     : CreatorEmptyState(
                         tab_index: widget.tab_index,

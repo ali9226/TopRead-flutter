@@ -508,7 +508,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: _build_metric(
-                  value: dashboard_loaded ? '$works_count' : '—',
+                  number: dashboard_loaded ? works_count : null,
                   label: easy.tr('creator_center.stats_works'),
                   accent_color: AuthorStyle.blue,
                 ),
@@ -516,7 +516,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
               const SizedBox(width: AuthorStyle.metric_card_spacing),
               Expanded(
                 child: _build_metric(
-                  value: dashboard_loaded ? favorites_count : '—',
+                  number: dashboard_loaded ? int.tryParse(favorites_count) : null,
                   label: easy.tr('creator_center.stats_favorites'),
                   accent_color: AuthorStyle.gold,
                 ),
@@ -524,7 +524,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
               const SizedBox(width: AuthorStyle.metric_card_spacing),
               Expanded(
                 child: _build_metric(
-                  value: dashboard_loaded ? comments_count : '—',
+                  number: dashboard_loaded ? int.tryParse(comments_count) : null,
                   label: easy.tr('creator_center.stats_comments'),
                   accent_color: AuthorStyle.coral,
                 ),
@@ -637,7 +637,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
 
   /// 构建一个独立的数据统计卡片，样式参考 user_info 的 _StatCard。
   Widget _build_metric({
-    required String value,
+    required int? number,
     required String label,
     required Color accent_color,
   }) {
@@ -687,17 +687,27 @@ class _CreatorFlexibleHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: AuthorStyle.primary_text(is_dark),
-                  fontSize: 22,
-                  height: 1.1,
-                  fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                ),
-              ),
+              number != null && number > 0
+                  ? _AnimatedCounter(
+                      target: number,
+                      style: TextStyle(
+                        color: AuthorStyle.primary_text(is_dark),
+                        fontSize: 22,
+                        height: 1.1,
+                        fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                      ),
+                    )
+                  : Text(
+                      number != null ? '$number' : '—',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AuthorStyle.primary_text(is_dark),
+                        fontSize: 22,
+                        height: 1.1,
+                        fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                      ),
+                    ),
               const SizedBox(height: 3),
               Text(
                 label,
@@ -985,6 +995,92 @@ class _HeaderTapTarget extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 数字滚动动画：从 0 垂直滑动到目标值。
+class _AnimatedCounter extends StatefulWidget {
+  final int target;
+  final TextStyle style;
+
+  const _AnimatedCounter({required this.target, required this.style});
+
+  @override
+  State<_AnimatedCounter> createState() => _AnimatedCounterState();
+}
+
+class _AnimatedCounterState extends State<_AnimatedCounter>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    )..forward();
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedCounter old) {
+    super.didUpdateWidget(old);
+    if (old.target != widget.target) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final int target = widget.target;
+    final double lineHeight = widget.style.fontSize! * (widget.style.height ?? 1.2);
+
+    /// 测量最宽数字（通常是目标值本身）的像素宽度。
+    final TextPainter tp = TextPainter(
+      text: TextSpan(text: '$target', style: widget.style),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final double maxWidth = tp.size.width;
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final double progress = Curves.easeOutCubic.transform(_controller.value);
+        final double offset = target * lineHeight * progress;
+
+        return SizedBox(
+          width: maxWidth,
+          height: lineHeight,
+          child: ClipRect(
+            child: OverflowBox(
+              maxHeight: (target + 1) * lineHeight,
+              alignment: Alignment.topLeft,
+              child: Transform.translate(
+                offset: Offset(0, -offset),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List<Widget>.generate(target + 1, (i) {
+                    return SizedBox(
+                      height: lineHeight,
+                      child: Text(
+                        '$i',
+                        style: widget.style,
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
