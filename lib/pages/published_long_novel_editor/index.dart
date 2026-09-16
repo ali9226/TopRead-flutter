@@ -1,4 +1,3 @@
-// ignore_for_file: non_constant_identifier_names
 
 import 'package:app/components/image_source_sheet/index.dart';
 import 'package:app/config/color_config.dart';
