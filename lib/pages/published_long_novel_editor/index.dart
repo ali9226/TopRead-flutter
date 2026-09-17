@@ -2,7 +2,6 @@
 import 'package:app/components/image_source_sheet/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
-import 'package:app/pages/work_editor/_shared/widgets/editor_actions.dart';
 import 'package:app/pages/work_editor/_shared/widgets/steps/step_basic/step_basic.dart';
 import 'package:app/pages/work_editor/_shared/widgets/steps/step_category/step_category.dart';
 import 'package:app/pages/work_editor/single_chapter/index.dart';
