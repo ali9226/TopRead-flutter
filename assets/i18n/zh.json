@@ -1211,5 +1211,24 @@
     "descending": "倒序 · 最新在前",
     "ascending": "正序 · 最早在前",
     "immediate_hint": "修改后点击立即更新，章节内容将立即生效。"
+  },
+  "paragraph_comment": {
+    "write": "发段评",
+    "share": "分享",
+    "input_hint": "说说你对这段文字的想法…",
+    "send": "发送",
+    "add_image": "添加图片",
+    "emoji": "表情",
+    "keyboard": "键盘",
+    "remove_image": "移除图片",
+    "image_upload_failed": "图片上传失败，请重试",
+    "image_limit": "最多添加 9 张图片",
+    "send_failed": "发送失败，请重试",
+    "send_success": "段评发送成功",
+    "login_required": "请先登录后发送段评",
+    "unavailable": "段落暂不可用，请稍后重试",
+    "count_label": "{count} 条段评",
+    "quote": "所选文字",
+    "content_too_long": "段评最多 2000 个字符（表情可能占多个字符）"
   }
 }

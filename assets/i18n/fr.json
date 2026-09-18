@@ -1235,5 +1235,24 @@
     "descending": "Plus récents en premier",
     "ascending": "Plus anciens en premier",
     "immediate_hint": "La mise à jour applique immédiatement vos modifications au chapitre."
+  },
+  "paragraph_comment": {
+    "write": "Commenter",
+    "share": "Partager",
+    "input_hint": "Que pensez-vous de ce passage ?",
+    "send": "Envoyer",
+    "add_image": "Ajouter des photos",
+    "emoji": "Émojis",
+    "keyboard": "Clavier",
+    "remove_image": "Retirer la photo",
+    "image_upload_failed": "Échec de l’envoi de la photo. Réessayez.",
+    "image_limit": "Vous pouvez ajouter jusqu’à 9 photos.",
+    "send_failed": "Échec de l’envoi. Réessayez.",
+    "send_success": "Commentaire envoyé",
+    "login_required": "Connectez-vous pour commenter ce passage.",
+    "unavailable": "Ce passage est indisponible. Réessayez plus tard.",
+    "count_label": "{count} commentaires",
+    "quote": "Passage sélectionné",
+    "content_too_long": "Les commentaires sont limités à 2 000 caractères (un émoji peut en compter plusieurs)."
   }
 }

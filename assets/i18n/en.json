@@ -1211,5 +1211,24 @@
     "descending": "Newest first",
     "ascending": "Oldest first",
     "immediate_hint": "Update now applies your chapter changes immediately."
+  },
+  "paragraph_comment": {
+    "write": "Comment",
+    "share": "Share",
+    "input_hint": "Share your thoughts on this passage…",
+    "send": "Send",
+    "add_image": "Add photos",
+    "emoji": "Emoji",
+    "keyboard": "Keyboard",
+    "remove_image": "Remove photo",
+    "image_upload_failed": "Photo upload failed. Please try again.",
+    "image_limit": "You can add up to 9 photos.",
+    "send_failed": "Could not send. Please try again.",
+    "send_success": "Comment sent",
+    "login_required": "Sign in to comment on this passage.",
+    "unavailable": "This passage is unavailable. Please try again later.",
+    "count_label": "{count} comments",
+    "quote": "Selected passage",
+    "content_too_long": "Comments can contain up to 2,000 characters (emoji may count as more than one)."
   }
 }

@@ -1,12 +1,17 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:crypto/crypto.dart';
 
 import 'package:app/api/post_request.dart';
 import 'package:app/api/get_novel_content.dart';
+import 'package:app/api/paragraph_comment.dart';
+import 'package:app/models/paragraph_anchor.dart';
+import 'package:app/pages/short_story_read/models/story_paragraph.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/models/short_story_read_data.dart';
 import 'package:app/models/short_story_item.dart';
@@ -50,6 +55,9 @@ class ShortStoryReadLogic {
 
   /// 小说正文内容（从远程 txt 文件加载）。
   final RxString content = ''.obs;
+
+  /// 只保存与当前显示正文摘要一致的已发布段落。
+  final RxList<ParagraphAnchor> paragraph_anchors = <ParagraphAnchor>[].obs;
 
   /// 预加载的上一篇正文内容。
   final RxString previous_story_content = ''.obs;
@@ -309,7 +317,9 @@ class ShortStoryReadLogic {
       return disk_text;
     }
 
-    final result = await get_short_story_content_with_version(novel_language_id);
+    final result = await get_short_story_content_with_version(
+      novel_language_id,
+    );
     final String text = result.content;
     if (text.isNotEmpty) {
       _write_memory_cache<String>(
@@ -532,13 +542,45 @@ class ShortStoryReadLogic {
     }
 
     is_content_loading.value = true;
+    paragraph_anchors.clear();
 
     try {
-      final String loaded_content = await _fetch_content_text_with_cache(
+      final metadata_future = get_short_story_paragraphs(novel_language_id);
+      String loaded_content = await _fetch_content_text_with_cache(
         novel_language_id,
       );
+      final metadata = await metadata_future;
       if (_is_disposed) return false;
+
+      // 缓存可能来自旧发布版本；发现摘要变化后重新读取加密正文。
+      if (metadata != null &&
+          !_matches_paragraph_body(loaded_content, metadata)) {
+        final fresh = await get_short_story_content_with_version(
+          novel_language_id,
+        );
+        if (_is_disposed) return false;
+        if (fresh.content.isNotEmpty) {
+          loaded_content = fresh.content;
+          _write_memory_cache<String>(
+            _content_memory_cache,
+            novel_language_id,
+            loaded_content,
+            _content_memory_cache_capacity,
+          );
+          unawaited(
+            ShortStoryContentCache.write(
+              novel_language_id,
+              loaded_content,
+              published_revision_id: fresh.published_revision_id,
+            ),
+          );
+        }
+      }
       content.value = loaded_content;
+      if (metadata != null &&
+          _matches_paragraph_body(loaded_content, metadata)) {
+        paragraph_anchors.assignAll(metadata.paragraphs);
+      }
       return loaded_content.trim().isNotEmpty;
     } catch (e) {
       if (_is_disposed) return false;
@@ -549,6 +591,82 @@ class ShortStoryReadLogic {
         is_content_loading.value = false;
       }
     }
+  }
+
+  /// 使用完整正文摘要校验版本，不按段落序号跨版本匹配评论。
+  bool _matches_paragraph_body(String text, ParagraphMetadata metadata) {
+    return metadata.content_hash.isNotEmpty &&
+        sha256.convert(utf8.encode(text)).toString() == metadata.content_hash;
+  }
+
+  /// 元数据暂时加载失败时允许用户再次尝试，仍严格校验当前正文。
+  Future<ParagraphAnchor?> resolve_paragraph_anchor(
+    StoryParagraph paragraph,
+  ) async {
+    if (_is_disposed ||
+        paragraph.start_offset < 0 ||
+        paragraph.end_offset > content.value.length ||
+        paragraph.start_offset >= paragraph.end_offset ||
+        content.value.substring(paragraph.start_offset, paragraph.end_offset) !=
+            paragraph.text) {
+      return null;
+    }
+    if (paragraph_anchors.isEmpty) {
+      final language_id = story_data.value?.novel_language_id;
+      if (language_id == null) return null;
+      final metadata = await get_short_story_paragraphs(language_id);
+      if (_is_disposed ||
+          metadata == null ||
+          !_matches_paragraph_body(content.value, metadata)) {
+        return null;
+      }
+      paragraph_anchors.assignAll(metadata.paragraphs);
+    }
+    final String paragraph_hash = sha256
+        .convert(utf8.encode(paragraph.text))
+        .toString();
+    for (final anchor in paragraph_anchors) {
+      if (anchor.start_offset == paragraph.start_offset &&
+          anchor.end_offset == paragraph.end_offset &&
+          anchor.content_hash == paragraph_hash) {
+        return anchor;
+      }
+    }
+    return null;
+  }
+
+  /// 提交段评后用事务返回值更新段末气泡；不影响整本书评论数量。
+  Future<bool> send_paragraph_comment({
+    required ParagraphAnchor anchor,
+    required TextSelection selection,
+    required String comment_content,
+    required List<String> images,
+  }) async {
+    if (_is_disposed ||
+        !selection.isValid ||
+        selection.isCollapsed ||
+        selection.start < 0 ||
+        selection.end > anchor.end_offset - anchor.start_offset ||
+        !paragraph_anchors.any((item) => item.id == anchor.id)) {
+      return false;
+    }
+    final count = await create_paragraph_comment(
+      paragraph_id: anchor.id,
+      content: comment_content,
+      images: images,
+      selection_start: anchor.start_offset + selection.start,
+      selection_end: anchor.start_offset + selection.end,
+    );
+    if (count == null) return false;
+    if (!_is_disposed) {
+      final index = paragraph_anchors.indexWhere(
+        (item) => item.id == anchor.id,
+      );
+      if (index >= 0) {
+        paragraph_anchors[index] = anchor.with_comment_count(count);
+      }
+    }
+    return true;
   }
 
   /// 预加载目录列表。

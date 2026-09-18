@@ -55,6 +55,9 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
   /// 语种刷新任务订阅。
   late final LanguageRefreshSubscription _language_refresh_subscription;
 
+  /// 语种刷新状态监听，用于处理 widget 重建导致刷新任务丢失的情况。
+  late final Worker _language_refresh_worker;
+
   /// 本组件请求版本，用于丢弃语种切换前的旧响应。
   int _request_generation = 0;
 
@@ -79,6 +82,20 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
           on_refresh: _refresh_for_language,
         );
 
+    /// 监听语种刷新结束事件。
+    ///
+    /// 场景：语种切换时 Home 页重建导致本 widget 被销毁再创建，
+    /// 新 widget 注册的刷新任务因 pipeline 已结束而未被调度。
+    /// 当刷新完成且列表仍为空时，自动触发数据加载。
+    _language_refresh_worker = ever(
+      LanguageChangeHandler.is_refreshing,
+      (bool refreshing) {
+        if (!refreshing && mounted && _display_list.isEmpty && !_is_loading) {
+          _load_initial_data();
+        }
+      },
+    );
+
     /// 如果全局仓库已有数据，直接恢复并插入广告，不重新请求。
     final HomeBannerStore home_store = Get.find<HomeBannerStore>();
     if (home_store.short_story_list.isNotEmpty) {
@@ -90,6 +107,7 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
 
   @override
   void dispose() {
+    _language_refresh_worker.dispose();
     _language_refresh_subscription.dispose();
     _scroll_controller.removeListener(_handle_scroll);
     _scroll_controller.dispose();

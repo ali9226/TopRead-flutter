@@ -3,6 +3,8 @@ import 'package:app/pages/short_story_read/utils/create_story_content_preview.da
 import 'package:app/pages/short_story_read/widgets/story_content.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:flutter/material.dart';
+import 'package:app/models/paragraph_anchor.dart';
+import 'package:app/pages/short_story_read/models/story_paragraph.dart';
 
 import 'unlock_overlay.dart';
 
@@ -20,6 +22,10 @@ class StoryUnlockGate extends StatelessWidget {
     required this.font_size,
     required this.on_unlock,
     this.native_ad_widget,
+    this.paragraph_anchors = const [],
+    this.on_paragraph_comment,
+    this.on_selection_changed,
+    this.on_content_tap,
     super.key,
   });
 
@@ -49,6 +55,12 @@ class StoryUnlockGate extends StatelessWidget {
   /// 非空时在正文 1/3 位置插入原生广告。
   final Widget? native_ad_widget;
 
+  /// 段评回调只绑定实际展示的正文，不渲染未解锁段落。
+  final List<ParagraphAnchor> paragraph_anchors;
+  final void Function(StoryParagraph, TextSelection)? on_paragraph_comment;
+  final ValueChanged<bool>? on_selection_changed;
+  final VoidCallback? on_content_tap;
+
   @override
   Widget build(BuildContext context) {
     final bool is_cjk = LanguageUtil.is_cjk_language(
@@ -61,6 +73,10 @@ class StoryUnlockGate extends StatelessWidget {
         is_loading: is_loading,
         font_size: font_size,
         native_ad_widget: native_ad_widget,
+        paragraph_anchors: paragraph_anchors,
+        on_paragraph_comment: on_paragraph_comment,
+        on_selection_changed: on_selection_changed,
+        on_content_tap: on_content_tap,
       );
     }
 
@@ -72,12 +88,20 @@ class StoryUnlockGate extends StatelessWidget {
           ? ShortStoryReadStyle.unlock_fade_tail_count_cjk
           : ShortStoryReadStyle.unlock_fade_tail_count_alphabetic,
     );
+    // 预览工具会去掉开头空白；恢复原始缩进，使首段选区仍指向数据库原文。
+    final int leading_length = content.length - content.trimLeft().length;
+    final String selectable_preview =
+        content.substring(0, leading_length) + preview_data.preview_content;
     if (preview_data.remaining_count <= 0) {
       return StoryContent(
         content: content,
         is_dark: is_dark,
         font_size: font_size,
         native_ad_widget: native_ad_widget,
+        paragraph_anchors: paragraph_anchors,
+        on_paragraph_comment: on_paragraph_comment,
+        on_selection_changed: on_selection_changed,
+        on_content_tap: on_content_tap,
       );
     }
 
@@ -96,10 +120,14 @@ class StoryUnlockGate extends StatelessWidget {
           children: <Widget>[
             StoryContent(
               key: const ValueKey<String>('story_unlock_faded_content'),
-              content: preview_data.preview_content,
+              content: selectable_preview,
               is_dark: is_dark,
               font_size: font_size,
               native_ad_widget: native_ad_widget,
+              paragraph_anchors: paragraph_anchors,
+              on_paragraph_comment: on_paragraph_comment,
+              on_selection_changed: on_selection_changed,
+              on_content_tap: on_content_tap,
             ),
             SizedBox(height: gate_height),
           ],

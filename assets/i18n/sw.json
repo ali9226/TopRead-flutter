@@ -1203,5 +1203,24 @@
     "descending": "Mpya kwanza",
     "ascending": "Za zamani kwanza",
     "immediate_hint": "Kusasisha sasa kunatumia mabadiliko ya sura mara moja."
+  },
+  "paragraph_comment": {
+    "write": "Maoni",
+    "share": "Shiriki",
+    "input_hint": "Toa maoni yako kuhusu kifungu hiki…",
+    "send": "Tuma",
+    "add_image": "Ongeza picha",
+    "emoji": "Emoji",
+    "keyboard": "Kibodi",
+    "remove_image": "Ondoa picha",
+    "image_upload_failed": "Picha haikupakiwa. Tafadhali jaribu tena.",
+    "image_limit": "Unaweza kuongeza hadi picha 9.",
+    "send_failed": "Haikutumwa. Tafadhali jaribu tena.",
+    "send_success": "Maoni yametumwa",
+    "login_required": "Ingia ili utoe maoni kuhusu kifungu hiki.",
+    "unavailable": "Kifungu hiki hakipatikani. Tafadhali jaribu tena baadaye.",
+    "count_label": "Maoni {count}",
+    "quote": "Kifungu ulichochagua",
+    "content_too_long": "Maoni yanaweza kuwa na hadi herufi 2,000 (emoji inaweza kuhesabiwa zaidi ya moja)."
   }
 }

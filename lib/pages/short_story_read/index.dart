@@ -15,6 +15,8 @@ import 'package:app/api/results_type.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/components/login_required_dialog/index.dart';
 import 'package:app/components/comment_list/index.dart';
+import 'package:app/components/paragraph_comment_composer/index.dart';
+import 'package:app/pages/short_story_read/models/story_paragraph.dart';
 import 'package:app/models/short_story_item.dart';
 import 'package:app/stores/comment_navigation.dart';
 import 'package:app/stores/device_info.dart';
@@ -120,6 +122,12 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 当前是否正在执行翻页动画。
   bool _is_transitioning = false;
+
+  /// 选文时不让阅读页边缘拖拽接管文字手柄。
+  bool _is_paragraph_selection_active = false;
+
+  /// 防止连续点击段评按钮叠加多个登录或输入弹窗。
+  bool _is_paragraph_composer_open = false;
 
   /// 翻页方向（true = 向上滑动（下一篇），false = 向下滑动（上一篇））。
   bool _is_slide_up = true;
@@ -1074,7 +1082,60 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 切换导航栏和评论栏的显示/隐藏，同时停止自动阅读。
   void _on_content_tap() {
     _stop_auto_read();
+    if (_is_paragraph_selection_active) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      return;
+    }
     _logic.toggle_bars_visibility();
+  }
+
+  /// 记录选择状态，同时暂停自动阅读，避免选区随自动滚动移动。
+  void _on_paragraph_selection_changed(bool active) {
+    _is_paragraph_selection_active = active;
+    if (active) _stop_auto_read();
+  }
+
+  /// 固定本次选择的正文版本与选区，登录后显示段评输入框。
+  Future<void> _on_paragraph_comment(
+    StoryParagraph paragraph,
+    TextSelection selection,
+  ) async {
+    if (_is_paragraph_composer_open ||
+        !selection.isValid ||
+        selection.isCollapsed ||
+        selection.start < 0 ||
+        selection.end > paragraph.text.length) {
+      return;
+    }
+    _is_paragraph_composer_open = true;
+    _stop_auto_read();
+    final action_logic = _logic;
+    final generation = _logic_generation;
+    try {
+      final logged_in = await showLoginRequiredDialog(
+        title: easy.tr('paragraph_comment.login_required'),
+      );
+      if (!logged_in || !_is_current_logic(action_logic, generation)) return;
+      final anchor = await action_logic.resolve_paragraph_anchor(paragraph);
+      if (!_is_current_logic(action_logic, generation)) return;
+      if (anchor == null) {
+        showBottomTip(easy.tr('paragraph_comment.unavailable'));
+        return;
+      }
+      await show_paragraph_comment_composer(
+        context,
+        quote: selection.textInside(paragraph.text),
+        is_dark: device_info.dark.value,
+        on_send: (text, images) => action_logic.send_paragraph_comment(
+          anchor: anchor,
+          selection: selection,
+          comment_content: text,
+          images: images,
+        ),
+      );
+    } finally {
+      _is_paragraph_composer_open = false;
+    }
   }
 
   // ==================== 动画控制 ====================
@@ -1646,6 +1707,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     if (_is_transitioning || story_id == _logic.story_id) return;
 
     _is_transitioning = true;
+    FocusManager.instance.primaryFocus?.unfocus();
+    _is_paragraph_selection_active = false;
     _stop_auto_read();
     _is_slide_up = slide_up;
     _is_previous_pull_rebounding = false;
@@ -1917,6 +1980,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 指针移动：在顶部向下拖拽切上一篇，在底部向上拖拽切下一篇。
   void _on_reader_pointer_move(PointerMoveEvent event) {
+    if (_is_paragraph_selection_active || _is_paragraph_composer_open) return;
     final double dy = event.delta.dy;
     if (dy != 0) {
       _has_user_engaged = true;
@@ -2536,6 +2600,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
                     /// 正文内容。
                     StoryUnlockGate(
+                      key: ValueKey(_logic.story_id),
                       content: _logic.content.value,
                       is_dark: is_dark,
                       is_loading: _logic.is_content_loading.value,
@@ -2546,6 +2611,15 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                       font_size: _logic.body_font_size.value,
                       on_unlock: _on_unlock_story_tap,
                       native_ad_widget: native_ad_slot,
+                      paragraph_anchors: _logic.paragraph_anchors.toList(),
+                      on_paragraph_comment:
+                          Get.find<ProjectConfigStore>()
+                              .current
+                              .is_comment_enabled
+                          ? _on_paragraph_comment
+                          : null,
+                      on_selection_changed: _on_paragraph_selection_changed,
+                      on_content_tap: _on_content_tap,
                     ),
 
                     /// 当前篇正文结束位置，用于准确计算进度和恢复位置。

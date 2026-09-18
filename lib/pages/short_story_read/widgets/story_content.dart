@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:app/config/font_config.dart';
 
 import 'package:app/pages/short_story_read/style.dart';
 import 'package:app/util/native_ad_insert_index.dart';
 import 'package:app/util/language_util/index.dart';
+import 'package:app/models/paragraph_anchor.dart';
+import 'package:app/pages/short_story_read/models/story_paragraph.dart';
+import 'package:app/pages/short_story_read/utils/split_story_paragraphs.dart';
+import 'package:app/pages/short_story_read/widgets/paragraph_selection/index.dart';
 
 /// 正文内容组件。
 ///
@@ -14,7 +19,7 @@ import 'package:app/util/language_util/index.dart';
 /// - CJK / 非 CJK 语系的字号和行高适配。
 /// - 加载中状态展示骨架屏占位。
 /// - 在指定位置插入原生广告（可选）。
-class StoryContent extends StatelessWidget {
+class StoryContent extends StatefulWidget {
   /// 正文内容字符串（以 `\n` 分隔段落）。
   final String content;
 
@@ -35,6 +40,17 @@ class StoryContent extends StatelessWidget {
   /// 原生广告在当前 [content] 中的插入比例。
   final double native_ad_display_ratio;
 
+  /// 当前正文版本的段落锚点和实时评论数量。
+  final List<ParagraphAnchor> paragraph_anchors;
+
+  /// 预览去掉开头空白时，在完整正文中的偏移。
+  final int content_offset;
+
+  /// 选定段落及段内 UTF-16 选区后打开段评输入框。
+  final void Function(StoryParagraph, TextSelection)? on_paragraph_comment;
+  final ValueChanged<bool>? on_selection_changed;
+  final VoidCallback? on_content_tap;
+
   const StoryContent({
     super.key,
     required this.content,
@@ -43,7 +59,82 @@ class StoryContent extends StatelessWidget {
     this.font_size = 17.0,
     this.native_ad_widget,
     this.native_ad_display_ratio = ShortStoryReadStyle.native_ad_display_ratio,
+    this.paragraph_anchors = const [],
+    this.content_offset = 0,
+    this.on_paragraph_comment,
+    this.on_selection_changed,
+    this.on_content_tap,
   });
+
+  @override
+  State<StoryContent> createState() => _StoryContentState();
+}
+
+class _StoryContentState extends State<StoryContent> {
+  /// 缓存正文分段和摘要匹配结果，阅读进度每帧更新时不重复处理整篇文字。
+  List<StoryParagraph> _paragraphs = const [];
+  final Set<int> _selected_paragraphs = <int>{};
+
+  String get content => widget.content;
+  bool get is_dark => widget.is_dark;
+  bool get is_loading => widget.is_loading;
+  double get font_size => widget.font_size;
+  Widget? get native_ad_widget => widget.native_ad_widget;
+  double get native_ad_display_ratio => widget.native_ad_display_ratio;
+
+  @override
+  void initState() {
+    super.initState();
+    _split_content();
+  }
+
+  @override
+  void didUpdateWidget(StoryContent old_widget) {
+    super.didUpdateWidget(old_widget);
+    if (old_widget.content != widget.content ||
+        old_widget.content_offset != widget.content_offset ||
+        widget.on_paragraph_comment == null) {
+      if (_selected_paragraphs.isNotEmpty) {
+        _selected_paragraphs.clear();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _selected_paragraphs.isEmpty) {
+            widget.on_selection_changed?.call(false);
+          }
+        });
+      }
+    }
+    if (old_widget.content != widget.content ||
+        old_widget.content_offset != widget.content_offset ||
+        !listEquals(old_widget.paragraph_anchors, widget.paragraph_anchors)) {
+      _split_content();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_selected_paragraphs.isNotEmpty) {
+      widget.on_selection_changed?.call(false);
+    }
+    super.dispose();
+  }
+
+  void _split_content() {
+    _paragraphs = split_story_paragraphs(
+      content,
+      anchors: widget.paragraph_anchors,
+      content_offset: widget.content_offset,
+    );
+  }
+
+  /// 汇总多个段落的焦点通知，旧段落失焦不能覆盖新段落的选择状态。
+  void _selection_changed(int start_offset, bool active) {
+    if (active) {
+      _selected_paragraphs.add(start_offset);
+    } else {
+      _selected_paragraphs.remove(start_offset);
+    }
+    widget.on_selection_changed?.call(_selected_paragraphs.isNotEmpty);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,10 +167,7 @@ class StoryContent extends StatelessWidget {
     }
 
     // 按换行符拆分段落，过滤空行后逐段渲染。
-    final List<String> paragraphs = content
-        .split('\n')
-        .where((String p) => p.trim().isNotEmpty)
-        .toList();
+    final paragraphs = _paragraphs;
 
     // 计算原生广告插入位置（正文 1/3 处的段落下标）。
     final int? ad_insert_index = _get_ad_insert_index(
@@ -148,7 +236,7 @@ class StoryContent extends StatelessWidget {
 
   /// 构建段落列表，可在指定位置插入原生广告。
   List<Widget> _build_paragraph_widgets({
-    required List<String> paragraphs,
+    required List<StoryParagraph> paragraphs,
     required double body_font_size,
     required Color body_color,
     required double body_height,
@@ -157,6 +245,13 @@ class StoryContent extends StatelessWidget {
     final List<Widget> children = <Widget>[];
 
     for (int index = 0; index < paragraphs.length; index++) {
+      final paragraph = paragraphs[index];
+      final text_style = TextStyle(
+        fontSize: body_font_size,
+        fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+        color: body_color,
+        height: body_height,
+      );
       // 在指定位置之前插入原生广告。
       if (ad_insert_index != null && index == ad_insert_index) {
         children.add(native_ad_widget!);
@@ -167,15 +262,22 @@ class StoryContent extends StatelessWidget {
           padding: const EdgeInsets.only(
             bottom: ShortStoryReadStyle.paragraph_spacing,
           ),
-          child: Text(
-            paragraphs[index],
-            style: TextStyle(
-              fontSize: body_font_size,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-              color: body_color,
-              height: body_height,
-            ),
-          ),
+          child: widget.on_paragraph_comment == null
+              ? Text(paragraph.text, style: text_style)
+              : ParagraphSelection(
+                  key: ValueKey(
+                    '${paragraph.anchor?.id ?? "local"}:${paragraph.start_offset}',
+                  ),
+                  text: paragraph.text,
+                  text_style: text_style,
+                  is_dark: is_dark,
+                  comment_count: paragraph.anchor?.comment_count ?? 0,
+                  on_comment: (selection) =>
+                      widget.on_paragraph_comment!(paragraph, selection),
+                  on_selection_changed: (active) =>
+                      _selection_changed(paragraph.start_offset, active),
+                  on_tap: widget.on_content_tap,
+                ),
         ),
       );
     }

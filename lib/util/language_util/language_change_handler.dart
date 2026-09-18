@@ -67,6 +67,22 @@ class _LanguageRefreshTask {
   });
 }
 
+/// 单次语种刷新独立的调度状态，避免连续切换时串用任务完成记录。
+class _LanguageRefreshRun {
+  final LanguageRefreshContext context;
+
+  /// 已开始的阶段；未开始时，新订阅仅执行准备回调。
+  LanguageRefreshPhase? phase;
+
+  /// 同一次切换中每个订阅只执行一次。
+  final Set<int> scheduled_task_ids = <int>{};
+
+  /// 当前轮次尚未完成的任务，包含阶段执行期间新挂载页面的任务。
+  final Map<int, Future<void>> pending_tasks = <int, Future<void>>{};
+
+  _LanguageRefreshRun(this.context);
+}
+
 /// 全局语种切换协调器。
 ///
 /// 所有依赖语种的数据通过 [register_refresh_task] 注册，切换时统一执行：
@@ -78,7 +94,7 @@ class LanguageChangeHandler {
   static String? _last_language_code;
   static int _revision = 0;
   static int _next_task_id = 0;
-  static LanguageRefreshContext? _active_context;
+  static _LanguageRefreshRun? _active_run;
 
   static final Map<int, _LanguageRefreshTask> _refresh_tasks =
       <int, _LanguageRefreshTask>{};
@@ -124,11 +140,18 @@ class LanguageChangeHandler {
     _refresh_tasks[task_id] = task;
 
     /// 页面如果恰好在切换过程中挂载，立即加入当前刷新，不遗漏本次事件。
-    final LanguageRefreshContext? active_context = _active_context;
+    final _LanguageRefreshRun? active_run = _active_run;
     if (is_refreshing.value &&
-        active_context != null &&
-        active_context.is_current) {
-      _prepare_task(task, active_context);
+        active_run != null &&
+        active_run.context.is_current) {
+      _prepare_task(task, active_run.context);
+
+      /// 阶段已经开始时不能只准备而不刷新，否则重建的页面会永久加载。
+      /// 配置阶段尚未结束时，内容任务仍由后续内容阶段统一启动。
+      final LanguageRefreshPhase? active_phase = active_run.phase;
+      if (active_phase != null && task.phase.index <= active_phase.index) {
+        _schedule_task(task, active_run);
+      }
     }
 
     return LanguageRefreshSubscription._(task_id);
@@ -154,7 +177,8 @@ class LanguageChangeHandler {
     );
 
     _last_language_code = normalized_code;
-    _active_context = refresh_context;
+    final _LanguageRefreshRun refresh_run = _LanguageRefreshRun(refresh_context);
+    _active_run = refresh_run;
     is_refreshing.value = true;
     logUtil(
       msg:
@@ -177,7 +201,7 @@ class LanguageChangeHandler {
       return false;
     }
 
-    unawaited(_run_refresh_pipeline(refresh_context));
+    unawaited(_run_refresh_pipeline(refresh_run));
     return true;
   }
 
@@ -191,30 +215,29 @@ class LanguageChangeHandler {
       revision: ++_revision,
     );
     _last_language_code = normalized_code;
-    _active_context = refresh_context;
+    final _LanguageRefreshRun refresh_run = _LanguageRefreshRun(refresh_context);
+    _active_run = refresh_run;
     is_refreshing.value = true;
 
     _prepare_phase(LanguageRefreshPhase.content, refresh_context);
     _prepare_phase(LanguageRefreshPhase.configuration, refresh_context);
     _prepare_phase(LanguageRefreshPhase.background, refresh_context);
     await StorageUtil.saveData(LanguageStore.language_key, normalized_code);
-    unawaited(_run_refresh_pipeline(refresh_context));
+    unawaited(_run_refresh_pipeline(refresh_run));
   }
 
   /// 执行分阶段刷新。
   static Future<void> _run_refresh_pipeline(
-    LanguageRefreshContext refresh_context,
+    _LanguageRefreshRun refresh_run,
   ) async {
-    await _run_phase(LanguageRefreshPhase.configuration, refresh_context);
+    final LanguageRefreshContext refresh_context = refresh_run.context;
+    await _run_phase(LanguageRefreshPhase.configuration, refresh_run);
     if (!refresh_context.is_current) return;
 
-    await _run_phase(LanguageRefreshPhase.content, refresh_context);
+    await _run_phase(LanguageRefreshPhase.content, refresh_run);
     if (!refresh_context.is_current) return;
 
-    is_refreshing.value = false;
-    _active_context = null;
-
-    await _run_phase(LanguageRefreshPhase.background, refresh_context);
+    await _run_phase(LanguageRefreshPhase.background, refresh_run);
     if (!refresh_context.is_current) return;
     await _update_fcm_language(refresh_context.language_code);
   }
@@ -222,29 +245,60 @@ class LanguageChangeHandler {
   /// 执行一个刷新阶段内的全部任务。
   static Future<void> _run_phase(
     LanguageRefreshPhase phase,
-    LanguageRefreshContext refresh_context,
+    _LanguageRefreshRun refresh_run,
   ) async {
-    if (!refresh_context.is_current) return;
-    final List<_LanguageRefreshTask> tasks = _refresh_tasks.values
-        .where((_LanguageRefreshTask task) => task.phase == phase)
-        .toList(growable: false);
+    if (!refresh_run.context.is_current) return;
+    refresh_run.phase = phase;
 
-    await Future.wait<void>(
-      tasks.map((_LanguageRefreshTask task) async {
-        if (!refresh_context.is_current ||
-            !identical(_refresh_tasks[task.id], task)) {
-          return;
+    /// 每轮等待后重新收集订阅，吸收配置恢复、页面重建产生的新任务。
+    while (refresh_run.context.is_current) {
+      final List<_LanguageRefreshTask> tasks = _refresh_tasks.values
+          .where((_LanguageRefreshTask task) => task.phase.index <= phase.index)
+          .toList(growable: false);
+      for (final _LanguageRefreshTask task in tasks) {
+        _schedule_task(task, refresh_run);
+      }
+
+      if (refresh_run.pending_tasks.isEmpty) {
+        if (phase == LanguageRefreshPhase.content &&
+            identical(_active_run, refresh_run)) {
+          /// 与最后一次待执行任务检查同步结束，避免异步返回间隙漏掉新订阅。
+          _active_run = null;
+          is_refreshing.value = false;
         }
-        try {
-          await task.on_refresh(refresh_context);
-        } catch (error) {
-          logUtil(
-            msg: 'LanguageChangeHandler: ${task.phase.name} 刷新任务失败: $error',
-            type: 'e',
-          );
+        return;
+      }
+
+      await Future.wait<void>(refresh_run.pending_tasks.values.toList());
+    }
+  }
+
+  /// 调度一次任务；回调执行前再次检查页面订阅和语种版本。
+  static void _schedule_task(
+    _LanguageRefreshTask task,
+    _LanguageRefreshRun refresh_run,
+  ) {
+    if (!refresh_run.context.is_current ||
+        !identical(_refresh_tasks[task.id], task) ||
+        !refresh_run.scheduled_task_ids.add(task.id)) {
+      return;
+    }
+
+    refresh_run.pending_tasks[task.id] = Future<void>.microtask(() async {
+      try {
+        if (refresh_run.context.is_current &&
+            identical(_refresh_tasks[task.id], task)) {
+          await task.on_refresh(refresh_run.context);
         }
-      }),
-    );
+      } catch (error) {
+        logUtil(
+          msg: 'LanguageChangeHandler: ${task.phase.name} 刷新任务失败: $error',
+          type: 'e',
+        );
+      } finally {
+        refresh_run.pending_tasks.remove(task.id);
+      }
+    });
   }
 
   /// 执行指定阶段的同步准备任务。
