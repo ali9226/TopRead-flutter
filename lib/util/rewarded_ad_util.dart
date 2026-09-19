@@ -1,7 +1,10 @@
+// ignore_for_file: constant_identifier_names, non_constant_identifier_names
+
 import 'dart:async';
 
 import 'package:app/permission_request/admob_consent_permission_request.dart';
 import 'package:app/util/ad_display_policy.dart';
+import 'package:app/util/full_screen_ad_guard.dart';
 import 'package:app/util/google_mobile_ads_util.dart';
 import 'package:app/util/log_util.dart';
 import 'package:flutter/foundation.dart';
@@ -30,7 +33,7 @@ enum GoogleRewardedAdResult {
   /// 当前运行平台不支持谷歌移动广告。
   unsupported,
 
-  /// 已经有一个激励广告流程在执行。
+  /// 已经有一个全屏广告流程在执行。
   busy,
 
   /// 广告加载完成前，发起展示的页面已经失效。
@@ -52,6 +55,9 @@ class GoogleRewardedAdUtil {
 
   /// 当前是否已有广告在加载或展示。
   bool _is_running = false;
+
+  /// 激励广告是否正在准备或展示，供开屏广告避免抢占全屏流程。
+  bool get is_running => _is_running;
 
   /// 当前平台是否支持 Google Mobile Ads。
   ///
@@ -81,8 +87,8 @@ class GoogleRewardedAdUtil {
       _log('当前平台不支持激励视频广告', type: 'w');
       return GoogleRewardedAdResult.unsupported;
     }
-    if (_is_running) {
-      _log('已有激励视频广告流程在执行', type: 'w');
+    if (_is_running || !FullScreenAdGuard.try_acquire(this)) {
+      _log('已有全屏广告流程在执行', type: 'w');
       return GoogleRewardedAdResult.busy;
     }
 
@@ -131,6 +137,7 @@ class GoogleRewardedAdUtil {
       return GoogleRewardedAdResult.show_failed;
     } finally {
       _is_running = false;
+      FullScreenAdGuard.release(this);
     }
   }
 

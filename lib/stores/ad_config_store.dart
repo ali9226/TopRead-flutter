@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:app/config/ad_type_config.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/util/device/app_environment.dart';
+import 'package:app/util/log_util.dart';
 import 'package:app/util/select_weighted_ad_config.dart';
 
 /// 广告配置仓库。
@@ -25,6 +26,11 @@ class AdConfigStore extends GetxController {
   void save_configs(List<AdConfig> configs) {
     _configs.assignAll(configs);
     is_config_loaded.value = true;
+    logUtil(
+      msg:
+          '[AdConfigStore] save_configs: 共 ${configs.length} 条广告配置, '
+          'ids=${configs.map((c) => '${c.id}(type=${c.adsType},adv=${c.advertisers},w=${c.weight},adsId=${c.adsId.isNotEmpty})').toList()}',
+    );
   }
 
   /// 按业务场景、平台、广告商与权重选择一个 Google AdMob 配置。
@@ -41,7 +47,25 @@ class AdConfigStore extends GetxController {
       placement,
       environment: environment,
     );
-    if (ads_type == null) return null;
+    if (ads_type == null) {
+      logUtil(
+        msg:
+            '[AdConfigStore] select_google_config($placement): '
+            'resolve_type 返回 null（当前平台不支持此广告位）',
+        type: 'w',
+      );
+      return null;
+    }
+
+    if (_configs.isEmpty) {
+      logUtil(
+        msg:
+            '[AdConfigStore] select_google_config($placement): '
+            '配置列表为空，ads_type=$ads_type',
+        type: 'w',
+      );
+      return null;
+    }
 
     final List<AdConfig> candidates = _configs
         .where(
@@ -52,7 +76,17 @@ class AdConfigStore extends GetxController {
               config.weight > 0,
         )
         .toList(growable: false);
-    if (candidates.isEmpty) return null;
+
+    if (candidates.isEmpty) {
+      logUtil(
+        msg:
+            '[AdConfigStore] select_google_config($placement): '
+            '无匹配候选，ads_type=$ads_type, '
+            '配置详情=${_configs.map((c) => 'id=${c.id},type=${c.adsType},adv=${c.advertisers},w=${c.weight},adsId="${c.adsId}"').toList()}',
+        type: 'w',
+      );
+      return null;
+    }
 
     return select_weighted_ad_config(candidates, random_value: random_value);
   }
