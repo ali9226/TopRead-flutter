@@ -536,19 +536,19 @@ class CommentItem extends StatelessWidget {
       ).toLocal();
       final Duration difference = DateTime.now().difference(comment_time);
 
-      if (difference.inMinutes < 1) {
+      if (difference.inMinutes < CommentListStyle.time_just_now_minutes) {
         return tr('comment.time.just_now');
       }
-      if (difference.inMinutes < 60) {
+      if (difference.inMinutes < CommentListStyle.time_minutes_threshold) {
         return '${difference.inMinutes}${tr('comment.time.minutes_ago')}';
       }
-      if (difference.inHours < 24) {
+      if (difference.inHours < CommentListStyle.time_hours_threshold) {
         return '${difference.inHours}${tr('comment.time.hours_ago')}';
       }
-      if (difference.inDays < 7) {
+      if (difference.inDays < CommentListStyle.time_days_threshold) {
         return '${difference.inDays}${tr('comment.time.days_ago')}';
       }
-      if (difference.inDays < 30) {
+      if (difference.inDays < CommentListStyle.time_weeks_threshold) {
         return '${(difference.inDays / 7).floor()}${tr('comment.time.weeks_ago')}';
       }
       return '${comment_time.month}/${comment_time.day}';
@@ -827,7 +827,9 @@ class _SendingIndicatorState extends State<_SendingIndicator>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(seconds: 2),
+      duration: const Duration(
+        seconds: CommentListStyle.sending_indicator_animation_seconds,
+      ),
       vsync: this,
     )..repeat();
   }
@@ -841,13 +843,13 @@ class _SendingIndicatorState extends State<_SendingIndicator>
   @override
   Widget build(BuildContext context) {
     final Color color = widget.is_dark
-        ? const Color(0xFF8B8B9E)
-        : const Color(0xFF929292);
+        ? CommentListStyle.sending_indicator_color_dark
+        : CommentListStyle.sending_indicator_color_light;
     return RotationTransition(
       turns: _controller,
       child: Icon(
         Icons.hourglass_top_rounded,
-        size: 18,
+        size: CommentListStyle.sending_indicator_size,
         color: color,
       ),
     );
@@ -876,8 +878,8 @@ class _DisabledLikeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color color = is_dark
-        ? const Color(0xFF4A4A4E)
-        : const Color(0xFFBDBDBD);
+        ? CommentListStyle.like_disabled_color_dark
+        : CommentListStyle.like_disabled_color_light;
     final double icon_size = compact
         ? CommentListStyle.like_compact_icon_size
         : CommentListStyle.like_icon_size;

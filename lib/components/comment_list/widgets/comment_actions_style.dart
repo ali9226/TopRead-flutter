@@ -89,4 +89,48 @@ class CommentActionsStyle {
     fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
     color: subtitle_color,
   );
+
+  // ==================== 举报弹窗 ====================
+
+  /// 举报弹窗水平内边距。
+  static const double report_horizontal_padding = 20;
+
+  /// 举报弹窗标题字号（CJK 语系）。
+  static const double report_title_font_size_cjk = 18;
+
+  /// 举报弹窗标题字号（字母语系）。
+  static const double report_title_font_size_alphabetic = 17;
+
+  /// 举报弹窗标题与标签间距。
+  static const double report_title_spacing = 8;
+
+  /// 举报弹窗提示文字字号（CJK 语系）。
+  static const double report_hint_font_size_cjk = 13;
+
+  /// 举报弹窗提示文字字号（字母语系）。
+  static const double report_hint_font_size_alphabetic = 12;
+
+  /// 举报弹窗提示与标签间距。
+  static const double report_hint_spacing = 16;
+
+  /// 举报弹窗标签间距。
+  static const double report_chip_spacing = 10;
+
+  /// 举报弹窗空状态内边距。
+  static const double report_empty_padding = 24;
+
+  /// 举报弹窗空状态字号。
+  static const double report_empty_font_size = 14;
+
+  /// 举报弹窗标签区域与按钮间距。
+  static const double report_chips_button_spacing = 20;
+
+  /// 举报弹窗按钮高度。
+  static const double report_button_height = 48;
+
+  /// 举报弹窗按钮圆角。
+  static const double report_button_radius = 12;
+
+  /// 举报弹窗计数字号。
+  static const double report_count_font_size = 14;
 }

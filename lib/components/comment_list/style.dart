@@ -610,4 +610,41 @@ class CommentListStyle {
 
   /// 段落引用最大行数。
   static const int paragraph_quote_max_lines = 3;
+
+  // ==================== 时间格式化阈值 ====================
+
+  /// 分钟阈值（低于此显示"刚刚"）。
+  static const int time_just_now_minutes = 1;
+
+  /// 小时阈值（低于此显示 X 分钟前）。
+  static const int time_minutes_threshold = 60;
+
+  /// 天阈值（低于此显示 X 小时前）。
+  static const int time_hours_threshold = 24;
+
+  /// 周阈值（低于此显示 X 天前）。
+  static const int time_days_threshold = 7;
+
+  /// 月阈值（低于此显示 X 周前）。
+  static const int time_weeks_threshold = 30;
+
+  // ==================== 禁用/发送中状态颜色 ====================
+
+  /// 禁用点赞图标颜色（夜间模式）。
+  static const Color like_disabled_color_dark = Color(0xFF4A4A4E);
+
+  /// 禁用点赞图标颜色（日间模式）。
+  static const Color like_disabled_color_light = Color(0xFFBDBDBD);
+
+  /// 沙漏图标颜色（夜间模式）。
+  static const Color sending_indicator_color_dark = Color(0xFF8B8B9E);
+
+  /// 沙漏图标颜色（日间模式）。
+  static const Color sending_indicator_color_light = Color(0xFF929292);
+
+  /// 沙漏图标尺寸。
+  static const double sending_indicator_size = 18;
+
+  /// 沙漏旋转动画时长（秒）。
+  static const int sending_indicator_animation_seconds = 2;
 }

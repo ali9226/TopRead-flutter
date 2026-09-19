@@ -268,19 +268,22 @@ class _MessagePageState extends State<MessagePage> {
     final Duration diff = DateTime.now().difference(message_time);
     if (diff.inMinutes < 1) return easy.tr('message.time.just_now');
     if (diff.inMinutes < 60) {
-      return easy
-          .tr('message.time.minutes_ago')
-          .replaceAll('{0}', '${diff.inMinutes}');
+      return easy.tr(
+        'message.time.minutes_ago',
+        namedArgs: {'count': '${diff.inMinutes}'},
+      );
     }
     if (diff.inHours < 24) {
-      return easy
-          .tr('message.time.hours_ago')
-          .replaceAll('{0}', '${diff.inHours}');
+      return easy.tr(
+        'message.time.hours_ago',
+        namedArgs: {'count': '${diff.inHours}'},
+      );
     }
     if (diff.inDays < 7) {
-      return easy
-          .tr('message.time.days_ago')
-          .replaceAll('{0}', '${diff.inDays}');
+      return easy.tr(
+        'message.time.days_ago',
+        namedArgs: {'count': '${diff.inDays}'},
+      );
     }
     return '${message_time.month}/${message_time.day}';
   }
