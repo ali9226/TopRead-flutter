@@ -665,9 +665,9 @@
     },
     "time": {
       "just_now": "Just now",
-      "minutes_ago": "{0}m ago",
-      "hours_ago": "{0}h ago",
-      "days_ago": "{0}d ago"
+      "minutes_ago": "{count}m ago",
+      "hours_ago": "{count}h ago",
+      "days_ago": "{count}d ago"
     },
     "no_login": {
       "title": "Not logged in",
@@ -1038,13 +1038,33 @@
     "load_error_desc": "Network issue. Tap to try again.",
     "send_success": "Comment posted",
     "send_failed": "Couldn't post. Please try again.",
+    "action": {
+      "copy": "Copy",
+      "dislike": "Don't like",
+      "dislike_subtitle": "Show fewer comments like this",
+      "report": "Report",
+      "delete": "Delete",
+      "delete_confirm": "Are you sure you want to delete this comment?",
+      "copy_success": "Copied to clipboard",
+      "login_required": "Login required to perform this action",
+      "dislike_success": "Submitted, this comment will no longer be shown",
+      "delete_success": "Comment deleted"
+    },
     "time": {
       "just_now": "Just now",
       "minutes_ago": "m ago",
       "hours_ago": "h ago",
       "days_ago": "d ago",
       "weeks_ago": "w ago"
-    }
+    },
+    "report": {
+      "empty": "No report categories",
+      "submit": "Submit",
+      "success": "Report submitted",
+      "hint": "Select report reasons (multiple allowed)",
+      "wait_sync": "Comment syncing, please try again later"
+    },
+    "collapsed": "This comment has been collapsed"
   },
   "favorite": {
     "add_success": "Added to favorites",
@@ -1229,6 +1249,13 @@
     "unavailable": "This passage is unavailable. Please try again later.",
     "count_label": "{count} comments",
     "quote": "Selected passage",
-    "content_too_long": "Comments can contain up to 2,000 characters (emoji may count as more than one)."
+    "content_too_long": "Comments can contain up to 2,000 characters (emoji may count as more than one).",
+    "title": "Passage comments",
+    "copied": "Copied",
+    "copy": "Copy",
+    "delete": "Delete comment",
+    "delete_confirm": "Delete this comment?",
+    "more_replies": "View all {count} replies",
+    "load_more": "Load more"
   }
 }

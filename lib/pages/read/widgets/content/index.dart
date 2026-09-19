@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/inline_native_ad/index.dart';
-import 'package:app/config/font_config.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/pages/read/logic.dart' as read_logic;
 import 'package:app/pages/read/widgets/ad_free_time_hint/index.dart';
@@ -12,6 +11,8 @@ import 'package:app/util/log_util.dart';
 import 'package:app/util/native_ad_insert_index.dart';
 
 import './style.dart';
+import 'paragraph.dart';
+import 'tap_region.dart';
 
 /// 阅读页正文内容组件。
 ///
@@ -38,6 +39,11 @@ class ReadContent extends StatelessWidget {
 
   /// 正文点击回调，由页面读取最新滚动状态并决定翻页或显示导航栏。
   final GestureTapDownCallback on_reading_tap_down;
+
+  /// 与短篇共用段落选择、输入和详情弹窗的交互入口。
+  final void Function(ReadingContentItem, TextSelection)? on_paragraph_comment;
+  final ValueChanged<ReadingContentItem>? on_paragraph_comments;
+  final void Function(ReadingContentItem, bool)? on_paragraph_selection_changed;
 
   /// 关注状态变更回调。
   final ValueChanged<bool>? on_focus_changed;
@@ -70,6 +76,9 @@ class ReadContent extends StatelessWidget {
     required this.reading_items,
     required this.scroll_controller,
     required this.on_reading_tap_down,
+    this.on_paragraph_comment,
+    this.on_paragraph_comments,
+    this.on_paragraph_selection_changed,
     this.reading_section_key,
     this.on_focus_changed,
     this.native_ad_config,
@@ -97,10 +106,11 @@ class ReadContent extends StatelessWidget {
           ),
           SizedBox(height: ContentStyle.reading_top_spacing),
         ],
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: on_reading_tap_down,
-          child: Container(
+        ReaderTapRegion(
+          on_tap_position: (position) => on_reading_tap_down(
+            TapDownDetails(globalPosition: position),
+          ),
+          builder: (on_tap_position, on_selection_changed) => Container(
             key: reading_section_key,
             width: double.infinity,
             color: Colors.transparent,
@@ -112,6 +122,8 @@ class ReadContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: _build_reading_widgets(
                 reading_text_color: reading_text_color,
+                on_tap_position: on_tap_position,
+                on_selection_changed: on_selection_changed,
               ),
             ),
           ),
@@ -192,7 +204,11 @@ class ReadContent extends StatelessWidget {
   ///
   /// 每个章节如果命中广告概率，在广告下方展示"看视频免30分钟广告"提示；
   /// 如果该章节未命中广告概率，则在章节末尾展示该提示。
-  List<Widget> _build_reading_widgets({required Color reading_text_color}) {
+  List<Widget> _build_reading_widgets({
+    required Color reading_text_color,
+    required ValueChanged<Offset> on_tap_position,
+    required void Function(String, bool) on_selection_changed,
+  }) {
     final Set<int> assigned_chapter_keys = <int>{};
     final Map<int, int> rendered_paragraph_counts = <int, int>{};
     final Map<int, int> ad_insert_indexes = _resolve_native_ad_insert_indexes();
@@ -218,9 +234,24 @@ class ReadContent extends StatelessWidget {
                 ? ContentStyle.reading_paragraph_top_spacing * 2
                 : 0,
           ),
-          child: _ReaderParagraphItem(
-            text: item.text,
-            is_title: item.is_title,
+          child: ReaderParagraphItem(
+            key: ValueKey(
+              '${item.chapter_id}:${item.anchor?.id ?? item.start_offset}:${item.body_content_hash}',
+            ),
+            item: item,
+            is_dark: is_dark,
+            on_comment: on_paragraph_comment == null
+                ? null
+                : (selection) => on_paragraph_comment!(item, selection),
+            on_comments: () => on_paragraph_comments?.call(item),
+            on_selection_changed: (active) {
+              on_selection_changed(
+                '${item.chapter_id}:${item.body_content_hash}:${item.start_offset}',
+                active,
+              );
+              on_paragraph_selection_changed?.call(item, active);
+            },
+            on_tap_position: on_tap_position,
             body_font_size: logic.body_font_size.value,
             text_color: item.is_title
                 ? (is_dark
@@ -302,45 +333,6 @@ class ReadContent extends StatelessWidget {
       badge_text_key: 'short_story_read.ad_free',
       show_continue_hint: false,
       on_ad_impression: on_native_ad_impression,
-    );
-  }
-}
-
-/// 阅读页单段正文组件。
-class _ReaderParagraphItem extends StatelessWidget {
-  /// 当前段落文本内容。
-  final String text;
-
-  /// 是否为章节标题。
-  final bool is_title;
-
-  /// 正文字号。
-  final double body_font_size;
-
-  /// 段落文字颜色。
-  final Color text_color;
-
-  const _ReaderParagraphItem({
-    required this.text,
-    this.is_title = false,
-    required this.body_font_size,
-    required this.text_color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: TextStyle(
-        color: text_color,
-        fontSize: is_title
-            ? ContentStyle.reading_title_font_size
-            : body_font_size,
-        height: ContentStyle.reading_paragraph_height,
-        fontWeight: FontConfig.adjustedWeight(
-          is_title ? FontWeight.w500 : FontWeight.w400,
-        ),
-      ),
     );
   }
 }

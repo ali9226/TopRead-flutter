@@ -4,7 +4,7 @@ import 'package:app/pages/short_story_read/widgets/story_content.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:flutter/material.dart';
 import 'package:app/models/paragraph_anchor.dart';
-import 'package:app/pages/short_story_read/models/story_paragraph.dart';
+import 'package:app/models/story_paragraph.dart';
 
 import 'unlock_overlay.dart';
 
@@ -26,6 +26,7 @@ class StoryUnlockGate extends StatelessWidget {
     this.on_paragraph_comment,
     this.on_selection_changed,
     this.on_content_tap,
+    this.on_comment_count_tap,
     super.key,
   });
 
@@ -61,6 +62,14 @@ class StoryUnlockGate extends StatelessWidget {
   final ValueChanged<bool>? on_selection_changed;
   final VoidCallback? on_content_tap;
 
+  /// 点击评论数量气泡时的回调，返回段落文本、评论数量和段落 ID。
+  final void Function(
+    String paragraph_text,
+    int comment_count,
+    String? paragraph_id,
+  )?
+  on_comment_count_tap;
+
   @override
   Widget build(BuildContext context) {
     final bool is_cjk = LanguageUtil.is_cjk_language(
@@ -77,6 +86,7 @@ class StoryUnlockGate extends StatelessWidget {
         on_paragraph_comment: on_paragraph_comment,
         on_selection_changed: on_selection_changed,
         on_content_tap: on_content_tap,
+        on_comment_count_tap: on_comment_count_tap,
       );
     }
 
@@ -102,6 +112,7 @@ class StoryUnlockGate extends StatelessWidget {
         on_paragraph_comment: on_paragraph_comment,
         on_selection_changed: on_selection_changed,
         on_content_tap: on_content_tap,
+        on_comment_count_tap: on_comment_count_tap,
       );
     }
 
@@ -128,6 +139,7 @@ class StoryUnlockGate extends StatelessWidget {
               on_paragraph_comment: on_paragraph_comment,
               on_selection_changed: on_selection_changed,
               on_content_tap: on_content_tap,
+              on_comment_count_tap: on_comment_count_tap,
             ),
             SizedBox(height: gate_height),
           ],

@@ -575,4 +575,39 @@ class CommentListStyle {
 
   /// 预置表情列表。
   static const List<String> emoji_list = InputBarStyle.emoji_list;
+
+  // ==================== 段落引用 ====================
+
+  /// 段落引用底部间距。
+  static const double paragraph_quote_margin_bottom = 8;
+
+  /// 段落引用内边距。
+  static const double paragraph_quote_padding = 10;
+
+  /// 段落引用圆角。
+  static const double paragraph_quote_radius = 8;
+
+  /// 段落引用背景透明度（夜间模式）。
+  static const double paragraph_quote_bg_opacity_dark = 0.05;
+
+  /// 段落引用背景透明度（日间模式）。
+  static const double paragraph_quote_bg_opacity_light = 0.03;
+
+  /// 段落引用文字字号（CJK 语系）。
+  static const double paragraph_quote_font_size_cjk = 13;
+
+  /// 段落引用文字字号（字母语系）。
+  static const double paragraph_quote_font_size_alphabetic = 12;
+
+  /// 段落引用文字行高（CJK 语系）。
+  static const double paragraph_quote_line_height_cjk = 1.4;
+
+  /// 段落引用文字行高（字母语系）。
+  static const double paragraph_quote_line_height_alphabetic = 1.45;
+
+  /// 段落引用文字透明度。
+  static const double paragraph_quote_text_opacity = 0.7;
+
+  /// 段落引用最大行数。
+  static const int paragraph_quote_max_lines = 3;
 }

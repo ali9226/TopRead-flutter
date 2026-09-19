@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:app/components/paragraph_selection/comment_badge.dart';
 import 'package:app/models/paragraph_anchor.dart';
 import 'package:app/pages/short_story_read/models/story_paragraph.dart';
 import 'package:app/pages/short_story_read/widgets/paragraph_selection/index.dart';
@@ -100,6 +101,40 @@ void main() {
           .map((paragraph) => paragraph.comment_count),
       [4, 7],
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('短篇解锁组件把实际段落身份传给共用详情入口，气泡不触发阅读点击', (
+    tester,
+  ) async {
+    const text = 'Repeated paragraph.';
+    final opened = <(String, int, String?)>[];
+    int reading_taps = 0;
+
+    await pump_reader(
+      tester,
+      StoryUnlockGate(
+        content: '$text\n$text',
+        is_dark: true,
+        is_loading: false,
+        is_unlocked: true,
+        is_unlocking: false,
+        font_size: 18,
+        on_unlock: () {},
+        paragraph_anchors: [
+          make_anchor('11', text, 0, 3),
+          make_anchor('12', text, text.length + 1, 7),
+        ],
+        on_paragraph_comment: (_, _) {},
+        on_content_tap: () => reading_taps++,
+        on_comment_count_tap: (text, count, id) => opened.add((text, count, id)),
+      ),
+    );
+
+    await tester.tap(find.byType(ParagraphCommentBadge).last);
+    await tester.pumpAndSettle();
+    expect(opened, [(text, 7, '12')]);
+    expect(reading_taps, 0);
     expect(tester.takeException(), isNull);
   });
 }

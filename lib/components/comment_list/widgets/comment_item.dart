@@ -5,6 +5,7 @@ import 'package:app/components/comment_list/models/comment_data.dart';
 import 'package:app/components/comment_list/style.dart';
 import 'package:app/components/comment_list/widgets/comment_avatar.dart';
 import 'package:app/components/svg_icon/index.dart';
+import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/util/language_util/index.dart';
 
@@ -32,6 +33,9 @@ class CommentItem extends StatelessWidget {
   /// 点击点赞按钮时触发。
   final ValueChanged<CommentData> on_like;
 
+  /// 长按评论时触发（显示操作菜单）。
+  final ValueChanged<CommentData>? on_long_press;
+
   /// 当前需要高亮的评论 ID，0 表示不高亮。
   final int highlighted_comment_id;
 
@@ -44,6 +48,7 @@ class CommentItem extends StatelessWidget {
     required this.is_dark,
     required this.on_reply,
     required this.on_like,
+    this.on_long_press,
     this.highlighted_comment_id = 0,
     this.target_key_builder,
   });
@@ -70,40 +75,37 @@ class CommentItem extends StatelessWidget {
         : CommentListStyle.divider_light_color;
 
     return RepaintBoundary(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: CommentListStyle.list_horizontal_padding,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            _build_main_comment(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          _build_main_comment(
+            is_cjk: is_cjk,
+            content_color: content_color,
+            metadata_color: metadata_color,
+            action_color: action_color,
+            nickname_color: nickname_color,
+          ),
+          if (comment.replies.isNotEmpty)
+            _build_reply_section(
               is_cjk: is_cjk,
               content_color: content_color,
               metadata_color: metadata_color,
               action_color: action_color,
               nickname_color: nickname_color,
             ),
-            if (comment.replies.isNotEmpty)
-              _build_reply_section(
-                is_cjk: is_cjk,
-                content_color: content_color,
-                metadata_color: metadata_color,
-                action_color: action_color,
-                nickname_color: nickname_color,
-              ),
-            Padding(
-              padding: const EdgeInsets.only(
-                left: CommentListStyle.divider_indent,
-              ),
-              child: Divider(
-                height: CommentListStyle.divider_thickness,
-                thickness: CommentListStyle.divider_thickness,
-                color: divider_color,
-              ),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: CommentListStyle.list_horizontal_padding,
+            ).add(const EdgeInsets.only(
+              left: CommentListStyle.divider_indent,
+            )),
+            child: Divider(
+              height: CommentListStyle.divider_thickness,
+              thickness: CommentListStyle.divider_thickness,
+              color: divider_color,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -124,37 +126,47 @@ class CommentItem extends StatelessWidget {
       child: Builder(
         key: target_key_builder?.call(comment.id),
         builder: (BuildContext target_context) {
-          return GestureDetector(
-            key: ValueKey<String>('comment_item_tap_${comment.id}'),
-            onTap: () => on_reply(comment, target_context),
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.only(
-                top: CommentListStyle.item_top_padding,
-                bottom: CommentListStyle.item_bottom_padding,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  CommentAvatar(
-                    avatar_url: comment.avatar,
-                    user_id: comment.user_id,
-                    size: CommentListStyle.avatar_size,
-                    is_dark: is_dark,
-                  ),
-                  const SizedBox(width: CommentListStyle.avatar_content_gap),
-                  Expanded(
-                    child: _build_comment_content(
-                      target: comment,
-                      is_cjk: is_cjk,
-                      content_color: content_color,
-                      metadata_color: metadata_color,
-                      action_color: action_color,
-                      nickname_color: nickname_color,
-                      is_reply: false,
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: ValueKey<String>('comment_item_tap_${comment.id}'),
+              // 发送中或已折叠禁用点击和长按
+              onTap: comment.is_sending || comment.is_disliked
+                  ? null
+                  : () => on_reply(comment, target_context),
+              onLongPress: comment.is_sending || comment.is_disliked || on_long_press == null
+                  ? null
+                  : () => on_long_press!(comment),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: CommentListStyle.list_horizontal_padding,
+                ).add(const EdgeInsets.only(
+                  top: CommentListStyle.item_top_padding,
+                  bottom: CommentListStyle.item_bottom_padding,
+                )),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    CommentAvatar(
+                      avatar_url: comment.avatar,
+                      user_id: comment.user_id,
+                      size: CommentListStyle.avatar_size,
+                      is_dark: is_dark,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: CommentListStyle.avatar_content_gap),
+                    Expanded(
+                      child: _build_comment_content(
+                        target: comment,
+                        is_cjk: is_cjk,
+                        content_color: content_color,
+                        metadata_color: metadata_color,
+                        action_color: action_color,
+                        nickname_color: nickname_color,
+                        is_reply: false,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -213,32 +225,40 @@ class CommentItem extends StatelessWidget {
       child: Builder(
         key: target_key_builder?.call(reply.id),
         builder: (BuildContext target_context) {
-          return GestureDetector(
-            key: ValueKey<String>('comment_reply_tap_${reply.id}'),
-            onTap: () => on_reply(reply, target_context),
-            behavior: HitTestBehavior.opaque,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                CommentAvatar(
-                  avatar_url: reply.avatar,
-                  user_id: reply.user_id,
-                  size: CommentListStyle.reply_avatar_size,
-                  is_dark: is_dark,
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: ValueKey<String>('comment_reply_tap_${reply.id}'),
+              onTap: () => on_reply(reply, target_context),
+              onLongPress: on_long_press != null ? () => on_long_press!(reply) : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: CommentListStyle.list_horizontal_padding,
                 ),
-                const SizedBox(width: CommentListStyle.reply_avatar_gap),
-                Expanded(
-                  child: _build_comment_content(
-                    target: reply,
-                    is_cjk: is_cjk,
-                    content_color: content_color,
-                    metadata_color: metadata_color,
-                    action_color: action_color,
-                    nickname_color: nickname_color,
-                    is_reply: true,
-                  ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    CommentAvatar(
+                      avatar_url: reply.avatar,
+                      user_id: reply.user_id,
+                      size: CommentListStyle.reply_avatar_size,
+                      is_dark: is_dark,
+                    ),
+                    const SizedBox(width: CommentListStyle.reply_avatar_gap),
+                    Expanded(
+                      child: _build_comment_content(
+                        target: reply,
+                        is_cjk: is_cjk,
+                        content_color: content_color,
+                        metadata_color: metadata_color,
+                        action_color: action_color,
+                        nickname_color: nickname_color,
+                        is_reply: true,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
         },
@@ -300,6 +320,15 @@ class CommentItem extends StatelessWidget {
               ? CommentListStyle.reply_content_top_spacing
               : CommentListStyle.content_top_spacing,
         ),
+        // 段评在小说评论列表中显示段落内容引用
+        if (!is_reply &&
+            target.paragraph_text != null &&
+            target.paragraph_text!.isNotEmpty)
+          _build_paragraph_quote(
+            paragraph_text: target.paragraph_text!,
+            is_cjk: is_cjk,
+            content_color: content_color,
+          ),
         _build_content_text(
           target: target,
           is_reply: is_reply,
@@ -325,6 +354,8 @@ class CommentItem extends StatelessWidget {
   }
 
   /// 构建正文；回复其他用户时保留明确的回复关系。
+  ///
+  /// 不喜欢的评论显示折叠样式，保留头像和昵称。
   Widget _build_content_text({
     required CommentData target,
     required bool is_reply,
@@ -339,6 +370,18 @@ class CommentItem extends StatelessWidget {
       fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
       color: content_color,
     );
+
+    // 不喜欢的评论显示折叠提示
+    if (target.is_disliked) {
+      return Text(
+        tr('comment.collapsed'),
+        style: content_style.copyWith(
+          color: content_style.color?.withValues(alpha: 0.5),
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
     final String? reply_to_nickname = target.reply_to_nickname;
 
     if (!is_reply || reply_to_nickname?.isNotEmpty != true) {
@@ -363,7 +406,54 @@ class CommentItem extends StatelessWidget {
     );
   }
 
+  /// 构建段落内容引用（段评在小说评论列表中显示）。
+  Widget _build_paragraph_quote({
+    required String paragraph_text,
+    required bool is_cjk,
+    required Color content_color,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(
+        bottom: CommentListStyle.paragraph_quote_margin_bottom,
+      ),
+      padding: const EdgeInsets.all(CommentListStyle.paragraph_quote_padding),
+      decoration: BoxDecoration(
+        color: is_dark
+            ? Colors.white.withValues(
+                alpha: CommentListStyle.paragraph_quote_bg_opacity_dark,
+              )
+            : Colors.black.withValues(
+                alpha: CommentListStyle.paragraph_quote_bg_opacity_light,
+              ),
+        borderRadius: BorderRadius.circular(
+          CommentListStyle.paragraph_quote_radius,
+        ),
+      ),
+      child: Text(
+        paragraph_text,
+        maxLines: CommentListStyle.paragraph_quote_max_lines,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: is_cjk
+              ? CommentListStyle.paragraph_quote_font_size_cjk
+              : CommentListStyle.paragraph_quote_font_size_alphabetic,
+          height: is_cjk
+              ? CommentListStyle.paragraph_quote_line_height_cjk
+              : CommentListStyle.paragraph_quote_line_height_alphabetic,
+          fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+          color: content_color.withValues(
+            alpha: CommentListStyle.paragraph_quote_text_opacity,
+          ),
+        ),
+      ),
+    );
+  }
+
   /// 构建时间、回复入口与右侧点赞按钮。
+  ///
+  /// 发送中时显示沙漏动画，禁用点赞按钮。
+  /// 已折叠的评论只显示时间，不显示回复按钮和点赞按钮。
   Widget _build_metadata_row({
     required CommentData target,
     required bool is_cjk,
@@ -393,31 +483,42 @@ class CommentItem extends StatelessWidget {
                 ),
                 const SizedBox(width: CommentListStyle.action_spacing),
               ],
-              Flexible(
-                child: Text(
-                  tr('comment.reply'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: is_cjk
-                        ? CommentListStyle.action_font_size_cjk
-                        : CommentListStyle.action_font_size_alphabetic,
-                    fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                    color: action_color,
+              // 已折叠评论不显示回复按钮
+              if (!target.is_disliked)
+                Flexible(
+                  child: Text(
+                    tr('comment.reply'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: is_cjk
+                          ? CommentListStyle.action_font_size_cjk
+                          : CommentListStyle.action_font_size_alphabetic,
+                      fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                      color: action_color,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
-        _CommentLikeButton(
-          key: ValueKey<String>('comment_like_${target.id}'),
-          is_dark: is_dark,
-          is_liked: target.is_liked,
-          like_count: target.like_count,
-          compact: is_reply,
-          on_tap: () => on_like(target),
-        ),
+        // 发送中显示沙漏动画，已折叠显示置灰点赞，否则显示可点击点赞
+        target.is_sending
+            ? _SendingIndicator(is_dark: is_dark)
+            : target.is_disliked
+                ? _DisabledLikeButton(
+                    is_dark: is_dark,
+                    like_count: target.like_count,
+                    compact: is_reply,
+                  )
+                : _CommentLikeButton(
+                    key: ValueKey<String>('comment_like_${target.id}'),
+                    is_dark: is_dark,
+                    is_liked: target.is_liked,
+                    like_count: target.like_count,
+                    compact: is_reply,
+                    on_tap: () => on_like(target),
+                  ),
       ],
     );
   }
@@ -702,5 +803,125 @@ class _HighlightWrapperState extends State<_HighlightWrapper>
       },
       child: widget.child,
     );
+  }
+}
+
+/// 发送中指示器，显示旋转沙漏动画。
+///
+/// 评论正在发送时替代点赞按钮，长按和点赞均禁用。
+class _SendingIndicator extends StatefulWidget {
+  /// 是否为夜间主题。
+  final bool is_dark;
+
+  const _SendingIndicator({required this.is_dark});
+
+  @override
+  State<_SendingIndicator> createState() => _SendingIndicatorState();
+}
+
+class _SendingIndicatorState extends State<_SendingIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = widget.is_dark
+        ? const Color(0xFF8B8B9E)
+        : const Color(0xFF929292);
+    return RotationTransition(
+      turns: _controller,
+      child: Icon(
+        Icons.hourglass_top_rounded,
+        size: 18,
+        color: color,
+      ),
+    );
+  }
+}
+
+/// 置灰点赞按钮，用于已折叠评论。
+///
+/// 显示点赞图标和数量，但颜色置灰且不可点击。
+class _DisabledLikeButton extends StatelessWidget {
+  /// 是否为夜间主题。
+  final bool is_dark;
+
+  /// 当前点赞数量。
+  final int like_count;
+
+  /// 是否使用子回复的小尺寸图标。
+  final bool compact;
+
+  const _DisabledLikeButton({
+    required this.is_dark,
+    required this.like_count,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = is_dark
+        ? const Color(0xFF4A4A4E)
+        : const Color(0xFFBDBDBD);
+    final double icon_size = compact
+        ? CommentListStyle.like_compact_icon_size
+        : CommentListStyle.like_icon_size;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minWidth: CommentListStyle.like_touch_width,
+        minHeight: CommentListStyle.like_touch_height,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(left: CommentListStyle.like_left_padding),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            SvgIcon(
+              name: 'love',
+              width: icon_size,
+              height: icon_size,
+              color: color,
+              animateColor: false,
+            ),
+            if (like_count > 0) ...[
+              const SizedBox(width: CommentListStyle.like_icon_count_spacing),
+              Text(
+                _format_like_count(like_count),
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: CommentListStyle.like_count_font_size,
+                  fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                  color: color,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 将较大的点赞数量格式化为紧凑形式。
+  String _format_like_count(int count) {
+    if (count < 1000) return '$count';
+    if (count < 1000000) return '${(count / 1000).toStringAsFixed(1)}k';
+    return '${(count / 1000000).toStringAsFixed(1)}M';
   }
 }

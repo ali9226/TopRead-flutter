@@ -636,9 +636,9 @@
     },
     "time": {
       "just_now": "Sasa hivi",
-      "minutes_ago": "Dakika {0} zilizopita",
-      "hours_ago": "Saa {0} zilizopita",
-      "days_ago": "Siku {0} zilizopita"
+      "minutes_ago": "Dakika {count} zilizopita",
+      "hours_ago": "Saa {count} zilizopita",
+      "days_ago": "Siku {count} zilizopita"
     },
     "no_login": {
       "title": "Hujaingia",
@@ -1015,7 +1015,27 @@
       "hours_ago": "masaa yaliyopita",
       "days_ago": "siku zilizopita",
       "weeks_ago": "wiki zilizopita"
-    }
+    },
+    "action": {
+      "copy": "Nakili",
+      "dislike": "Sipendi",
+      "dislike_subtitle": "Punguza maoni haya kwa wengine",
+      "report": "Ripoti",
+      "delete": "Futa",
+      "delete_confirm": "Una uhakika unataka kufuta maoni haya?",
+      "copy_success": "Imenakiliwa",
+      "login_required": "Inahitajika kuingia kufanya kitendo hiki",
+      "dislike_success": "Imewasilishwa, maoni haya hayataonyeshwa tena",
+      "delete_success": "Maoni yamefutwa"
+    },
+    "report": {
+      "empty": "Hakuna aina za ripoti",
+      "submit": "Wasilisha",
+      "success": "Ripoti imewasilishwa",
+      "hint": "Chagua sababu za ripoti (inayoruhusiwa nyingi)",
+      "wait_sync": "Maoni yanayosawazisha, tafadhali jaribu tena baadaye"
+    },
+    "collapsed": "Maoni haya yamefungwa"
   },
   "favorite": {
     "add_success": "Imeongezwa kwenye vipendwa",
@@ -1221,6 +1241,13 @@
     "unavailable": "Kifungu hiki hakipatikani. Tafadhali jaribu tena baadaye.",
     "count_label": "Maoni {count}",
     "quote": "Kifungu ulichochagua",
-    "content_too_long": "Maoni yanaweza kuwa na hadi herufi 2,000 (emoji inaweza kuhesabiwa zaidi ya moja)."
+    "content_too_long": "Maoni yanaweza kuwa na hadi herufi 2,000 (emoji inaweza kuhesabiwa zaidi ya moja).",
+    "title": "Maoni ya kifungu",
+    "copied": "Imenakiliwa",
+    "copy": "Nakili",
+    "delete": "Futa maoni",
+    "delete_confirm": "Ungependa kufuta maoni haya?",
+    "more_replies": "Tazama majibu yote {count}",
+    "load_more": "Pakia zaidi"
   }
 }

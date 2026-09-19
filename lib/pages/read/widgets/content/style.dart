@@ -26,6 +26,10 @@ class ContentStyle {
   /// 正文行高
   static const double reading_paragraph_height = 1.9;
 
+  /// 两种语系分别保留正文排版参数，调整时不影响其他阅读组件。
+  static const double reading_paragraph_height_cjk = reading_paragraph_height;
+  static const double reading_paragraph_height_alphabetic = 1.9;
+
   /// 正文段落底部间距
   static const double reading_paragraph_bottom_spacing = 18;
 

@@ -15,8 +15,8 @@ import 'package:app/api/results_type.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/components/login_required_dialog/index.dart';
 import 'package:app/components/comment_list/index.dart';
-import 'package:app/components/paragraph_comment_composer/index.dart';
-import 'package:app/pages/short_story_read/models/story_paragraph.dart';
+import 'package:app/components/paragraph_selection/actions.dart';
+import 'package:app/models/story_paragraph.dart';
 import 'package:app/models/short_story_item.dart';
 import 'package:app/stores/comment_navigation.dart';
 import 'package:app/stores/device_info.dart';
@@ -127,7 +127,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   bool _is_paragraph_selection_active = false;
 
   /// 防止连续点击段评按钮叠加多个登录或输入弹窗。
-  bool _is_paragraph_composer_open = false;
+  final ParagraphActions _paragraph_actions = ParagraphActions();
+
+  bool get _is_paragraph_composer_open => _paragraph_actions.is_open;
 
   /// 翻页方向（true = 向上滑动（下一篇），false = 向下滑动（上一篇））。
   bool _is_slide_up = true;
@@ -1095,47 +1097,63 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     if (active) _stop_auto_read();
   }
 
-  /// 固定本次选择的正文版本与选区，登录后显示段评输入框。
+  /// 选区输入、登录提示及详情弹窗由长短篇共用组件统一处理。
   Future<void> _on_paragraph_comment(
     StoryParagraph paragraph,
     TextSelection selection,
   ) async {
-    if (_is_paragraph_composer_open ||
-        !selection.isValid ||
-        selection.isCollapsed ||
-        selection.start < 0 ||
-        selection.end > paragraph.text.length) {
-      return;
-    }
-    _is_paragraph_composer_open = true;
     _stop_auto_read();
     final action_logic = _logic;
     final generation = _logic_generation;
-    try {
-      final logged_in = await showLoginRequiredDialog(
-        title: easy.tr('paragraph_comment.login_required'),
-      );
-      if (!logged_in || !_is_current_logic(action_logic, generation)) return;
-      final anchor = await action_logic.resolve_paragraph_anchor(paragraph);
-      if (!_is_current_logic(action_logic, generation)) return;
-      if (anchor == null) {
-        showBottomTip(easy.tr('paragraph_comment.unavailable'));
-        return;
-      }
-      await show_paragraph_comment_composer(
-        context,
-        quote: selection.textInside(paragraph.text),
-        is_dark: device_info.dark.value,
-        on_send: (text, images) => action_logic.send_paragraph_comment(
-          anchor: anchor,
-          selection: selection,
-          comment_content: text,
-          images: images,
-        ),
-      );
-    } finally {
-      _is_paragraph_composer_open = false;
+    final success = await _paragraph_actions.compose(
+      context: context,
+      paragraph_text: paragraph.text,
+      selection: selection,
+      is_dark: device_info.dark.value,
+      is_current: () => _is_current_logic(action_logic, generation),
+      resolve_anchor: () => action_logic.resolve_paragraph_anchor(paragraph),
+      on_send: (anchor, text, images) => action_logic.send_paragraph_comment(
+        anchor: anchor,
+        selection: selection,
+        comment_content: text,
+        images: images,
+      ),
+    );
+    // 段评发送成功后，乐观更新小说总评论数
+    if (success == true && mounted) {
+      action_logic.update_comment_count(action_logic.comment_count + 1);
     }
+  }
+
+  /// 保存打开时的正文身份，换篇后旧弹窗不能修改新篇的气泡数量。
+  void _on_comment_count_tap(
+    String paragraph_text,
+    int comment_count,
+    String? paragraph_id,
+  ) {
+    _stop_auto_read();
+    final int para_id = int.tryParse(paragraph_id ?? '') ?? 0;
+    if (para_id <= 0) return;
+    final ShortStoryReadLogic action_logic = _logic;
+    final int story_id = action_logic.story_id;
+    unawaited(
+      showCommentSheet(
+        context: context,
+        novel_id: story_id,
+        paragraph_id: para_id,
+        on_close: () => Navigator.pop(context),
+        on_paragraph_count_changed: (count) {
+          action_logic.update_paragraph_comment_count(
+            paragraph_id: paragraph_id!,
+            count: count,
+          );
+        },
+        on_novel_count_changed: (delta) {
+          // 段评增删时，乐观更新小说总评论数
+          action_logic.update_comment_count(action_logic.comment_count + delta);
+        },
+      ),
+    );
   }
 
   // ==================== 动画控制 ====================
@@ -2620,6 +2638,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                           : null,
                       on_selection_changed: _on_paragraph_selection_changed,
                       on_content_tap: _on_content_tap,
+                      on_comment_count_tap: _on_comment_count_tap,
                     ),
 
                     /// 当前篇正文结束位置，用于准确计算进度和恢复位置。

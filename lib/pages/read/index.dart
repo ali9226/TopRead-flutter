@@ -50,6 +50,8 @@ import 'package:app/pages/read/utils/calculate_ad_free_expire_time.dart';
 import 'package:app/pages/read/utils/can_process_read_ads.dart';
 import 'package:app/pages/read/widgets/rewarded_ad_loading_overlay/index.dart';
 
+import 'package:app/components/paragraph_selection/actions.dart';
+
 import 'logic.dart';
 import 'style.dart';
 
@@ -94,6 +96,10 @@ class _ReadPageState extends State<ReadPage>
 
   /// 是否已经进入正文阅读状态，用于控制底部胶囊与进度条显隐。
   bool has_started_reading = false;
+
+  /// 长短篇共用的弹窗入口与当前选择状态；选区建立后暂停自动阅读。
+  final ParagraphActions _paragraph_actions = ParagraphActions();
+  final Set<String> _selected_paragraphs = <String>{};
 
   // ==================== 状态变量 ====================
 
@@ -1973,7 +1979,15 @@ class _ReadPageState extends State<ReadPage>
   ///
   /// 页面在点击发生时读取最新滚动和导航状态，正文段落无需随滚动重建。
   void _handle_reading_tap_down(TapDownDetails details) {
-    if (!is_reading_section_at_top || _is_chapter_transaction_active) return;
+    if (!is_reading_section_at_top ||
+        _is_chapter_transaction_active ||
+        _paragraph_actions.is_open) {
+      return;
+    }
+    if (_selected_paragraphs.isNotEmpty) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      return;
+    }
 
     if (logic.is_auto_reading.value) {
       _stop_auto_read();
@@ -2000,6 +2014,73 @@ class _ReadPageState extends State<ReadPage>
     } else {
       logic.toggle_navigation();
     }
+  }
+
+  /// 跨章同一偏移的段落保持独立，失焦通知不会覆盖另一个段落的选择。
+  void _on_paragraph_selection_changed(ReadingContentItem item, bool active) {
+    final key =
+        '${item.chapter_id}:${item.body_content_hash}:${item.start_offset}';
+    if (active) {
+      _selected_paragraphs.add(key);
+      _stop_auto_read();
+    } else {
+      _selected_paragraphs.remove(key);
+    }
+  }
+
+  /// 固定当前段落的原文选区，通过公共入口处理登录、输入及发送。
+  Future<void> _on_paragraph_comment(
+    ReadingContentItem item,
+    TextSelection selection,
+  ) async {
+    _stop_auto_read();
+    logic.show_navigation.value = false;
+    final success = await _paragraph_actions.compose(
+      context: context,
+      paragraph_text: item.text,
+      selection: selection,
+      is_dark: device_info.dark.value,
+      is_current: () => mounted && !_is_chapter_transaction_active,
+      resolve_anchor: () => logic.resolve_paragraph_anchor(item),
+      on_send: (anchor, text, images) => logic.send_paragraph_comment(
+        item: item,
+        anchor: anchor,
+        selection: selection,
+        text: text,
+        images: images,
+      ),
+    );
+    // 段评发送成功后，乐观更新小说总评论数
+    if (success == true && mounted) {
+      logic.update_comment_count(logic.comment_count + 1);
+    }
+  }
+
+  /// 打开段评详情弹窗，使用统一的评论组件。
+  void _on_paragraph_comments(ReadingContentItem item) {
+    final anchor = item.anchor;
+    if (anchor == null) return;
+    final int para_id = int.tryParse(anchor.id) ?? 0;
+    if (para_id <= 0) return;
+    _stop_auto_read();
+    logic.show_navigation.value = false;
+    unawaited(
+      showCommentSheet(
+        context: context,
+        novel_id: widget.story_id,
+        paragraph_id: para_id,
+        on_close: () => Navigator.pop(context),
+        on_paragraph_count_changed: (count) => logic.update_paragraph_comment_count(
+          item: item,
+          paragraph_id: anchor.id,
+          count: count,
+        ),
+        on_novel_count_changed: (delta) {
+          // 段评增删时，乐观更新小说总评论数
+          logic.update_comment_count(logic.comment_count + delta);
+        },
+      ),
+    );
   }
 
   /// 程序化上翻一屏。
@@ -2295,6 +2376,10 @@ class _ReadPageState extends State<ReadPage>
                     reading_items: reading_items,
                     reading_section_key: reading_section_key,
                     on_reading_tap_down: _handle_reading_tap_down,
+                    on_paragraph_comment: _on_paragraph_comment,
+                    on_paragraph_comments: _on_paragraph_comments,
+                    on_paragraph_selection_changed:
+                        _on_paragraph_selection_changed,
                     native_ad_config: suppress_read_ads
                         ? null
                         : _native_ad_config,

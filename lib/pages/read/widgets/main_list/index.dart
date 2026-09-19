@@ -36,6 +36,11 @@ class ReadMainList extends StatelessWidget {
   /// 正文点击回调。
   final GestureTapDownCallback on_reading_tap_down;
 
+  /// 与短篇共用段落选择、输入和详情弹窗的交互入口。
+  final void Function(ReadingContentItem, TextSelection)? on_paragraph_comment;
+  final ValueChanged<ReadingContentItem>? on_paragraph_comments;
+  final void Function(ReadingContentItem, bool)? on_paragraph_selection_changed;
+
   /// 当前小说唯一的原生广告配置。
   final AdConfig? native_ad_config;
 
@@ -66,6 +71,9 @@ class ReadMainList extends StatelessWidget {
     required this.reading_items,
     required this.reading_section_key,
     required this.on_reading_tap_down,
+    this.on_paragraph_comment,
+    this.on_paragraph_comments,
+    this.on_paragraph_selection_changed,
     this.native_ad_config,
     this.is_native_ad_config_loading = false,
     this.on_native_ad_impression,
@@ -107,6 +115,9 @@ class ReadMainList extends StatelessWidget {
               scroll_controller: scroll_controller,
               reading_section_key: reading_section_key,
               on_reading_tap_down: on_reading_tap_down,
+              on_paragraph_comment: on_paragraph_comment,
+              on_paragraph_comments: on_paragraph_comments,
+              on_paragraph_selection_changed: on_paragraph_selection_changed,
               native_ad_config: native_ad_config,
               is_native_ad_config_loading: is_native_ad_config_loading,
               on_native_ad_impression: on_native_ad_impression,

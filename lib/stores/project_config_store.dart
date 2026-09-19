@@ -17,6 +17,9 @@ class ProjectConfigStore extends GetxController {
   /// 项目配置版本；每次完整保存后递增，供跨页面策略监听。
   final RxInt config_revision = 0.obs;
 
+  /// 举报分类列表（从 redis/get 接口获取）。
+  List<Map<String, String>> complaint_list = [];
+
   /// 首次项目配置加载完成信号。
   final Completer<void> _first_config_completer = Completer<void>();
 
@@ -30,6 +33,11 @@ class ProjectConfigStore extends GetxController {
     if (!_first_config_completer.isCompleted) {
       _first_config_completer.complete();
     }
+  }
+
+  /// 保存举报分类列表。
+  void save_complaint_list(List<Map<String, String>> list) {
+    complaint_list = list;
   }
 
   /// 获取当前配置。

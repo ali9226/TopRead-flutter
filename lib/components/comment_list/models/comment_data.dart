@@ -41,6 +41,18 @@ class CommentData {
   /// 评分（1-5）。
   final int score;
 
+  /// 段落ID（段评时有值，普通评论为 null）。
+  final int? paragraph_id;
+
+  /// 段落内容（段评时有值，用于在小说评论列表中展示）。
+  final String? paragraph_text;
+
+  /// 是否正在发送中（显示沙漏动画，禁用长按和点赞）。
+  final bool is_sending;
+
+  /// 是否被当前用户标记为不喜欢（显示折叠样式）。
+  final bool is_disliked;
+
   const CommentData({
     required this.id,
     required this.user_id,
@@ -54,6 +66,10 @@ class CommentData {
     this.reply_to_nickname,
     this.parent_id = 0,
     this.score = 5,
+    this.paragraph_id,
+    this.paragraph_text,
+    this.is_sending = false,
+    this.is_disliked = false,
   });
 
   /// 从后端接口返回的 JSON 数据解析评论对象。
@@ -78,10 +94,13 @@ class CommentData {
       time: json['create_time']?.toString() ?? '',
       like_count: _parse_int(json['like_count']),
       is_liked: _parse_bool(json['like'] ?? json['is_liked']),
+      is_disliked: _parse_bool(json['is_disliked']),
       replies: replies,
       reply_to_nickname: json['reply_to_nickname']?.toString(),
       parent_id: _parse_int(json['parent_id']),
       score: _parse_int(json['score']),
+      paragraph_id: json['paragraph_id'] != null ? _parse_int(json['paragraph_id']) : null,
+      paragraph_text: json['paragraph_text']?.toString(),
     );
   }
 
@@ -105,13 +124,16 @@ class CommentData {
   ///
   /// 用于点赞等操作后的状态更新。
   CommentData copy_with({
+    int? id,
     int? like_count,
     bool? is_liked,
+    bool? is_disliked,
     List<CommentData>? replies,
     String? reply_to_nickname,
+    bool? is_sending,
   }) {
     return CommentData(
-      id: id,
+      id: id ?? this.id,
       user_id: user_id,
       avatar: avatar,
       nickname: nickname,
@@ -119,10 +141,14 @@ class CommentData {
       time: time,
       like_count: like_count ?? this.like_count,
       is_liked: is_liked ?? this.is_liked,
+      is_disliked: is_disliked ?? this.is_disliked,
       replies: replies ?? this.replies,
       reply_to_nickname: reply_to_nickname ?? this.reply_to_nickname,
       parent_id: parent_id,
       score: score,
+      paragraph_id: paragraph_id,
+      paragraph_text: paragraph_text,
+      is_sending: is_sending ?? this.is_sending,
     );
   }
 }

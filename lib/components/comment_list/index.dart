@@ -4,20 +4,24 @@ import 'dart:math' as math;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/components/comment_list/models/comment_data.dart';
 import 'package:app/components/comment_list/style.dart';
+import 'package:app/components/comment_list/widgets/comment_actions.dart';
 import 'package:app/components/comment_list/widgets/comment_header.dart';
 import 'package:app/components/comment_list/widgets/comment_item.dart';
 import 'package:app/components/comment_list/widgets/comment_input.dart';
+import 'package:app/components/comment_list/widgets/comment_report_sheet.dart';
 import 'package:app/components/comment_list/widgets/comment_skeleton.dart';
 import 'package:app/components/no_internet/index.dart';
 import 'package:app/components/login_required_dialog/index.dart';
 import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
+import 'package:app/util/language_util/index.dart';
 import 'package:app/api/novel_comment.dart';
 
 /// 评论列表弹窗组件。
@@ -48,18 +52,30 @@ class CommentSheet extends StatefulWidget {
   /// 小说ID（必传，用于请求评论数据）。
   final int novel_id;
 
+  /// 段落ID（可选，传则只显示该段落的评论）。
+  final int paragraph_id;
+
   /// 需要定位的评论ID（可选，加载完成后自动滚动到该评论）。
   final int scroll_to_comment_id;
 
   /// 评论数量发生变化时通知弹窗路由，用于手势下滑关闭时返回最新数量。
   final ValueChanged<int>? on_count_changed;
 
+  /// 段评计数回调（段评时返回段落评论总数）。
+  final ValueChanged<int>? on_paragraph_count_changed;
+
+  /// 小说总评论数变化回调（段评增删时同步更新小说评论总数，+1 或 -1）。
+  final ValueChanged<int>? on_novel_count_changed;
+
   const CommentSheet({
     super.key,
     required this.on_close,
     required this.novel_id,
+    this.paragraph_id = 0,
     this.scroll_to_comment_id = 0,
     this.on_count_changed,
+    this.on_paragraph_count_changed,
+    this.on_novel_count_changed,
   });
 
   @override
@@ -71,12 +87,19 @@ class CommentSheet extends StatefulWidget {
 /// 使用与目录、设置一致的系统 ModalBottomSheet 路由，支持整张面板上下拖动、
 /// 阈值回弹和下滑关闭。真实输入框仍放在根 Overlay 中，因此键盘不会推动面板。
 ///
+/// [paragraph_id] 段落ID（可选，传则只显示该段落的评论）。
+/// [on_paragraph_count_changed] 段评计数回调（段评时返回段落评论总数）。
+/// [on_novel_count_changed] 小说总评论数变化回调（段评增删时传 +1 或 -1）。
+///
 /// 返回值：弹窗关闭后的最新评论总数（若无变化返回 null）。
 Future<int?> showCommentSheet({
   required BuildContext context,
   required int novel_id,
   required VoidCallback on_close,
+  int paragraph_id = 0,
   int scroll_to_comment_id = 0,
+  ValueChanged<int>? on_paragraph_count_changed,
+  ValueChanged<int>? on_novel_count_changed,
 }) async {
   int? changed_comment_count;
   final int? route_result = await showModalBottomSheet<int>(
@@ -105,10 +128,13 @@ Future<int?> showCommentSheet({
       return CommentSheet(
         on_close: on_close,
         novel_id: novel_id,
+        paragraph_id: paragraph_id,
         scroll_to_comment_id: scroll_to_comment_id,
         on_count_changed: (int count) {
           changed_comment_count = count;
         },
+        on_paragraph_count_changed: on_paragraph_count_changed,
+        on_novel_count_changed: on_novel_count_changed,
       );
     },
   );
@@ -289,6 +315,7 @@ class _CommentSheetState extends State<CommentSheet>
     try {
       final CommentListResult? result = await inquire_comment_list(
         novel_id: widget.novel_id,
+        paragraph_id: widget.paragraph_id,
         page: 1,
         page_size: _page_size,
         highlight_id: widget.scroll_to_comment_id,
@@ -312,6 +339,8 @@ class _CommentSheetState extends State<CommentSheet>
         _total_count = result.total;
         _has_more = result.page * result.page_size < result.total;
       });
+      // 首次加载成功后，同步最新评论总数到外层
+      widget.on_count_changed?.call(_total_count);
 
       if (widget.scroll_to_comment_id > 0) {
         unawaited(_scroll_to_comment(widget.scroll_to_comment_id));
@@ -376,6 +405,7 @@ class _CommentSheetState extends State<CommentSheet>
     try {
       final CommentListResult? result = await inquire_comment_list(
         novel_id: widget.novel_id,
+        paragraph_id: widget.paragraph_id,
         page: _current_page + 1,
         page_size: _page_size,
       );
@@ -605,7 +635,219 @@ class _CommentSheetState extends State<CommentSheet>
     });
   }
 
-  /// 处理发送评论（乐观更新，失败时保留草稿与回复目标）。
+  /// 处理长按评论，显示操作菜单。
+  ///
+  /// 乐观添加的临时评论（id < 0）也支持长按，但不喜欢、举报等需要
+  /// 服务端 ID 的操作会被跳过。
+  Future<void> _handle_long_press(CommentData comment) async {
+    final DeviceInfo device_info = Get.find<DeviceInfo>();
+    final bool is_dark = device_info.theme.value == ThemeMode.dark;
+    final bool is_cjk = LanguageUtil.is_cjk_language(
+      Localizations.localeOf(context).languageCode,
+    );
+
+    // 判断是否是自己的评论
+    final user_info = Get.find<UserInformation>().userInfo.value;
+    final bool is_owner = user_info != null && comment.user_id == user_info.id;
+
+    // 临时评论（乐观添加，尚未落库）只能复制和删除
+    final bool is_temp = comment.id <= 0;
+
+    final String? action = await showCommentActions(
+      context: context,
+      is_owner: is_owner || is_temp,
+      is_dark: is_dark,
+      is_cjk: is_cjk,
+      content: comment.content,
+    );
+
+    if (!mounted || action == null) return;
+
+    switch (action) {
+      case 'copy':
+        await Clipboard.setData(ClipboardData(text: comment.content));
+        if (mounted) {
+          showBottomTip(tr('comment.action.copy_success'));
+        }
+      case 'dislike':
+        if (is_temp) return;
+        await _handle_dislike(comment);
+      case 'report':
+        await _handle_report(comment);
+      case 'delete':
+        final bool confirmed = await confirmCommentDelete(
+          context: context,
+        );
+        if (confirmed && mounted) {
+          await _handle_delete(comment);
+        }
+    }
+  }
+
+  /// 处理删除评论（乐观删除，改变评论总数）。
+  Future<void> _handle_delete(CommentData comment) async {
+    if (comment.id <= 0) return;
+
+    // 保存原始数据用于回滚
+    final List<CommentData> original_comments = _comments;
+    final int original_total = _total_count;
+
+    // 乐观删除：立即从列表中移除
+    setState(() {
+      _comments = _comments.where((c) => c.id != comment.id).toList();
+      _total_count = math.max(0, _total_count - 1);
+    });
+    widget.on_count_changed?.call(_total_count);
+    // 段评：同步更新段落评论计数和小说总评论数
+    if (widget.paragraph_id > 0) {
+      widget.on_paragraph_count_changed?.call(_total_count);
+      widget.on_novel_count_changed?.call(-1);
+    }
+
+    try {
+      final bool success = await delete_comment(comment_id: comment.id);
+      if (!mounted) return;
+
+      if (success) {
+        showBottomTip(tr('comment.action.delete_success'));
+      } else {
+        // 删除失败，回滚
+        setState(() {
+          _comments = original_comments;
+          _total_count = original_total;
+        });
+        widget.on_count_changed?.call(_total_count);
+        if (widget.paragraph_id > 0) {
+          widget.on_paragraph_count_changed?.call(_total_count);
+          widget.on_novel_count_changed?.call(1); // 回滚：+1
+        }
+        showBottomTip(tr('comment.send_failed'));
+      }
+    } catch (_) {
+      if (!mounted) return;
+      // 删除失败，回滚
+      setState(() {
+        _comments = original_comments;
+        _total_count = original_total;
+      });
+      widget.on_count_changed?.call(_total_count);
+      if (widget.paragraph_id > 0) {
+        widget.on_paragraph_count_changed?.call(_total_count);
+        widget.on_novel_count_changed?.call(1); // 回滚：+1
+      }
+      showBottomTip(tr('comment.send_failed'));
+    }
+  }
+
+  /// 处理不喜欢评论（需要登录，标记后评论内容折叠显示，不改变评论总数）。
+  Future<void> _handle_dislike(CommentData comment) async {
+    if (comment.id <= 0) return;
+
+    // 检查登录状态
+    final bool is_logged_in = await checkLoginForComment();
+    if (!is_logged_in || !mounted) return;
+
+    // 保存原始数据用于回滚
+    final List<CommentData> original_comments = _comments;
+
+    // 乐观更新：标记为已折叠（不从列表移除）
+    setState(() {
+      _comments = _comments.map((c) {
+        if (c.id == comment.id) return c.copy_with(is_disliked: true);
+        if (c.replies.isNotEmpty) {
+          final updated_replies = c.replies.map((r) {
+            if (r.id == comment.id) return r.copy_with(is_disliked: true);
+            return r;
+          }).toList();
+          return c.copy_with(replies: updated_replies);
+        }
+        return c;
+      }).toList();
+    });
+
+    try {
+      final bool success = await dislike_comment(comment_id: comment.id);
+      if (!mounted) return;
+
+      if (success) {
+        showBottomTip(tr('comment.action.dislike_success'));
+      } else {
+        // 不喜欢失败，回滚
+        setState(() {
+          _comments = original_comments;
+        });
+        showBottomTip(tr('comment.send_failed'));
+      }
+    } catch (_) {
+      if (!mounted) return;
+      // 不喜欢失败，回滚
+      setState(() {
+        _comments = original_comments;
+      });
+      showBottomTip(tr('comment.send_failed'));
+    }
+  }
+
+  /// 处理举报评论（打开举报弹窗，提交举报理由）。
+  Future<void> _handle_report(CommentData comment) async {
+    // 临时评论（尚未落库）无法举报
+    if (comment.id <= 0) {
+      showBottomTip(tr('comment.report.wait_sync'));
+      return;
+    }
+
+    final DeviceInfo device_info = Get.find<DeviceInfo>();
+    final bool is_dark = device_info.theme.value == ThemeMode.dark;
+
+    // 打开举报弹窗
+    final List<String>? reasons = await showCommentReport(
+      context: context,
+      is_dark: is_dark,
+    );
+
+    if (!mounted || reasons == null || reasons.isEmpty) return;
+
+    // 提交举报
+    try {
+      final bool success = await report_comment(
+        comment_id: comment.id,
+        reasons: reasons,
+      );
+      if (!mounted) return;
+
+      if (success) {
+        showBottomTip(tr('comment.report.success'));
+        // 已登录用户举报后会自动标记不喜欢，评论折叠显示
+        final user_info = Get.find<UserInformation>().userInfo.value;
+        if (user_info != null) {
+          setState(() {
+            _comments = _comments.map((c) {
+              if (c.id == comment.id) return c.copy_with(is_disliked: true);
+              if (c.replies.isNotEmpty) {
+                final updated_replies = c.replies.map((r) {
+                  if (r.id == comment.id) return r.copy_with(is_disliked: true);
+                  return r;
+                }).toList();
+                return c.copy_with(replies: updated_replies);
+              }
+              return c;
+            }).toList();
+          });
+        }
+      } else {
+        showBottomTip(tr('comment.send_failed'));
+      }
+    } catch (_) {
+      if (!mounted) return;
+      showBottomTip(tr('comment.send_failed'));
+    }
+  }
+
+  /// 处理发送评论。
+  ///
+  /// 点击发送后立即显示在列表中（带沙漏动画），禁用长按和点赞。
+  /// 发送成功后用服务端返回的真实 ID 替换临时 ID，取消沙漏。
+  /// 发送失败后从列表中移除。
   Future<bool> _handle_send(String content) async {
     if (_is_sending || _load_status != 'success') return false;
     final CommentData? reply_target = _reply_target;
@@ -621,6 +863,7 @@ class _CommentSheetState extends State<CommentSheet>
     final user_info = Get.find<UserInformation>().userInfo.value;
     if (user_info == null) return false;
 
+    // 临时 ID 仅用于列表内定位，is_sending = true 期间禁用交互
     final int temp_id = -DateTime.now().microsecondsSinceEpoch;
     final String now_str = DateTime.now().toUtc().toIso8601String();
 
@@ -633,6 +876,7 @@ class _CommentSheetState extends State<CommentSheet>
       time: now_str,
       parent_id: parent_id,
       reply_to_nickname: is_reply_to_nested ? reply_target.nickname : null,
+      is_sending: true,
     );
 
     int root_index = -1;
@@ -693,19 +937,38 @@ class _CommentSheetState extends State<CommentSheet>
     });
 
     bool success = false;
+    int? real_id;
     try {
-      success = await add_comment(
+      final result = await add_comment(
         novel_id: widget.novel_id,
         comment_content: content,
         parent_id: parent_id,
+        paragraph_id: widget.paragraph_id,
       );
+      if (result != null) {
+        success = true;
+        real_id = result['id'] is int
+            ? result['id']
+            : int.tryParse(result['id'].toString());
+        // 段评：更新段落评论计数
+        if (widget.paragraph_id > 0 && result.containsKey('comment_count')) {
+          final int? paragraph_count = result['comment_count'] is int
+              ? result['comment_count']
+              : int.tryParse(result['comment_count'].toString());
+          if (paragraph_count != null) {
+            widget.on_paragraph_count_changed?.call(paragraph_count);
+          }
+          widget.on_novel_count_changed?.call(1);
+        }
+      }
     } catch (_) {
       success = false;
     }
     if (!mounted) return success;
 
     _is_sending = false;
-    if (!success) {
+    if (!success || real_id == null) {
+      // 发送失败：从列表移除
       setState(() {
         _comments = _remove_optimistic_comment(_comments, temp_id);
         _total_count = math.max(0, _total_count - 1);
@@ -714,6 +977,11 @@ class _CommentSheetState extends State<CommentSheet>
       showBottomTip(tr('comment.send_failed'));
       return false;
     }
+
+    // 发送成功：用真实 ID 替换临时 ID，取消发送中状态
+    setState(() {
+      _comments = _replace_comment_id(_comments, temp_id, real_id!);
+    });
 
     _has_new_comments = true;
     _reply_target_context = null;
@@ -739,6 +1007,29 @@ class _CommentSheetState extends State<CommentSheet>
           ),
         )
         .toList();
+  }
+
+  /// 发送成功后，将临时 ID 替换为服务端返回的真实 ID，取消发送中状态。
+  List<CommentData> _replace_comment_id(
+    List<CommentData> comments,
+    int temp_id,
+    int real_id,
+  ) {
+    return comments.map((CommentData comment) {
+      if (comment.id == temp_id) {
+        return comment.copy_with(id: real_id, is_sending: false);
+      }
+      if (comment.replies.isNotEmpty) {
+        final updated_replies = comment.replies.map((CommentData reply) {
+          if (reply.id == temp_id) {
+            return reply.copy_with(id: real_id, is_sending: false);
+          }
+          return reply;
+        }).toList();
+        return comment.copy_with(replies: updated_replies);
+      }
+      return comment;
+    }).toList();
   }
 
   @override
@@ -879,6 +1170,7 @@ class _CommentSheetState extends State<CommentSheet>
             is_dark: is_dark,
             on_reply: _handle_reply,
             on_like: _handle_like,
+            on_long_press: _handle_long_press,
             highlighted_comment_id: _highlighted_comment_id,
             target_key_builder: _target_key_for,
           );

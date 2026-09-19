@@ -45,6 +45,8 @@ post_install do |installer|
         '$(inherited)',
         'PERMISSION_CAMERA=1',
       ]
+      # 强制所有 Pod 使用最低部署目标 16.0
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
     end
   end
 end

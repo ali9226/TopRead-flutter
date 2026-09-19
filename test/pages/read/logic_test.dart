@@ -168,6 +168,7 @@ void main() {
       reading_store: reading_store,
       initial_body_font_size: 18,
       initial_auto_read_speed: 0.2,
+      chapter_paragraph_metadata_loader: (_) async => null,
       chapter_content_loader: (String url) async {
         final int count = (request_counts[url] ?? 0) + 1;
         request_counts[url] = count;

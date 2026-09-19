@@ -665,9 +665,9 @@
     },
     "time": {
       "just_now": "刚刚",
-      "minutes_ago": "{0}分钟前",
-      "hours_ago": "{0}小时前",
-      "days_ago": "{0}天前"
+      "minutes_ago": "{count}分钟前",
+      "hours_ago": "{count}小时前",
+      "days_ago": "{count}天前"
     },
     "no_login": {
       "title": "你还没有登录",
@@ -1038,13 +1038,33 @@
     "load_error_desc": "网络开小差了，点击重新加载试试",
     "send_success": "评论成功",
     "send_failed": "发送失败，请重试",
+    "action": {
+      "copy": "复制",
+      "dislike": "不喜欢",
+      "dislike_subtitle": "减少该评论对他人的展示",
+      "report": "举报",
+      "delete": "删除",
+      "delete_confirm": "确定要删除这条评论吗？",
+      "copy_success": "已复制到剪贴板",
+      "login_required": "需要登录才能操作",
+      "dislike_success": "已提交，该评论将不再展示",
+      "delete_success": "评论已删除"
+    },
     "time": {
       "just_now": "刚刚",
       "minutes_ago": "分钟前",
       "hours_ago": "小时前",
       "days_ago": "天前",
       "weeks_ago": "周前"
-    }
+    },
+    "report": {
+      "empty": "暂无举报分类",
+      "submit": "提交",
+      "success": "举报已提交",
+      "hint": "请选择举报理由（可多选）",
+      "wait_sync": "评论同步中，请稍后再试"
+    },
+    "collapsed": "评论已被折叠"
   },
   "favorite": {
     "add_success": "收藏成功",
@@ -1229,6 +1249,13 @@
     "unavailable": "段落暂不可用，请稍后重试",
     "count_label": "{count} 条段评",
     "quote": "所选文字",
-    "content_too_long": "段评最多 2000 个字符（表情可能占多个字符）"
+    "content_too_long": "段评最多 2000 个字符（表情可能占多个字符）",
+    "title": "段落评论",
+    "copied": "已复制",
+    "copy": "复制",
+    "delete": "删除评论",
+    "delete_confirm": "确定要删除这条评论吗？",
+    "more_replies": "查看全部 {count} 条回复",
+    "load_more": "加载更多"
   }
 }

@@ -1,11 +1,15 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:app/api/get_chapter_content.dart';
+import 'package:app/api/get_novel_content.dart';
+import 'package:app/api/novel_comment.dart';
+import 'package:app/api/paragraph_comment.dart';
+import 'package:crypto/crypto.dart';
 import 'package:app/api/post_request.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/config/color_config.dart';
@@ -17,22 +21,50 @@ import 'package:app/util/percentage_probability.dart';
 
 import 'style.dart';
 import 'utils/read_models.dart';
-import 'utils/progress_calculator.dart';
 import 'utils/chapter_cache.dart';
 import 'utils/detail_builder.dart';
 import 'logic/interaction_handler.dart';
 import 'logic/progress_handler.dart';
+import 'logic/paragraph_comment_handler.dart';
 
 export 'utils/read_models.dart';
+export 'logic/paragraph_comment_handler.dart'
+    show ChapterParagraphMetadataLoader, ParagraphCommentSender;
+
+/// 默认段评发送器，使用统一的 novel_comment/add 接口。
+Future<int?> _default_paragraph_comment_sender({
+  required String paragraph_id,
+  required String content,
+  required List<String> images,
+  required int selection_start,
+  required int selection_end,
+}) async {
+  final result = await add_comment(
+    novel_id: 0, // 段评时从段落推导 novel_id
+    comment_content: content,
+    paragraph_id: int.tryParse(paragraph_id) ?? 0,
+    selection_start: selection_start,
+    selection_end: selection_end,
+  );
+  if (result == null) return null;
+  return result['comment_count'] is int
+      ? result['comment_count']
+      : int.tryParse(result['comment_count'].toString());
+}
 
 /// 章节正文加载器。
 typedef ChapterContentLoader = Future<String> Function(String chapter_id);
+
+/// 带实际公开修订身份的章节正文加载器。
+typedef ChapterVersionedContentLoader =
+    Future<NovelContentResult> Function(String chapter_id);
 
 /// 阅读页逻辑层。
 ///
 /// 负责章节加载、缓存管理、滚动导航等核心逻辑。
 /// 互动操作抽离到 [ReadInteractionMixin]，进度计算抽离到 [ReadProgressMixin]。
-class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin {
+class Logic extends GetxController
+    with ReadInteractionMixin, ReadProgressMixin, ReadParagraphCommentMixin {
   /// 路由传入的书籍 id。
   final int story_id;
 
@@ -83,14 +115,19 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
   /// 当前阅读窗口版本。
   int _chapter_window_generation = 0;
 
+  /// 详情刷新或页面关闭时失效旧正文及元数据请求，普通跳章不丢弃预加载。
+  int _chapter_data_generation = 0;
+
   /// 正在进行的章节正文请求。
-  final Map<int, Future<String>> _chapter_fetch_in_flight = <int, Future<String>>{};
+  final Map<int, Future<String>> _chapter_fetch_in_flight =
+      <int, Future<String>>{};
 
   /// 外部页面提供的"等待主滚动区域空闲"回调。
   Future<void> Function()? wait_until_chapter_mutation_allowed;
 
   /// 外部页面提供的"保持可视锚点后执行插入"回调。
-  Future<void> Function(VoidCallback mutation, int anchor_chapter_index)? preserve_chapter_anchor;
+  Future<void> Function(VoidCallback mutation, int anchor_chapter_index)?
+  preserve_chapter_anchor;
 
   /// 章节正文进入当前阅读窗口后的回调。
   ValueChanged<int>? on_chapter_loaded;
@@ -191,7 +228,13 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
   final NovelReadingStore _store;
 
   /// 章节正文加载器。
-  final ChapterContentLoader _chapter_content_loader;
+  final ChapterVersionedContentLoader _chapter_content_loader;
+
+  @override
+  final ChapterParagraphMetadataLoader chapter_paragraph_metadata_loader;
+
+  @override
+  final ParagraphCommentSender paragraph_comment_sender;
 
   /// 书籍总字数。
   int _total_word_count = 0;
@@ -234,20 +277,33 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
     required this.story_id,
     required this.story_title,
     NovelReadingStore? reading_store,
-    ChapterContentLoader chapter_content_loader = get_chapter_content,
+    ChapterContentLoader? chapter_content_loader,
+    ChapterVersionedContentLoader chapter_content_with_version_loader =
+        get_chapter_content_with_version,
+    this.chapter_paragraph_metadata_loader = get_chapter_paragraphs,
+    ParagraphCommentSender? paragraph_comment_sender,
     double? initial_body_font_size,
     double? initial_auto_read_speed,
   }) : _store = reading_store ?? NovelReadingStore(),
-       _chapter_content_loader = chapter_content_loader {
+       this.paragraph_comment_sender = paragraph_comment_sender ?? _default_paragraph_comment_sender,
+       _chapter_content_loader = chapter_content_loader == null
+           ? chapter_content_with_version_loader
+           : ((chapter_id) async => NovelContentResult(
+               content: await chapter_content_loader(chapter_id),
+             )) {
     scroll_controller = ScrollController();
-    body_font_size = (initial_body_font_size ?? load_body_font_size() ?? 18.0).obs;
-    auto_read_speed = (initial_auto_read_speed ?? load_auto_read_speed() ?? 0.2).obs;
+    body_font_size =
+        (initial_body_font_size ?? load_body_font_size() ?? 18.0).obs;
+    auto_read_speed =
+        (initial_auto_read_speed ?? load_auto_read_speed() ?? 0.2).obs;
     _store.clear_novel_info();
   }
 
   @override
   void onClose() {
     _chapter_window_generation++;
+    _chapter_data_generation++;
+    close_paragraph_state();
     _chapter_native_ad_decisions.clear();
     _chapter_video_ad_hint_decisions.clear();
     _chapter_fetch_in_flight.clear();
@@ -266,7 +322,10 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
     final bool? existing_decision = _chapter_native_ad_decisions[chapter_index];
     if (existing_decision != null) return existing_decision;
 
-    final bool should_show = PercentageProbability.is_hit(probability, roll: roll);
+    final bool should_show = PercentageProbability.is_hit(
+      probability,
+      roll: roll,
+    );
     _chapter_native_ad_decisions[chapter_index] = should_show;
     return should_show;
   }
@@ -282,10 +341,14 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
     required int probability,
     int? roll,
   }) {
-    final bool? existing_decision = _chapter_video_ad_hint_decisions[chapter_index];
+    final bool? existing_decision =
+        _chapter_video_ad_hint_decisions[chapter_index];
     if (existing_decision != null) return existing_decision;
 
-    final bool should_show = PercentageProbability.is_hit(probability, roll: roll);
+    final bool should_show = PercentageProbability.is_hit(
+      probability,
+      roll: roll,
+    );
     _chapter_video_ad_hint_decisions[chapter_index] = should_show;
     return should_show;
   }
@@ -309,7 +372,9 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
     bool show_loading = true,
     bool bypass_chapter_cache = false,
   }) async {
-    if (!force && _store.novel_info.value != null && _store.reading_items.isNotEmpty) {
+    if (!force &&
+        _store.novel_info.value != null &&
+        _store.reading_items.isNotEmpty) {
       is_loading.value = false;
       return;
     }
@@ -318,6 +383,8 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
     is_loading.value = show_loading || !has_existing_content;
     is_error.value = false;
     _chapter_window_generation++;
+    _chapter_data_generation++;
+    _chapter_fetch_in_flight.clear();
     _chapter_native_ad_decisions.clear();
     _chapter_video_ad_hint_decisions.clear();
     _loaded_chapter_index = 0;
@@ -348,7 +415,10 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
 
       if (_store.chapter_list.isNotEmpty) {
         final NovelChapterInfo first_chapter = _store.chapter_list.first;
-        final String content = await _fetch_chapter_content(0, force: bypass_chapter_cache);
+        final String content = await _fetch_chapter_content(
+          0,
+          force: bypass_chapter_cache,
+        );
         _store.set_initial_content(
           first_chapter.title,
           first_chapter.chapter_no,
@@ -380,7 +450,10 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
           parameter: <String, dynamic>{'novel_language_id': novel_language_id},
           fromJsonList: (List<dynamic> json) {
             return json
-                .map((e) => NovelChapterInfo.from_json(Map<String, dynamic>.from(e)))
+                .map(
+                  (e) =>
+                      NovelChapterInfo.from_json(Map<String, dynamic>.from(e)),
+                )
                 .toList();
           },
         );
@@ -405,7 +478,8 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
       return;
     }
 
-    if (_store.chapter_list.isEmpty || _loaded_chapter_index >= _store.chapter_list.length - 1) {
+    if (_store.chapter_list.isEmpty ||
+        _loaded_chapter_index >= _store.chapter_list.length - 1) {
       return;
     }
 
@@ -476,7 +550,9 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
 
   /// 加载并插入上一章内容。
   Future<void> load_prev_chapter() async {
-    if (is_loading_prev || _store.chapter_list.isEmpty || _min_loaded_chapter_index <= 0) {
+    if (is_loading_prev ||
+        _store.chapter_list.isEmpty ||
+        _min_loaded_chapter_index <= 0) {
       return;
     }
 
@@ -542,7 +618,10 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
     try {
       final NovelChapterInfo chapter = _store.chapter_list[index];
 
-      final bool rebuilt = await _rebuild_reading_window_around_chapter(index, generation: generation);
+      final bool rebuilt = await _rebuild_reading_window_around_chapter(
+        index,
+        generation: generation,
+      );
       if (generation != _chapter_window_generation) {
         return null;
       }
@@ -571,15 +650,28 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
   }
 
   /// 重建以目标章节为中心的阅读窗口。
-  Future<bool> _rebuild_reading_window_around_chapter(int index, {required int generation}) async {
+  Future<bool> _rebuild_reading_window_around_chapter(
+    int index, {
+    required int generation,
+  }) async {
     final int total_count = _store.chapter_list.length;
     if (total_count <= 0) return false;
 
-    final int start_index = (index - _jump_window_before_count).clamp(0, total_count - 1);
-    final int end_index = (index + _jump_window_after_count).clamp(0, total_count - 1);
+    final int start_index = (index - _jump_window_before_count).clamp(
+      0,
+      total_count - 1,
+    );
+    final int end_index = (index + _jump_window_after_count).clamp(
+      0,
+      total_count - 1,
+    );
 
     final List<int> chapter_indexes = <int>[
-      for (int chapter_index = start_index; chapter_index <= end_index; chapter_index++)
+      for (
+        int chapter_index = start_index;
+        chapter_index <= end_index;
+        chapter_index++
+      )
         chapter_index,
     ];
     final List<String> contents = <String>[];
@@ -599,7 +691,10 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
           previous_content_index < contents.length &&
           contents[previous_content_index].isEmpty) {
         try {
-          contents[previous_content_index] = await _fetch_chapter_content(index - 1, force: true);
+          contents[previous_content_index] = await _fetch_chapter_content(
+            index - 1,
+            force: true,
+          );
         } catch (error) {
           debugPrint('重试加载上一章 ${index - 1} 失败: $error');
         }
@@ -621,16 +716,26 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
     }
 
     int actual_start_index = index;
-    while (actual_start_index > start_index && contents[actual_start_index - start_index - 1].isNotEmpty) {
+    while (actual_start_index > start_index &&
+        contents[actual_start_index - start_index - 1].isNotEmpty) {
       actual_start_index--;
     }
     int actual_end_index = index;
-    while (actual_end_index < end_index && contents[actual_end_index - start_index + 1].isNotEmpty) {
+    while (actual_end_index < end_index &&
+        contents[actual_end_index - start_index + 1].isNotEmpty) {
       actual_end_index++;
     }
 
-    _store.rebuild_reading_items_from_cache(actual_start_index, actual_end_index, _store.chapter_list);
-    for (int chapter_index = actual_start_index; chapter_index <= actual_end_index; chapter_index++) {
+    _store.rebuild_reading_items_from_cache(
+      actual_start_index,
+      actual_end_index,
+      _store.chapter_list,
+    );
+    for (
+      int chapter_index = actual_start_index;
+      chapter_index <= actual_end_index;
+      chapter_index++
+    ) {
       on_chapter_loaded?.call(chapter_index);
     }
 
@@ -673,27 +778,84 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
   Future<String> _load_chapter_content(int index, {required bool force}) async {
     final NovelChapterInfo chapter = _store.chapter_list[index];
     final String chapter_id = chapter.id;
-    final String? published_revision_id = chapter.published_revision_id;
+    final int data_generation = _chapter_data_generation;
+    String? published_revision_id = chapter.published_revision_id;
+    String? body_id;
+    String content = '';
 
-    if (!force) {
-      final String? cached = _store.get_cached_chapter_content(index);
-      if (cached != null && cached.isNotEmpty) return cached;
+    // 已校验的内存缓存无需重复查询；失败元数据仍在下一次加载时重试。
+    final cached = force ? null : _store.get_cached_chapter_content(index);
+    if (cached != null && cached.isNotEmpty) {
+      content = cached;
+      published_revision_id = _store.get_cached_chapter_revision(index);
+      if (_store.get_chapter_paragraph_metadata(index) != null) return cached;
     }
+    final metadata_future = load_chapter_paragraph_metadata(chapter_id);
+    if (!force && content.isEmpty) {
+      content =
+          await ChapterCache.read(
+            chapter_id,
+            published_revision_id: published_revision_id,
+          ) ??
+          '';
+    }
+    bool loaded_from_network = false;
+    if (content.isEmpty || force) {
+      final fresh = await _chapter_content_loader(chapter_id);
+      content = fresh.content;
+      published_revision_id =
+          fresh.published_revision_id ?? published_revision_id;
+      body_id = fresh.body_id;
+      loaded_from_network = true;
+    }
+    var metadata = await metadata_future;
+    bool metadata_matches() =>
+        metadata != null &&
+        metadata.content_hash.isNotEmpty &&
+        metadata.content_hash ==
+            sha256.convert(utf8.encode(content)).toString() &&
+        (published_revision_id == null ||
+            published_revision_id.isEmpty ||
+            published_revision_id == metadata.published_revision_id) &&
+        (body_id == null || body_id == metadata.body_id);
 
-    if (!force) {
-      final String? disk_cached = await ChapterCache.read(
-        chapter_id,
-        published_revision_id: published_revision_id,
-      );
-      if (disk_cached != null && disk_cached.isNotEmpty) {
-        _store.cache_chapter_content(index, disk_cached);
-        return disk_cached;
+    // 缓存即使版本字段缺失，也必须通过完整正文摘要校验后才能关联段评。
+    if (content.isNotEmpty &&
+        metadata != null &&
+        !metadata_matches() &&
+        !loaded_from_network) {
+      final fresh = await _chapter_content_loader(chapter_id);
+      if (fresh.content.isNotEmpty) {
+        content = fresh.content;
+        published_revision_id =
+            fresh.published_revision_id ?? published_revision_id;
+        body_id = fresh.body_id;
+        loaded_from_network = true;
       }
     }
-
-    final String content = await _chapter_content_loader(chapter_id);
+    // 正文与段落查询之间可能正好发生发布，再读取一次元数据以确定同版身份。
+    if (content.isNotEmpty &&
+        metadata != null &&
+        !metadata_matches() &&
+        loaded_from_network) {
+      metadata = await load_chapter_paragraph_metadata(chapter_id);
+    }
+    if (data_generation != _chapter_data_generation ||
+        index >= _store.chapter_list.length ||
+        _store.chapter_list[index].id != chapter_id) {
+      return '';
+    }
     if (content.isNotEmpty) {
-      _store.cache_chapter_content(index, content);
+      _store.cache_chapter_content(
+        index,
+        content,
+        published_revision_id: published_revision_id,
+      );
+      if (metadata_matches()) {
+        _store.set_chapter_paragraph_metadata(index, metadata!);
+      }
+    }
+    if (content.isNotEmpty && loaded_from_network) {
       await ChapterCache.write(
         chapter_id,
         content,
@@ -749,12 +911,14 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
     if (offset == _last_scroll_offset) return;
 
     _is_scrolling_down = offset > _last_scroll_offset;
-    if (_last_scroll_direction_down == null || _last_scroll_direction_down != _is_scrolling_down) {
+    if (_last_scroll_direction_down == null ||
+        _last_scroll_direction_down != _is_scrolling_down) {
       _scroll_direction_anchor_offset = _last_scroll_offset;
       _last_scroll_direction_down = _is_scrolling_down;
     }
     _last_scroll_offset = offset;
-    final double scroll_distance = (offset - _scroll_direction_anchor_offset).abs();
+    final double scroll_distance = (offset - _scroll_direction_anchor_offset)
+        .abs();
 
     if (offset < Style.navigation_force_hidden_top_threshold) {
       if (show_navigation.value) {
@@ -765,12 +929,16 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
       return;
     }
 
-    if (_is_scrolling_down && show_navigation.value && scroll_distance > Style.navigation_visibility_scroll_threshold) {
+    if (_is_scrolling_down &&
+        show_navigation.value &&
+        scroll_distance > Style.navigation_visibility_scroll_threshold) {
       show_navigation.value = false;
       _scroll_direction_anchor_offset = offset;
     }
 
-    if (!_is_scrolling_down && !show_navigation.value && scroll_distance > Style.navigation_visibility_scroll_threshold) {
+    if (!_is_scrolling_down &&
+        !show_navigation.value &&
+        scroll_distance > Style.navigation_visibility_scroll_threshold) {
       show_navigation.value = true;
       _scroll_direction_anchor_offset = offset;
     }
@@ -786,13 +954,18 @@ class Logic extends GetxController with ReadInteractionMixin, ReadProgressMixin 
 
   /// 是否为最后一章。
   bool get is_last_chapter =>
-      _store.chapter_list.isEmpty || current_chapter_index.value >= _store.chapter_list.length - 1;
+      _store.chapter_list.isEmpty ||
+      current_chapter_index.value >= _store.chapter_list.length - 1;
 
   // ==================== 构建方法 ====================
 
   /// 构建占位详情数据。
   ReadDetail build_detail() {
-    return DetailBuilder.build(store: _store, story_id: story_id, story_title: story_title);
+    return DetailBuilder.build(
+      store: _store,
+      story_id: story_id,
+      story_title: story_title,
+    );
   }
 
   /// 构建正文内容项列表。

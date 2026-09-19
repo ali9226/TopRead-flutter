@@ -377,7 +377,9 @@ class RedisRequestStore extends GetxController {
     }
 
     if (Get.isRegistered<ProjectConfigStore>()) {
-      Get.find<ProjectConfigStore>().save_config(data.project_config);
+      Get.find<ProjectConfigStore>()
+        ..save_config(data.project_config)
+        ..save_complaint_list(data.complaint_list);
     }
 
     if (Get.isRegistered<AdConfigStore>()) {

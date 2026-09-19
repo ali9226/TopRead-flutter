@@ -45,6 +45,9 @@ class RedisGetData {
   /// 广告配置列表。
   final List<AdConfig> ads_ids;
 
+  /// 举报分类列表。
+  final List<Map<String, String>> complaint_list;
+
   const RedisGetData({
     required this.language_list,
     required this.rotation_list,
@@ -56,6 +59,7 @@ class RedisGetData {
     required this.popular_searches,
     required this.project_config,
     required this.ads_ids,
+    this.complaint_list = const [],
   });
 
   /// TODO 空数据兜底。
@@ -69,7 +73,8 @@ class RedisGetData {
       dislike_list = const [],
       popular_searches = const [],
       project_config = const ProjectConfig.empty(),
-      ads_ids = const [];
+      ads_ids = const [],
+      complaint_list = const [];
 
   /// TODO 从接口返回的原始 json 中解析业务对象。
   ///
@@ -89,6 +94,7 @@ class RedisGetData {
       popular_searches: _parse_popular_searches(json['popular_searches']),
       project_config: _parse_project_config(json['project_config']),
       ads_ids: _parse_ads_ids(json['ads_ids']),
+      complaint_list: _parse_complaint_list(json['complaint_list']),
     );
   }
 
@@ -163,6 +169,18 @@ class RedisGetData {
           (dynamic item) =>
               AdConfig.fromJson(Map<String, dynamic>.from(item)),
         )
+        .toList();
+  }
+
+  /// TODO 解析举报分类列表。
+  static List<Map<String, String>> _parse_complaint_list(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => {
+              'title': (item['title'] ?? '').toString(),
+              'note': (item['note'] ?? '').toString(),
+            })
         .toList();
   }
 }

@@ -45,26 +45,13 @@ Future<ParagraphMetadata?> get_short_story_paragraphs(
   return results.status ? results.content : null;
 }
 
-/// 发送选区段评，返回事务提交后的段落评论数；失败返回 null。
-Future<int?> create_paragraph_comment({
-  required String paragraph_id,
-  required String content,
-  required List<String> images,
-  required int selection_start,
-  required int selection_end,
-}) async {
-  final results = await postRequest<Map<String, dynamic>>(
-    path: 'paragraph_comment/create',
-    parameter: {
-      'paragraph_id': paragraph_id,
-      'content': content,
-      'images': images,
-      'selection_start': selection_start,
-      'selection_end': selection_end,
-    },
+/// 按章节数据库 ID 查询长篇公开正文段落，使用与正文读取相同的身份参数。
+Future<ParagraphMetadata?> get_chapter_paragraphs(String chapter_id) async {
+  final results = await postRequest<ParagraphMetadata>(
+    path: 'novel_content/get_paragraphs',
+    parameter: {'content_type': 'chapter', 'content_id': chapter_id},
     showTips: false,
-    fromJson: (json) => json,
+    fromJson: ParagraphMetadata.from_json,
   );
-  if (!results.status || results.content == null) return null;
-  return int.tryParse(results.content!['comment_count'].toString());
+  return results.status ? results.content : null;
 }

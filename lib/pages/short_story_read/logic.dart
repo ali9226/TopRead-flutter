@@ -9,9 +9,10 @@ import 'package:crypto/crypto.dart';
 
 import 'package:app/api/post_request.dart';
 import 'package:app/api/get_novel_content.dart';
+import 'package:app/api/novel_comment.dart';
 import 'package:app/api/paragraph_comment.dart';
 import 'package:app/models/paragraph_anchor.dart';
-import 'package:app/pages/short_story_read/models/story_paragraph.dart';
+import 'package:app/models/story_paragraph.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/models/short_story_read_data.dart';
 import 'package:app/models/short_story_item.dart';
@@ -650,23 +651,36 @@ class ShortStoryReadLogic {
         !paragraph_anchors.any((item) => item.id == anchor.id)) {
       return false;
     }
-    final count = await create_paragraph_comment(
-      paragraph_id: anchor.id,
-      content: comment_content,
-      images: images,
+    final result = await add_comment(
+      novel_id: story_id,
+      comment_content: comment_content,
+      paragraph_id: int.tryParse(anchor.id) ?? 0,
       selection_start: anchor.start_offset + selection.start,
       selection_end: anchor.start_offset + selection.end,
     );
+    if (result == null) return false;
+    final count = result['comment_count'] is int
+        ? result['comment_count']
+        : int.tryParse(result['comment_count'].toString());
     if (count == null) return false;
-    if (!_is_disposed) {
-      final index = paragraph_anchors.indexWhere(
-        (item) => item.id == anchor.id,
-      );
-      if (index >= 0) {
-        paragraph_anchors[index] = anchor.with_comment_count(count);
-      }
-    }
+    update_paragraph_comment_count(paragraph_id: anchor.id, count: count);
     return true;
+  }
+
+  /// 详情弹窗的发表、回复和删除结果只刷新对应段落，不影响整本书评论数。
+  void update_paragraph_comment_count({
+    required String paragraph_id,
+    required int count,
+  }) {
+    if (_is_disposed || count < 0) return;
+    final index = paragraph_anchors.indexWhere(
+      (item) => item.id == paragraph_id,
+    );
+    if (index >= 0) {
+      paragraph_anchors[index] = paragraph_anchors[index].with_comment_count(
+        count,
+      );
+    }
   }
 
   /// 预加载目录列表。

@@ -667,9 +667,9 @@
     },
     "time": {
       "just_now": "À l'instant",
-      "minutes_ago": "Il y a {0} min",
-      "hours_ago": "Il y a {0}h",
-      "days_ago": "Il y a {0}j"
+      "minutes_ago": "Il y a {count} min",
+      "hours_ago": "Il y a {count}h",
+      "days_ago": "Il y a {count}j"
     },
     "no_login": {
       "title": "Vous n'êtes pas connecté",
@@ -1046,7 +1046,27 @@
       "days_ago": "j",
       "weeks_ago": "sem"
     },
-    "count_label": "{count} commentaires"
+    "count_label": "{count} commentaires",
+    "action": {
+      "copy": "Copier",
+      "dislike": "Je n'aime pas",
+      "dislike_subtitle": "Réduire la visibilité de ce commentaire",
+      "report": "Signaler",
+      "delete": "Supprimer",
+      "delete_confirm": "Êtes-vous sûr de vouloir supprimer ce commentaire ?",
+      "copy_success": "Copié dans le presse-papiers",
+      "login_required": "Connexion requise pour effectuer cette action",
+      "dislike_success": "Soumis, ce commentaire ne sera plus affiché",
+      "delete_success": "Commentaire supprimé"
+    },
+    "report": {
+      "empty": "Aucune catégorie de signalement",
+      "submit": "Soumettre",
+      "success": "Signalement soumis",
+      "hint": "Sélectionnez les raisons du signalement (plusieurs autorisées)",
+      "wait_sync": "Synchronisation du commentaire, veuillez réessayer plus tard"
+    },
+    "collapsed": "Ce commentaire a été masqué"
   },
   "favorite": {
     "add_success": "Ajouté aux favoris",
@@ -1253,6 +1273,13 @@
     "unavailable": "Ce passage est indisponible. Réessayez plus tard.",
     "count_label": "{count} commentaires",
     "quote": "Passage sélectionné",
-    "content_too_long": "Les commentaires sont limités à 2 000 caractères (un émoji peut en compter plusieurs)."
+    "content_too_long": "Les commentaires sont limités à 2 000 caractères (un émoji peut en compter plusieurs).",
+    "title": "Commentaires du passage",
+    "copied": "Copié",
+    "copy": "Copier",
+    "delete": "Supprimer le commentaire",
+    "delete_confirm": "Supprimer ce commentaire ?",
+    "more_replies": "Voir les {count} réponses",
+    "load_more": "Afficher plus"
   }
 }

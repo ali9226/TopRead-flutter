@@ -6,9 +6,9 @@ import 'package:app/pages/short_story_read/style.dart';
 import 'package:app/util/native_ad_insert_index.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/models/paragraph_anchor.dart';
-import 'package:app/pages/short_story_read/models/story_paragraph.dart';
-import 'package:app/pages/short_story_read/utils/split_story_paragraphs.dart';
-import 'package:app/pages/short_story_read/widgets/paragraph_selection/index.dart';
+import 'package:app/models/story_paragraph.dart';
+import 'package:app/util/split_story_paragraphs.dart';
+import 'package:app/components/paragraph_selection/index.dart';
 
 /// 正文内容组件。
 ///
@@ -51,6 +51,14 @@ class StoryContent extends StatefulWidget {
   final ValueChanged<bool>? on_selection_changed;
   final VoidCallback? on_content_tap;
 
+  /// 点击评论数量气泡时的回调，返回段落文本、评论数量和段落 ID。
+  final void Function(
+    String paragraph_text,
+    int comment_count,
+    String? paragraph_id,
+  )?
+  on_comment_count_tap;
+
   const StoryContent({
     super.key,
     required this.content,
@@ -64,6 +72,7 @@ class StoryContent extends StatefulWidget {
     this.on_paragraph_comment,
     this.on_selection_changed,
     this.on_content_tap,
+    this.on_comment_count_tap,
   });
 
   @override
@@ -272,11 +281,13 @@ class _StoryContentState extends State<StoryContent> {
                   text_style: text_style,
                   is_dark: is_dark,
                   comment_count: paragraph.anchor?.comment_count ?? 0,
+                  paragraph_id: paragraph.anchor?.id,
                   on_comment: (selection) =>
                       widget.on_paragraph_comment!(paragraph, selection),
                   on_selection_changed: (active) =>
                       _selection_changed(paragraph.start_offset, active),
                   on_tap: widget.on_content_tap,
+                  on_comment_count_tap_with_data: widget.on_comment_count_tap,
                 ),
         ),
       );
