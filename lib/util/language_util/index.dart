@@ -269,6 +269,8 @@ class LanguageUtil {
         initial_id = 1;
       } else if (normalized_language_code == 'zh') {
         initial_id = 2;
+      } else if (normalized_language_code == 'sw') {
+        initial_id = 3;
       }
 
       return LanguageInfo(

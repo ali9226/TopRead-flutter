@@ -21,6 +21,7 @@ import 'package:app/models/recommend_ranking_item.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/home_store.dart';
 import 'package:app/util/language_util/index.dart';
+import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/novel_navigation/index.dart';
 import 'package:app/util/router/router_back.dart';
 import 'package:app/util/router/router_util.dart';
@@ -63,6 +64,9 @@ class _SearchPageState extends State<SearchPage> {
   /// 当前实际搜索的关键词（用于显示搜索结果标题）。
   String _current_search_keyword = '';
 
+  /// 当前按 ID 搜索的小说，用于切换语种后继续同一查询。
+  int? _current_search_novel_id;
+
   /// 是否已点击搜索按钮（控制显示瀑布流还是搜索结果）。
   bool _has_submitted = false;
 
@@ -82,6 +86,9 @@ class _SearchPageState extends State<SearchPage> {
   ///
   /// 新搜索、重置和页面销毁时递增，防止旧请求覆盖最新页面状态。
   int _search_request_generation = 0;
+
+  /// 搜索结果随当前语种刷新。
+  late final LanguageRefreshSubscription _language_refresh_subscription;
 
   /// 每次加载的数据量。
   static const int _page_size = 20;
@@ -113,16 +120,48 @@ class _SearchPageState extends State<SearchPage> {
     search_controller = TextEditingController();
     search_focus_node = FocusNode();
     _scroll_controller.addListener(_handle_scroll);
+    _language_refresh_subscription =
+        LanguageChangeHandler.register_refresh_task(
+          phase: LanguageRefreshPhase.content,
+          on_prepare: _prepare_language_refresh,
+          on_refresh: _refresh_for_language,
+        );
   }
 
   @override
   void dispose() {
     _search_request_generation++;
+    _language_refresh_subscription.dispose();
     _scroll_controller.removeListener(_handle_scroll);
     _scroll_controller.dispose();
     search_focus_node.dispose();
     search_controller.dispose();
     super.dispose();
+  }
+
+  /// 切换语种时立即隐藏旧结果，并让首屏、分页和 ID 查询的旧请求失效。
+  void _prepare_language_refresh(LanguageRefreshContext refresh_context) {
+    _search_request_generation++;
+    if (!mounted) return;
+    setState(() {
+      _search_results.clear();
+      _is_search_loading = _has_submitted;
+      _is_loading_more = false;
+      _has_more = true;
+    });
+  }
+
+  /// 等待新语种配置准备完成，再以当前查询重新搜索。
+  Future<void> _refresh_for_language(
+    LanguageRefreshContext refresh_context,
+  ) async {
+    if (!mounted || !refresh_context.is_current || !_has_submitted) return;
+    final int? novel_id = _current_search_novel_id;
+    if (novel_id != null) {
+      await _perform_search_by_id(novel_id);
+    } else {
+      await _perform_search(_current_search_keyword);
+    }
   }
 
   /// 处理滚动事件。
@@ -198,6 +237,7 @@ class _SearchPageState extends State<SearchPage> {
       _is_loading_more = false;
       _has_submitted = true;
       _current_search_keyword = search_keyword;
+      _current_search_novel_id = null;
       _search_results.clear();
       _has_more = true;
     });
@@ -323,6 +363,7 @@ class _SearchPageState extends State<SearchPage> {
       _is_loading_more = false;
       _has_submitted = true;
       _current_search_keyword = 'ID: $novel_id';
+      _current_search_novel_id = novel_id;
       _search_results.clear();
     });
 
@@ -422,6 +463,7 @@ class _SearchPageState extends State<SearchPage> {
       _is_loading_more = false;
       _search_results.clear();
       _current_search_keyword = '';
+      _current_search_novel_id = null;
       _has_more = true;
     });
   }

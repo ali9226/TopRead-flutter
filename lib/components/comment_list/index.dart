@@ -692,9 +692,21 @@ class _CommentSheetState extends State<CommentSheet>
     final List<CommentData> original_comments = _comments;
     final int original_total = _total_count;
 
-    // 乐观删除：立即从列表中移除
+    // 乐观删除：立即从列表中移除（支持顶层评论和子回复）
     setState(() {
-      _comments = _comments.where((c) => c.id != comment.id).toList();
+      final bool is_top_level = _comments.any((c) => c.id == comment.id);
+      if (is_top_level) {
+        _comments = _comments.where((c) => c.id != comment.id).toList();
+      } else {
+        _comments = _comments.map((c) {
+          if (c.replies.any((r) => r.id == comment.id)) {
+            return c.copy_with(
+              replies: c.replies.where((r) => r.id != comment.id).toList(),
+            );
+          }
+          return c;
+        }).toList();
+      }
       _total_count = math.max(0, _total_count - 1);
     });
     widget.on_count_changed?.call(_total_count);
