@@ -43,6 +43,9 @@ class ReadContent extends StatelessWidget {
   /// 与短篇共用段落选择、输入和详情弹窗的交互入口。
   final void Function(ReadingContentItem, TextSelection)? on_paragraph_comment;
   final ValueChanged<ReadingContentItem>? on_paragraph_comments;
+
+  /// 选中文字后点击分享的回调。
+  final void Function(ReadingContentItem, TextSelection)? on_paragraph_share;
   final void Function(ReadingContentItem, bool)? on_paragraph_selection_changed;
 
   /// 关注状态变更回调。
@@ -78,6 +81,7 @@ class ReadContent extends StatelessWidget {
     required this.on_reading_tap_down,
     this.on_paragraph_comment,
     this.on_paragraph_comments,
+    this.on_paragraph_share,
     this.on_paragraph_selection_changed,
     this.reading_section_key,
     this.on_focus_changed,
@@ -244,6 +248,9 @@ class ReadContent extends StatelessWidget {
                 ? null
                 : (selection) => on_paragraph_comment!(item, selection),
             on_comments: () => on_paragraph_comments?.call(item),
+            on_share: on_paragraph_share == null
+                ? null
+                : (selection) => on_paragraph_share!(item, selection),
             on_selection_changed: (active) {
               on_selection_changed(
                 '${item.chapter_id}:${item.body_content_hash}:${item.start_offset}',

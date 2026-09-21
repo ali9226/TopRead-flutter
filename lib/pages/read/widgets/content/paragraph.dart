@@ -18,6 +18,7 @@ class ReaderParagraphItem extends StatelessWidget {
     required this.text_color,
     this.on_comment,
     this.on_comments,
+    this.on_share,
     this.on_selection_changed,
     this.on_tap_position,
   });
@@ -28,6 +29,7 @@ class ReaderParagraphItem extends StatelessWidget {
   final Color text_color;
   final ValueChanged<TextSelection>? on_comment;
   final VoidCallback? on_comments;
+  final ValueChanged<TextSelection>? on_share;
   final ValueChanged<bool>? on_selection_changed;
   final ValueChanged<Offset>? on_tap_position;
 
@@ -58,6 +60,7 @@ class ReaderParagraphItem extends StatelessWidget {
       paragraph_id: item.anchor?.id,
       comment_count: item.anchor?.comment_count ?? 0,
       on_comment: on_comment!,
+      on_share: on_share,
       on_comment_count_tap: on_comments,
       on_selection_changed: on_selection_changed,
       on_tap_position: on_tap_position,

@@ -24,6 +24,7 @@ class ParagraphSelection extends StatefulWidget {
     required this.text_style,
     required this.is_dark,
     required this.on_comment,
+    this.on_share,
     this.comment_count = 0,
     this.paragraph_id,
     this.on_selection_changed,
@@ -39,6 +40,7 @@ class ParagraphSelection extends StatefulWidget {
   final int comment_count;
   final String? paragraph_id;
   final ValueChanged<TextSelection> on_comment;
+  final ValueChanged<TextSelection>? on_share;
   final ValueChanged<bool>? on_selection_changed;
   final VoidCallback? on_tap;
 
@@ -153,6 +155,15 @@ class _ParagraphSelectionState extends State<ParagraphSelection>
     widget.on_comment(selection);
   }
 
+  /// 拷贝选择范围并关闭选区后，将选区传递给分享回调。
+  void _open_share() {
+    final TextSelection selection = _controller.selection;
+    if (!selection.isValid || selection.isCollapsed) return;
+    _clear_selection();
+    _focus_node.unfocus();
+    widget.on_share?.call(selection);
+  }
+
   /// 普通单击沿用阅读页动作；已存在选区时，第一次单击只退出选择。
   void _handle_tap(Offset global_position) {
     final bool was_selected = _has_selection;
@@ -170,6 +181,7 @@ class _ParagraphSelectionState extends State<ParagraphSelection>
         anchors: state.contextMenuAnchors,
         is_dark: widget.is_dark,
         on_comment: _open_comment,
+        on_share: widget.on_share != null ? _open_share : null,
       );
 
   @override

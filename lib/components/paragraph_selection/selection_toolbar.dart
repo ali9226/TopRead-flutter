@@ -14,11 +14,13 @@ class ParagraphSelectionToolbar extends StatelessWidget {
     required this.anchors,
     required this.is_dark,
     required this.on_comment,
+    this.on_share,
   });
 
   final TextSelectionToolbarAnchors anchors;
   final bool is_dark;
   final VoidCallback on_comment;
+  final VoidCallback? on_share;
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +107,7 @@ class ParagraphSelectionToolbar extends StatelessWidget {
                           is_cjk: is_cjk,
                           font_size: font_size,
                           line_height: line_height,
-                          on_pressed: () {},
+                          on_pressed: on_share ?? () {},
                         ),
                       ),
                     ],

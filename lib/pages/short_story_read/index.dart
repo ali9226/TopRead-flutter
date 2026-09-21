@@ -38,6 +38,7 @@ import 'package:app/pages/short_story_read/widgets/reading_settings_sheet.dart';
 import 'package:app/pages/short_story_read/widgets/auto_read_settings_sheet.dart';
 import 'package:app/components/no_internet/index.dart';
 import 'package:app/components/share_sheet/index.dart';
+import 'package:app/components/share_sheet/widgets/text_selection_preview_sheet.dart';
 import 'package:app/components/inline_native_ad/index.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/services/bookshelf_sync_service.dart';
@@ -1123,6 +1124,27 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     if (success == true && mounted) {
       action_logic.update_comment_count(action_logic.comment_count + 1);
     }
+  }
+
+  /// 处理段落选中文字的分享操作。
+  void _on_paragraph_share(
+    StoryParagraph paragraph,
+    TextSelection selection,
+  ) {
+    _stop_auto_read();
+    final String selected_text = paragraph.text.substring(
+      selection.start,
+      selection.end,
+    );
+    if (selected_text.trim().isEmpty) return;
+    showTextSelectionPreviewSheet(
+      context: context,
+      novel_id: _logic.story_id,
+      novel_title: _logic.title,
+      novel_cover_url: _logic.story_data.value?.cover_url ?? '',
+      share_text: selected_text,
+      is_dark: device_info.dark.value,
+    );
   }
 
   /// 保存打开时的正文身份，换篇后旧弹窗不能修改新篇的气泡数量。
@@ -2635,6 +2657,12 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                               .current
                               .is_comment_enabled
                           ? _on_paragraph_comment
+                          : null,
+                      on_paragraph_share:
+                          Get.find<ProjectConfigStore>()
+                              .current
+                              .is_share_enabled
+                          ? _on_paragraph_share
                           : null,
                       on_selection_changed: _on_paragraph_selection_changed,
                       on_content_tap: _on_content_tap,

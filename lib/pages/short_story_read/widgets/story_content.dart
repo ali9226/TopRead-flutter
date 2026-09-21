@@ -48,6 +48,9 @@ class StoryContent extends StatefulWidget {
 
   /// 选定段落及段内 UTF-16 选区后打开段评输入框。
   final void Function(StoryParagraph, TextSelection)? on_paragraph_comment;
+
+  /// 选中文字后点击分享的回调。
+  final void Function(StoryParagraph, TextSelection)? on_paragraph_share;
   final ValueChanged<bool>? on_selection_changed;
   final VoidCallback? on_content_tap;
 
@@ -70,6 +73,7 @@ class StoryContent extends StatefulWidget {
     this.paragraph_anchors = const [],
     this.content_offset = 0,
     this.on_paragraph_comment,
+    this.on_paragraph_share,
     this.on_selection_changed,
     this.on_content_tap,
     this.on_comment_count_tap,
@@ -284,6 +288,10 @@ class _StoryContentState extends State<StoryContent> {
                   paragraph_id: paragraph.anchor?.id,
                   on_comment: (selection) =>
                       widget.on_paragraph_comment!(paragraph, selection),
+                  on_share: widget.on_paragraph_share != null
+                      ? (selection) =>
+                            widget.on_paragraph_share!(paragraph, selection)
+                      : null,
                   on_selection_changed: (active) =>
                       _selection_changed(paragraph.start_offset, active),
                   on_tap: widget.on_content_tap,

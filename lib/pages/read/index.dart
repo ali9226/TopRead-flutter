@@ -44,6 +44,7 @@ import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/components/login_required_dialog/index.dart';
 import 'package:app/components/comment_list/index.dart';
 import 'package:app/components/share_sheet/index.dart';
+import 'package:app/components/share_sheet/widgets/text_selection_preview_sheet.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/pages/read/widgets/unlock_ad_free_popup/index.dart';
 import 'package:app/pages/read/utils/calculate_ad_free_expire_time.dart';
@@ -2056,6 +2057,30 @@ class _ReadPageState extends State<ReadPage>
     }
   }
 
+  /// 处理段落选中文字的分享操作。
+  void _on_paragraph_share(
+    ReadingContentItem item,
+    TextSelection selection,
+  ) {
+    _stop_auto_read();
+    logic.show_navigation.value = false;
+    final String selected_text = item.text.substring(
+      selection.start,
+      selection.end,
+    );
+    if (selected_text.trim().isEmpty) return;
+    final ReadDetail detail = logic.build_detail();
+    showTextSelectionPreviewSheet(
+      context: context,
+      novel_id: widget.story_id,
+      novel_title: detail.title,
+      novel_author: detail.author_name,
+      novel_cover_url: detail.cover_url,
+      share_text: selected_text,
+      is_dark: device_info.dark.value,
+    );
+  }
+
   /// 打开段评详情弹窗，使用统一的评论组件。
   void _on_paragraph_comments(ReadingContentItem item) {
     final anchor = item.anchor;
@@ -2378,6 +2403,7 @@ class _ReadPageState extends State<ReadPage>
                     on_reading_tap_down: _handle_reading_tap_down,
                     on_paragraph_comment: _on_paragraph_comment,
                     on_paragraph_comments: _on_paragraph_comments,
+                    on_paragraph_share: _on_paragraph_share,
                     on_paragraph_selection_changed:
                         _on_paragraph_selection_changed,
                     native_ad_config: suppress_read_ads

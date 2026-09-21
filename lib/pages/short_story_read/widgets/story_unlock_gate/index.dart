@@ -24,6 +24,7 @@ class StoryUnlockGate extends StatelessWidget {
     this.native_ad_widget,
     this.paragraph_anchors = const [],
     this.on_paragraph_comment,
+    this.on_paragraph_share,
     this.on_selection_changed,
     this.on_content_tap,
     this.on_comment_count_tap,
@@ -59,6 +60,9 @@ class StoryUnlockGate extends StatelessWidget {
   /// 段评回调只绑定实际展示的正文，不渲染未解锁段落。
   final List<ParagraphAnchor> paragraph_anchors;
   final void Function(StoryParagraph, TextSelection)? on_paragraph_comment;
+
+  /// 选中文字后点击分享的回调。
+  final void Function(StoryParagraph, TextSelection)? on_paragraph_share;
   final ValueChanged<bool>? on_selection_changed;
   final VoidCallback? on_content_tap;
 
@@ -84,6 +88,7 @@ class StoryUnlockGate extends StatelessWidget {
         native_ad_widget: native_ad_widget,
         paragraph_anchors: paragraph_anchors,
         on_paragraph_comment: on_paragraph_comment,
+        on_paragraph_share: on_paragraph_share,
         on_selection_changed: on_selection_changed,
         on_content_tap: on_content_tap,
         on_comment_count_tap: on_comment_count_tap,
@@ -110,6 +115,7 @@ class StoryUnlockGate extends StatelessWidget {
         native_ad_widget: native_ad_widget,
         paragraph_anchors: paragraph_anchors,
         on_paragraph_comment: on_paragraph_comment,
+        on_paragraph_share: on_paragraph_share,
         on_selection_changed: on_selection_changed,
         on_content_tap: on_content_tap,
         on_comment_count_tap: on_comment_count_tap,
@@ -137,6 +143,7 @@ class StoryUnlockGate extends StatelessWidget {
               native_ad_widget: native_ad_widget,
               paragraph_anchors: paragraph_anchors,
               on_paragraph_comment: on_paragraph_comment,
+              on_paragraph_share: on_paragraph_share,
               on_selection_changed: on_selection_changed,
               on_content_tap: on_content_tap,
               on_comment_count_tap: on_comment_count_tap,
