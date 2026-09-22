@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 
 import 'style.dart';
 
-/// 不插入正文 TextSpan 的段评气泡，避免污染选区的 UTF-16 字符偏移。
+/// 由不可选 WidgetSpan 承载的段评气泡，与正文共同行内排版但不参与选区。
 class ParagraphCommentBadge extends StatelessWidget {
   const ParagraphCommentBadge({
     super.key,

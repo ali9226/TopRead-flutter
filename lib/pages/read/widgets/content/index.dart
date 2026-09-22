@@ -9,6 +9,7 @@ import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/native_ad_insert_index.dart';
+import 'package:app/components/paragraph_selection/scope.dart';
 
 import './style.dart';
 import 'paragraph.dart';
@@ -111,9 +112,8 @@ class ReadContent extends StatelessWidget {
           SizedBox(height: ContentStyle.reading_top_spacing),
         ],
         ReaderTapRegion(
-          on_tap_position: (position) => on_reading_tap_down(
-            TapDownDetails(globalPosition: position),
-          ),
+          on_tap_position: (position) =>
+              on_reading_tap_down(TapDownDetails(globalPosition: position)),
           builder: (on_tap_position, on_selection_changed) => Container(
             key: reading_section_key,
             width: double.infinity,
@@ -218,6 +218,28 @@ class ReadContent extends StatelessWidget {
     final Map<int, int> ad_insert_indexes = _resolve_native_ad_insert_indexes();
     final Set<int> ad_shown_for_chapter = <int>{};
     final List<Widget> widgets = <Widget>[];
+    final List<Widget> chapters = <Widget>[];
+
+    // 每章拥有独立的服务端正文坐标，章内段落和广告共用一套原生选择区域。
+    void finish_chapter(ReadingContentItem item) {
+      final body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: List<Widget>.of(widgets),
+      );
+      final content = logic.store.get_cached_chapter_content(
+        item.chapter_index,
+      );
+      chapters.add(
+        ParagraphSelectionScope(
+          key: ValueKey('${item.chapter_id}:${item.body_content_hash}'),
+          content: content ?? '',
+          is_dark: is_dark,
+          on_tap_position: on_tap_position,
+          child: body,
+        ),
+      );
+      widgets.clear();
+    }
 
     for (int i = 0; i < reading_items.length; i++) {
       final ReadingContentItem item = reading_items[i];
@@ -240,7 +262,7 @@ class ReadContent extends StatelessWidget {
           ),
           child: ReaderParagraphItem(
             key: ValueKey(
-              '${item.chapter_id}:${item.anchor?.id ?? item.start_offset}:${item.body_content_hash}',
+              '${item.chapter_id}:${item.body_content_hash}:${item.start_offset}:${item.end_offset}',
             ),
             item: item,
             is_dark: is_dark,
@@ -275,10 +297,19 @@ class ReadContent extends StatelessWidget {
         rendered_paragraph_counts[item.chapter_index] = rendered_count;
         if (rendered_count == ad_insert_indexes[item.chapter_index]) {
           ad_shown_for_chapter.add(item.chapter_index);
-          widgets.add(_build_native_ad(item.chapter_index));
+          widgets.add(
+            SelectionContainer.disabled(
+              child: _build_native_ad(item.chapter_index),
+            ),
+          );
           if (_should_show_video_ad_hint(item.chapter_index)) {
             widgets.add(
-              AdFreeTimeHint(is_dark: is_dark, on_tap: on_video_ad_hint_tap),
+              SelectionContainer.disabled(
+                child: AdFreeTimeHint(
+                  is_dark: is_dark,
+                  on_tap: on_video_ad_hint_tap,
+                ),
+              ),
             );
           }
         }
@@ -292,8 +323,9 @@ class ReadContent extends StatelessWidget {
             chapter_index: item.chapter_index,
             has_native_ad: ad_shown_for_chapter.contains(item.chapter_index),
           );
-          widgets.add(footer_hint);
+          widgets.add(SelectionContainer.disabled(child: footer_hint));
         }
+        if (next_chapter_index != item.chapter_index) finish_chapter(item);
       }
     }
 
@@ -305,11 +337,12 @@ class ReadContent extends StatelessWidget {
           chapter_index: last_item.chapter_index,
           has_native_ad: ad_shown_for_chapter.contains(last_item.chapter_index),
         );
-        widgets.add(footer_hint);
+        widgets.add(SelectionContainer.disabled(child: footer_hint));
       }
+      finish_chapter(last_item);
     }
 
-    return widgets;
+    return chapters;
   }
 
   /// 构建单个章节底部的免广告提示。

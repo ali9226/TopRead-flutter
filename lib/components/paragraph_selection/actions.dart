@@ -3,6 +3,7 @@
 import 'package:app/components/login_required_dialog/index.dart';
 import 'package:app/components/paragraph_comment_composer/index.dart';
 import 'package:app/models/paragraph_anchor.dart';
+import 'package:app/models/paragraph_text_selection.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -55,7 +56,7 @@ class ParagraphActions {
       }
       await show_paragraph_comment_composer(
         context,
-        quote: selection.textInside(paragraph_text),
+        quote: selected_paragraph_text(paragraph_text, selection),
         is_dark: is_dark,
         on_send: (text, images) async {
           if (!context.mounted || !is_current()) return false;

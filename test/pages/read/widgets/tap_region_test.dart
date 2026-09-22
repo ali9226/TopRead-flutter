@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/pages/read/widgets/content/paragraph.dart';
+import 'package:app/components/paragraph_selection/index.dart';
 import 'package:app/pages/read/widgets/content/tap_region.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -39,7 +40,7 @@ void main() {
             },
           );
 
-          await tester.longPress(find.byType(EditableText).first);
+          await tester.longPressAt(tester.getTopLeft(find.byType(ParagraphSelection).first) + const Offset(90, 18));
           await tester.pumpAndSettle();
           expect(selected, {'first_paragraph'});
           expect(turns, 0);
@@ -50,8 +51,7 @@ void main() {
           final gesture = await tester.startGesture(target_position);
           await tester.pump();
 
-          // 点击空白会先触发 onTapOutside；点击另一编辑器可能同属 TapRegion。
-          if (target == 'paragraph_gap') expect(selected, isEmpty);
+          // 同一正文内的单击确认后统一清理选区，不提前翻页。
           expect(turns, 0);
           await gesture.up();
           await tester.pumpAndSettle();
@@ -81,7 +81,7 @@ void main() {
       first_text: List<String>.filled(60, 'A long story beyond the hills.').join(' '),
     );
 
-    final position = tester.getTopLeft(find.byType(EditableText).first) +
+    final position = tester.getTopLeft(find.byType(ParagraphSelection).first) +
         const Offset(40, 20);
     final gesture = await tester.startGesture(position);
     await tester.pump(const Duration(milliseconds: 100));
@@ -148,7 +148,11 @@ Future<void> _pump_reading_region(
                             on_selection(key, active);
                           },
                         );
-                    return Column(
+                    return ParagraphSelectionScope(
+                      content: '$first_text\nThe second paragraph beyond the forest.',
+                      is_dark: false,
+                      on_tap_position: on_tap_position,
+                      child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         paragraph('first_paragraph', first_text, 0),
@@ -162,6 +166,7 @@ Future<void> _pump_reading_region(
                           first_text.length + 1,
                         ),
                       ],
+                    ),
                     );
                   },
                 ),

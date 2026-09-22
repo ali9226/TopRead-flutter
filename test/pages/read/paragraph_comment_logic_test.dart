@@ -7,6 +7,7 @@ import 'package:app/api/get_novel_content.dart';
 import 'package:app/api/paragraph_comment.dart';
 import 'package:app/models/novel_info.dart';
 import 'package:app/models/paragraph_anchor.dart';
+import 'package:app/models/paragraph_text_selection.dart';
 import 'package:app/pages/read/logic.dart';
 import 'package:app/pages/read/utils/chapter_cache.dart';
 import 'package:app/stores/novel_reading_store.dart';
@@ -54,6 +55,7 @@ ParagraphMetadata _metadata(
 );
 
 Future<int?> _unused_sender({
+  required int novel_id,
   required String paragraph_id,
   required String content,
   required List<String> images,
@@ -111,7 +113,7 @@ void main() {
     int content_requests = 0;
     initialize(
       directory_revision: 'rev-old',
-      metadata_loader: (id) async {
+      metadata_loader: (id, {required novel_id}) async {
         expect(id, chapter_id);
         return metadata;
       },
@@ -133,7 +135,10 @@ void main() {
     expect(body_item().text, '  新正文😀');
     expect(body_item().start_offset, 2);
     expect(body_item().anchor?.id, 'paragraph-0');
-    expect(await logic.resolve_paragraph_anchor(body_item()), isNotNull);
+    expect(
+      await logic.resolve_paragraph_anchor(body_item(), novel_id: 1),
+      isNotNull,
+    );
   });
 
   test('旧磁盘缓存无版本字段时仍按完整正文摘要重新获取内容', () async {
@@ -141,7 +146,7 @@ void main() {
     final metadata = _metadata(fresh_content);
     int content_requests = 0;
     initialize(
-      metadata_loader: (_) async => metadata,
+      metadata_loader: (_, {required novel_id}) async => metadata,
       content_loader: (_) async {
         content_requests++;
         return NovelContentResult(
@@ -165,7 +170,7 @@ void main() {
     final old_metadata = _metadata(content, revision: 'rev-old');
     final new_metadata = _metadata(content, revision: 'rev-new');
     initialize(
-      metadata_loader: (_) async => new_metadata,
+      metadata_loader: (_, {required novel_id}) async => new_metadata,
       content_loader: (_) async => NovelContentResult(
         content: content,
         published_revision_id: old_metadata.published_revision_id,
@@ -177,7 +182,10 @@ void main() {
 
     expect(body_item().text, content);
     expect(body_item().anchor, isNull);
-    expect(await logic.resolve_paragraph_anchor(body_item()), isNull);
+    expect(
+      await logic.resolve_paragraph_anchor(body_item(), novel_id: 1),
+      isNull,
+    );
   });
 
   test('元数据与正文查询之间发生发布时重取元数据完成同版绑定', () async {
@@ -185,7 +193,7 @@ void main() {
     final metadata = _metadata(content, revision: 'rev-new');
     int metadata_requests = 0;
     initialize(
-      metadata_loader: (_) async {
+      metadata_loader: (_, {required novel_id}) async {
         metadata_requests++;
         return metadata_requests == 1 ? _metadata('发布前的正文') : metadata;
       },
@@ -208,7 +216,7 @@ void main() {
     int metadata_requests = 0;
     Map<String, Object>? submitted;
     initialize(
-      metadata_loader: (_) async {
+      metadata_loader: (_, {required novel_id}) async {
         metadata_requests++;
         if (metadata_requests == 1) throw StateError('暂时离线');
         return metadata;
@@ -220,6 +228,7 @@ void main() {
       ),
       sender:
           ({
+            required novel_id,
             required paragraph_id,
             required content,
             required images,
@@ -240,10 +249,11 @@ void main() {
     await show_chapter();
     final item = body_item();
     expect(item.anchor, isNull);
-    final anchor = await logic.resolve_paragraph_anchor(item);
+    final anchor = await logic.resolve_paragraph_anchor(item, novel_id: 1);
     expect(anchor?.id, 'paragraph-0');
     expect(body_item().anchor?.comment_count, 2);
     final sent = await logic.send_paragraph_comment(
+      novel_id: 1,
       item: item,
       anchor: anchor!,
       selection: const TextSelection(baseOffset: 2, extentOffset: 7),
@@ -278,7 +288,7 @@ void main() {
     final metadata = _metadata(content);
     int submissions = 0;
     initialize(
-      metadata_loader: (_) async => metadata,
+      metadata_loader: (_, {required novel_id}) async => metadata,
       content_loader: (_) async => NovelContentResult(
         content: content,
         published_revision_id: metadata.published_revision_id,
@@ -286,6 +296,7 @@ void main() {
       ),
       sender:
           ({
+            required novel_id,
             required paragraph_id,
             required content,
             required images,
@@ -305,6 +316,7 @@ void main() {
     ]) {
       expect(
         await logic.send_paragraph_comment(
+          novel_id: 1,
           item: item,
           anchor: item.anchor!,
           selection: selection,
@@ -316,6 +328,7 @@ void main() {
     }
     expect(
       await logic.send_paragraph_comment(
+        novel_id: 1,
         item: item,
         anchor: body_item(1).anchor!,
         selection: const TextSelection(baseOffset: 0, extentOffset: 2),
@@ -327,9 +340,10 @@ void main() {
 
     store.cache_chapter_content(0, '更新后的正文', published_revision_id: 'rev-2');
     store.rebuild_reading_items_from_cache(0, 0, store.chapter_list);
-    expect(await logic.resolve_paragraph_anchor(item), isNull);
+    expect(await logic.resolve_paragraph_anchor(item, novel_id: 1), isNull);
     expect(
       await logic.send_paragraph_comment(
+        novel_id: 1,
         item: item,
         anchor: item.anchor!,
         selection: const TextSelection(baseOffset: 0, extentOffset: 2),
@@ -351,7 +365,7 @@ void main() {
     const content = '测试正文';
     final metadata = _metadata(content);
     initialize(
-      metadata_loader: (_) async => metadata,
+      metadata_loader: (_, {required novel_id}) async => metadata,
       content_loader: (_) async => NovelContentResult(
         content: content,
         published_revision_id: metadata.published_revision_id,
@@ -362,6 +376,7 @@ void main() {
     final item = body_item();
     expect(
       await logic.send_paragraph_comment(
+        novel_id: 1,
         item: item,
         anchor: item.anchor!,
         selection: const TextSelection(baseOffset: 0, extentOffset: 2),
@@ -372,16 +387,133 @@ void main() {
     );
     expect(body_item().anchor?.comment_count, 2);
     store.reading_items.clear();
-    expect(await logic.resolve_paragraph_anchor(item), isNull);
+    expect(await logic.resolve_paragraph_anchor(item, novel_id: 1), isNull);
+  });
+
+  test('跨段引用提交完整 UTF-16 偏移且只更新最后选中的段落', () async {
+    const content = '\r\n  第一段😀\r\n\n重复\n重复';
+    final metadata = _metadata(content);
+    final submitted = <Map<String, Object>>[];
+    initialize(
+      metadata_loader: (_, {required novel_id}) async => metadata,
+      content_loader: (_) async => NovelContentResult(
+        content: content,
+        published_revision_id: metadata.published_revision_id,
+        body_id: metadata.body_id,
+      ),
+      sender:
+          ({
+            required novel_id,
+            required paragraph_id,
+            required content,
+            required images,
+            required selection_start,
+            required selection_end,
+          }) async {
+            submitted.add({
+              'paragraph_id': paragraph_id,
+              'start': selection_start,
+              'end': selection_end,
+            });
+            return 19;
+          },
+    );
+    await show_chapter();
+    final item = body_item(2);
+    const selection_start = 4;
+    final selection_end = item.start_offset + 1;
+    final selection = ParagraphTextSelection(
+      baseOffset: 1,
+      extentOffset: 0,
+      selected_text: content.substring(selection_start, selection_end),
+      content_start: selection_start,
+      content_end: selection_end,
+    );
+
+    expect(
+      await logic.send_paragraph_comment(
+        novel_id: 1,
+        item: item,
+        anchor: item.anchor!,
+        selection: selection,
+        text: '跨段评论',
+        images: [],
+      ),
+      isTrue,
+    );
+    expect(submitted, [
+      {
+        'paragraph_id': 'paragraph-2',
+        'start': selection_start,
+        'end': selection_end,
+      },
+    ]);
+    expect(body_item().anchor!.comment_count, 2);
+    expect(body_item(1).anchor!.comment_count, 3);
+    expect(body_item(2).anchor!.comment_count, 19);
+
+    for (final invalid_selection in [
+      ParagraphTextSelection(
+        baseOffset: 0,
+        extentOffset: 1,
+        selected_text: '过期正文',
+        content_start: selection_start,
+        content_end: selection_end,
+      ),
+      ParagraphTextSelection(
+        baseOffset: 0,
+        extentOffset: 2,
+        selected_text: selection.selected_text,
+        content_start: selection_start,
+        content_end: selection_end,
+      ),
+      ParagraphTextSelection(
+        baseOffset: 0,
+        extentOffset: 1,
+        selected_text: content.substring(0, body_item(1).end_offset),
+        content_start: 0,
+        content_end: body_item(1).end_offset,
+      ),
+    ]) {
+      expect(
+        await logic.send_paragraph_comment(
+          novel_id: 1,
+          item: item,
+          anchor: item.anchor!,
+          selection: invalid_selection,
+          text: '错误引用',
+          images: [],
+        ),
+        isFalse,
+      );
+    }
+    expect(submitted, hasLength(1));
+
+    // 锚点解析完成前发布了新正文；即使引用片段和末段仍相同也不能提交旧版本。
+    final pending_submission = logic.send_paragraph_comment(
+      novel_id: 1,
+      item: item,
+      anchor: item.anchor!,
+      selection: selection,
+      text: '旧版本引用',
+      images: [],
+    );
+    store.cache_chapter_content(
+      0,
+      '前${content.substring(1)}',
+      published_revision_id: 'rev-new',
+    );
+    expect(await pending_submission, isFalse);
+    expect(submitted, hasLength(1));
   });
 
   test('关闭阅读页后迟到的元数据不会写回已销毁页面', () async {
     const content = '测试正文';
     final pending = Completer<ParagraphMetadata?>();
-    initialize(metadata_loader: (_) => pending.future);
+    initialize(metadata_loader: (_, {required novel_id}) => pending.future);
     store.cache_chapter_content(0, content);
     store.set_initial_content('第一章', 1, 0, 0, 100, content);
-    final resolving = logic.resolve_paragraph_anchor(body_item());
+    final resolving = logic.resolve_paragraph_anchor(body_item(), novel_id: 1);
     logic.close_paragraph_state();
     pending.complete(_metadata(content));
 

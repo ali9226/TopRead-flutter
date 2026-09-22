@@ -11,7 +11,7 @@ typedef ReaderTapRegionBuilder =
 
 /// 阅读区域的单击协调器：有选区时，本次点击只退出选择。
 ///
-/// EditableText 在 pointer down 阶段触发 onTapOutside 并清空旧选区；
+/// 原生选区可能在 pointer down 阶段失焦并清空旧选区；
 /// 这里必须提前记住按下时的选择状态，不能到 tap up 时才查询选区。
 class ReaderTapRegion extends StatefulWidget {
   const ReaderTapRegion({
@@ -37,7 +37,7 @@ class _ReaderTapRegionState extends State<ReaderTapRegion> {
   /// 当前指针序列开始时存在选区；直到下一次按下前都阻止阅读单击。
   bool _tap_started_with_selection = false;
 
-  /// Listener 位于 EditableText 的 TapRegionSurface 内，先于其外部点击回调。
+  /// Listener 提前记录本次点击是否用于取消已存在的选区。
   void _handle_pointer_down(PointerDownEvent event) {
     _tap_started_with_selection = _selected_paragraphs.isNotEmpty;
   }
@@ -67,10 +67,7 @@ class _ReaderTapRegionState extends State<ReaderTapRegion> {
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapUp: (details) => _handle_confirmed_tap(details.globalPosition),
-      child: widget.builder(
-        _handle_confirmed_tap,
-        _handle_selection_changed,
-      ),
+      child: widget.builder(_handle_confirmed_tap, _handle_selection_changed),
     ),
   );
 }

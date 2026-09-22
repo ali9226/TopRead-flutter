@@ -4,13 +4,17 @@ import 'dart:convert';
 
 import 'package:app/api/paragraph_comment.dart';
 import 'package:app/models/paragraph_anchor.dart';
+import 'package:app/models/paragraph_text_selection.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 
 /// 可注入章节段落读取器，测试无需请求真实接口。
 typedef ChapterParagraphMetadataLoader =
-    Future<ParagraphMetadata?> Function(String chapter_id, {required int novel_id});
+    Future<ParagraphMetadata?> Function(
+      String chapter_id, {
+      required int novel_id,
+    });
 
 /// 可注入段评提交器，偏移始终使用完整章节正文的 UTF-16 坐标。
 typedef ParagraphCommentSender =
@@ -72,7 +76,10 @@ mixin ReadParagraphCommentMixin {
     required int novel_id,
   }) async {
     try {
-      return await chapter_paragraph_metadata_loader(chapter_id, novel_id: novel_id);
+      return await chapter_paragraph_metadata_loader(
+        chapter_id,
+        novel_id: novel_id,
+      );
     } catch (_) {
       return null;
     }
@@ -146,7 +153,7 @@ mixin ReadParagraphCommentMixin {
     return _find_paragraph_anchor(item, metadata);
   }
 
-  /// 将段内选区转为完整章节偏移，提交成功后使用服务端段评数刷新气泡。
+  /// 将选区转为完整章节偏移，跨段评论始终归属最后选中的段落。
   Future<bool> send_paragraph_comment({
     required ReadingContentItem item,
     required ParagraphAnchor anchor,
@@ -172,13 +179,28 @@ mixin ReadParagraphCommentMixin {
         current_anchor.content_hash != anchor.content_hash) {
       return false;
     }
+    // 元数据解析可能等待网络；必须在解析完成后核对当前完整正文。
+    if (selection is ParagraphTextSelection &&
+        (!_is_current_paragraph_item(item) ||
+            !selection.matches_paragraph(
+              content:
+                  store.get_cached_chapter_content(item.chapter_index) ?? '',
+              paragraph_start: item.start_offset,
+              paragraph_end: item.end_offset,
+            ))) {
+      return false;
+    }
     final count = await paragraph_comment_sender(
       novel_id: novel_id,
       paragraph_id: anchor.id,
       content: text,
       images: images,
-      selection_start: item.start_offset + selection.start,
-      selection_end: item.start_offset + selection.end,
+      selection_start: selection is ParagraphTextSelection
+          ? selection.content_start
+          : item.start_offset + selection.start,
+      selection_end: selection is ParagraphTextSelection
+          ? selection.content_end
+          : item.start_offset + selection.end,
     );
     if (count == null) return false;
     update_paragraph_comment_count(

@@ -17,6 +17,7 @@ import 'package:app/components/login_required_dialog/index.dart';
 import 'package:app/components/comment_list/index.dart';
 import 'package:app/components/paragraph_selection/actions.dart';
 import 'package:app/models/story_paragraph.dart';
+import 'package:app/models/paragraph_text_selection.dart';
 import 'package:app/models/short_story_item.dart';
 import 'package:app/stores/comment_navigation.dart';
 import 'package:app/stores/device_info.dart';
@@ -126,6 +127,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 选文时不让阅读页边缘拖拽接管文字手柄。
   bool _is_paragraph_selection_active = false;
+
+  /// 原生选区会在按下正文外空白时清除，保留按下前状态供单击确认使用。
+  bool _tap_started_with_selection = false;
 
   /// 防止连续点击段评按钮叠加多个登录或输入弹窗。
   final ParagraphActions _paragraph_actions = ParagraphActions();
@@ -1085,7 +1089,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 切换导航栏和评论栏的显示/隐藏，同时停止自动阅读。
   void _on_content_tap() {
     _stop_auto_read();
-    if (_is_paragraph_selection_active) {
+    if (_tap_started_with_selection || _is_paragraph_selection_active) {
       FocusManager.instance.primaryFocus?.unfocus();
       return;
     }
@@ -1132,9 +1136,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     TextSelection selection,
   ) {
     _stop_auto_read();
-    final String selected_text = paragraph.text.substring(
-      selection.start,
-      selection.end,
+    final String selected_text = selected_paragraph_text(
+      paragraph.text,
+      selection,
     );
     if (selected_text.trim().isEmpty) return;
     showTextSelectionPreviewSheet(
@@ -2567,6 +2571,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
           },
           child: Listener(
             behavior: HitTestBehavior.translucent,
+            onPointerDown: (_) {
+              _tap_started_with_selection = _is_paragraph_selection_active;
+            },
             onPointerMove: _on_reader_pointer_move,
             onPointerUp: _on_reader_pointer_end,
             onPointerCancel: _on_reader_pointer_end,

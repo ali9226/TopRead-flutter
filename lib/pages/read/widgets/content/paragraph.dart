@@ -51,10 +51,11 @@ class ReaderParagraphItem extends StatelessWidget {
       ),
     );
     if (item.is_title || on_comment == null) {
-      return Text(item.text, style: style);
+      return SelectionContainer.disabled(child: Text(item.text, style: style));
     }
     return ParagraphSelection(
       text: item.text,
+      start_offset: item.start_offset,
       text_style: style,
       is_dark: is_dark,
       paragraph_id: item.anchor?.id,

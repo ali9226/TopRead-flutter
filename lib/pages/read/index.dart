@@ -12,6 +12,7 @@ import 'package:app/config/ad_type_config.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/models/ad_verify_result.dart';
+import 'package:app/models/paragraph_text_selection.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/rewarded_ad_util.dart';
 import 'package:app/components/page_top_gradient_overlay/index.dart';
@@ -2065,10 +2066,7 @@ class _ReadPageState extends State<ReadPage>
   ) {
     _stop_auto_read();
     logic.show_navigation.value = false;
-    final String selected_text = item.text.substring(
-      selection.start,
-      selection.end,
-    );
+    final String selected_text = selected_paragraph_text(item.text, selection);
     if (selected_text.trim().isEmpty) return;
     final ReadDetail detail = logic.build_detail();
     showTextSelectionPreviewSheet(

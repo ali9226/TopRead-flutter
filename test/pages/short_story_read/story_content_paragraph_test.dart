@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:app/components/paragraph_selection/comment_badge.dart';
 import 'package:app/models/paragraph_anchor.dart';
+import 'package:app/models/paragraph_text_selection.dart';
 import 'package:app/pages/short_story_read/models/story_paragraph.dart';
 import 'package:app/pages/short_story_read/widgets/paragraph_selection/index.dart';
 import 'package:app/pages/short_story_read/widgets/story_content.dart';
@@ -11,6 +12,7 @@ import 'package:app/pages/short_story_read/widgets/story_unlock_gate/index.dart'
 import 'package:crypto/crypto.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -104,9 +106,89 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('短篇解锁组件把实际段落身份传给共用详情入口，气泡不触发阅读点击', (
-    tester,
-  ) async {
+  testWidgets('短篇共享选区跨过广告保留原文，评论和偏移归属最后一段', (tester) async {
+    const paragraphs = [
+      '  First moon 🌙 rises.',
+      'Second stars sparkle.',
+      'Third night deepens.',
+      '  Fourth dawn arrives.',
+    ];
+    final content = paragraphs.join('\r\n\r\n');
+    const content_offset = 12;
+    final submitted = <(StoryParagraph, TextSelection)>[];
+    await pump_reader(
+      tester,
+      StoryContent(
+        content: content,
+        content_offset: content_offset,
+        is_dark: false,
+        native_ad_display_ratio: 0.5,
+        native_ad_widget: const Text(
+          'Advertisement outside the novel',
+          key: ValueKey('native_ad_text'),
+        ),
+        paragraph_anchors: [
+          for (int index = 0; index < paragraphs.length; index++)
+            make_anchor(
+              '${index + 1}',
+              paragraphs[index],
+              content_offset + content.indexOf(paragraphs[index]),
+              index + 3,
+            ),
+        ],
+        on_paragraph_comment: (paragraph, selection) =>
+            submitted.add((paragraph, selection)),
+      ),
+    );
+
+    expect(find.byType(SelectionArea), findsOneWidget);
+    final first_render = tester.renderObject<RenderParagraph>(
+      find
+          .descendant(
+            of: find.byType(ParagraphSelection).first,
+            matching: find.byType(RichText),
+          )
+          .first,
+    );
+    await tester.longPressAt(
+      first_render.localToGlobal(
+        first_render.getOffsetForCaret(
+              const TextPosition(offset: 9),
+              Rect.zero,
+            ) +
+            Offset(1, first_render.preferredLineHeight / 2),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final area = tester.state<SelectionAreaState>(find.byType(SelectionArea));
+    area.selectableRegion.selectAll(SelectionChangedCause.toolbar);
+    await tester.pumpAndSettle();
+
+    final ad_render = tester.renderObject<RenderParagraph>(
+      find.descendant(
+        of: find.byKey(const ValueKey('native_ad_text')),
+        matching: find.byType(RichText),
+      ),
+    );
+    expect(ad_render.selections, isEmpty);
+    await tester.tap(find.text('Comment'));
+    await tester.pumpAndSettle();
+
+    expect(submitted, hasLength(1));
+    final (paragraph, range) = submitted.single;
+    expect(paragraph.anchor?.id, '4');
+    expect(paragraph.text, paragraphs.last);
+    expect(range, isA<ParagraphTextSelection>());
+    final selection = range as ParagraphTextSelection;
+    expect(selection.selected_text, content);
+    expect(selection.content_start, content_offset);
+    expect(selection.content_end, content_offset + content.length);
+    expect(selection.start, 0);
+    expect(selection.end, paragraphs.last.length);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('短篇解锁组件把实际段落身份传给共用详情入口，气泡不触发阅读点击', (tester) async {
     const text = 'Repeated paragraph.';
     final opened = <(String, int, String?)>[];
     int reading_taps = 0;
@@ -127,7 +209,8 @@ void main() {
         ],
         on_paragraph_comment: (_, _) {},
         on_content_tap: () => reading_taps++,
-        on_comment_count_tap: (text, count, id) => opened.add((text, count, id)),
+        on_comment_count_tap: (text, count, id) =>
+            opened.add((text, count, id)),
       ),
     );
 
@@ -182,6 +265,10 @@ class _ReaderAssetLoader extends AssetLoader {
       'locked_remaining_words': '{count} words remaining',
       'watch_ad_to_continue': 'Watch ad to continue',
     },
-    'paragraph_comment': {'count_label': '{count} comments'},
+    'paragraph_comment': {
+      'write': 'Comment',
+      'share': 'Share',
+      'count_label': '{count} comments',
+    },
   };
 }

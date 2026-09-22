@@ -38,6 +38,8 @@ class ParagraphSelectionStyle {
   static const double badge_border_width = 1;
   static const double selection_opacity = 0.35;
   static const double drag_reveal_padding = 48;
+  static const double auto_scroll_edge_extent = 48;
+  static const double auto_scroll_velocity = 30;
 
   static Color menu_background(bool is_dark) =>
       is_dark ? ColorConstants.lightTextColor : ColorConstants.whiteColor;

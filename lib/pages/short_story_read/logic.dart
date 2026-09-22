@@ -12,6 +12,7 @@ import 'package:app/api/get_novel_content.dart';
 import 'package:app/api/novel_comment.dart';
 import 'package:app/api/paragraph_comment.dart';
 import 'package:app/models/paragraph_anchor.dart';
+import 'package:app/models/paragraph_text_selection.dart';
 import 'package:app/models/story_paragraph.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/models/short_story_read_data.dart';
@@ -22,6 +23,16 @@ import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/device/save_body_font_size.dart';
 import 'package:app/pages/short_story_read/utils/short_story_content_cache.dart';
 import 'package:app/services/bookshelf_sync_service.dart';
+
+/// 可注入短篇段评发送器，使完整正文偏移和末段归属能够离线验证。
+typedef ShortStoryParagraphCommentSender =
+    Future<Map<String, dynamic>?> Function({
+      required int novel_id,
+      required String comment_content,
+      required int paragraph_id,
+      required int selection_start,
+      required int selection_end,
+    });
 
 /// 短篇小说阅读页面逻辑层。
 ///
@@ -38,6 +49,9 @@ class ShortStoryReadLogic {
 
   /// 小说 ID。
   final int story_id;
+
+  /// 默认调用统一评论接口，测试可替换为不会访问网络的发送器。
+  final ShortStoryParagraphCommentSender paragraph_comment_sender;
 
   /// 当前逻辑实例是否已经退出使用。
   ///
@@ -143,7 +157,11 @@ class ShortStoryReadLogic {
   /// 导航栏显隐需要累计的滚动距离。
   static const double _bar_visibility_scroll_threshold = 8;
 
-  ShortStoryReadLogic({required this.context, required this.story_id}) {
+  ShortStoryReadLogic({
+    required this.context,
+    required this.story_id,
+    this.paragraph_comment_sender = add_comment,
+  }) {
     final double? saved_size = load_body_font_size();
     body_font_size = (saved_size ?? 18.0).obs;
 
@@ -651,12 +669,44 @@ class ShortStoryReadLogic {
         !paragraph_anchors.any((item) => item.id == anchor.id)) {
       return false;
     }
-    final result = await add_comment(
+    if (selection is ParagraphTextSelection) {
+      // 引用及末段身份都必须仍与当前正文一致，避免异步弹窗提交旧选区。
+      if (!selection.matches_paragraph(
+            content: content.value,
+            paragraph_start: anchor.start_offset,
+            paragraph_end: anchor.end_offset,
+          ) ||
+          !paragraph_anchors.any(
+            (current) =>
+                current.id == anchor.id &&
+                current.start_offset == anchor.start_offset &&
+                current.end_offset == anchor.end_offset &&
+                current.content_hash == anchor.content_hash,
+          ) ||
+          sha256
+                  .convert(
+                    utf8.encode(
+                      content.value.substring(
+                        anchor.start_offset,
+                        anchor.end_offset,
+                      ),
+                    ),
+                  )
+                  .toString() !=
+              anchor.content_hash) {
+        return false;
+      }
+    }
+    final result = await paragraph_comment_sender(
       novel_id: story_id,
       comment_content: comment_content,
       paragraph_id: int.tryParse(anchor.id) ?? 0,
-      selection_start: anchor.start_offset + selection.start,
-      selection_end: anchor.start_offset + selection.end,
+      selection_start: selection is ParagraphTextSelection
+          ? selection.content_start
+          : anchor.start_offset + selection.start,
+      selection_end: selection is ParagraphTextSelection
+          ? selection.content_end
+          : anchor.start_offset + selection.end,
     );
     if (result == null) return false;
     final count = result['comment_count'] is int

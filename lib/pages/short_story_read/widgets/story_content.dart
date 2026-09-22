@@ -188,7 +188,7 @@ class _StoryContentState extends State<StoryContent> {
       has_native_ad: native_ad_widget != null,
     );
 
-    return Column(
+    final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: _build_paragraph_widgets(
         paragraphs: paragraphs,
@@ -197,6 +197,14 @@ class _StoryContentState extends State<StoryContent> {
         body_height: body_height,
         ad_insert_index: ad_insert_index,
       ),
+    );
+    if (widget.on_paragraph_comment == null) return body;
+    return ParagraphSelectionScope(
+      content: content,
+      content_offset: widget.content_offset,
+      is_dark: is_dark,
+      on_tap_position: (_) => widget.on_content_tap?.call(),
+      child: body,
     );
   }
 
@@ -267,7 +275,7 @@ class _StoryContentState extends State<StoryContent> {
       );
       // 在指定位置之前插入原生广告。
       if (ad_insert_index != null && index == ad_insert_index) {
-        children.add(native_ad_widget!);
+        children.add(SelectionContainer.disabled(child: native_ad_widget!));
       }
 
       children.add(
@@ -279,9 +287,10 @@ class _StoryContentState extends State<StoryContent> {
               ? Text(paragraph.text, style: text_style)
               : ParagraphSelection(
                   key: ValueKey(
-                    '${paragraph.anchor?.id ?? "local"}:${paragraph.start_offset}',
+                    '${paragraph.start_offset}:${paragraph.end_offset}',
                   ),
                   text: paragraph.text,
+                  start_offset: paragraph.start_offset,
                   text_style: text_style,
                   is_dark: is_dark,
                   comment_count: paragraph.anchor?.comment_count ?? 0,
@@ -303,7 +312,7 @@ class _StoryContentState extends State<StoryContent> {
 
     // 广告位置在最后一个段落之后时，追加到末尾。
     if (ad_insert_index != null && ad_insert_index >= paragraphs.length) {
-      children.add(native_ad_widget!);
+      children.add(SelectionContainer.disabled(child: native_ad_widget!));
     }
 
     return children;
