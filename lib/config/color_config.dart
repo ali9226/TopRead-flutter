@@ -39,6 +39,14 @@ class ColorConstants {
   /// 日间主题背景色。
   static final Color lightBackgroundColor = hexToColor("#FAFAFA");
 
+  /// 弹窗/BottomSheet 背景色（统一变量，所有弹窗共用）。
+  static Color sheetBackground(bool isDark) =>
+      isDark ? const Color(0xFF12121C) : Colors.white;
+
+  /// 弹窗内输入框背景色（比 sheetBackground 略亮，形成层次感）。
+  static Color sheetInputBackground(bool isDark) =>
+      isDark ? const Color(0xFF1C1C28) : const Color(0xFFF5F5F5);
+
   /// 消息分类主色列表。
   ///
   /// 后续新增消息类型时，优先从这里扩展颜色，页面直接按索引读取。

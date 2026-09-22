@@ -172,7 +172,7 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
     return Obx(() {
       final bool is_dark = device_info.theme.value == ThemeMode.dark;
 
-      final Color bg_color = is_dark ? const Color(0xFF161B22) : Colors.white;
+      final Color bg_color = ColorConstants.sheetBackground(is_dark);
 
       return Container(
         constraints: BoxConstraints(maxHeight: max_height),

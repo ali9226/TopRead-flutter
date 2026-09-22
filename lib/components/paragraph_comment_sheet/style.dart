@@ -43,8 +43,7 @@ class ParagraphCommentSheetStyle {
   static const int preview_max_lines = 3;
   static const int input_max_lines = 3;
 
-  static Color surface(bool is_dark) =>
-      is_dark ? const Color(0xFF0D1117) : Colors.white;
+  static Color surface(bool is_dark) => ColorConstants.sheetBackground(is_dark);
   static Color title(bool is_dark) =>
       is_dark ? const Color(0xFFE8E8EA) : const Color(0xFF1A1A1A);
   static Color body(bool is_dark) =>

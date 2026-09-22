@@ -47,7 +47,7 @@ class Constant {
   static String get requestUrl {
     // 本地调试地址
     // return "http://192.168.31.120:5006";
-    return "http://0.0.0.0:5006";
+    // return "http://0.0.0.0:5006";
     // 正式域名（发布前取消注释上面一行，注释此行）
     return "https://www.read.top";
   }

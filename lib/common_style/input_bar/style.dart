@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// 输入栏共享样式常量。
 ///
@@ -16,10 +17,10 @@ class InputBarStyle {
   static const double padding_v = 6;
 
   /// 输入栏背景色（日间模式），与评论面板背景色保持一致。
-  static const Color bar_bg_light = Color(0xFFFFFFFF);
+  static Color get bar_bg_light => ColorConstants.sheetBackground(false);
 
   /// 输入栏背景色（夜间模式），与评论面板背景色保持一致。
-  static const Color bar_bg_dark = Color(0xFF191919);
+  static Color get bar_bg_dark => ColorConstants.sheetBackground(true);
 
   // ==================== 输入框 ====================
 
@@ -33,10 +34,10 @@ class InputBarStyle {
   static const double field_radius = 20;
 
   /// 输入框背景色（日间模式），与回复区域背景色一致。
-  static const Color field_bg_light = Color(0xFFF7F7F7);
+  static Color get field_bg_light => ColorConstants.sheetInputBackground(false);
 
   /// 输入框背景色（夜间模式），与回复区域背景色一致。
-  static const Color field_bg_dark = Color(0xFF232323);
+  static Color get field_bg_dark => ColorConstants.sheetInputBackground(true);
 
   /// 输入框字号（CJK 语系）。
   static const double font_size_cjk = 15;

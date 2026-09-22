@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
+import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
 
@@ -49,7 +50,7 @@ class CommentActionsStyle {
   // ==================== 颜色（日间） ====================
 
   /// 弹窗背景色（日间）。
-  static const Color background_light = Colors.white;
+  static Color get background_light => ColorConstants.sheetBackground(false);
 
   /// 间隔区域背景色（日间）。
   static const Color spacer_light = Color(0xFFF2F2F7);
@@ -60,7 +61,7 @@ class CommentActionsStyle {
   // ==================== 颜色（夜间） ====================
 
   /// 弹窗背景色（夜间）。
-  static const Color background_dark = Color(0xFF1C1C1E);
+  static Color get background_dark => ColorConstants.sheetBackground(true);
 
   /// 间隔区域背景色（夜间）。
   static const Color spacer_dark = Color(0xFF000000);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app/common_style/input_bar/style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 评论区统一视觉常量。
 ///
@@ -420,13 +421,13 @@ class CommentListStyle {
   // ==================== 日间颜色 ====================
 
   /// 面板背景色（日间模式）。
-  static const Color sheet_light_bg = Color(0xFFFFFFFF);
+  static Color get sheet_light_bg => ColorConstants.sheetBackground(false);
 
   /// 卡片背景色（日间模式）。
   static const Color card_light_bg = Color(0xFFFFFFFF);
 
   /// 输入栏背景色（日间模式），引用 InputBarStyle。
-  static const Color input_bar_light_bg = InputBarStyle.bar_bg_light;
+  static Color get input_bar_light_bg => InputBarStyle.bar_bg_light;
 
   /// 标题文字色（日间模式）。
   static const Color title_light_color = Color(0xFF191919);
@@ -441,7 +442,7 @@ class CommentListStyle {
   static const Color divider_light_color = Color(0xFFEDEDED);
 
   /// 输入框背景色（日间模式）。
-  static const Color input_light_bg = Color(0xFFF6F6F7);
+  static Color get input_light_bg => ColorConstants.sheetInputBackground(false);
 
   /// 输入框边框色（日间模式）。
   static const Color input_border_light_color = Color(0xFFECECED);
@@ -470,13 +471,13 @@ class CommentListStyle {
   // ==================== 夜间颜色 ====================
 
   /// 面板背景色（夜间模式）。
-  static const Color sheet_dark_bg = Color(0xFF191919);
+  static Color get sheet_dark_bg => ColorConstants.sheetBackground(true);
 
   /// 卡片背景色（夜间模式）。
   static const Color card_dark_bg = Color(0xFF191919);
 
   /// 输入栏背景色（夜间模式），引用 InputBarStyle。
-  static const Color input_bar_dark_bg = InputBarStyle.bar_bg_dark;
+  static Color get input_bar_dark_bg => InputBarStyle.bar_bg_dark;
 
   /// 标题文字色（夜间模式）。
   static const Color title_dark_color = Color(0xFFF2F2F2);
@@ -491,7 +492,7 @@ class CommentListStyle {
   static const Color divider_dark_color = Color(0xFF2C2C2C);
 
   /// 输入框背景色（夜间模式）。
-  static const Color input_dark_bg = Color(0xFF242424);
+  static Color get input_dark_bg => ColorConstants.sheetInputBackground(true);
 
   /// 输入框边框色（夜间模式）。
   static const Color input_border_dark_color = Color(0xFF343434);
@@ -526,10 +527,10 @@ class CommentListStyle {
   static const int emoji_columns = InputBarStyle.emoji_columns;
 
   /// 表情面板背景色（日间模式），与评论弹窗保持一致。
-  static const Color emoji_panel_light_bg = sheet_light_bg;
+  static Color get emoji_panel_light_bg => sheet_light_bg;
 
   /// 表情面板背景色（夜间模式），与评论弹窗保持一致。
-  static const Color emoji_panel_dark_bg = sheet_dark_bg;
+  static Color get emoji_panel_dark_bg => sheet_dark_bg;
 
   /// 表情面板顶部分隔线颜色（日间模式）。
   static const Color emoji_panel_divider_light_color = Color(0xFFEFEFF0);

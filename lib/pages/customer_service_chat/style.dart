@@ -36,7 +36,7 @@ class CustomerServiceChatStyle {
   static final Color nav_bg_color_light = hexToColor("#FFFFFF");
 
   /// 导航栏背景色（夜间模式）。
-  static const Color nav_bg_color_dark = InputBarStyle.bar_bg_dark;
+  static Color get nav_bg_color_dark => InputBarStyle.bar_bg_dark;
 
   /// 页面背景色（日间模式）。
   static final Color page_bg_color_light = hexToColor("#EDEDED");
@@ -156,16 +156,16 @@ class CustomerServiceChatStyle {
   static const double input_bar_padding_v = InputBarStyle.padding_v;
 
   /// 输入栏背景色（日间模式）。
-  static const Color input_bar_bg_light = InputBarStyle.bar_bg_light;
+  static Color get input_bar_bg_light => InputBarStyle.bar_bg_light;
 
   /// 输入栏背景色（夜间模式）。
-  static const Color input_bar_bg_dark = InputBarStyle.bar_bg_dark;
+  static Color get input_bar_bg_dark => InputBarStyle.bar_bg_dark;
 
   /// 输入框背景色（日间模式）。
-  static const Color input_field_bg_light = InputBarStyle.field_bg_light;
+  static Color get input_field_bg_light => InputBarStyle.field_bg_light;
 
   /// 输入框背景色（夜间模式）。
-  static const Color input_field_bg_dark = InputBarStyle.field_bg_dark;
+  static Color get input_field_bg_dark => InputBarStyle.field_bg_dark;
 
   /// 输入框文字颜色（日间模式）。
   static final Color input_text_color_light = ColorConstants.lightTextColor;
