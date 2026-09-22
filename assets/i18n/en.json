@@ -1064,7 +1064,8 @@
       "hint": "Select report reasons (multiple allowed)",
       "wait_sync": "Comment syncing, please try again later"
     },
-    "collapsed": "This comment has been collapsed"
+    "collapsed": "This comment has been collapsed",
+    "deleted": "This comment has been deleted"
   },
   "favorite": {
     "add_success": "Added to favorites",

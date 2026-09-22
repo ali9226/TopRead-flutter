@@ -170,6 +170,9 @@ class _CommentSheetState extends State<CommentSheet>
   /// 总评论数。
   int _total_count = 0;
 
+  /// 段落评论总数（来自服务端 novel_content_paragraph.comment_count，段评时使用）。
+  int _paragraph_comment_count = 0;
+
   /// 每页数量。
   final int _page_size = 20;
 
@@ -337,6 +340,7 @@ class _CommentSheetState extends State<CommentSheet>
           return c.copy_with(replies: _flatten_replies(c.replies));
         }).toList();
         _total_count = result.total;
+        if (result.comment_count != null) _paragraph_comment_count = result.comment_count!;
         _has_more = result.page * result.page_size < result.total;
       });
       // 首次加载成功后，同步最新评论总数到外层
@@ -427,6 +431,7 @@ class _CommentSheetState extends State<CommentSheet>
           _current_page = result.page;
           _comments = [..._comments, ...new_comments];
           _total_count = math.max(_total_count, result.total);
+          if (result.comment_count != null) _paragraph_comment_count = result.comment_count!;
           _has_more = result.page * result.page_size < result.total;
         });
       }
@@ -585,6 +590,7 @@ class _CommentSheetState extends State<CommentSheet>
       // TODO 调用接口
       final CommentLikeResult? result = await like_comment(
         comment_id: comment.id,
+        novel_id: widget.novel_id,
       );
 
       if (!mounted) return;
@@ -684,40 +690,20 @@ class _CommentSheetState extends State<CommentSheet>
     }
   }
 
-  /// 处理删除评论（乐观删除，改变评论总数）。
+  /// 处理删除评论（乐观标记已删除，不减少数量，保留子回复可见）。
   Future<void> _handle_delete(CommentData comment) async {
     if (comment.id <= 0) return;
 
     // 保存原始数据用于回滚
     final List<CommentData> original_comments = _comments;
-    final int original_total = _total_count;
 
-    // 乐观删除：立即从列表中移除（支持顶层评论和子回复）
+    // 乐观删除：将评论标记为已删除（不改变数量，保留子回复可见）
     setState(() {
-      final bool is_top_level = _comments.any((c) => c.id == comment.id);
-      if (is_top_level) {
-        _comments = _comments.where((c) => c.id != comment.id).toList();
-      } else {
-        _comments = _comments.map((c) {
-          if (c.replies.any((r) => r.id == comment.id)) {
-            return c.copy_with(
-              replies: c.replies.where((r) => r.id != comment.id).toList(),
-            );
-          }
-          return c;
-        }).toList();
-      }
-      _total_count = math.max(0, _total_count - 1);
+      _comments = _mark_deleted(_comments, comment.id);
     });
-    widget.on_count_changed?.call(_total_count);
-    // 段评：同步更新段落评论计数和小说总评论数
-    if (widget.paragraph_id > 0) {
-      widget.on_paragraph_count_changed?.call(_total_count);
-      widget.on_novel_count_changed?.call(-1);
-    }
 
     try {
-      final bool success = await delete_comment(comment_id: comment.id);
+      final bool success = await delete_comment(comment_id: comment.id, novel_id: widget.novel_id);
       if (!mounted) return;
 
       if (success) {
@@ -726,13 +712,7 @@ class _CommentSheetState extends State<CommentSheet>
         // 删除失败，回滚
         setState(() {
           _comments = original_comments;
-          _total_count = original_total;
         });
-        widget.on_count_changed?.call(_total_count);
-        if (widget.paragraph_id > 0) {
-          widget.on_paragraph_count_changed?.call(_total_count);
-          widget.on_novel_count_changed?.call(1); // 回滚：+1
-        }
         showBottomTip(tr('comment.send_failed'));
       }
     } catch (_) {
@@ -740,15 +720,22 @@ class _CommentSheetState extends State<CommentSheet>
       // 删除失败，回滚
       setState(() {
         _comments = original_comments;
-        _total_count = original_total;
       });
-      widget.on_count_changed?.call(_total_count);
-      if (widget.paragraph_id > 0) {
-        widget.on_paragraph_count_changed?.call(_total_count);
-        widget.on_novel_count_changed?.call(1); // 回滚：+1
-      }
       showBottomTip(tr('comment.send_failed'));
     }
+  }
+
+  /// 递归将指定评论标记为已删除（保留子回复可见）。
+  List<CommentData> _mark_deleted(List<CommentData> comments, int target_id) {
+    return comments.map((c) {
+      if (c.id == target_id) {
+        return c.copy_with(is_deleted: true);
+      }
+      if (c.replies.isNotEmpty) {
+        return c.copy_with(replies: _mark_deleted(c.replies, target_id));
+      }
+      return c;
+    }).toList();
   }
 
   /// 处理不喜欢评论（需要登录，标记后评论内容折叠显示，不改变评论总数）。
@@ -778,7 +765,7 @@ class _CommentSheetState extends State<CommentSheet>
     });
 
     try {
-      final bool success = await dislike_comment(comment_id: comment.id);
+      final bool success = await dislike_comment(comment_id: comment.id, novel_id: widget.novel_id);
       if (!mounted) return;
 
       if (success) {
@@ -823,6 +810,7 @@ class _CommentSheetState extends State<CommentSheet>
     try {
       final bool success = await report_comment(
         comment_id: comment.id,
+        novel_id: widget.novel_id,
         reasons: reasons,
       );
       if (!mounted) return;
@@ -968,6 +956,7 @@ class _CommentSheetState extends State<CommentSheet>
               ? result['comment_count']
               : int.tryParse(result['comment_count'].toString());
           if (paragraph_count != null) {
+            _paragraph_comment_count = paragraph_count;
             widget.on_paragraph_count_changed?.call(paragraph_count);
           }
           widget.on_novel_count_changed?.call(1);

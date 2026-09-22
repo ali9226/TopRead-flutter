@@ -20,11 +20,15 @@ class CommentListResult {
   /// 每页数量。
   final int page_size;
 
+  /// 段落评论总数（段评时后端返回，来自 novel_content_paragraph.comment_count）。
+  final int? comment_count;
+
   const CommentListResult({
     required this.list,
     required this.total,
     required this.page,
     required this.page_size,
+    this.comment_count,
   });
 
   /// 从后端接口返回的 JSON 数据解析。
@@ -37,6 +41,7 @@ class CommentListResult {
       total: _parse_int(json['total']),
       page: _parse_int(json['page']),
       page_size: _parse_int(json['page_size']),
+      comment_count: json['comment_count'] == null ? null : _parse_int(json['comment_count']),
     );
   }
 
@@ -152,12 +157,13 @@ Future<Map<String, dynamic>?> add_comment({
 /// 评论点赞/取消点赞接口。
 ///
 /// [comment_id] 评论ID（必传）。
+/// [novel_id] 小说ID（必传，用于分表路由）。
 /// 返回点赞结果（包含最新点赞状态和点赞数），失败时返回 null。
-Future<CommentLikeResult?> like_comment({required int comment_id}) async {
+Future<CommentLikeResult?> like_comment({required int comment_id, required int novel_id}) async {
   final ResultsType<Map<String, dynamic>> results =
       await postRequest<Map<String, dynamic>>(
         path: 'novel_comment/like',
-        parameter: {'comment_id': comment_id},
+        parameter: {'comment_id': comment_id, 'novel_id': novel_id},
         showTips: true,
         fromJson: (json) => json,
       );
@@ -169,12 +175,13 @@ Future<CommentLikeResult?> like_comment({required int comment_id}) async {
 /// 删除评论接口。
 ///
 /// [comment_id] 评论ID（必传）。
-/// 返回是否成功删除。
-Future<bool> delete_comment({required int comment_id}) async {
+/// [novel_id] 小说ID（必传，用于分表路由）。
+/// 返回是否成功删除。删除后评论标记为"已删除"，数量不变。
+Future<bool> delete_comment({required int comment_id, required int novel_id}) async {
   final ResultsType<Map<String, dynamic>> results =
       await postRequest<Map<String, dynamic>>(
         path: 'novel_comment/delete',
-        parameter: {'comment_id': comment_id},
+        parameter: {'comment_id': comment_id, 'novel_id': novel_id},
         showTips: false,
         fromJson: (json) => json,
       );
@@ -185,12 +192,13 @@ Future<bool> delete_comment({required int comment_id}) async {
 /// 不喜欢评论接口。
 ///
 /// [comment_id] 评论ID（必传）。
+/// [novel_id] 小说ID（必传，用于分表路由）。
 /// 返回是否成功标记不喜欢。
-Future<bool> dislike_comment({required int comment_id}) async {
+Future<bool> dislike_comment({required int comment_id, required int novel_id}) async {
   final ResultsType<Map<String, dynamic>> results =
       await postRequest<Map<String, dynamic>>(
         path: 'novel_comment/dislike',
-        parameter: {'comment_id': comment_id},
+        parameter: {'comment_id': comment_id, 'novel_id': novel_id},
         showTips: false,
         fromJson: (json) => json,
       );
@@ -205,6 +213,7 @@ Future<bool> dislike_comment({required int comment_id}) async {
 /// 返回是否成功举报。
 Future<bool> report_comment({
   required int comment_id,
+  required int novel_id,
   required List<String> reasons,
 }) async {
   final ResultsType<Map<String, dynamic>> results =
@@ -212,6 +221,7 @@ Future<bool> report_comment({
         path: 'novel_comment_report/report',
         parameter: {
           'comment_id': comment_id,
+          'novel_id': novel_id,
           'reasons': reasons,
         },
         showTips: false,

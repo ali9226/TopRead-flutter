@@ -53,6 +53,9 @@ class CommentData {
   /// 是否被当前用户标记为不喜欢（显示折叠样式）。
   final bool is_disliked;
 
+  /// 是否已被作者/管理员删除（显示"已删除"标记，禁用交互，子回复仍可见）。
+  final bool is_deleted;
+
   const CommentData({
     required this.id,
     required this.user_id,
@@ -70,6 +73,7 @@ class CommentData {
     this.paragraph_text,
     this.is_sending = false,
     this.is_disliked = false,
+    this.is_deleted = false,
   });
 
   /// 从后端接口返回的 JSON 数据解析评论对象。
@@ -95,6 +99,7 @@ class CommentData {
       like_count: _parse_int(json['like_count']),
       is_liked: _parse_bool(json['like'] ?? json['is_liked']),
       is_disliked: _parse_bool(json['is_disliked']),
+      is_deleted: _parse_bool(json['is_deleted']),
       replies: replies,
       reply_to_nickname: json['reply_to_nickname']?.toString(),
       parent_id: _parse_int(json['parent_id']),
@@ -128,6 +133,7 @@ class CommentData {
     int? like_count,
     bool? is_liked,
     bool? is_disliked,
+    bool? is_deleted,
     List<CommentData>? replies,
     String? reply_to_nickname,
     bool? is_sending,
@@ -142,6 +148,7 @@ class CommentData {
       like_count: like_count ?? this.like_count,
       is_liked: is_liked ?? this.is_liked,
       is_disliked: is_disliked ?? this.is_disliked,
+      is_deleted: is_deleted ?? this.is_deleted,
       replies: replies ?? this.replies,
       reply_to_nickname: reply_to_nickname ?? this.reply_to_nickname,
       parent_id: parent_id,

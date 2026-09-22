@@ -34,11 +34,15 @@ class ParagraphMetadata {
 
 /// 查询当前语种的公开正文段落，不读取草稿或自动迁移历史评论。
 Future<ParagraphMetadata?> get_short_story_paragraphs(
-  String novel_language_id,
-) async {
+  String novel_language_id, {
+  required int novel_id,
+}) async {
   final results = await postRequest<ParagraphMetadata>(
     path: 'novel_content/get_paragraphs',
-    parameter: {'novel_language_id': novel_language_id},
+    parameter: {
+      'novel_id': novel_id,
+      'novel_language_id': novel_language_id,
+    },
     showTips: false,
     fromJson: ParagraphMetadata.from_json,
   );
@@ -46,10 +50,17 @@ Future<ParagraphMetadata?> get_short_story_paragraphs(
 }
 
 /// 按章节数据库 ID 查询长篇公开正文段落，使用与正文读取相同的身份参数。
-Future<ParagraphMetadata?> get_chapter_paragraphs(String chapter_id) async {
+Future<ParagraphMetadata?> get_chapter_paragraphs(
+  String chapter_id, {
+  required int novel_id,
+}) async {
   final results = await postRequest<ParagraphMetadata>(
     path: 'novel_content/get_paragraphs',
-    parameter: {'content_type': 'chapter', 'content_id': chapter_id},
+    parameter: {
+      'novel_id': novel_id,
+      'content_type': 'chapter',
+      'content_id': chapter_id,
+    },
     showTips: false,
     fromJson: ParagraphMetadata.from_json,
   );

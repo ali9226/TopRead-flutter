@@ -10,11 +10,12 @@ import 'package:flutter/material.dart';
 
 /// 可注入章节段落读取器，测试无需请求真实接口。
 typedef ChapterParagraphMetadataLoader =
-    Future<ParagraphMetadata?> Function(String chapter_id);
+    Future<ParagraphMetadata?> Function(String chapter_id, {required int novel_id});
 
 /// 可注入段评提交器，偏移始终使用完整章节正文的 UTF-16 坐标。
 typedef ParagraphCommentSender =
     Future<int?> Function({
+      required int novel_id,
       required String paragraph_id,
       required String content,
       required List<String> images,
@@ -48,12 +49,13 @@ mixin ReadParagraphCommentMixin {
 
   /// 元数据失败不阻断正文阅读；同一章节的并发查询共享一次请求。
   Future<ParagraphMetadata?> load_chapter_paragraph_metadata(
-    String chapter_id,
-  ) async {
+    String chapter_id, {
+    required int novel_id,
+  }) async {
     if (_paragraph_state_closed || chapter_id.isEmpty) return null;
     final pending = _paragraph_metadata_requests[chapter_id];
     if (pending != null) return pending;
-    final request = _read_paragraph_metadata(chapter_id);
+    final request = _read_paragraph_metadata(chapter_id, novel_id: novel_id);
     _paragraph_metadata_requests[chapter_id] = request;
     try {
       return await request;
@@ -65,9 +67,12 @@ mixin ReadParagraphCommentMixin {
   }
 
   /// 捕获离线、接口未升级等错误，使阅读和后续重试保持可用。
-  Future<ParagraphMetadata?> _read_paragraph_metadata(String chapter_id) async {
+  Future<ParagraphMetadata?> _read_paragraph_metadata(
+    String chapter_id, {
+    required int novel_id,
+  }) async {
     try {
-      return await chapter_paragraph_metadata_loader(chapter_id);
+      return await chapter_paragraph_metadata_loader(chapter_id, novel_id: novel_id);
     } catch (_) {
       return null;
     }
@@ -122,12 +127,16 @@ mixin ReadParagraphCommentMixin {
 
   /// 元数据暂时不可用时允许重试，只给完整正文版本匹配的段落开放段评。
   Future<ParagraphAnchor?> resolve_paragraph_anchor(
-    ReadingContentItem item,
-  ) async {
+    ReadingContentItem item, {
+    required int novel_id,
+  }) async {
     if (!_is_current_paragraph_item(item)) return null;
     var metadata = store.get_chapter_paragraph_metadata(item.chapter_index);
     if (metadata == null) {
-      metadata = await load_chapter_paragraph_metadata(item.chapter_id);
+      metadata = await load_chapter_paragraph_metadata(
+        item.chapter_id,
+        novel_id: novel_id,
+      );
       if (!_is_current_paragraph_item(item) ||
           metadata == null ||
           !store.set_chapter_paragraph_metadata(item.chapter_index, metadata)) {
@@ -144,6 +153,7 @@ mixin ReadParagraphCommentMixin {
     required TextSelection selection,
     required String text,
     required List<String> images,
+    required int novel_id,
   }) async {
     if (!selection.isValid ||
         selection.isCollapsed ||
@@ -151,7 +161,10 @@ mixin ReadParagraphCommentMixin {
         selection.end > item.text.length) {
       return false;
     }
-    final current_anchor = await resolve_paragraph_anchor(item);
+    final current_anchor = await resolve_paragraph_anchor(
+      item,
+      novel_id: novel_id,
+    );
     if (current_anchor == null ||
         current_anchor.id != anchor.id ||
         current_anchor.start_offset != anchor.start_offset ||
@@ -160,6 +173,7 @@ mixin ReadParagraphCommentMixin {
       return false;
     }
     final count = await paragraph_comment_sender(
+      novel_id: novel_id,
       paragraph_id: anchor.id,
       content: text,
       images: images,

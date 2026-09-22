@@ -546,7 +546,7 @@ class ShortStoryReadLogic {
     paragraph_anchors.clear();
 
     try {
-      final metadata_future = get_short_story_paragraphs(novel_language_id);
+      final metadata_future = get_short_story_paragraphs(novel_language_id, novel_id: story_id);
       String loaded_content = await _fetch_content_text_with_cache(
         novel_language_id,
       );
@@ -615,7 +615,7 @@ class ShortStoryReadLogic {
     if (paragraph_anchors.isEmpty) {
       final language_id = story_data.value?.novel_language_id;
       if (language_id == null) return null;
-      final metadata = await get_short_story_paragraphs(language_id);
+      final metadata = await get_short_story_paragraphs(language_id, novel_id: story_id);
       if (_is_disposed ||
           metadata == null ||
           !_matches_paragraph_body(content.value, metadata)) {

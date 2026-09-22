@@ -274,14 +274,6 @@ class _ParagraphSelectionState extends State<ParagraphSelection>
       final bool is_cjk = LanguageUtil.is_cjk_language(
         Localizations.localeOf(context).languageCode,
       );
-      final TextPainter painter = TextPainter(
-        text: TextSpan(text: widget.text, style: effective_style),
-        textDirection: direction,
-        textScaler: scaler,
-        textHeightBehavior: DefaultTextStyle.of(context).textHeightBehavior,
-        strutStyle: const StrutStyle(),
-      )..layout(maxWidth: constraints.maxWidth);
-      final List<ui.LineMetrics> lines = painter.computeLineMetrics();
       final Size badge_size = ParagraphCommentBadge.measure(
         comment_count: widget.comment_count,
         style: ParagraphSelectionStyle.badge_text_style(
@@ -291,33 +283,64 @@ class _ParagraphSelectionState extends State<ParagraphSelection>
         text_scaler: scaler,
         text_direction: direction,
       );
-      final double width = constraints.hasBoundedWidth
-          ? constraints.maxWidth
-          : painter.width +
-                badge_size.width +
-                ParagraphSelectionStyle.badge_gap;
-      final ui.LineMetrics? last_line = lines.isEmpty ? null : lines.last;
+      final double badge_reserved =
+          badge_size.width + ParagraphSelectionStyle.badge_gap;
       final bool is_rtl = direction == TextDirection.rtl;
-      final double inline_x = is_rtl
-          ? (last_line?.left ?? width) -
-                ParagraphSelectionStyle.badge_gap -
-                badge_size.width
-          : (last_line?.left ?? 0) +
-                (last_line?.width ?? 0) +
-                ParagraphSelectionStyle.badge_gap;
-      final bool fits_inline =
-          inline_x >= 0 && inline_x + badge_size.width <= width;
-      final double badge_x = fits_inline
-          ? inline_x
-          : (is_rtl ? math.max(0, width - badge_size.width) : 0);
-      final double badge_y = fits_inline && last_line != null
+      final double max_width = constraints.hasBoundedWidth
+          ? constraints.maxWidth
+          : double.infinity;
+      // 用全宽测量，获取最后一行的真实宽度
+      final TextPainter painter = TextPainter(
+        text: TextSpan(text: widget.text, style: effective_style),
+        textDirection: direction,
+        textScaler: scaler,
+        textHeightBehavior: DefaultTextStyle.of(context).textHeightBehavior,
+        strutStyle: const StrutStyle(),
+      )..layout(maxWidth: max_width);
+      final List<ui.LineMetrics> lines = painter.computeLineMetrics();
+      final ui.LineMetrics? last_line = lines.isEmpty ? null : lines.last;
+      // 计算最后一行文字结束位置
+      final double last_line_end = is_rtl
+          ? (last_line?.left ?? 0)
+          : (last_line?.left ?? 0) + (last_line?.width ?? 0);
+      // 判断气泡是否和最后一行文字重叠
+      final bool overlaps = last_line != null &&
+          constraints.hasBoundedWidth &&
+          (is_rtl
+              ? last_line_end < badge_reserved
+              : last_line_end + badge_reserved > max_width);
+      double text_width = max_width;
+      if (overlaps) {
+        // 重叠：减去气泡宽度重新测量，文字自动换行留出空间
+        text_width = math.max(100, max_width - badge_reserved);
+        painter.layout(maxWidth: text_width);
+      }
+      final List<ui.LineMetrics> final_lines = painter.computeLineMetrics();
+      final ui.LineMetrics? final_last =
+          final_lines.isEmpty ? null : final_lines.last;
+      final double width = constraints.hasBoundedWidth
+          ? max_width
+          : painter.width + badge_reserved;
+      // 气泡紧跟最后一行文字末尾
+      final double badge_x = is_rtl
           ? math.max(
               0,
-              last_line.baseline -
-                  last_line.ascent +
-                  (last_line.height - badge_size.height) / 2,
+              (final_last?.left ?? 0) - badge_reserved,
             )
-          : painter.height;
+          : math.max(
+              0,
+              (final_last?.left ?? 0) +
+                  (final_last?.width ?? 0) +
+                  ParagraphSelectionStyle.badge_gap,
+            );
+      final double badge_y = final_last != null
+          ? math.max(
+              0,
+              final_last.baseline -
+                  final_last.ascent +
+                  (final_last.height - badge_size.height) / 2,
+            )
+          : 0;
       final double total_height = math.max(
         painter.height,
         badge_y + badge_size.height,
@@ -329,7 +352,11 @@ class _ParagraphSelectionState extends State<ParagraphSelection>
         child: Stack(
           clipBehavior: Clip.none,
           children: <Widget>[
-            Positioned(top: 0, left: 0, right: 0, child: editable),
+            Positioned(
+              top: 0,
+              left: 0,
+              child: SizedBox(width: text_width, child: editable),
+            ),
             Positioned(
               left: badge_x,
               top: badge_y,

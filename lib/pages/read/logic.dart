@@ -33,6 +33,7 @@ export 'logic/paragraph_comment_handler.dart'
 
 /// 默认段评发送器，使用统一的 novel_comment/add 接口。
 Future<int?> _default_paragraph_comment_sender({
+  required int novel_id,
   required String paragraph_id,
   required String content,
   required List<String> images,
@@ -40,7 +41,7 @@ Future<int?> _default_paragraph_comment_sender({
   required int selection_end,
 }) async {
   final result = await add_comment(
-    novel_id: 0, // 段评时从段落推导 novel_id
+    novel_id: novel_id,
     comment_content: content,
     paragraph_id: int.tryParse(paragraph_id) ?? 0,
     selection_start: selection_start,
@@ -280,11 +281,12 @@ class Logic extends GetxController
     ChapterContentLoader? chapter_content_loader,
     ChapterVersionedContentLoader chapter_content_with_version_loader =
         get_chapter_content_with_version,
-    this.chapter_paragraph_metadata_loader = get_chapter_paragraphs,
+    ChapterParagraphMetadataLoader? chapter_paragraph_metadata_loader,
     ParagraphCommentSender? paragraph_comment_sender,
     double? initial_body_font_size,
     double? initial_auto_read_speed,
   }) : _store = reading_store ?? NovelReadingStore(),
+       chapter_paragraph_metadata_loader = chapter_paragraph_metadata_loader ?? ((chapter_id, {required int novel_id}) => get_chapter_paragraphs(chapter_id, novel_id: novel_id)),
        this.paragraph_comment_sender = paragraph_comment_sender ?? _default_paragraph_comment_sender,
        _chapter_content_loader = chapter_content_loader == null
            ? chapter_content_with_version_loader
@@ -790,7 +792,7 @@ class Logic extends GetxController
       published_revision_id = _store.get_cached_chapter_revision(index);
       if (_store.get_chapter_paragraph_metadata(index) != null) return cached;
     }
-    final metadata_future = load_chapter_paragraph_metadata(chapter_id);
+    final metadata_future = load_chapter_paragraph_metadata(chapter_id, novel_id: story_id);
     if (!force && content.isEmpty) {
       content =
           await ChapterCache.read(
@@ -838,7 +840,7 @@ class Logic extends GetxController
         metadata != null &&
         !metadata_matches() &&
         loaded_from_network) {
-      metadata = await load_chapter_paragraph_metadata(chapter_id);
+      metadata = await load_chapter_paragraph_metadata(chapter_id, novel_id: story_id);
     }
     if (data_generation != _chapter_data_generation ||
         index >= _store.chapter_list.length ||

@@ -55,14 +55,17 @@ class _ParagraphCommentItemState extends State<ParagraphCommentItem> {
         ? CommentListStyle.nickname_dark_color
         : CommentListStyle.nickname_light_color;
 
+    // 已删除评论禁用所有交互
+    final bool is_disabled = widget.comment.is_deleted;
+
     return GestureDetector(
-      onTap: () => widget.on_reply(widget.comment),
-      onLongPressStart: (_) => setState(() => _is_pressed = true),
-      onLongPressEnd: (_) {
+      onTap: is_disabled ? null : () => widget.on_reply(widget.comment),
+      onLongPressStart: is_disabled ? null : (_) => setState(() => _is_pressed = true),
+      onLongPressEnd: is_disabled ? null : (_) {
         setState(() => _is_pressed = false);
         widget.on_actions(widget.comment);
       },
-      onLongPressCancel: () => setState(() => _is_pressed = false),
+      onLongPressCancel: is_disabled ? null : () => setState(() => _is_pressed = false),
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
@@ -203,6 +206,20 @@ class _ParagraphCommentItemState extends State<ParagraphCommentItem> {
     required Color content_color,
     required Color nickname_color,
   }) {
+    // 已删除的评论显示删除提示
+    if (widget.comment.is_deleted) {
+      return Text(
+        tr('comment.deleted'),
+        style: TextStyle(
+          fontSize: font_size,
+          height: line_height,
+          fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+          color: content_color.withValues(alpha: 0.4),
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
     if (widget.comment.content.isEmpty) return const SizedBox.shrink();
 
     return Text(
@@ -222,6 +239,8 @@ class _ParagraphCommentItemState extends State<ParagraphCommentItem> {
     required Color nickname_color,
   }) {
     final String formatted_time = _format_time(widget.comment.create_time);
+    // 已删除评论禁用交互
+    final bool is_disabled = widget.comment.is_deleted;
 
     return Row(
       children: [
@@ -243,35 +262,44 @@ class _ParagraphCommentItemState extends State<ParagraphCommentItem> {
                 ),
                 const SizedBox(width: CommentListStyle.action_spacing),
               ],
-              Flexible(
-                child: GestureDetector(
-                  onTap: () => widget.on_reply(widget.comment),
-                  behavior: HitTestBehavior.opaque,
-                  child: Text(
-                    tr('comment.reply'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: widget.is_cjk
-                          ? CommentListStyle.action_font_size_cjk
-                          : CommentListStyle.action_font_size_alphabetic,
-                      fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                      color: metadata_color,
+              // 已删除评论不显示回复按钮
+              if (!is_disabled)
+                Flexible(
+                  child: GestureDetector(
+                    onTap: () => widget.on_reply(widget.comment),
+                    behavior: HitTestBehavior.opaque,
+                    child: Text(
+                      tr('comment.reply'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: widget.is_cjk
+                            ? CommentListStyle.action_font_size_cjk
+                            : CommentListStyle.action_font_size_alphabetic,
+                        fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                        color: metadata_color,
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
-        _ParagraphLikeButton(
-          key: ValueKey('paragraph_like_${widget.comment.id}'),
-          is_dark: widget.is_dark,
-          is_liked: widget.comment.is_liked,
-          like_count: widget.comment.like_count,
-          compact: widget.is_reply,
-          on_tap: () => widget.logic.toggle_like(widget.comment),
-        ),
+        // 已删除评论显示置灰点赞按钮
+        is_disabled
+            ? _DisabledParagraphLikeButton(
+                is_dark: widget.is_dark,
+                like_count: widget.comment.like_count,
+                compact: widget.is_reply,
+              )
+            : _ParagraphLikeButton(
+                key: ValueKey('paragraph_like_${widget.comment.id}'),
+                is_dark: widget.is_dark,
+                is_liked: widget.comment.is_liked,
+                like_count: widget.comment.like_count,
+                compact: widget.is_reply,
+                on_tap: () => widget.logic.toggle_like(widget.comment),
+              ),
       ],
     );
   }
@@ -493,6 +521,70 @@ class _ParagraphLikeButtonState extends State<_ParagraphLikeButton>
   }
 
   /// 将较大的点赞数量格式化为紧凑形式。
+  String _format_like_count(int count) {
+    if (count < 1000) return '$count';
+    if (count < 1000000) return '${(count / 1000).toStringAsFixed(1)}k';
+    return '${(count / 1000000).toStringAsFixed(1)}M';
+  }
+}
+
+/// 置灰点赞按钮，用于已删除的段评。
+class _DisabledParagraphLikeButton extends StatelessWidget {
+  final bool is_dark;
+  final int like_count;
+  final bool compact;
+
+  const _DisabledParagraphLikeButton({
+    required this.is_dark,
+    required this.like_count,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = is_dark
+        ? CommentListStyle.like_disabled_color_dark
+        : CommentListStyle.like_disabled_color_light;
+    final double icon_size = compact
+        ? CommentListStyle.like_compact_icon_size
+        : CommentListStyle.like_icon_size;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minWidth: CommentListStyle.like_touch_width,
+        minHeight: CommentListStyle.like_touch_height,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(left: CommentListStyle.like_left_padding),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            SvgIcon(
+              name: 'love',
+              width: icon_size,
+              height: icon_size,
+              color: color,
+              animateColor: false,
+            ),
+            if (like_count > 0) ...[
+              const SizedBox(width: CommentListStyle.like_icon_count_spacing),
+              Text(
+                _format_like_count(like_count),
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: CommentListStyle.like_count_font_size,
+                  fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                  color: color,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   String _format_like_count(int count) {
     if (count < 1000) return '$count';
     if (count < 1000000) return '${(count / 1000).toStringAsFixed(1)}k';

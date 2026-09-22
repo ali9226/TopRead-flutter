@@ -6,6 +6,9 @@ import 'api.dart';
 
 /// 共用段评状态：请求锁、分页、鉴权和生命周期集中处理。
 class ParagraphCommentSheetLogic extends ChangeNotifier {
+  /// 小说ID，用于分表路由。
+  final int novel_id;
+
   /// 当前弹窗对应的服务端段落 ID。
   final int paragraph_id;
 
@@ -58,6 +61,7 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
   Future<bool>? _authentication;
 
   ParagraphCommentSheetLogic({
+    required this.novel_id,
     required this.paragraph_id,
     required int initial_comment_count,
     required this.ensure_authenticated,
@@ -121,7 +125,7 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
     _notify();
     try {
       final response = await repository.inquire(
-        paragraph_id: paragraph_id, page: page,
+        novel_id: novel_id, paragraph_id: paragraph_id, page: page,
       );
       if (!_active || generation != _generation) return;
       comments = _merge_unique(
@@ -157,7 +161,7 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
     _notify();
     try {
       final response = await repository.inquire(
-        paragraph_id: paragraph_id, parent_id: parent.id, page: page,
+        novel_id: novel_id, paragraph_id: paragraph_id, parent_id: parent.id, page: page,
       );
       if (!_active || generation != _generation) return;
       _replace_comment(parent.id, (current) => current.copy_with(
@@ -199,6 +203,7 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
     try {
       if (!await _authenticate()) return false;
       final result = await repository.submit(
+        novel_id: novel_id,
         paragraph_id: paragraph_id,
         parent_id: parent_id,
         content: content.trim(),
@@ -224,9 +229,8 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
     _notify();
     try {
       if (!await _authenticate()) return;
-      final result = await repository.delete(comment_id);
+      await repository.delete(novel_id, comment_id);
       if (!_active) return;
-      _set_count(result.comment_count);
       await load_comments();
     } catch (error) {
       _report_error(error);
@@ -247,7 +251,7 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
       // 登录期间列表可能刷新，使用当前节点而非点击时捕获的旧对象。
       final current = _find_comment(comments, comment.id);
       if (current == null) return;
-      final result = await repository.like(comment.id, !current.is_liked);
+      final result = await repository.like(novel_id, comment.id, !current.is_liked);
       if (!_active) return;
       final bool liked = parse_paragraph_bool(result['liked']);
       final int count = parse_paragraph_int(result['like_count']);

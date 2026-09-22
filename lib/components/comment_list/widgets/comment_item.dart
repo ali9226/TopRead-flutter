@@ -5,7 +5,6 @@ import 'package:app/components/comment_list/models/comment_data.dart';
 import 'package:app/components/comment_list/style.dart';
 import 'package:app/components/comment_list/widgets/comment_avatar.dart';
 import 'package:app/components/svg_icon/index.dart';
-import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/util/language_util/index.dart';
 
@@ -119,6 +118,8 @@ class CommentItem extends StatelessWidget {
     required Color nickname_color,
   }) {
     final bool is_highlighted = highlighted_comment_id == comment.id;
+    // 已删除评论禁用所有交互
+    final bool is_disabled = comment.is_sending || comment.is_disliked || comment.is_deleted;
 
     return _HighlightWrapper(
       highlighted: is_highlighted,
@@ -130,11 +131,10 @@ class CommentItem extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               key: ValueKey<String>('comment_item_tap_${comment.id}'),
-              // 发送中或已折叠禁用点击和长按
-              onTap: comment.is_sending || comment.is_disliked
+              onTap: is_disabled
                   ? null
                   : () => on_reply(comment, target_context),
-              onLongPress: comment.is_sending || comment.is_disliked || on_long_press == null
+              onLongPress: is_disabled || on_long_press == null
                   ? null
                   : () => on_long_press!(comment),
               child: Padding(
@@ -218,6 +218,8 @@ class CommentItem extends StatelessWidget {
     required Color nickname_color,
   }) {
     final bool is_highlighted = highlighted_comment_id == reply.id;
+    // 已删除回复禁用所有交互
+    final bool is_disabled = reply.is_deleted;
 
     return _HighlightWrapper(
       highlighted: is_highlighted,
@@ -229,8 +231,8 @@ class CommentItem extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               key: ValueKey<String>('comment_reply_tap_${reply.id}'),
-              onTap: () => on_reply(reply, target_context),
-              onLongPress: on_long_press != null ? () => on_long_press!(reply) : null,
+              onTap: is_disabled ? null : () => on_reply(reply, target_context),
+              onLongPress: is_disabled || on_long_press == null ? null : () => on_long_press!(reply),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: CommentListStyle.list_horizontal_padding,
@@ -356,6 +358,7 @@ class CommentItem extends StatelessWidget {
   /// 构建正文；回复其他用户时保留明确的回复关系。
   ///
   /// 不喜欢的评论显示折叠样式，保留头像和昵称。
+  /// 已删除的评论显示"已删除"标记，保留头像和昵称。
   Widget _build_content_text({
     required CommentData target,
     required bool is_reply,
@@ -370,6 +373,17 @@ class CommentItem extends StatelessWidget {
       fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
       color: content_color,
     );
+
+    // 已删除的评论显示删除提示
+    if (target.is_deleted) {
+      return Text(
+        tr('comment.deleted'),
+        style: content_style.copyWith(
+          color: content_style.color?.withValues(alpha: 0.4),
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
 
     // 不喜欢的评论显示折叠提示
     if (target.is_disliked) {
@@ -483,8 +497,8 @@ class CommentItem extends StatelessWidget {
                 ),
                 const SizedBox(width: CommentListStyle.action_spacing),
               ],
-              // 已折叠评论不显示回复按钮
-              if (!target.is_disliked)
+              // 已折叠或已删除评论不显示回复按钮
+              if (!target.is_disliked && !target.is_deleted)
                 Flexible(
                   child: Text(
                     tr('comment.reply'),
@@ -502,10 +516,10 @@ class CommentItem extends StatelessWidget {
             ],
           ),
         ),
-        // 发送中显示沙漏动画，已折叠显示置灰点赞，否则显示可点击点赞
+        // 发送中显示沙漏动画，已折叠/已删除显示置灰点赞，否则显示可点击点赞
         target.is_sending
             ? _SendingIndicator(is_dark: is_dark)
-            : target.is_disliked
+            : (target.is_disliked || target.is_deleted)
                 ? _DisabledLikeButton(
                     is_dark: is_dark,
                     like_count: target.like_count,

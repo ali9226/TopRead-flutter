@@ -2042,13 +2042,14 @@ class _ReadPageState extends State<ReadPage>
       selection: selection,
       is_dark: device_info.dark.value,
       is_current: () => mounted && !_is_chapter_transaction_active,
-      resolve_anchor: () => logic.resolve_paragraph_anchor(item),
+      resolve_anchor: () => logic.resolve_paragraph_anchor(item, novel_id: widget.story_id),
       on_send: (anchor, text, images) => logic.send_paragraph_comment(
         item: item,
         anchor: anchor,
         selection: selection,
         text: text,
         images: images,
+        novel_id: widget.story_id,
       ),
     );
     // 段评发送成功后，乐观更新小说总评论数

@@ -28,6 +28,7 @@ class ParagraphComment {
   final int reply_count;
   final int like_count;
   final bool is_liked;
+  final bool is_deleted;
 
   const ParagraphComment({
     required this.id,
@@ -44,6 +45,7 @@ class ParagraphComment {
     this.reply_count = 0,
     this.like_count = 0,
     this.is_liked = false,
+    this.is_deleted = false,
   });
 
   factory ParagraphComment.from_json(Map<String, dynamic> json) {
@@ -72,6 +74,7 @@ class ParagraphComment {
       reply_count: parse_paragraph_int(json['reply_count']),
       like_count: parse_paragraph_int(json['like_count']),
       is_liked: parse_paragraph_bool(json['is_liked']),
+      is_deleted: parse_paragraph_bool(json['is_deleted']),
     );
   }
 
@@ -80,6 +83,7 @@ class ParagraphComment {
     int? reply_count,
     int? like_count,
     bool? is_liked,
+    bool? is_deleted,
   }) => ParagraphComment(
     id: id,
     user_id: user_id,
@@ -95,6 +99,7 @@ class ParagraphComment {
     reply_count: reply_count ?? this.reply_count,
     like_count: like_count ?? this.like_count,
     is_liked: is_liked ?? this.is_liked,
+    is_deleted: is_deleted ?? this.is_deleted,
   );
 }
 
@@ -173,11 +178,13 @@ class ParagraphCommentApi {
   }
 
   static Future<ParagraphCommentListResponse> inquire({
+    required int novel_id,
     required int paragraph_id,
     int? parent_id,
     int page = 1,
     int page_size = 20,
   }) async => ParagraphCommentListResponse.from_json(await _request('inquire', {
+    'novel_id': novel_id,
     'paragraph_id': paragraph_id,
     'parent_id': ?parent_id,
     'page': page,
@@ -185,29 +192,34 @@ class ParagraphCommentApi {
   }));
 
   static Future<ParagraphCommentMutationResult> create_result({
+    required int novel_id,
     required int paragraph_id,
     required String content,
     List<String> images = const [],
   }) async => ParagraphCommentMutationResult.from_json(await _request('create', {
+    'novel_id': novel_id,
     'paragraph_id': paragraph_id,
     'content': content,
     'images': images,
   }));
 
   static Future<int> create({
+    required int novel_id,
     required int paragraph_id,
     required String content,
     List<String> images = const [],
   }) async => (await create_result(
-    paragraph_id: paragraph_id, content: content, images: images,
+    novel_id: novel_id, paragraph_id: paragraph_id, content: content, images: images,
   )).comment_id;
 
   static Future<ParagraphCommentMutationResult> reply_result({
+    required int novel_id,
     required int paragraph_id,
     required int parent_id,
     required String content,
     List<String> images = const [],
   }) async => ParagraphCommentMutationResult.from_json(await _request('reply', {
+    'novel_id': novel_id,
     'paragraph_id': paragraph_id,
     'parent_id': parent_id,
     'content': content,
@@ -215,31 +227,33 @@ class ParagraphCommentApi {
   }));
 
   static Future<int> reply({
+    required int novel_id,
     required int paragraph_id,
     required int parent_id,
     required String content,
     List<String> images = const [],
   }) async => (await reply_result(
-    paragraph_id: paragraph_id,
-    parent_id: parent_id,
-    content: content,
-    images: images,
+    novel_id: novel_id, paragraph_id: paragraph_id, parent_id: parent_id,
+    content: content, images: images,
   )).comment_id;
 
   static Future<ParagraphCommentMutationResult> delete_result({
+    required int novel_id,
     required int comment_id,
   }) async => ParagraphCommentMutationResult.from_json(
-    await _request('delete', {'comment_id': comment_id}),
+    await _request('delete', {'novel_id': novel_id, 'comment_id': comment_id}),
   );
 
-  static Future<void> delete({required int comment_id}) async {
-    await delete_result(comment_id: comment_id);
+  static Future<void> delete({required int novel_id, required int comment_id}) async {
+    await delete_result(novel_id: novel_id, comment_id: comment_id);
   }
 
   static Future<Map<String, dynamic>> like({
+    required int novel_id,
     required int comment_id,
     bool? liked,
   }) => _request('like', {
+    'novel_id': novel_id,
     'comment_id': comment_id,
     'liked': ?liked,
   });
@@ -250,28 +264,29 @@ class ParagraphCommentRepository {
   const ParagraphCommentRepository();
 
   Future<ParagraphCommentListResponse> inquire({
-    required int paragraph_id, int? parent_id, int page = 1,
+    required int novel_id, required int paragraph_id, int? parent_id, int page = 1,
   }) => ParagraphCommentApi.inquire(
-    paragraph_id: paragraph_id, parent_id: parent_id, page: page,
+    novel_id: novel_id, paragraph_id: paragraph_id, parent_id: parent_id, page: page,
   );
 
   Future<ParagraphCommentMutationResult> submit({
+    required int novel_id,
     required int paragraph_id,
     required String content,
     int? parent_id,
     List<String> images = const [],
   }) => parent_id == null
       ? ParagraphCommentApi.create_result(
-          paragraph_id: paragraph_id, content: content, images: images,
+          novel_id: novel_id, paragraph_id: paragraph_id, content: content, images: images,
         )
       : ParagraphCommentApi.reply_result(
-          paragraph_id: paragraph_id, parent_id: parent_id,
+          novel_id: novel_id, paragraph_id: paragraph_id, parent_id: parent_id,
           content: content, images: images,
         );
 
-  Future<ParagraphCommentMutationResult> delete(int comment_id) =>
-      ParagraphCommentApi.delete_result(comment_id: comment_id);
+  Future<ParagraphCommentMutationResult> delete(int novel_id, int comment_id) =>
+      ParagraphCommentApi.delete_result(novel_id: novel_id, comment_id: comment_id);
 
-  Future<Map<String, dynamic>> like(int comment_id, bool liked) =>
-      ParagraphCommentApi.like(comment_id: comment_id, liked: liked);
+  Future<Map<String, dynamic>> like(int novel_id, int comment_id, bool liked) =>
+      ParagraphCommentApi.like(novel_id: novel_id, comment_id: comment_id, liked: liked);
 }
