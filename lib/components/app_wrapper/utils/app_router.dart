@@ -248,6 +248,13 @@ class AppRouter {
     _notifyRouteChanged();
   }
 
+  // TODO 强制跳转，无视 _shouldSkipNavigation 检查。
+  // 仅用于删除账号等需要清栈回首页的场景。
+  static void forceGo(String location) {
+    _router.go(location);
+    _notifyRouteChanged();
+  }
+
   // TODO 在当前栈顶继续压入一个新路由。
   static void push(String location) {
     if (_shouldSkipNavigation(location)) {

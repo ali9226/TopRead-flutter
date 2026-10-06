@@ -37,4 +37,33 @@ void main() {
     expect(invoked_methods, <String>['getTrackingAuthorizationStatus']);
     expect(status, AppTrackingAuthorizationStatus.denied);
   });
+
+  test('ATT 兜底请求返回授权后的状态', () async {
+    final List<String> invoked_methods = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (MethodCall call) async {
+          invoked_methods.add(call.method);
+          if (call.method == 'requestTrackingAuthorization') {
+            return 'authorized';
+          }
+          return null;
+        });
+
+    final AppTrackingAuthorizationStatus status =
+        await AppTrackingTransparencyPermissionRequest
+            .request_tracking_authorization();
+
+    expect(invoked_methods, <String>['requestTrackingAuthorization']);
+    expect(status, AppTrackingAuthorizationStatus.authorized);
+  });
+
+  test('非 iOS 平台调用兜底请求返回 unknown', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+
+    final AppTrackingAuthorizationStatus status =
+        await AppTrackingTransparencyPermissionRequest
+            .request_tracking_authorization();
+
+    expect(status, AppTrackingAuthorizationStatus.unknown);
+  });
 }

@@ -1,5 +1,4 @@
 // ignore_for_file: non_constant_identifier_names
-
 import 'package:app/components/bottom_sheet_drag_handle/index.dart';
 import 'package:app/components/login_required_dialog/index.dart';
 import 'package:app/components/paragraph_comment_composer/index.dart';

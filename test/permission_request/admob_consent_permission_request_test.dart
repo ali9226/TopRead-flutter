@@ -47,7 +47,6 @@ void main() {
   });
 
   test('启动和多个广告位并发请求时只执行一次 UMP 流程', () async {
-    // 模拟首页瀑布流广告在根组件首帧回调之前先进入 initState。
     final List<Future<bool>> ad_requests = <Future<bool>>[
       AdMobConsentPermissionRequest.request_before_ad(),
       AdMobConsentPermissionRequest.request_before_ad(),
@@ -115,14 +114,18 @@ void main() {
     expect(result.can_continue_to_notification_permission, isTrue);
   });
 
-  test('日本等非欧盟地区的 iOS 首次 ATT 完成后，本次启动不再弹通知权限', () async {
+  test('iOS: UMP 触发 ATT 后检测到状态变化', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     fake_consent_information.consent_status = ConsentStatus.notRequired;
-    final List<String> att_statuses = <String>['notDetermined', 'denied'];
+    bool ump_att_triggered = false;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(advertising_info_channel, (MethodCall call) {
           if (call.method == 'getTrackingAuthorizationStatus') {
-            return Future<String>.value(att_statuses.removeAt(0));
+            if (!ump_att_triggered) {
+              ump_att_triggered = true;
+              return Future<String>.value('notDetermined');
+            }
+            return Future<String>.value('denied');
           }
           return Future<Object?>.value(null);
         });
@@ -132,6 +135,24 @@ void main() {
 
     expect(result.did_present_privacy_prompt, isTrue);
     expect(result.can_continue_to_notification_permission, isFalse);
+  });
+
+  test('iOS: UMP 未触发 ATT 时状态不变，可继续检查通知权限', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    fake_consent_information.consent_status = ConsentStatus.notRequired;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(advertising_info_channel, (MethodCall call) {
+          if (call.method == 'getTrackingAuthorizationStatus') {
+            return Future<String>.value('authorized');
+          }
+          return Future<Object?>.value(null);
+        });
+
+    final AdMobStartupPrivacyResult result =
+        await AdMobConsentPermissionRequest.initialize_on_app_start_with_result();
+
+    expect(result.did_present_privacy_prompt, isFalse);
+    expect(result.can_continue_to_notification_permission, isTrue);
   });
 
   test('UMP 返回未知状态但没有权限界面时，启动流程仍可继续检查通知权限', () async {

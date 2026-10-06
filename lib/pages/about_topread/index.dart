@@ -301,8 +301,11 @@ class _AboutTopReadState extends State<AboutTopRead> {
     }
   }
 
+  bool _isDeleting = false;
+
   /// 处理删除账户操作。
   void _handleDeleteAccount() {
+    if (_isDeleting) return;
     showMessage(
       message:
           '${easy.tr('UserInfo.delete_account_confirm_title')}\n\n${easy.tr('UserInfo.delete_account_confirm_message')}',
@@ -311,18 +314,25 @@ class _AboutTopReadState extends State<AboutTopRead> {
       rightButtonColor: ColorConstants.dangerColor,
       iconColor: ColorConstants.dangerColor,
       onRightPressed: () async {
-        final bool success = await logic.deleteAccount();
-        if (!success) return;
+        if (_isDeleting) return;
+        _isDeleting = true;
+        try {
+          final bool success = await logic.deleteAccount();
+          if (!success) return;
 
-        if (!mounted) return;
-        showMessage(
-          message: easy.tr('UserInfo.delete_account_success_message'),
-          rightButtonText: easy.tr('UserInfo.yes'),
-          allowMaskDismiss: false,
-          onRightPressed: () async {
-            routerUtil(path: '/', type: 'replace');
-          },
-        );
+          if (!mounted) return;
+          // await 确保成功弹窗关闭后才返回，避免被 showMessage 的 closeDialog 误关。
+          await showMessage(
+            message: easy.tr('UserInfo.delete_account_success_message'),
+            rightButtonText: easy.tr('UserInfo.yes'),
+            allowMaskDismiss: false,
+            onRightPressed: () async {
+              AppRouter.forceGo('/');
+            },
+          );
+        } finally {
+          _isDeleting = false;
+        }
       },
     );
   }

@@ -198,6 +198,7 @@ class _RegisterState extends State<Register> {
                   Container(
                     width: 16,
                     height: 16,
+                    alignment: Alignment.center,
                     decoration: BoxDecoration(
                       border: Border.all(
                         color: _isAgreed
@@ -217,7 +218,7 @@ class _RegisterState extends State<Register> {
                         ? const Icon(
                             Icons.check,
                             size: 12,
-                            color: Colors.white,
+                            color: Colors.black,
                           )
                         : null,
                   ),

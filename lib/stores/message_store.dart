@@ -24,7 +24,7 @@ typedef MessageListFetcher =
 
 /// 消息桶：每个筛选类型独立存储，互不干扰。
 class _MessageBucket {
-  final list = <MessageData>[].obs;
+  RxList<MessageData> list = <MessageData>[].obs;
   bool has_loaded = false;
   bool has_more = true;
   bool refresh_pending = false;
@@ -688,7 +688,8 @@ class MessageStore extends GetxController {
     _list_refresh_pending = false;
     for (final bucket in _buckets.values) {
       bucket.data_revision++;
-      bucket.list.clear();
+      // 整个替换 RxList 实例，避免内部固定长度列表的 clear/assignAll 异常。
+      bucket.list = <MessageData>[].obs;
       bucket.has_loaded = false;
       bucket.has_more = true;
       bucket.refresh_pending = false;

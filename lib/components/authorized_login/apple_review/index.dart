@@ -188,7 +188,7 @@ class _AppleReviewLoginViewState extends State<AppleReviewLoginView> {
                       color: device_info.dark.value
                           ? ColorConstants.nightTextColor
                           : ColorConstants.lightTextColor,
-                      fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                      fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

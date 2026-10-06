@@ -199,10 +199,12 @@ Future<void> showMessage({
                           isProcessing = true;
                         });
                         try {
-                          await closeDialog();
+                          // 先执行回调（loading 期间弹窗保持打开），
+                          // 回调内如需弹新弹窗请 await，否则 closeDialog 会误关新弹窗。
                           if (onRightPressed != null) {
                             await onRightPressed();
                           }
+                          await closeDialog();
                         } finally {
                           if (!completer.isCompleted) {
                             completer.complete();

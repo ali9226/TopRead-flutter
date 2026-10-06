@@ -12,10 +12,10 @@ enum AppTrackingAuthorizationStatus {
   unknown,
 }
 
-/// iOS ATT 权限状态读取器。
+/// iOS ATT 权限状态读取器与请求器。
 ///
-/// ATT 系统弹窗的唯一触发方是 UMP 的 IDFA 铺垫消息。业务代码和调试页
-/// 只能读取状态，不得直接请求 ATT，否则会跳过 AdMob 后台配置的铺垫消息。
+/// 正常流程：ATT 系统弹窗由 UMP 的 IDFA 铺垫消息触发。
+/// 兜底流程：UMP 完成后若 ATT 状态仍为 notDetermined，则由本类直接请求。
 class AppTrackingTransparencyPermissionRequest {
   const AppTrackingTransparencyPermissionRequest._();
 
@@ -42,6 +42,30 @@ class AppTrackingTransparencyPermissionRequest {
       logUtil(msg: 'ATT: 原生状态读取失败 $error', type: 'e');
     } catch (error) {
       logUtil(msg: 'ATT: 状态读取异常 $error', type: 'e');
+    }
+    return AppTrackingAuthorizationStatus.unknown;
+  }
+
+  /// 直接调用 iOS ATT 系统弹窗，返回授权后的状态。
+  ///
+  /// 仅在 UMP 未触发 ATT 时作为兜底调用；iOS 外平台直接返回 unknown。
+  static Future<AppTrackingAuthorizationStatus>
+  request_tracking_authorization() async {
+    if (!isIOSApp) return AppTrackingAuthorizationStatus.unknown;
+
+    try {
+      final String? value = await _channel.invokeMethod<String>(
+        'requestTrackingAuthorization',
+      );
+      final AppTrackingAuthorizationStatus status = _parse_status(value);
+      logUtil(msg: 'ATT: 兜底请求授权后状态 ${status.name}');
+      return status;
+    } on MissingPluginException catch (error) {
+      logUtil(msg: 'ATT: 原生通道未注册 $error', type: 'e');
+    } on PlatformException catch (error) {
+      logUtil(msg: 'ATT: 兜底请求授权失败 $error', type: 'e');
+    } catch (error) {
+      logUtil(msg: 'ATT: 兜底请求授权异常 $error', type: 'e');
     }
     return AppTrackingAuthorizationStatus.unknown;
   }

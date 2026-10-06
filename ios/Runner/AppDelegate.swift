@@ -877,6 +877,9 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     }
   }
 
+  /// 当 UMP 未触发 ATT 系统弹窗时，由 Dart 层兜底调用此方法直接请求 ATT 授权。
+  private static let requestTrackingAuthorizationMethod = "requestTrackingAuthorization"
+
   private func handleAdvertisingInfoMethodCall(
     _ call: FlutterMethodCall,
     result: @escaping FlutterResult
@@ -888,8 +891,25 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
       result(isLimitAdTrackingEnabled())
     case Self.getTrackingAuthorizationStatusMethod:
       result(trackingAuthorizationStatusName(ATTrackingManager.trackingAuthorizationStatus))
+    case Self.requestTrackingAuthorizationMethod:
+      requestTrackingAuthorization(result: result)
     default:
       result(FlutterMethodNotImplemented)
+    }
+  }
+
+  /// 直接调用 iOS ATT 系统弹窗，返回授权后的状态字符串。
+  ///
+  /// 仅在 ATT 状态为 notDetermined 时调用，其他状态直接返回当前状态。
+  private func requestTrackingAuthorization(result: @escaping FlutterResult) {
+    guard ATTrackingManager.trackingAuthorizationStatus == .notDetermined else {
+      result(trackingAuthorizationStatusName(ATTrackingManager.trackingAuthorizationStatus))
+      return
+    }
+    ATTrackingManager.requestTrackingAuthorization { status in
+      DispatchQueue.main.async {
+        result(self.trackingAuthorizationStatusName(status))
+      }
     }
   }
 

@@ -31,8 +31,9 @@ class AdMobStartupPrivacyResult {
 /// 1. Android 和 iOS 每次冷启动的第一帧完成后调用
 ///    [initialize_on_app_start]。
 /// 2. 先刷新用户所在地区与同意状态，再展示必要的 UMP 表单。
-/// 3. iOS 的 IDFA 铺垫消息和后续 ATT 系统弹窗交给 UMP 统一触发；
-///    App 不再主动抢先请求 ATT。
+/// 3. iOS 的 IDFA 铺垫消息和后续 ATT 系统弹窗交给 UMP 统一触发。
+/// 4. 苹果审核模式下的 ATT 弹窗由 app_wrapper 在启动流程中直接处理，
+///    不经过本类。
 ///
 /// 广告触发逻辑：
 /// 1. 每个广告位在加载前调用 [request_before_ad]。
@@ -41,7 +42,7 @@ class AdMobStartupPrivacyResult {
 /// 3. 只有 UMP 返回允许请求广告时，才允许初始化 Google Mobile Ads SDK。
 ///
 /// 隐私选项触发逻辑：
-/// 1. “关于 TopRead”页面通过 [is_privacy_options_required] 判断是否需要入口。
+/// 1. "关于 TopRead"页面通过 [is_privacy_options_required] 判断是否需要入口。
 /// 2. 用户点击入口后调用 [show_privacy_options_form] 修改或撤回选择。
 class AdMobConsentPermissionRequest {
   const AdMobConsentPermissionRequest._();
@@ -166,6 +167,11 @@ class AdMobConsentPermissionRequest {
   }
 
   /// 刷新同意状态、展示必要表单并读取最终广告请求权限。
+  ///
+  /// 流程：
+  /// 1. 记录 UMP 和 ATT 的初始状态
+  /// 2. UMP 展示必要的法规/IDFA 表单（iOS 上可能链式触发 ATT）
+  /// 3. 通过前后状态对比判断本次是否出现了权限界面
   static Future<AdMobStartupPrivacyResult> _request_before_ad_internal() async {
     // 首页广告位可能先于根组件首帧进入 initState。等根组件开始启动权限
     // 协调后再联网刷新 UMP，便于统一观察网络、UMP、IDFA 和 ATT 弹窗。
@@ -209,12 +215,10 @@ class AdMobConsentPermissionRequest {
           ? await ConsentInformation.instance.getConsentStatus()
           : ConsentStatus.unknown;
       final AppTrackingAuthorizationStatus att_status_after =
-          did_update && isIOSApp
+          isIOSApp
           ? await AppTrackingTransparencyPermissionRequest.get_authorization_status()
           : AppTrackingAuthorizationStatus.unknown;
-      // google_mobile_ads 目前不会返回“表单是否实际出现”的布尔值。
-      // 因此用调用前后的 UMP/ATT 状态变化判断用户本次是否完成了权限界面；
-      // iOS 网络等系统弹窗则由根组件的 App 生命周期监听补充判断。
+      // 判断本次是否出现了权限界面：UMP 法规表单或 ATT 弹窗任一出现即可。
       final bool did_present_privacy_prompt =
           (consent_status_before == ConsentStatus.required &&
               consent_status_after != ConsentStatus.required) ||

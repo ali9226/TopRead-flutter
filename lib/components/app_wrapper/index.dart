@@ -18,7 +18,10 @@ import 'package:app/components/splash_screen/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/permission_request/admob_consent_permission_request.dart';
+import 'package:app/permission_request/app_tracking_transparency_permission_request.dart';
 import 'package:app/permission_request/notification_permission_request.dart';
+import 'package:app/stores/project_config_store.dart';
+import 'package:app/util/device/app_environment.dart';
 import 'package:app/stores/bottom_navigation_info.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/util/ad_display_policy.dart';
@@ -112,15 +115,66 @@ class _AppWrapperState extends State<AppWrapper> {
   }
 
   Future<void> _run_startup_permission_flow() async {
-    // 等待远端广告平台开关；关闭或超时时均跳过 UMP 初始化。
+    // 等待远端广告平台配置加载完成。
     final bool can_show_ads = await AdDisplayPolicy.wait_until_resolved();
     if (!mounted) return;
-    if (!can_show_ads) {
-      // 仅检查通知权限。
+
+    final ProjectConfigStore config_store = Get.find<ProjectConfigStore>();
+    final bool is_review_mode = config_store.is_config_loaded.value &&
+        config_store.current.is_apple_review_mode;
+
+    // ---- 广告关闭 + 非审核模式：跳过所有隐私流程 ----
+    if (!can_show_ads && !is_review_mode) {
       await NotificationPermissionRequest.request_on_app_start_if_needed();
       return;
     }
 
+    // ---- 广告关闭 + 审核模式 + iOS：仅请求 ATT ----
+    // 审核期间必须展示 ATT 弹窗，即使广告开关关闭也不能跳过。
+    if (!can_show_ads && is_review_mode && isIOSApp) {
+      await _request_att_if_needed();
+      if (!mounted) return;
+      await NotificationPermissionRequest.request_on_app_start_if_needed();
+      return;
+    }
+
+    // ---- 广告开启 + 审核模式：跳过 UMP，iOS 直接请求 ATT ----
+    if (can_show_ads && is_review_mode) {
+      if (isIOSApp) {
+        await _request_att_if_needed();
+        if (!mounted) return;
+      }
+      // Android 审核模式走正常 UMP 流程（UMP 会展示同意表单）。
+      if (!isIOSApp) {
+        final bool can_continue = await _run_ump_flow();
+        if (!mounted || !can_continue) return;
+      }
+      await NotificationPermissionRequest.request_on_app_start_if_needed();
+      return;
+    }
+
+    // ---- 广告开启 + 非审核模式：正常 UMP 流程 ----
+    final bool can_continue = await _run_ump_flow();
+    if (!mounted || !can_continue) return;
+    await NotificationPermissionRequest.request_on_app_start_if_needed();
+  }
+
+  /// iOS ATT 弹窗：仅在未决定时请求，已决定则跳过。
+  Future<void> _request_att_if_needed() async {
+    final AppTrackingAuthorizationStatus att_status =
+        await AppTrackingTransparencyPermissionRequest
+            .get_authorization_status();
+    if (att_status == AppTrackingAuthorizationStatus.not_determined) {
+      await AppTrackingTransparencyPermissionRequest
+          .request_tracking_authorization();
+    }
+  }
+
+  /// UMP 流程：展示法规表单，iOS 上可能链式触发 ATT。
+  ///
+  /// 返回 true 表示本次没有出现系统弹窗，可以继续检查通知权限；
+  /// 返回 false 表示已有弹窗出现，应跳过通知权限。
+  Future<bool> _run_ump_flow() async {
     bool did_present_system_prompt = false;
     final AppLifecycleListener lifecycle_listener = AppLifecycleListener(
       onStateChange: (AppLifecycleState state) {
@@ -139,12 +193,11 @@ class _AppWrapperState extends State<AppWrapper> {
       lifecycle_listener.dispose();
     }
 
-    if (!mounted ||
-        did_present_system_prompt ||
+    if (did_present_system_prompt ||
         !privacy_result.can_continue_to_notification_permission) {
-      return;
+      return false;
     }
-    await NotificationPermissionRequest.request_on_app_start_if_needed();
+    return true;
   }
 
   @override
