@@ -58,6 +58,9 @@ class ReadContent extends StatelessWidget {
   /// 当前小说是否正在请求原生广告配置。
   final bool is_native_ad_config_loading;
 
+  /// 广告业务开关，关闭时仍保留广告位身份以安全补偿上方高度。
+  final bool native_ads_enabled;
+
   /// 原生广告产生真实展示后的统计回调。
   final VoidCallback? on_native_ad_impression;
 
@@ -88,6 +91,7 @@ class ReadContent extends StatelessWidget {
     this.on_focus_changed,
     this.native_ad_config,
     this.is_native_ad_config_loading = false,
+    this.native_ads_enabled = true,
     this.on_native_ad_impression,
     this.ads_read_video_ad_probability = 0,
     required this.ad_free_expire_time_listenable,
@@ -150,8 +154,6 @@ class ReadContent extends StatelessWidget {
 
   /// 为当前阅读窗口计算每个命中章节的广告段落位置。
   Map<int, int> _resolve_native_ad_insert_indexes() {
-    if (!AdDisplayPolicy.can_show_ads()) return <int, int>{};
-
     const String log_prefix = '[ReadNativeAd]';
     final Map<int, int> insert_indexes = <int, int>{};
     final Map<int, List<int>> paragraph_lengths =
@@ -196,6 +198,7 @@ class ReadContent extends StatelessWidget {
   /// 基于 project_config 中的 [ads_read_video_ad_probability] 概率值判断，
   /// 0 表示不展示，100 表示必定展示，其余值按百分比随机。
   bool _should_show_video_ad_hint(int chapter_index) {
+    if (!native_ads_enabled || !AdDisplayPolicy.can_show_ads()) return false;
     if (ads_read_video_ad_probability <= 0) return false;
     if (ads_read_video_ad_probability >= 100) return true;
     return logic.resolve_chapter_video_ad_hint_decision(
@@ -368,6 +371,13 @@ class ReadContent extends StatelessWidget {
     return ViewportAwareInlineNativeAdBanner(
       key: ValueKey<String>('read-native-ad-$chapter_index'),
       scroll_controller: scroll_controller,
+      is_enabled: native_ads_enabled && AdDisplayPolicy.can_show_ads(),
+      layout_revision: (
+        logic.body_font_size.value,
+        logic.should_show_introduction,
+        logic.min_loaded_chapter_index,
+        logic.loaded_chapter_index,
+      ),
       ad_unit_id: native_ad_config?.adsId ?? '',
       uuid: native_ad_config?.uuid ?? '',
       badge_text_key: 'short_story_read.ad_free',

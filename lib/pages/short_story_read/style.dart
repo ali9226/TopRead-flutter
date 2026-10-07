@@ -129,9 +129,6 @@ class ShortStoryReadStyle {
   /// 计算广告可视区域时，阅读视口顶部的额外安全间距。
   static const double native_ad_viewport_top_spacing = 12.0;
 
-  /// 广告顶部进入屏幕底部该高度后立即挂载平台视图。
-  static const double native_ad_minimum_visible_extent = 24.0;
-
   /// CJK 语系解锁区域高度。
   static const double unlock_gate_height_cjk = 160.0;
 
@@ -345,10 +342,12 @@ class ShortStoryReadStyle {
   static const Color decoration_light_color = Color(0x0A000000);
 
   /// 目录弹窗背景色（日间模式，与首页背景色一致）。
-  static Color get catalog_sheet_light_bg => ColorConstants.sheetBackground(false);
+  static Color get catalog_sheet_light_bg =>
+      ColorConstants.sheetBackground(false);
 
   /// 目录弹窗背景色（夜间模式，与首页背景色一致）。
-  static Color get catalog_sheet_dark_bg => ColorConstants.sheetBackground(true);
+  static Color get catalog_sheet_dark_bg =>
+      ColorConstants.sheetBackground(true);
 
   /// 点赞激活颜色。
   static const Color like_active_color = Color(0xFFFF6B6B);

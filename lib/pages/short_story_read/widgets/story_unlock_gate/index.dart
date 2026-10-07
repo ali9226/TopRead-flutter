@@ -10,7 +10,7 @@ import 'unlock_overlay.dart';
 
 /// 短篇小说正文的激励广告解锁区域。
 ///
-/// 解锁前只展示大约二分之一的正文，并在折叠位置使用渐变遮罩和
+/// 解锁前按配置比例预览正文，并在折叠位置使用渐变遮罩和
 /// 观看广告按钮。解锁后直接展示完整正文。
 class StoryUnlockGate extends StatelessWidget {
   const StoryUnlockGate({
@@ -22,6 +22,7 @@ class StoryUnlockGate extends StatelessWidget {
     required this.font_size,
     required this.on_unlock,
     this.native_ad_widget,
+    this.native_ad_insert_index,
     this.paragraph_anchors = const [],
     this.on_paragraph_comment,
     this.on_paragraph_share,
@@ -57,6 +58,9 @@ class StoryUnlockGate extends StatelessWidget {
   /// 非空时在正文 1/3 位置插入原生广告。
   final Widget? native_ad_widget;
 
+  /// 当前广告已确定的段落边界，锁定预览切换到全文时保持不变。
+  final int? native_ad_insert_index;
+
   /// 段评回调只绑定实际展示的正文，不渲染未解锁段落。
   final List<ParagraphAnchor> paragraph_anchors;
   final void Function(StoryParagraph, TextSelection)? on_paragraph_comment;
@@ -86,6 +90,7 @@ class StoryUnlockGate extends StatelessWidget {
         is_loading: is_loading,
         font_size: font_size,
         native_ad_widget: native_ad_widget,
+        native_ad_insert_index: native_ad_insert_index,
         paragraph_anchors: paragraph_anchors,
         on_paragraph_comment: on_paragraph_comment,
         on_paragraph_share: on_paragraph_share,
@@ -113,6 +118,7 @@ class StoryUnlockGate extends StatelessWidget {
         is_dark: is_dark,
         font_size: font_size,
         native_ad_widget: native_ad_widget,
+        native_ad_insert_index: native_ad_insert_index,
         paragraph_anchors: paragraph_anchors,
         on_paragraph_comment: on_paragraph_comment,
         on_paragraph_share: on_paragraph_share,
@@ -141,6 +147,7 @@ class StoryUnlockGate extends StatelessWidget {
               is_dark: is_dark,
               font_size: font_size,
               native_ad_widget: native_ad_widget,
+              native_ad_insert_index: native_ad_insert_index,
               paragraph_anchors: paragraph_anchors,
               on_paragraph_comment: on_paragraph_comment,
               on_paragraph_share: on_paragraph_share,

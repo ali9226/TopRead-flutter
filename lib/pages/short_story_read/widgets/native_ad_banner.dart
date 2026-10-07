@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:app/components/inline_native_ad/style.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/permission_request/admob_consent_permission_request.dart';
@@ -49,6 +50,9 @@ class NativeAdBanner extends StatefulWidget {
   /// 广告未加载或尚未允许挂载时是否保留完整广告位高度。
   final bool reserve_space;
 
+  /// 是否绘制加载骨架；关闭时仅在已提交的广告位保持空白尺寸。
+  final bool show_placeholder;
+
   /// 是否在广告卡片下方显示继续滑动提示。
   final bool show_continue_hint;
 
@@ -73,6 +77,7 @@ class NativeAdBanner extends StatefulWidget {
     this.badge_text_key = 'short_story_read.unlock',
     this.attach_ad = true,
     this.reserve_space = false,
+    this.show_placeholder = true,
     this.show_continue_hint = true,
     this.on_load_status_changed,
     this.on_layout_height_changed,
@@ -123,9 +128,6 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
   /// 最近一次广告请求使用的卡片宽度。
   double? _requested_card_width;
 
-  /// 最近一次广告请求使用的主题模式。
-  bool? _requested_is_dark;
-
   /// 下一帧待使用的卡片宽度。
   double? _pending_card_width;
 
@@ -142,19 +144,19 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
   String? _media_type;
 
   /// 广告区域顶部间距。
-  static const double _spacing_top = 12.0;
+  static const double _spacing_top = InlineNativeAdStyle.spacing_top;
 
   /// 广告区域底部间距。
-  static const double _spacing_bottom = 16.0;
+  static const double _spacing_bottom = InlineNativeAdStyle.spacing_bottom;
 
   /// 提示文字与广告之间的间距。
-  static const double _hint_spacing = 18.0;
+  static const double _hint_spacing = InlineNativeAdStyle.hint_spacing;
 
   /// 提示文字字号。
-  static const double _hint_font_size = 12.0;
+  static const double _hint_font_size = InlineNativeAdStyle.hint_font_size;
 
   /// 提示文字行高。
-  static const double _hint_height = 1.4;
+  static const double _hint_height = InlineNativeAdStyle.hint_height;
 
   @override
   void initState() {
@@ -180,7 +182,8 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
   void didUpdateWidget(NativeAdBanner old_widget) {
     super.didUpdateWidget(old_widget);
     // 广告单元 ID 变化时重新加载。
-    if (old_widget.ad_unit_id != widget.ad_unit_id) {
+    if (old_widget.ad_unit_id != widget.ad_unit_id ||
+        old_widget.uuid != widget.uuid) {
       _dispose_ad();
       _reset_requested_layout();
       _set_load_status(NativeAdLoadStatus.idle);
@@ -222,7 +225,6 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
   /// 清空上一次布局请求，使下一次构建按当前宽度重新加载广告。
   void _reset_requested_layout() {
     _requested_card_width = null;
-    _requested_is_dark = null;
     _pending_card_width = null;
     _pending_is_dark = null;
     _ad_height = _fallback_ad_height;
@@ -246,9 +248,12 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
     }
   }
 
-  /// 更新加载状态，并只在状态真正变化时通知父组件。
-  void _set_load_status(NativeAdLoadStatus status) {
-    if (_load_status == status) return;
+  /// 更新加载状态；新请求即使仍是 loading 也必须失效父级旧素材尺寸。
+  void _set_load_status(
+    NativeAdLoadStatus status, {
+    bool force_notify = false,
+  }) {
+    if (_load_status == status && !force_notify) return;
     _load_status = status;
     widget.on_load_status_changed?.call(status);
   }
@@ -267,7 +272,7 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
     }
 
     final int generation = ++_load_generation;
-    _set_load_status(NativeAdLoadStatus.loading);
+    _set_load_status(NativeAdLoadStatus.loading, force_notify: true);
     try {
       // 全 App 的所有广告位共享同一个 UMP 门禁和 SDK 初始化 Future。
       // 未来首页瀑布流同时创建多个广告卡片时也不会重复弹窗。
@@ -335,6 +340,11 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
           onAdOpened: (Ad ad) => _log('原生广告被点击'),
           onAdClosed: (Ad ad) => _log('原生广告被关闭'),
           onAdImpression: (Ad ad) {
+            if (!mounted ||
+                generation != _load_generation ||
+                !identical(_native_ad, ad)) {
+              return;
+            }
             unawaited(_log_native_ad_impression(generation));
             widget.on_ad_impression?.call();
           },
@@ -366,7 +376,10 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
     }
   }
 
-  /// 在布局宽度或主题变化后，于当前构建帧结束时重建原生广告。
+  /// 在布局宽度变化后，于当前构建帧结束时重建原生广告。
+  ///
+  /// 原生媒体卡片使用固定的黑色遮罩，明暗主题仅影响 Flutter 外层；
+  /// 切换主题时保留当前素材，避免重新请求造成可见广告暂时消失。
   void _ensure_native_ad_requested({
     required double card_width,
     required bool is_dark,
@@ -380,9 +393,7 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
 
     final bool request_unchanged =
         _requested_card_width != null &&
-        (_requested_card_width! - card_width).abs() <
-            _layout_height_tolerance &&
-        _requested_is_dark == is_dark;
+        (_requested_card_width! - card_width).abs() < _layout_height_tolerance;
     if (request_unchanged) return;
 
     _pending_card_width = card_width;
@@ -401,14 +412,12 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
       final bool pending_request_unchanged =
           _requested_card_width != null &&
           (_requested_card_width! - pending_card_width).abs() <
-              _layout_height_tolerance &&
-          _requested_is_dark == pending_is_dark;
+              _layout_height_tolerance;
       if (pending_request_unchanged) return;
 
       _dispose_ad();
       setState(() {
         _requested_card_width = pending_card_width;
-        _requested_is_dark = pending_is_dark;
         _ad_height = _fallback_ad_height;
       });
       unawaited(
@@ -423,11 +432,13 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
   /// 应用原生端按标题、广告主和按钮实际内容测量出的安全高度。
   void _on_native_layout_measured(double height, int token) {
     if (!mounted || token != _load_generation) return;
-    if ((_ad_height - height).abs() < _layout_height_tolerance) return;
     final double resolved_height = height.ceilToDouble();
-    setState(() {
-      _ad_height = resolved_height;
-    });
+    if ((_ad_height - resolved_height).abs() >= _layout_height_tolerance) {
+      setState(() {
+        _ad_height = resolved_height;
+      });
+    }
+    // 尺寸等于 fallback 时仍须通知，父级据此确认本次素材已经测量。
     widget.on_layout_height_changed?.call(resolved_height);
   }
 
@@ -489,11 +500,15 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
   void _schedule_ad_attached_notification() {
     if (_has_reported_ad_attached) return;
     _has_reported_ad_attached = true;
+    final int generation = _load_generation;
+    final NativeAd? attached_ad = _native_ad;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted ||
-          !widget.attach_ad ||
-          !_is_ad_loaded ||
-          _native_ad == null) {
+          generation != _load_generation ||
+          !identical(_native_ad, attached_ad)) {
+        return;
+      }
+      if (!widget.attach_ad || !_is_ad_loaded || _native_ad == null) {
         _has_reported_ad_attached = false;
         return;
       }
@@ -507,6 +522,17 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
     required Color ad_bg_color,
     required Color hint_color,
   }) {
+    if (!widget.show_placeholder) {
+      return SizedBox(
+        height:
+            _spacing_top +
+            _ad_height +
+            _spacing_bottom +
+            (widget.show_continue_hint
+                ? _hint_spacing + _hint_font_size * _hint_height
+                : 0),
+      );
+    }
     final Color skeleton_color = hint_color.withValues(alpha: 0.12);
     final Color media_skeleton_color = hint_color.withValues(alpha: 0.08);
 

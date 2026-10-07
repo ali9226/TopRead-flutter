@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:convert';
 import 'package:app/pages/work_editor/single_chapter/logic.dart';
 import 'package:app/api/creator_work.dart';
@@ -19,7 +21,9 @@ class CreatorDraftPersistence {
   String? _pendingKey;
   CreatorWorkDraft? _pendingPublish;
   String? _publishKey;
-  final String _createKey = creatorRequestKey();
+  CreatorWorkDraft? _pending_create;
+  int? _create_language;
+  String? _create_key;
 
   CreatorDraftPersistence({
     CreatorWorkDraft? initialWork,
@@ -82,18 +86,36 @@ class CreatorDraftPersistence {
         return await _publishPending();
       }
       if (_novelId == null) {
+        // 创建结果不明时保留原参数；作者后续输入由取得身份后的保存请求提交。
+        _pending_create ??= work;
+        _create_language ??= languageId;
+        _create_key ??= creatorRequestKey();
         final created = await backend.create(
-          work,
-          languageId,
-          requestKey: _createKey,
+          _pending_create!,
+          _create_language!,
+          requestKey: _create_key,
         );
+        if (created.serverRejected) {
+          _pending_create = null;
+          _create_language = null;
+          _create_key = null;
+        }
         _requireSuccess(created, tr('creator_center.create_draft_failed'));
-        _novelId = _parseIntNullable(created.content?['novel_id']);
-        _revisionId = _parseIntNullable(created.content?['revision_id']);
+        final novel_id = _parseIntNullable(created.content?['novel_id']);
+        final revision_id = _parseIntNullable(created.content?['revision_id']);
+        // 不接受部分身份，避免后续永久跳过创建请求且无法补齐修订编号。
+        if (novel_id == null || revision_id == null) {
+          throw CreatorDraftException(tr('creator_center.draft_incomplete'));
+        }
+        _novelId = novel_id;
+        _revisionId = revision_id;
         _novelLanguageId = _parseIntNullable(
           created.content?['novel_language_id'],
         );
         _lockVersion = _parseIntNullable(created.content?['lock_version']) ?? 0;
+        _pending_create = null;
+        _create_language = null;
+        _create_key = null;
       }
       if (_novelId == null || _revisionId == null) {
         throw CreatorDraftException(tr('creator_center.draft_incomplete'));

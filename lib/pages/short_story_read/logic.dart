@@ -564,7 +564,10 @@ class ShortStoryReadLogic {
     paragraph_anchors.clear();
 
     try {
-      final metadata_future = get_short_story_paragraphs(novel_language_id, novel_id: story_id);
+      final metadata_future = get_short_story_paragraphs(
+        novel_language_id,
+        novel_id: story_id,
+      );
       String loaded_content = await _fetch_content_text_with_cache(
         novel_language_id,
       );
@@ -633,7 +636,10 @@ class ShortStoryReadLogic {
     if (paragraph_anchors.isEmpty) {
       final language_id = story_data.value?.novel_language_id;
       if (language_id == null) return null;
-      final metadata = await get_short_story_paragraphs(language_id, novel_id: story_id);
+      final metadata = await get_short_story_paragraphs(
+        language_id,
+        novel_id: story_id,
+      );
       if (_is_disposed ||
           metadata == null ||
           !_matches_paragraph_body(content.value, metadata)) {
@@ -916,6 +922,15 @@ class ShortStoryReadLogic {
     is_story_unlocked.value =
         _unlocked_story_ids.contains(story_id) ||
         AdDisplayPolicy.should_bypass_ads();
+  }
+
+  /// 同步程序化滚动后的方向基准，不改变导航栏或评论栏显隐。
+  ///
+  /// [offset] 补偿或定位完成后的实际偏移，后续手动滚动从这里累计距离。
+  void sync_scroll_offset(double offset) {
+    _last_scroll_offset = offset;
+    _scroll_direction_anchor_offset = offset;
+    _last_scroll_direction_down = null;
   }
 
   /// 处理滚动事件。

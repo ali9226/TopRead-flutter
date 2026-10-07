@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app/pages/short_story_read/widgets/native_ad_banner.dart';
-import 'package:app/util/native_ad_visibility.dart';
-
+import 'prepared_slot.dart';
 import 'style.dart';
 
 export 'package:app/pages/short_story_read/widgets/native_ad_banner.dart'
@@ -33,6 +32,9 @@ class InlineNativeAdBanner extends StatelessWidget {
   /// 加载期间是否保留稳定广告位高度。
   final bool reserve_space;
 
+  /// 是否绘制加载骨架；阅读页只为就绪广告预留尺寸，不展示加载占位。
+  final bool show_placeholder;
+
   /// 是否展示继续滑动提示。
   final bool show_continue_hint;
 
@@ -57,6 +59,7 @@ class InlineNativeAdBanner extends StatelessWidget {
     this.badge_text_key = 'short_story_read.unlock',
     this.attach_ad = true,
     this.reserve_space = false,
+    this.show_placeholder = true,
     this.show_continue_hint = true,
     this.on_load_status_changed,
     this.on_layout_height_changed,
@@ -74,6 +77,7 @@ class InlineNativeAdBanner extends StatelessWidget {
       badge_text_key: badge_text_key,
       attach_ad: attach_ad,
       reserve_space: reserve_space,
+      show_placeholder: show_placeholder,
       show_continue_hint: show_continue_hint,
       on_load_status_changed: on_load_status_changed,
       on_layout_height_changed: on_layout_height_changed,
@@ -83,8 +87,8 @@ class InlineNativeAdBanner extends StatelessWidget {
   }
 }
 
-/// 到达安全可视范围前只预加载素材、不挂载平台视图的原生广告位。
-class ViewportAwareInlineNativeAdBanner extends StatefulWidget {
+/// 素材提前准备，未错过段落边界时才安排广告，进入视口后首次挂载。
+class ViewportAwareInlineNativeAdBanner extends StatelessWidget {
   /// 当前阅读列表的滚动控制器。
   final ScrollController scroll_controller;
 
@@ -93,6 +97,24 @@ class ViewportAwareInlineNativeAdBanner extends StatefulWidget {
 
   /// 广告配置的唯一标识。
   final String uuid;
+
+  /// 点击徽章时触发当前阅读页的解锁流程。
+  final VoidCallback? on_unlock;
+
+  /// 当前阅读页是否正在加载激励视频。
+  final bool is_unlocking;
+
+  /// 安全区下方被阅读页浮层遮挡的高度。
+  final double viewport_top_inset;
+
+  /// 正文重新排版的版本；进度重建不应撤销连续滚动中的可见性批准。
+  final Object? layout_revision;
+
+  /// 免广告或平台关闭时立即卸载素材，正文高度由广告位安全收回。
+  final bool is_enabled;
+
+  /// 广告位真正提交尺寸后通知页面更新正文进度范围。
+  final ValueChanged<double>? on_extent_changed;
 
   /// 徽章文案多语种 key。
   final String badge_text_key;
@@ -108,126 +130,56 @@ class ViewportAwareInlineNativeAdBanner extends StatefulWidget {
     required this.scroll_controller,
     required this.ad_unit_id,
     required this.uuid,
+    this.on_unlock,
+    this.is_unlocking = false,
+    this.viewport_top_inset = 0,
+    this.layout_revision,
+    this.is_enabled = true,
+    this.on_extent_changed,
     this.badge_text_key = 'short_story_read.ad_free',
     this.show_continue_hint = false,
     this.on_ad_impression,
   });
 
   @override
-  State<ViewportAwareInlineNativeAdBanner> createState() =>
-      _ViewportAwareInlineNativeAdBannerState();
-}
-
-class _ViewportAwareInlineNativeAdBannerState
-    extends State<ViewportAwareInlineNativeAdBanner> {
-  /// 广告位的布局定位锚点。
-  GlobalKey _slot_key = GlobalKey();
-
-  /// 是否已经允许挂载平台广告视图。
-  bool _can_attach_ad = false;
-
-  /// 当前广告是否加载失败。
-  bool _has_failed = false;
-
-  /// 是否已经安排下一帧可见性检查。
-  bool _visibility_update_scheduled = false;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.scroll_controller.addListener(_schedule_visibility_update);
-    _schedule_visibility_update();
-  }
-
-  @override
-  void didUpdateWidget(ViewportAwareInlineNativeAdBanner old_widget) {
-    super.didUpdateWidget(old_widget);
-    if (old_widget.scroll_controller != widget.scroll_controller) {
-      old_widget.scroll_controller.removeListener(_schedule_visibility_update);
-      widget.scroll_controller.addListener(_schedule_visibility_update);
-    }
-    if (old_widget.ad_unit_id != widget.ad_unit_id ||
-        old_widget.uuid != widget.uuid) {
-      _slot_key = GlobalKey();
-      _can_attach_ad = false;
-      _has_failed = false;
-    }
-    _schedule_visibility_update();
-  }
-
-  @override
-  void dispose() {
-    widget.scroll_controller.removeListener(_schedule_visibility_update);
-    super.dispose();
-  }
-
-  /// 将可见性测量延迟到当前布局帧结束后执行。
-  void _schedule_visibility_update() {
-    if (_visibility_update_scheduled || _can_attach_ad || _has_failed) return;
-    _visibility_update_scheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _visibility_update_scheduled = false;
-      if (!mounted) return;
-      _update_visibility();
-    });
-  }
-
-  /// 广告位刚进入视口边缘时即允许挂载，避免必须滚到屏幕中央才出现。
-  void _update_visibility() {
-    if (_can_attach_ad || _has_failed) return;
-
-    final RenderObject? render_object = _slot_key.currentContext
-        ?.findRenderObject();
-    if (render_object is! RenderBox || !render_object.hasSize) return;
-
-    final MediaQueryData media_query = MediaQuery.of(context);
-    final double slot_top = render_object.localToGlobal(Offset.zero).dy;
-    final bool should_attach = should_attach_native_ad(
-      slot_top: slot_top,
-      slot_height: render_object.size.height,
-      viewport_top: media_query.viewPadding.top,
-      viewport_bottom: media_query.size.height - media_query.viewPadding.bottom,
-      minimum_visible_extent: InlineNativeAdStyle.minimum_visible_extent,
-    );
-    if (!should_attach) return;
-
-    setState(() {
-      _can_attach_ad = true;
-    });
-  }
-
-  /// 广告失败后移除预留位；加载完成后再次检查当前可见范围。
-  void _on_load_status_changed(NativeAdLoadStatus status) {
-    if (!mounted) return;
-    if (status == NativeAdLoadStatus.failed) {
-      if (_has_failed) return;
-      setState(() {
-        _has_failed = true;
-      });
-      return;
-    }
-    if (status == NativeAdLoadStatus.loaded) {
-      _schedule_visibility_update();
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_has_failed) return const SizedBox.shrink();
-
-    return KeyedSubtree(
-      key: _slot_key,
-      child: InlineNativeAdBanner(
-        ad_unit_id: widget.ad_unit_id,
-        uuid: widget.uuid,
-        badge_text_key: widget.badge_text_key,
-        attach_ad: _can_attach_ad,
-        reserve_space: true,
-        show_continue_hint: widget.show_continue_hint,
-        on_load_status_changed: _on_load_status_changed,
-        on_layout_height_changed: (_) => _schedule_visibility_update(),
-        on_ad_impression: widget.on_ad_impression,
-      ),
+    return PreparedNativeAdSlot(
+      key: ValueKey((ad_unit_id, uuid)),
+      scroll_controller: scroll_controller,
+      viewport_top_inset: viewport_top_inset,
+      layout_revision: layout_revision,
+      is_enabled: is_enabled,
+      on_extent_changed: on_extent_changed,
+      trailing_extent:
+          InlineNativeAdStyle.spacing_bottom +
+          (show_continue_hint
+              ? InlineNativeAdStyle.hint_spacing +
+                    InlineNativeAdStyle.hint_font_size *
+                        InlineNativeAdStyle.hint_height
+              : 0),
+      builder:
+          (
+            context, {
+            required attach_ad,
+            required reserve_space,
+            required on_load_status_changed,
+            required on_layout_height_changed,
+            required on_ad_attached,
+          }) => InlineNativeAdBanner(
+            ad_unit_id: ad_unit_id,
+            uuid: uuid,
+            on_unlock: on_unlock,
+            is_unlocking: is_unlocking,
+            badge_text_key: badge_text_key,
+            attach_ad: attach_ad,
+            reserve_space: reserve_space,
+            show_placeholder: false,
+            show_continue_hint: show_continue_hint,
+            on_load_status_changed: on_load_status_changed,
+            on_layout_height_changed: on_layout_height_changed,
+            on_ad_attached: on_ad_attached,
+            on_ad_impression: on_ad_impression,
+          ),
     );
   }
 }

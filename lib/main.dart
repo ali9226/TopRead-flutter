@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:get/get.dart';
@@ -115,9 +116,10 @@ void main() async {
       LanguageUtil.get_fallback_language_code();
 
   // 【临时修复】Flutter 3.44.2 框架内部 semantics 断言 bug（node.built is not true），
-  // 用 ExcludeSemantics 跳过无障碍树构建来规避。不影响 release 模式。
+  // 仅 debug 模式跳过无障碍树构建；发布版保留 VoiceOver/TalkBack 的语义树。
   runApp(
     ExcludeSemantics(
+      excluding: kDebugMode,
       child: EasyLocalization(
         supportedLocales: LanguageUtil.supported_locales,
         path: 'assets/i18n',

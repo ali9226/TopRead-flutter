@@ -40,6 +40,9 @@ class StoryContent extends StatefulWidget {
   /// 原生广告在当前 [content] 中的插入比例。
   final double native_ad_display_ratio;
 
+  /// 已确定的段落插位；解锁全文后保持原边界，避免广告移走挤动正文。
+  final int? native_ad_insert_index;
+
   /// 当前正文版本的段落锚点和实时评论数量。
   final List<ParagraphAnchor> paragraph_anchors;
 
@@ -70,6 +73,7 @@ class StoryContent extends StatefulWidget {
     this.font_size = 17.0,
     this.native_ad_widget,
     this.native_ad_display_ratio = ShortStoryReadStyle.native_ad_display_ratio,
+    this.native_ad_insert_index,
     this.paragraph_anchors = const [],
     this.content_offset = 0,
     this.on_paragraph_comment,
@@ -248,6 +252,14 @@ class _StoryContentState extends State<StoryContent> {
     required int paragraph_count,
     required bool has_native_ad,
   }) {
+    if (!has_native_ad || paragraph_count == 0) return null;
+    final int? fixed_index = widget.native_ad_insert_index;
+    if (fixed_index != null) {
+      // 正文变短时不能把已经确定的广告搬到另一段，越界插位直接省略。
+      return fixed_index >= 1 && fixed_index <= paragraph_count
+          ? fixed_index
+          : null;
+    }
     return resolve_native_ad_insert_index(
       paragraph_count: paragraph_count,
       has_native_ad: has_native_ad,

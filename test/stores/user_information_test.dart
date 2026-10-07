@@ -53,6 +53,59 @@ void main() {
     expect(user_information.userInfo.value?.id, new_user.id);
   });
 
+  test('直接切换账号时旧账号响应不能覆盖新用户', () {
+    final UserInformation user_information = Get.find<UserInformation>();
+    final UserInfo old_user = _build_user_info(id: 1, name: 'old');
+    final UserInfo new_user = _build_user_info(id: 2, name: 'new');
+
+    user_information.saveUserInfo(old_user);
+    final int old_request_revision = user_information.auth_revision;
+    user_information.saveUserInfo(new_user);
+
+    expect(
+      user_information.save_user_info_if_current(
+        old_user,
+        request_revision: old_request_revision,
+      ),
+      isFalse,
+    );
+    expect(user_information.userInfo.value?.id, new_user.id);
+  });
+
+  test('清空用户并重新登录同一账号后丢弃原会话响应', () {
+    final UserInformation user_information = Get.find<UserInformation>();
+    final UserInfo original_user = _build_user_info(id: 1, name: 'original');
+    final UserInfo fresh_user = _build_user_info(id: 1, name: 'fresh');
+
+    user_information.saveUserInfo(original_user);
+    final int old_request_revision = user_information.auth_revision;
+    user_information.clearUserInfo();
+    user_information.saveUserInfo(fresh_user);
+
+    expect(
+      user_information.save_user_info_if_current(
+        original_user,
+        request_revision: old_request_revision,
+      ),
+      isFalse,
+    );
+    expect(user_information.userInfo.value?.name, 'fresh');
+  });
+
+  test('同一用户资料刷新保留认证会话版本', () {
+    final UserInformation user_information = Get.find<UserInformation>();
+    user_information.saveUserInfo(_build_user_info(id: 1, name: 'original'));
+    final int request_revision = user_information.auth_revision;
+
+    user_information.saveUserInfo(_build_user_info(id: 1, name: 'fresh'));
+
+    expect(user_information.auth_revision, request_revision);
+    expect(
+      user_information.can_apply_authenticated_response(request_revision),
+      isTrue,
+    );
+  });
+
   test('认证身份变化时隔离用户中心滚动状态，同一用户资料刷新时保持状态', () {
     final UserInformation user_information = Get.find<UserInformation>();
     final UserInfo first_user = _build_user_info(id: 1, name: 'first');

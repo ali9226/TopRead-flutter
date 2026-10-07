@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:async';
 
 import 'package:app/api/post_request.dart';
@@ -6,6 +8,7 @@ import 'package:app/models/login.dart';
 import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/services/post_login_sync_service.dart';
 import 'package:app/stores/user_information.dart';
+import 'package:app/util/auth/account_registration_verifier.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/encryption/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -14,50 +17,14 @@ import 'package:app/util/string/to_string.dart';
 import 'package:get/get.dart';
 
 /// 注册页逻辑控制器。
-class Logic {
-  Logic();
-
-  /// 用户输入的账号。
-  String account = '';
+class Logic extends AccountRegistrationVerifier {
+  Logic({super.verify_account_request});
 
   /// 用户输入的邀请码。
   String invitationCode = '';
 
   /// 用户输入的密码。
   String password = '';
-
-  /// 账号是否已注册：null 表示未验证，true 已注册，false 未注册。
-  bool? isAccountRegistered;
-
-  /// 验证账号是否已注册。
-  ///
-  /// 调用 user/register_verify 接口，返回 true 表示已注册，false 表示未注册。
-  Future<bool> verifyAccount() async {
-    if (account.isEmpty) {
-      isAccountRegistered = null;
-      return false;
-    }
-
-    try {
-      final results = await postRequest<Map<String, dynamic>>(
-        path: 'user/register_verify',
-        parameter: {'account': removeSpaces(account)},
-        showTips: false,
-        fromJson: (json) => json,
-      );
-
-      /// 接口返回 {status: true} 表示已注册。
-      if (results.status && results.content != null) {
-        isAccountRegistered = results.content!['status'] == true;
-      } else {
-        isAccountRegistered = false;
-      }
-      return isAccountRegistered!;
-    } catch (e) {
-      isAccountRegistered = null;
-      return false;
-    }
-  }
 
   /// 执行注册请求。
   Future<bool> registerFun() async {

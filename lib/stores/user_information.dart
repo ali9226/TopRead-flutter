@@ -13,7 +13,7 @@ class UserInformation extends GetxController {
 
   /// 当前认证会话版本。
   ///
-  /// 每次退出时递增，用于让退出前已经发出的异步请求响应失效。
+  /// 认证身份变化或开始退出时递增，使旧身份已经发出的异步响应失效。
   int _auth_revision = 0;
 
   /// 当前认证会话版本。
@@ -58,8 +58,7 @@ class UserInformation extends GetxController {
   ///
   /// 返回本次退出后的会话版本，供后台清理任务判断用户是否已经重新登录。
   int begin_logout() {
-    _auth_revision++;
-    _set_user_info(null);
+    _set_user_info(null, invalidate_auth_session: true);
     isLoggedIn.value = false;
     return _auth_revision;
   }
@@ -67,12 +66,22 @@ class UserInformation extends GetxController {
   /// 统一更新当前用户资料，并在认证身份变化时递增身份版本。
   ///
   /// [next_user_info] 为即将生效的用户资料；传入 null 表示切换到访客状态。
-  void _set_user_info(UserInfo? next_user_info) {
+  /// [invalidate_auth_session] 在开始退出时强制失效，即使当前已经是访客。
+  void _set_user_info(
+    UserInfo? next_user_info, {
+    bool invalidate_auth_session = false,
+  }) {
     final int current_user_id = _authenticated_user_id(userInfo.value);
     final int next_user_id = _authenticated_user_id(next_user_info);
+    final bool identity_changed = current_user_id != next_user_id;
+
+    // 身份切换统一废弃旧会话响应，避免直接清空或切换账号时遗漏失效处理。
+    if (identity_changed || invalidate_auth_session) {
+      _auth_revision++;
+    }
 
     // 访客、当前账号和其他账号分别属于不同的认证身份。
-    if (current_user_id != next_user_id) {
+    if (identity_changed) {
       _auth_identity_revision.value++;
     }
 

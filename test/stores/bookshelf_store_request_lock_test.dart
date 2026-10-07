@@ -194,6 +194,76 @@ void main() {
     expect(request_count, 2);
     expect(store.history_list.single.id, '7');
   });
+
+  test('历史首屏失败后再次访问会重试第一页', () async {
+    final List<int> requested_pages = <int>[];
+    final BookshelfStore store = BookshelfStore(
+      fetch_history_list: ({required int page, required int page_size}) async {
+        requested_pages.add(page);
+        if (requested_pages.length == 1) return null;
+        return _history_result(
+          page: page,
+          items: <ReadRecordItem>[_history_item(7)],
+        );
+      },
+    );
+    addTearDown(store.onClose);
+
+    await store.load_history_if_needed();
+    expect(store.history_is_loading.value, isFalse);
+    await store.load_history_if_needed();
+
+    expect(requested_pages, <int>[1, 1]);
+    expect(store.history_list.single.id, '7');
+  });
+
+  test('收藏首屏失败后滚动加载仍从第一页重试', () async {
+    final List<int> requested_pages = <int>[];
+    final BookshelfStore store = BookshelfStore(
+      fetch_favorite_list: ({required int page, required int page_size}) async {
+        requested_pages.add(page);
+        if (requested_pages.length == 1) return null;
+        return BookshelfListResult<FavoriteItem>(
+          list: <FavoriteItem>[_favorite_item(7)],
+          total: 1,
+          page: page,
+          page_size: page_size,
+        );
+      },
+    );
+    addTearDown(store.onClose);
+
+    await store.load_favorite_if_needed();
+    expect(store.favorite_is_loading.value, isFalse);
+    await store.load_more_favorite();
+
+    expect(requested_pages, <int>[1, 1]);
+    expect(store.favorite_list.single.id, '7');
+  });
+
+  test('关注首屏失败后再次访问会重试第一页', () async {
+    final List<int> requested_pages = <int>[];
+    final BookshelfStore store = BookshelfStore(
+      fetch_focus_list: ({required int page, required int page_size}) async {
+        requested_pages.add(page);
+        if (requested_pages.length == 1) return null;
+        return BookshelfListResult<FocusAuthorItem>(
+          list: <FocusAuthorItem>[_focus_item(7)],
+          total: 1,
+          page: page,
+          page_size: page_size,
+        );
+      },
+    );
+    addTearDown(store.onClose);
+
+    await store.load_focus_if_needed();
+    expect(store.focus_is_loading.value, isFalse);
+    await store.load_focus_if_needed();
+
+    expect(requested_pages, <int>[1, 1]);
+    expect(store.focus_list.single.id, '7');
+  });
 }
 
 BookshelfListResult<ReadRecordItem> _history_result({
@@ -237,5 +307,30 @@ FocusAuthorItem _focus_item(int id) {
     author_avatar: '',
     novel_count: 1,
     creation_time: '',
+  );
+}
+
+FavoriteItem _favorite_item(int id) {
+  return FavoriteItem(
+    id: '$id',
+    novel_id: '$id',
+    favorite_time: '',
+    novel_title: 'Novel $id',
+    subtitle: '',
+    publish_status: 1,
+    author_id: 'author_$id',
+    author_name: 'Author $id',
+    author_avatar: '',
+    score: 0,
+    read_count: 0,
+    like_count: 0,
+    favorite_count: 0,
+    latest_chapter_no: 0,
+    latest_update_time: '',
+    cover_url: '',
+    chapter_count: 0,
+    introduction: '',
+    read_progress: 0,
+    category_names: '',
   );
 }

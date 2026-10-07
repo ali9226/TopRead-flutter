@@ -83,6 +83,7 @@ class _RegisterState extends State<Register> {
 
   @override
   void dispose() {
+    logic.dispose();
     accountController.dispose();
     passwordController.dispose();
     invitationController.dispose();
@@ -124,14 +125,8 @@ class _RegisterState extends State<Register> {
           focusNode: accountFocusNode,
           hintText: context.tr('login.account_tips'),
           onChanged: (String value) {
-            logic.account = value;
-
-            /// 输入变化时重置验证状态。
-            if (logic.isAccountRegistered != null) {
-              setState(() {
-                logic.isAccountRegistered = null;
-              });
-            }
+            /// 逻辑层使旧请求失效，页面同步重置注册/登录模式。
+            setState(() => logic.account = value);
           },
           onSubmitted: () {
             /// 点击回车时切换到密码输入框。
@@ -204,9 +199,9 @@ class _RegisterState extends State<Register> {
                         color: _isAgreed
                             ? ColorConstants.themeColor
                             : (device_info.dark.value
-                                    ? ColorConstants.nightTextColor
-                                    : ColorConstants.lightTextColor)
-                                .withValues(alpha: 0.4),
+                                      ? ColorConstants.nightTextColor
+                                      : ColorConstants.lightTextColor)
+                                  .withValues(alpha: 0.4),
                         width: 1.5,
                       ),
                       borderRadius: BorderRadius.circular(3),
@@ -215,11 +210,7 @@ class _RegisterState extends State<Register> {
                           : Colors.transparent,
                     ),
                     child: _isAgreed
-                        ? const Icon(
-                            Icons.check,
-                            size: 12,
-                            color: Colors.black,
-                          )
+                        ? const Icon(Icons.check, size: 12, color: Colors.black)
                         : null,
                   ),
                   const SizedBox(width: 8),
@@ -230,7 +221,9 @@ class _RegisterState extends State<Register> {
                       text: TextSpan(
                         style: TextStyle(
                           fontSize: AuthTextStyle.fontSize,
-                          color: AuthTextStyle.textColor(isDark: device_info.dark.value),
+                          color: AuthTextStyle.textColor(
+                            isDark: device_info.dark.value,
+                          ),
                           fontWeight: AuthTextStyle.fontWeight,
                         ),
                         children: [
@@ -289,9 +282,7 @@ class _RegisterState extends State<Register> {
           onTap: isRegisterMode ? _goToLogin : _switchToRegisterMode,
         ),
         const SizedBox(height: Style.supportSpacing),
-        AuthorizedLoginView(
-          onBeforeLogin: _check_agreement,
-        ),
+        AuthorizedLoginView(onBeforeLogin: _check_agreement),
         const SizedBox(height: 30),
       ],
     );

@@ -19,10 +19,12 @@ import 'widgets/input_bar.dart';
 
 export 'style.dart';
 
-/// 长短篇共用的段评详情弹窗，调用方只传段落、配色及计数回调。
+/// 长短篇共用的段评详情弹窗，通过小说和段落 ID 定位对应的评论分表。
 ///
 /// 视觉风格与小说主评论弹窗保持一致：相同的圆角、拖拽把手、标题栏布局。
 class ParagraphCommentDetailSheet extends StatefulWidget {
+  /// 所属小说 ID，所有查询和修改操作都必须携带同一身份。
+  final int novel_id;
   final int paragraph_id;
   final String paragraph_text;
   final int initial_comment_count;
@@ -34,6 +36,7 @@ class ParagraphCommentDetailSheet extends StatefulWidget {
 
   const ParagraphCommentDetailSheet({
     super.key,
+    required this.novel_id,
     required this.paragraph_id,
     required this.paragraph_text,
     required this.initial_comment_count,
@@ -47,6 +50,7 @@ class ParagraphCommentDetailSheet extends StatefulWidget {
   /// 拖动、遮罩或系统返回关闭时也返回最近一次服务器确认的评论总数。
   static Future<int?> show({
     required BuildContext context,
+    required int novel_id,
     required int paragraph_id,
     required String paragraph_text,
     required int initial_comment_count,
@@ -61,6 +65,7 @@ class ParagraphCommentDetailSheet extends StatefulWidget {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => ParagraphCommentDetailSheet(
+        novel_id: novel_id,
         paragraph_id: paragraph_id,
         paragraph_text: paragraph_text,
         initial_comment_count: initial_comment_count,
@@ -76,10 +81,12 @@ class ParagraphCommentDetailSheet extends StatefulWidget {
   }
 
   @override
-  State<ParagraphCommentDetailSheet> createState() => _ParagraphCommentDetailSheetState();
+  State<ParagraphCommentDetailSheet> createState() =>
+      _ParagraphCommentDetailSheetState();
 }
 
-class _ParagraphCommentDetailSheetState extends State<ParagraphCommentDetailSheet> {
+class _ParagraphCommentDetailSheetState
+    extends State<ParagraphCommentDetailSheet> {
   late final ParagraphCommentSheetLogic _logic;
   final ScrollController _scroll_controller = ScrollController();
   bool _opening_composer = false;
@@ -90,6 +97,7 @@ class _ParagraphCommentDetailSheetState extends State<ParagraphCommentDetailShee
   void initState() {
     super.initState();
     _logic = ParagraphCommentSheetLogic(
+      novel_id: widget.novel_id,
       paragraph_id: widget.paragraph_id,
       initial_comment_count: widget.initial_comment_count,
       repository: widget.repository,
@@ -97,15 +105,16 @@ class _ParagraphCommentDetailSheetState extends State<ParagraphCommentDetailShee
       on_comment_count_changed: widget.on_comment_count_changed,
       on_error: (error) {
         if (!_is_active) return;
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text(error.toString())),
-        );
+        ScaffoldMessenger.maybeOf(
+          context,
+        )?.showSnackBar(SnackBar(content: Text(error.toString())));
       },
     );
     _logic.load_comments();
   }
 
-  Future<bool> _authenticate() => widget.ensure_authenticated?.call() ??
+  Future<bool> _authenticate() =>
+      widget.ensure_authenticated?.call() ??
       showLoginRequiredDialog(title: tr('paragraph_comment.login_required'));
 
   /// 回复与新段评均复用同一个带图片、表情的编辑器。
@@ -116,10 +125,14 @@ class _ParagraphCommentDetailSheetState extends State<ParagraphCommentDetailShee
       if (!await _authenticate() || !mounted || !_logic.is_active) return;
       await show_paragraph_comment_composer(
         context,
-        quote: reply == null ? widget.paragraph_text : '${reply.user_name}: ${reply.content}',
+        quote: reply == null
+            ? widget.paragraph_text
+            : '${reply.user_name}: ${reply.content}',
         is_dark: widget.is_dark,
         on_send: (content, images) => _logic.submit(
-          content: content, images: images, parent_id: reply?.id,
+          content: content,
+          images: images,
+          parent_id: reply?.id,
         ),
       );
     } finally {
@@ -130,7 +143,8 @@ class _ParagraphCommentDetailSheetState extends State<ParagraphCommentDetailShee
   Future<void> _show_actions(ParagraphComment comment) async {
     if (!_is_active) return;
     final int user_id = Get.isRegistered<UserInformation>()
-        ? Get.find<UserInformation>().userInfo.value?.id ?? 0 : 0;
+        ? Get.find<UserInformation>().userInfo.value?.id ?? 0
+        : 0;
     final String? action = await show_paragraph_comment_actions(
       context: context,
       is_owner: user_id > 0 && comment.user_id == user_id,
@@ -150,7 +164,9 @@ class _ParagraphCommentDetailSheetState extends State<ParagraphCommentDetailShee
         await _open_composer(comment);
       case 'delete':
         final bool confirmed = await confirm_paragraph_comment_delete(
-          context: context, is_dark: widget.is_dark, is_cjk: widget.is_cjk,
+          context: context,
+          is_dark: widget.is_dark,
+          is_cjk: widget.is_cjk,
         );
         if (confirmed && _is_active) await _logic.delete_comment(comment.id);
     }
@@ -177,17 +193,21 @@ class _ParagraphCommentDetailSheetState extends State<ParagraphCommentDetailShee
         ),
         clipBehavior: Clip.antiAlias,
         child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * ParagraphCommentSheetStyle.height_ratio,
-          child: Column(children: [
-            _build_header(),
-            Expanded(child: _build_list()),
-            ParagraphCommentInputBar(
-              is_dark: widget.is_dark,
-              is_cjk: widget.is_cjk,
-              is_busy: _logic.is_mutating,
-              on_compose: _open_composer,
-            ),
-          ]),
+          height:
+              MediaQuery.sizeOf(context).height *
+              ParagraphCommentSheetStyle.height_ratio,
+          child: Column(
+            children: [
+              _build_header(),
+              Expanded(child: _build_list()),
+              ParagraphCommentInputBar(
+                is_dark: widget.is_dark,
+                is_cjk: widget.is_cjk,
+                is_busy: _logic.is_mutating,
+                on_compose: _open_composer,
+              ),
+            ],
+          ),
         ),
       ),
     ),
@@ -198,8 +218,12 @@ class _ParagraphCommentDetailSheetState extends State<ParagraphCommentDetailShee
     final Color title_color = widget.is_dark
         ? ParagraphCommentSheetStyle.title(widget.is_dark)
         : ParagraphCommentSheetStyle.title(widget.is_dark);
-    final Color secondary_color = ParagraphCommentSheetStyle.secondary(widget.is_dark);
-    final Color divider_color = ParagraphCommentSheetStyle.divider(widget.is_dark);
+    final Color secondary_color = ParagraphCommentSheetStyle.secondary(
+      widget.is_dark,
+    );
+    final Color divider_color = ParagraphCommentSheetStyle.divider(
+      widget.is_dark,
+    );
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -227,7 +251,9 @@ class _ParagraphCommentDetailSheetState extends State<ParagraphCommentDetailShee
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: widget.is_cjk ? 17 : 15,
-                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
+                              ),
                               color: title_color,
                             ),
                           ),
@@ -238,7 +264,9 @@ class _ParagraphCommentDetailSheetState extends State<ParagraphCommentDetailShee
                             '${_logic.comment_count}',
                             style: TextStyle(
                               fontSize: widget.is_cjk ? 17 : 15,
-                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
+                              ),
                               color: secondary_color,
                             ),
                           ),
@@ -248,7 +276,8 @@ class _ParagraphCommentDetailSheetState extends State<ParagraphCommentDetailShee
                   ),
                   // 关闭按钮，使用与小说主评论一致的 SVG 图标。
                   GestureDetector(
-                    onTap: () => Navigator.of(context).pop(_logic.comment_count),
+                    onTap: () =>
+                        Navigator.of(context).pop(_logic.comment_count),
                     behavior: HitTestBehavior.opaque,
                     child: SizedBox(
                       width: 36,
@@ -274,23 +303,32 @@ class _ParagraphCommentDetailSheetState extends State<ParagraphCommentDetailShee
   }
 
   Widget _build_list() {
-    if (_logic.is_loading) return const Center(child: CircularProgressIndicator());
+    if (_logic.is_loading)
+      return const Center(child: CircularProgressIndicator());
     if (_logic.comments.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(ParagraphCommentSheetStyle.horizontal_padding),
+          padding: const EdgeInsets.all(
+            ParagraphCommentSheetStyle.horizontal_padding,
+          ),
           child: _logic.load_error != null
               ? TextButton(
                   onPressed: _logic.load_comments,
                   style: ParagraphCommentSheetStyle.button(
-                    is_dark: widget.is_dark, is_cjk: widget.is_cjk,
+                    is_dark: widget.is_dark,
+                    is_cjk: widget.is_cjk,
                   ),
                   child: Text(tr('comment.load_error_desc')),
                 )
-              : Text(tr('comment.empty'), textAlign: TextAlign.center,
+              : Text(
+                  tr('comment.empty'),
+                  textAlign: TextAlign.center,
                   style: ParagraphCommentSheetStyle.text(
-                    is_dark: widget.is_dark, is_cjk: widget.is_cjk, secondary: true,
-                  )),
+                    is_dark: widget.is_dark,
+                    is_cjk: widget.is_cjk,
+                    secondary: true,
+                  ),
+                ),
         ),
       );
     }
@@ -311,11 +349,20 @@ class _ParagraphCommentDetailSheetState extends State<ParagraphCommentDetailShee
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: TextButton(
                 key: const ValueKey('paragraph_load_more'),
-                onPressed: _logic.is_loading_more ? null : () => _logic.load_comments(load_more: true),
+                onPressed: _logic.is_loading_more
+                    ? null
+                    : () => _logic.load_comments(load_more: true),
                 style: ParagraphCommentSheetStyle.button(
-                  is_dark: widget.is_dark, is_cjk: widget.is_cjk,
+                  is_dark: widget.is_dark,
+                  is_cjk: widget.is_cjk,
                 ),
-                child: Text(tr(_logic.is_loading_more ? 'common.loading' : 'paragraph_comment.load_more')),
+                child: Text(
+                  tr(
+                    _logic.is_loading_more
+                        ? 'common.loading'
+                        : 'paragraph_comment.load_more',
+                  ),
+                ),
               ),
             )
           : Padding(

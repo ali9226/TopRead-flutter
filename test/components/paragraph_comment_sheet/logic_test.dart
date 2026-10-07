@@ -10,31 +10,58 @@ import 'package:flutter_test/flutter_test.dart';
 class _Repository extends ParagraphCommentRepository {
   Future<ParagraphCommentListResponse> Function(int? parent_id, int page)? read;
   Future<ParagraphCommentMutationResult> Function(
-    String content, List<String> images, int? parent_id,
-  )? send;
+    String content,
+    List<String> images,
+    int? parent_id,
+  )?
+  send;
   Future<ParagraphCommentMutationResult> Function(int comment_id)? remove;
   Future<Map<String, dynamic>> Function(int comment_id, bool liked)? set_like;
 
   @override
   Future<ParagraphCommentListResponse> inquire({
-    required int paragraph_id, int? parent_id, int page = 1,
-  }) async => read?.call(parent_id, page) ?? _response();
+    required int novel_id,
+    required int paragraph_id,
+    int? parent_id,
+    int page = 1,
+  }) async {
+    expect(novel_id, 11);
+    return read?.call(parent_id, page) ?? _response();
+  }
 
   @override
   Future<ParagraphCommentMutationResult> submit({
-    required int paragraph_id, required String content,
-    int? parent_id, List<String> images = const [],
-  }) async => send?.call(content, images, parent_id) ??
-      const ParagraphCommentMutationResult(comment_count: 1);
+    required int novel_id,
+    required int paragraph_id,
+    required String content,
+    int? parent_id,
+    List<String> images = const [],
+  }) async {
+    expect(novel_id, 11);
+    return send?.call(content, images, parent_id) ??
+        const ParagraphCommentMutationResult(comment_count: 1);
+  }
 
   @override
-  Future<ParagraphCommentMutationResult> delete(int comment_id) async =>
-      remove?.call(comment_id) ??
-      const ParagraphCommentMutationResult(comment_count: 0);
+  Future<ParagraphCommentMutationResult> delete(
+    int novel_id,
+    int comment_id,
+  ) async {
+    expect(novel_id, 11);
+    return remove?.call(comment_id) ??
+        const ParagraphCommentMutationResult(comment_count: 0);
+  }
 
   @override
-  Future<Map<String, dynamic>> like(int comment_id, bool liked) async =>
-      set_like?.call(comment_id, liked) ?? {'liked': liked, 'like_count': 1};
+  Future<Map<String, dynamic>> like(
+    int novel_id,
+    int comment_id,
+    bool liked,
+  ) async {
+    expect(novel_id, 11);
+    return set_like?.call(comment_id, liked) ??
+        {'liked': liked, 'like_count': 1};
+  }
 }
 
 ParagraphComment _comment(
@@ -84,6 +111,7 @@ void main() {
     counts = [];
     errors = [];
     logic = ParagraphCommentSheetLogic(
+      novel_id: 11,
       paragraph_id: 7,
       initial_comment_count: 12,
       ensure_authenticated: () async => true,
@@ -98,9 +126,8 @@ void main() {
     final old = Completer<ParagraphCommentListResponse>();
     repository.read = (_, _) => old.future;
     final pending = logic.load_comments();
-    repository.read = (_, _) async => _response(
-      list: [_comment(2)], total: 1, count: 5,
-    );
+    repository.read = (_, _) async =>
+        _response(list: [_comment(2)], total: 1, count: 5);
     await logic.load_comments();
     old.complete(_response(list: [_comment(1)], total: 99, count: 99));
     await pending;
@@ -110,7 +137,8 @@ void main() {
   });
 
   test('分页失败不推进页码，重复触发分页只发出一个请求', () async {
-    repository.read = (_, _) async => _response(list: [_comment(1)], more: true);
+    repository.read = (_, _) async =>
+        _response(list: [_comment(1)], more: true);
     await logic.load_comments();
     final pages = <int>[];
     final delayed = Completer<ParagraphCommentListResponse>();
@@ -206,7 +234,9 @@ void main() {
     };
     repository.read = (_, _) async => throw StateError('刷新失败');
     final success = await logic.submit(
-      content: ' ', images: ['https://example.com/image.png'], parent_id: 2,
+      content: ' ',
+      images: ['https://example.com/image.png'],
+      parent_id: 2,
     );
     expect(success, isTrue);
     expect(counts, [13]);
@@ -230,6 +260,7 @@ void main() {
     final authentication = Completer<bool>();
     int submits = 0;
     logic = ParagraphCommentSheetLogic(
+      novel_id: 11,
       paragraph_id: 7,
       initial_comment_count: 12,
       ensure_authenticated: () => authentication.future,

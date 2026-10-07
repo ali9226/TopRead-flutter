@@ -43,6 +43,7 @@ import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/percentage_probability.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/components/login_required_dialog/index.dart';
+import 'package:app/components/inline_native_ad/scroll_offset_compensation.dart';
 import 'package:app/components/comment_list/index.dart';
 import 'package:app/components/share_sheet/index.dart';
 import 'package:app/components/share_sheet/widgets/text_selection_preview_sheet.dart';
@@ -705,6 +706,7 @@ class _ReadPageState extends State<ReadPage>
   /// Google SSV确认成功或校验超时后都会调用，确保客户端乐观增加的时长
   /// 最终与服务端一致。
   void _apply_server_ad_free_status(AdFreeStatus status) {
+    final bool was_ad_free = _is_ad_free;
     final DateTime? expire_time = status.expire_time == null
         ? null
         : DateTime.tryParse(status.expire_time!);
@@ -719,6 +721,10 @@ class _ReadPageState extends State<ReadPage>
     });
     _ad_free_expire_time_notifier.value = is_active ? expire_time : null;
     _schedule_ad_free_expiration(is_active ? expire_time : null);
+    // 进入页面时处于免广告期的章节尚未判断概率，状态失效后补齐当前窗口。
+    if (was_ad_free && !is_active && _is_ad_free_status_ready) {
+      _sync_ad_policy();
+    }
   }
 
   /// 根据当前到期时间安排本地状态失效。
@@ -739,6 +745,7 @@ class _ReadPageState extends State<ReadPage>
         _ad_free_expire_time = null;
       });
       _ad_free_expire_time_notifier.value = null;
+      _sync_ad_policy();
       unawaited(_check_ad_free_status());
     });
   }
@@ -1847,8 +1854,11 @@ class _ReadPageState extends State<ReadPage>
 
     final double next_scroll_offset = scroll_controller.offset;
 
-    // 滚动方向检测：自动显示/隐藏导航栏（程序化滚动时不触发）。
-    if (!_is_programmatic_scroll && !logic.is_auto_reading.value) {
+    // 广告高度补偿只更新方向基准，下一次手动滚动不能累计补偿位移。
+    if (is_native_ad_scroll_compensating(scroll_controller.position)) {
+      logic.sync_scroll_offset(next_scroll_offset);
+    } else if (!_is_programmatic_scroll && !logic.is_auto_reading.value) {
+      // 滚动方向检测：自动显示/隐藏导航栏（程序化滚动时不触发）。
       logic.on_scroll(next_scroll_offset);
     }
 
@@ -2043,7 +2053,8 @@ class _ReadPageState extends State<ReadPage>
       selection: selection,
       is_dark: device_info.dark.value,
       is_current: () => mounted && !_is_chapter_transaction_active,
-      resolve_anchor: () => logic.resolve_paragraph_anchor(item, novel_id: widget.story_id),
+      resolve_anchor: () =>
+          logic.resolve_paragraph_anchor(item, novel_id: widget.story_id),
       on_send: (anchor, text, images) => logic.send_paragraph_comment(
         item: item,
         anchor: anchor,
@@ -2060,10 +2071,7 @@ class _ReadPageState extends State<ReadPage>
   }
 
   /// 处理段落选中文字的分享操作。
-  void _on_paragraph_share(
-    ReadingContentItem item,
-    TextSelection selection,
-  ) {
+  void _on_paragraph_share(ReadingContentItem item, TextSelection selection) {
     _stop_auto_read();
     logic.show_navigation.value = false;
     final String selected_text = selected_paragraph_text(item.text, selection);
@@ -2094,11 +2102,12 @@ class _ReadPageState extends State<ReadPage>
         novel_id: widget.story_id,
         paragraph_id: para_id,
         on_close: () => Navigator.pop(context),
-        on_paragraph_count_changed: (count) => logic.update_paragraph_comment_count(
-          item: item,
-          paragraph_id: anchor.id,
-          count: count,
-        ),
+        on_paragraph_count_changed: (count) =>
+            logic.update_paragraph_comment_count(
+              item: item,
+              paragraph_id: anchor.id,
+              count: count,
+            ),
         on_novel_count_changed: (delta) {
           // 段评增删时，乐观更新小说总评论数
           logic.update_comment_count(logic.comment_count + delta);
@@ -2110,6 +2119,13 @@ class _ReadPageState extends State<ReadPage>
   /// 程序化上翻一屏。
   Future<void> _scroll_page_up() async {
     if (_is_programmatic_scroll) return;
+    // 点击翻页属于真实阅读操作，不能依赖只在手势滚动时发送的通知。
+    if (scroll_controller.hasClients &&
+        scroll_controller.offset >
+            scroll_controller.position.minScrollExtent +
+                Style.scroll_offset_epsilon) {
+      _has_user_engaged = true;
+    }
     _is_programmatic_scroll = true;
     try {
       await ScrollUtils.scroll_page_up(
@@ -2124,6 +2140,12 @@ class _ReadPageState extends State<ReadPage>
   /// 程序化下翻一屏。
   Future<void> _scroll_page_down() async {
     if (_is_programmatic_scroll) return;
+    if (scroll_controller.hasClients &&
+        scroll_controller.offset <
+            scroll_controller.position.maxScrollExtent -
+                Style.scroll_offset_epsilon) {
+      _has_user_engaged = true;
+    }
     _is_programmatic_scroll = true;
     try {
       await ScrollUtils.scroll_page_down(
@@ -2137,10 +2159,20 @@ class _ReadPageState extends State<ReadPage>
 
   /// 自动滚动到正文阅读位置，方便用户快速从封面区域进入正文区域。
   Future<void> _scroll_to_reading_section() async {
+    final double? previous_offset = scroll_controller.hasClients
+        ? scroll_controller.offset
+        : null;
     await _scroll_to_chapter_title_with_top_offset(
       0,
       top_offset: Style.chapter_title_top_target_offset,
     );
+    if (mounted &&
+        previous_offset != null &&
+        scroll_controller.hasClients &&
+        (scroll_controller.offset - previous_offset).abs() >
+            Style.scroll_offset_epsilon) {
+      _has_user_engaged = true;
+    }
   }
 
   /// 显示阅读设置弹窗。
@@ -2200,6 +2232,8 @@ class _ReadPageState extends State<ReadPage>
   void _start_auto_read() {
     if (logic.is_auto_reading.value) return;
 
+    // 自动阅读由用户主动开启，后续 Ticker 的 jumpTo 不会产生手势通知。
+    _has_user_engaged = true;
     logic.is_auto_reading.value = true;
     logic.show_navigation.value = false;
 
@@ -2405,12 +2439,11 @@ class _ReadPageState extends State<ReadPage>
                     on_paragraph_share: _on_paragraph_share,
                     on_paragraph_selection_changed:
                         _on_paragraph_selection_changed,
-                    native_ad_config: suppress_read_ads
-                        ? null
-                        : _native_ad_config,
-                    is_native_ad_config_loading: suppress_read_ads
-                        ? false
-                        : _is_native_ad_config_loading,
+                    // 关闭广告保留已提交插位的身份，由插位安全回收上方高度。
+                    native_ad_config: _native_ad_config,
+                    is_native_ad_config_loading: _is_native_ad_config_loading,
+                    native_ads_enabled:
+                        !suppress_read_ads && AdDisplayPolicy.can_show_ads(),
                     on_native_ad_impression: () {
                       unawaited(_record_native_ad_impression());
                     },

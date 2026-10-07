@@ -60,6 +60,44 @@ typedef ChapterContentLoader = Future<String> Function(String chapter_id);
 typedef ChapterVersionedContentLoader =
     Future<NovelContentResult> Function(String chapter_id);
 
+/// 可替换的书籍详情读取器，便于验证刷新和页面关闭时的异步结果。
+typedef NovelInfoLoader = Future<ResultsType<NovelInfo>> Function(int novel_id);
+
+/// 可替换的章节目录读取器，返回服务端成功状态及章节列表。
+typedef ChapterDirectoryLoader =
+    Future<ResultsType<List<NovelChapterInfo>>> Function(
+      String novel_language_id,
+    );
+
+/// 尚未提交到阅读仓库的同版章节正文与段落元数据。
+typedef _LoadedChapterContent = ({
+  String content,
+  String? published_revision_id,
+  ParagraphMetadata? metadata,
+});
+
+/// 使用统一请求入口读取书籍详情。
+Future<ResultsType<NovelInfo>> _default_novel_info_loader(int novel_id) {
+  return postRequest<NovelInfo>(
+    path: 'novel/get_info',
+    parameter: <String, dynamic>{'id': novel_id},
+    fromJson: (Map<String, dynamic> json) => NovelInfo.from_json(json),
+  );
+}
+
+/// 使用统一请求入口读取对应语种的章节目录。
+Future<ResultsType<List<NovelChapterInfo>>> _default_chapter_directory_loader(
+  String novel_language_id,
+) {
+  return postRequest<List<NovelChapterInfo>>(
+    path: 'novel_chapter/inquire',
+    parameter: <String, dynamic>{'novel_language_id': novel_language_id},
+    fromJsonList: (List<dynamic> json) => json
+        .map((e) => NovelChapterInfo.from_json(Map<String, dynamic>.from(e)))
+        .toList(),
+  );
+}
+
 /// 阅读页逻辑层。
 ///
 /// 负责章节加载、缓存管理、滚动导航等核心逻辑。
@@ -118,6 +156,9 @@ class Logic extends GetxController
 
   /// 详情刷新或页面关闭时失效旧正文及元数据请求，普通跳章不丢弃预加载。
   int _chapter_data_generation = 0;
+
+  /// 页面退出后禁止新任务以及未完成请求继续回写阅读状态。
+  bool _is_disposed = false;
 
   /// 正在进行的章节正文请求。
   final Map<int, Future<String>> _chapter_fetch_in_flight =
@@ -231,6 +272,12 @@ class Logic extends GetxController
   /// 章节正文加载器。
   final ChapterVersionedContentLoader _chapter_content_loader;
 
+  /// 书籍详情读取器。
+  final NovelInfoLoader _novel_info_loader;
+
+  /// 章节目录读取器。
+  final ChapterDirectoryLoader _chapter_directory_loader;
+
   @override
   final ChapterParagraphMetadataLoader chapter_paragraph_metadata_loader;
 
@@ -281,13 +328,22 @@ class Logic extends GetxController
     ChapterContentLoader? chapter_content_loader,
     ChapterVersionedContentLoader chapter_content_with_version_loader =
         get_chapter_content_with_version,
+    NovelInfoLoader novel_info_loader = _default_novel_info_loader,
+    ChapterDirectoryLoader chapter_directory_loader =
+        _default_chapter_directory_loader,
     ChapterParagraphMetadataLoader? chapter_paragraph_metadata_loader,
     ParagraphCommentSender? paragraph_comment_sender,
     double? initial_body_font_size,
     double? initial_auto_read_speed,
   }) : _store = reading_store ?? NovelReadingStore(),
-       chapter_paragraph_metadata_loader = chapter_paragraph_metadata_loader ?? ((chapter_id, {required int novel_id}) => get_chapter_paragraphs(chapter_id, novel_id: novel_id)),
-       this.paragraph_comment_sender = paragraph_comment_sender ?? _default_paragraph_comment_sender,
+       _novel_info_loader = novel_info_loader,
+       _chapter_directory_loader = chapter_directory_loader,
+       chapter_paragraph_metadata_loader =
+           chapter_paragraph_metadata_loader ??
+           ((chapter_id, {required int novel_id}) =>
+               get_chapter_paragraphs(chapter_id, novel_id: novel_id)),
+       this.paragraph_comment_sender =
+           paragraph_comment_sender ?? _default_paragraph_comment_sender,
        _chapter_content_loader = chapter_content_loader == null
            ? chapter_content_with_version_loader
            : ((chapter_id) async => NovelContentResult(
@@ -303,6 +359,7 @@ class Logic extends GetxController
 
   @override
   void onClose() {
+    _is_disposed = true;
     _chapter_window_generation++;
     _chapter_data_generation++;
     close_paragraph_state();
@@ -368,12 +425,21 @@ class Logic extends GetxController
     }
   }
 
+  /// 当前初始化结果是否仍属于正在使用的阅读页面。
+  bool _is_current_data_generation(int generation) {
+    return !_is_disposed && generation == _chapter_data_generation;
+  }
+
   /// 请求书籍详情接口。
+  ///
+  /// 每次刷新拥有独立代次；详情、目录和正文的每个异步边界都校验代次，
+  /// 页面关闭或更新的刷新开始后，旧结果不能覆盖当前阅读状态。
   Future<void> fetch_info({
     bool force = false,
     bool show_loading = true,
     bool bypass_chapter_cache = false,
   }) async {
+    if (_is_disposed) return;
     if (!force &&
         _store.novel_info.value != null &&
         _store.reading_items.isNotEmpty) {
@@ -382,87 +448,87 @@ class Logic extends GetxController
     }
 
     final bool has_existing_content = _store.reading_items.isNotEmpty;
+    int generation = ++_chapter_data_generation;
+    _chapter_window_generation++;
+    _chapter_fetch_in_flight.clear();
+    is_jumping_chapter.value = false;
     is_loading.value = show_loading || !has_existing_content;
     is_error.value = false;
-    _chapter_window_generation++;
-    _chapter_data_generation++;
-    _chapter_fetch_in_flight.clear();
-    _chapter_native_ad_decisions.clear();
-    _chapter_video_ad_hint_decisions.clear();
-    _loaded_chapter_index = 0;
-    _min_loaded_chapter_index = 0;
-    current_chapter_index.value = 0;
-    current_chapter_db_id = 0;
-    _chapter_keys.clear();
-    if (bypass_chapter_cache) {
-      _store.clear_chapter_content_cache();
-    }
 
-    final ResultsType<NovelInfo> results = await postRequest<NovelInfo>(
-      path: 'novel/get_info',
-      parameter: <String, dynamic>{'id': story_id},
-      fromJson: (Map<String, dynamic> json) => NovelInfo.from_json(json),
-    );
+    try {
+      final ResultsType<NovelInfo> results = await _novel_info_loader(story_id);
+      if (!_is_current_data_generation(generation)) return;
+      if (!results.status || results.content == null) {
+        is_error.value = !(force && has_existing_content && !show_loading);
+        return;
+      }
 
-    if (results.status && results.content != null) {
-      _store.set_novel_info(results.content!);
       unawaited(BookshelfSyncService.history_changed());
-      _total_word_count = results.content!.language_info.word_count;
+      final directory = await _chapter_directory_loader(
+        results.content!.language_info.id,
+      );
+      if (!_is_current_data_generation(generation)) return;
+      if (!directory.status ||
+          directory.content == null ||
+          directory.content!.isEmpty) {
+        is_error.value = !(force && has_existing_content && !show_loading);
+        return;
+      }
 
+      final NovelChapterInfo first_chapter = directory.content!.first;
+      final loaded = await _read_chapter_content(
+        0,
+        chapter: first_chapter,
+        force: bypass_chapter_cache,
+      );
+      if (!_is_current_data_generation(generation)) return;
+      if (loaded.content.trim().isEmpty) {
+        is_error.value = !(force && has_existing_content && !show_loading);
+        return;
+      }
+
+      // 详情、目录、缓存与正文一起提交，失败的刷新完整保留旧阅读窗口。
+      // 刷新等待期间仍可阅读旧窗口；提交时再次失效期间启动的旧窗口拼接任务。
+      _chapter_window_generation++;
+      generation = ++_chapter_data_generation;
+      _chapter_fetch_in_flight.clear();
+      _store.set_novel_info(results.content!);
+      _store.set_chapter_list(directory.content!);
+      _total_word_count = results.content!.language_info.word_count;
+      _update_total_word_count();
       is_liked.value = results.content!.is_liked;
       like_count.value = int.tryParse(results.content!.like_count) ?? 0;
       is_favorited.value = results.content!.is_favorited;
-
-      await fetch_directory(results.content!.language_info.id);
-
-      if (_store.chapter_list.isNotEmpty) {
-        final NovelChapterInfo first_chapter = _store.chapter_list.first;
-        final String content = await _fetch_chapter_content(
-          0,
-          force: bypass_chapter_cache,
-        );
-        _store.set_initial_content(
-          first_chapter.title,
-          first_chapter.chapter_no,
-          0,
-          0,
-          first_chapter.word_count,
-          content,
-        );
-        on_chapter_loaded?.call(0);
-        _loaded_chapter_index = 0;
-        _min_loaded_chapter_index = 0;
-        current_chapter_index.value = 0;
-        current_chapter_db_id = int.tryParse(first_chapter.id) ?? 0;
-        _preload_adjacent_chapters(0);
+      if (bypass_chapter_cache) {
+        _store.clear_chapter_content_cache();
       }
-
-      is_loading.value = false;
-    } else {
+      _cache_loaded_chapter(0, loaded);
+      _chapter_native_ad_decisions.clear();
+      _chapter_video_ad_hint_decisions.clear();
+      _chapter_keys.clear();
+      _loaded_chapter_index = 0;
+      _min_loaded_chapter_index = 0;
+      current_chapter_index.value = 0;
+      current_chapter_db_id = int.tryParse(first_chapter.id) ?? 0;
+      update_chapter_progress(0);
+      _store.set_initial_content(
+        first_chapter.title,
+        first_chapter.chapter_no,
+        0,
+        0,
+        first_chapter.word_count,
+        loaded.content,
+      );
+      on_chapter_loaded?.call(0);
+      _preload_adjacent_chapters(0);
+    } catch (error) {
+      if (!_is_current_data_generation(generation)) return;
+      debugPrint('加载小说详情失败: $error');
       is_error.value = !(force && has_existing_content && !show_loading);
-      is_loading.value = false;
-    }
-  }
-
-  /// 请求章节目录接口。
-  Future<void> fetch_directory(String novel_language_id) async {
-    final ResultsType<List<NovelChapterInfo>> results =
-        await postRequest<List<NovelChapterInfo>>(
-          path: 'novel_chapter/inquire',
-          parameter: <String, dynamic>{'novel_language_id': novel_language_id},
-          fromJsonList: (List<dynamic> json) {
-            return json
-                .map(
-                  (e) =>
-                      NovelChapterInfo.from_json(Map<String, dynamic>.from(e)),
-                )
-                .toList();
-          },
-        );
-
-    if (results.status && results.content != null) {
-      _store.set_chapter_list(results.content!);
-      _update_total_word_count();
+    } finally {
+      if (_is_current_data_generation(generation)) {
+        is_loading.value = false;
+      }
     }
   }
 
@@ -755,7 +821,9 @@ class Logic extends GetxController
 
   /// 获取章节内容，优先从缓存读取。
   Future<String> _fetch_chapter_content(int index, {bool force = false}) async {
-    if (index < 0 || index >= _store.chapter_list.length) return '';
+    if (_is_disposed || index < 0 || index >= _store.chapter_list.length) {
+      return '';
+    }
 
     if (!force) {
       final Future<String>? in_flight = _chapter_fetch_in_flight[index];
@@ -779,6 +847,33 @@ class Logic extends GetxController
   /// 执行单个章节的真实缓存读取与网络请求。
   Future<String> _load_chapter_content(int index, {required bool force}) async {
     final NovelChapterInfo chapter = _store.chapter_list[index];
+    final int data_generation = _chapter_data_generation;
+    final loaded = await _read_chapter_content(
+      index,
+      chapter: chapter,
+      force: force,
+    );
+    if (!_is_current_data_generation(data_generation) ||
+        index >= _store.chapter_list.length ||
+        _store.chapter_list[index].id != chapter.id ||
+        _store.chapter_list[index].published_revision_id !=
+            chapter.published_revision_id) {
+      return '';
+    }
+    _cache_loaded_chapter(index, loaded);
+    return loaded.content;
+  }
+
+  /// 读取并校验正文，但不修改目录、内存缓存和正在显示的阅读窗口。
+  ///
+  /// [index] 当前章在目录中的索引，用于读取同身份的内存缓存。
+  /// [chapter] 本次请求的目录记录，也可以是尚未提交的新目录记录。
+  /// [force] 是否跳过正文缓存，刷新失败时原缓存仍然保留。
+  Future<_LoadedChapterContent> _read_chapter_content(
+    int index, {
+    required NovelChapterInfo chapter,
+    required bool force,
+  }) async {
     final String chapter_id = chapter.id;
     final int data_generation = _chapter_data_generation;
     String? published_revision_id = chapter.published_revision_id;
@@ -786,13 +881,31 @@ class Logic extends GetxController
     String content = '';
 
     // 已校验的内存缓存无需重复查询；失败元数据仍在下一次加载时重试。
-    final cached = force ? null : _store.get_cached_chapter_content(index);
+    final bool can_read_memory_cache =
+        !force &&
+        index < _store.chapter_list.length &&
+        _store.chapter_list[index].id == chapter_id &&
+        _store.chapter_list[index].published_revision_id ==
+            chapter.published_revision_id;
+    final cached = can_read_memory_cache
+        ? _store.get_cached_chapter_content(index)
+        : null;
     if (cached != null && cached.isNotEmpty) {
       content = cached;
       published_revision_id = _store.get_cached_chapter_revision(index);
-      if (_store.get_chapter_paragraph_metadata(index) != null) return cached;
+      final metadata = _store.get_chapter_paragraph_metadata(index);
+      if (metadata != null) {
+        return (
+          content: cached,
+          published_revision_id: published_revision_id,
+          metadata: metadata,
+        );
+      }
     }
-    final metadata_future = load_chapter_paragraph_metadata(chapter_id, novel_id: story_id);
+    final metadata_future = load_chapter_paragraph_metadata(
+      chapter_id,
+      novel_id: story_id,
+    );
     if (!force && content.isEmpty) {
       content =
           await ChapterCache.read(
@@ -840,22 +953,13 @@ class Logic extends GetxController
         metadata != null &&
         !metadata_matches() &&
         loaded_from_network) {
-      metadata = await load_chapter_paragraph_metadata(chapter_id, novel_id: story_id);
-    }
-    if (data_generation != _chapter_data_generation ||
-        index >= _store.chapter_list.length ||
-        _store.chapter_list[index].id != chapter_id) {
-      return '';
-    }
-    if (content.isNotEmpty) {
-      _store.cache_chapter_content(
-        index,
-        content,
-        published_revision_id: published_revision_id,
+      metadata = await load_chapter_paragraph_metadata(
+        chapter_id,
+        novel_id: story_id,
       );
-      if (metadata_matches()) {
-        _store.set_chapter_paragraph_metadata(index, metadata!);
-      }
+    }
+    if (!_is_current_data_generation(data_generation)) {
+      return (content: '', published_revision_id: null, metadata: null);
     }
     if (content.isNotEmpty && loaded_from_network) {
       await ChapterCache.write(
@@ -864,7 +968,24 @@ class Logic extends GetxController
         published_revision_id: published_revision_id,
       );
     }
-    return content;
+    return (
+      content: content,
+      published_revision_id: published_revision_id,
+      metadata: metadata_matches() ? metadata : null,
+    );
+  }
+
+  /// 在章节身份仍然有效时提交已完成正文校验的缓存和段落元数据。
+  void _cache_loaded_chapter(int index, _LoadedChapterContent loaded) {
+    if (loaded.content.isEmpty) return;
+    _store.cache_chapter_content(
+      index,
+      loaded.content,
+      published_revision_id: loaded.published_revision_id,
+    );
+    if (loaded.metadata != null) {
+      _store.set_chapter_paragraph_metadata(index, loaded.metadata!);
+    }
   }
 
   /// 异步预加载指定章节附近的章节到缓存。

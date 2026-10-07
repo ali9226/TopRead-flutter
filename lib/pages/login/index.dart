@@ -80,6 +80,8 @@ class _LoginState extends State<Login> {
 
   @override
   void dispose() {
+    logic.dispose();
+
     /// 释放输入框控制器。
     accountController.dispose();
     passwordController.dispose();
@@ -122,14 +124,8 @@ class _LoginState extends State<Login> {
           focusNode: accountFocusNode,
           hintText: context.tr('login.account_tips'),
           onChanged: (String value) {
-            logic.account = value;
-
-            /// 输入变化时重置验证状态。
-            if (logic.isAccountRegistered != null) {
-              setState(() {
-                logic.isAccountRegistered = null;
-              });
-            }
+            /// 逻辑层使旧请求失效，页面同步重置登录/注册模式。
+            setState(() => logic.account = value);
           },
           onSubmitted: () {
             /// 点击回车时切换到密码输入框。
@@ -157,9 +153,9 @@ class _LoginState extends State<Login> {
           password: true,
           onChanged: (String value) => logic.password = value,
           onSubmitted: () {
-            /// 点击回车时收起键盘并触发登录。
+            /// 键盘完成键与提交按钮使用同一个认证入口。
             passwordFocusNode.unfocus();
-            _handleLogin();
+            _handleSubmit();
           },
         ),
 
@@ -183,7 +179,7 @@ class _LoginState extends State<Login> {
         AuthSubmitButton(
           isLoginMode: isLoginMode,
           loading: loading,
-          onTap: isLoginMode ? _handleLogin : _handleRegister,
+          onTap: _handleSubmit,
         ),
         const SizedBox(height: Style.footerSpacing),
 
@@ -210,6 +206,10 @@ class _LoginState extends State<Login> {
       logic.remember = !logic.remember;
     });
   }
+
+  /// 根据最新账号验证状态提交，确保键盘和按钮选择相同的接口。
+  Future<void> _handleSubmit() =>
+      logic.isAccountRegistered == false ? _handleRegister() : _handleLogin();
 
   /// 当前版本忘记密码尚未接入真实流程，先保留日志入口。
   void _handleForgotPassword() {

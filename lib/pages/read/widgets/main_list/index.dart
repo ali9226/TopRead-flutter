@@ -50,6 +50,9 @@ class ReadMainList extends StatelessWidget {
   /// 当前小说是否正在请求原生广告配置。
   final bool is_native_ad_config_loading;
 
+  /// 当前业务是否允许广告展示，配置身份保留以便安全收回已有广告高度。
+  final bool native_ads_enabled;
+
   /// 原生广告产生真实展示后的统计回调。
   final VoidCallback? on_native_ad_impression;
 
@@ -80,6 +83,7 @@ class ReadMainList extends StatelessWidget {
     this.on_paragraph_selection_changed,
     this.native_ad_config,
     this.is_native_ad_config_loading = false,
+    this.native_ads_enabled = true,
     this.on_native_ad_impression,
     this.ads_read_video_ad_probability = 0,
     required this.ad_free_expire_time_listenable,
@@ -125,6 +129,7 @@ class ReadMainList extends StatelessWidget {
               on_paragraph_selection_changed: on_paragraph_selection_changed,
               native_ad_config: native_ad_config,
               is_native_ad_config_loading: is_native_ad_config_loading,
+              native_ads_enabled: native_ads_enabled,
               on_native_ad_impression: on_native_ad_impression,
               ads_read_video_ad_probability: ads_read_video_ad_probability,
               ad_free_expire_time_listenable: ad_free_expire_time_listenable,

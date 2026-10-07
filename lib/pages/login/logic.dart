@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:async';
 
 import 'package:app/api/post_request.dart';
@@ -6,6 +8,7 @@ import 'package:app/models/login.dart';
 import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/services/post_login_sync_service.dart';
 import 'package:app/stores/user_information.dart';
+import 'package:app/util/auth/account_registration_verifier.dart';
 import 'package:app/util/dialog/aes_encryption.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/encryption/index.dart';
@@ -19,11 +22,8 @@ const String accountKey = 'account';
 const String passwordKey = 'password';
 
 /// 登录页逻辑控制器。
-class Logic {
-  Logic();
-
-  /// 用户输入的账号。
-  String account = '';
+class Logic extends AccountRegistrationVerifier {
+  Logic({super.verify_account_request});
 
   /// 用户输入的密码。
   String password = '';
@@ -34,9 +34,6 @@ class Logic {
   /// 是否记住密码。
   bool remember = true;
 
-  /// 账号是否已注册：null 表示未验证，true 已注册，false 未注册。
-  bool? isAccountRegistered;
-
   /// 外部页面注入的账号输入框控制器。
   TextEditingController? accountController;
 
@@ -45,9 +42,13 @@ class Logic {
 
   /// 初始化登录表单的缓存数据。
   Future<void> init() async {
+    final int initial_revision = account_revision;
     final String? storageAccountEncryption = await StorageUtil.getData(
       accountKey,
     );
+
+    // 缓存读取期间页面可能已关闭，或用户已经开始输入。
+    if (!is_active || account_revision != initial_revision) return;
 
     if (storageAccountEncryption == null || storageAccountEncryption.isEmpty) {
       return;
@@ -63,9 +64,16 @@ class Logic {
     account = storageAccount;
     accountController?.text = account;
 
+    final int restored_revision = account_revision;
+
     final String? storagePasswordEncryption = await StorageUtil.getData(
       passwordKey,
     );
+    if (!is_active ||
+        account_revision != restored_revision ||
+        password.isNotEmpty) {
+      return;
+    }
     if (storagePasswordEncryption == null ||
         storagePasswordEncryption.isEmpty) {
       return;
@@ -79,36 +87,6 @@ class Logic {
 
     password = storagePassword;
     passwordController?.text = password;
-  }
-
-  /// 验证账号是否已注册。
-  ///
-  /// 调用 user/register_verify 接口，返回 true 表示已注册，false 表示未注册。
-  Future<bool> verifyAccount() async {
-    if (account.isEmpty) {
-      isAccountRegistered = null;
-      return false;
-    }
-
-    try {
-      final results = await postRequest<Map<String, dynamic>>(
-        path: 'user/register_verify',
-        parameter: {'account': removeSpaces(account)},
-        showTips: false,
-        fromJson: (json) => json,
-      );
-
-      /// 接口返回 {status: true} 表示已注册。
-      if (results.status && results.content != null) {
-        isAccountRegistered = results.content!['status'] == true;
-      } else {
-        isAccountRegistered = false;
-      }
-      return isAccountRegistered!;
-    } catch (e) {
-      isAccountRegistered = null;
-      return false;
-    }
   }
 
   /// 执行登录请求。

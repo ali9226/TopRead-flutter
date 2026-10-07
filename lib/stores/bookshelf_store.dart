@@ -378,6 +378,11 @@ class BookshelfStore extends GetxController {
 
   /// 加载历史列表更多数据。
   Future<void> load_more_history() async {
+    // 首屏失败后仍需重试第一页，不能把滚动加载误当作下一页请求。
+    if (!_history_loaded) {
+      await load_history_if_needed();
+      return;
+    }
     if (!history_has_more.value ||
         _history_request != null ||
         LanguageChangeHandler.is_refreshing.value) {
@@ -478,9 +483,7 @@ class BookshelfStore extends GetxController {
       }
 
       if (result == null) {
-        // TODO 静默刷新失败时保留旧列表，避免网络波动把书架瞬间清空。
-        if (history_list.isEmpty) history_has_more.value = false;
-        _history_loaded = true;
+        // 请求失败不改变已加载状态和分页信息，首屏下次访问仍可重试。
         return;
       }
 
@@ -592,6 +595,11 @@ class BookshelfStore extends GetxController {
 
   /// 加载收藏列表更多数据。
   Future<void> load_more_favorite() async {
+    // 首屏失败后重试第一页，确保收藏不会因网络波动遗漏首屏数据。
+    if (!_favorite_loaded) {
+      await load_favorite_if_needed();
+      return;
+    }
     if (!favorite_has_more.value ||
         _favorite_request != null ||
         LanguageChangeHandler.is_refreshing.value) {
@@ -692,9 +700,7 @@ class BookshelfStore extends GetxController {
       }
 
       if (result == null) {
-        // TODO 静默刷新失败时保留旧收藏数据。
-        if (favorite_list.isEmpty) favorite_has_more.value = false;
-        _favorite_loaded = true;
+        // 保留旧收藏及分页状态，未成功加载的首屏允许再次请求。
         return;
       }
 
@@ -814,6 +820,11 @@ class BookshelfStore extends GetxController {
 
   /// 加载关注列表更多数据。
   Future<void> load_more_focus() async {
+    // 只有首屏成功后才能翻页，失败时继续从第一页重试。
+    if (!_focus_loaded) {
+      await load_focus_if_needed();
+      return;
+    }
     if (!focus_has_more.value || _focus_request != null) return;
     await _fetch_focus(reset: false);
   }
@@ -918,9 +929,7 @@ class BookshelfStore extends GetxController {
       }
 
       if (result == null) {
-        // TODO 静默刷新失败时保留旧关注数据。
-        if (focus_list.isEmpty) focus_has_more.value = false;
-        _focus_loaded = true;
+        // 临时失败不缓存为成功的空列表，恢复网络后仍能重新加载。
         return;
       }
 
