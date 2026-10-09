@@ -1,10 +1,20 @@
+import 'package:app/config/constant.dart';
 import 'package:get/get.dart';
 import 'package:app/models/user_info.dart';
+import 'package:app/util/storage_util/index.dart';
+import 'package:flutter/foundation.dart';
 
 /// 用户信息全局状态。
 ///
 /// 管理当前登录用户资料、登录状态和认证会话版本。
 class UserInformation extends GetxController {
+  UserInformation({
+    @visibleForTesting Future<bool> Function(String, String)? token_writer,
+  }) : _token_writer = token_writer ?? StorageUtil.saveData;
+
+  /// 凭证持久化入口。写入在内存中同步完成，Future 仅等待磁盘刷新。
+  final Future<bool> Function(String, String) _token_writer;
+
   /// 当前用户信息，默认 null 表示未登录。
   var userInfo = Rxn<UserInfo>();
 
@@ -47,6 +57,36 @@ class UserInformation extends GetxController {
   /// [info] 要保存的用户信息。
   void saveUserInfo(UserInfo info) {
     _set_user_info(info);
+  }
+
+  /// 仅向请求所属会话提交新凭证，避免等待磁盘期间将旧账号重新登录。
+  ///
+  /// [token] 和 [info] 在同一同步调用中更新；持久化完成后只校验结果，
+  /// 不再写入身份。[request_revision] 是认证请求开始时的会话版本，
+  /// [is_active] 可用于阻止已关闭页面的认证结果提交或继续跳转。
+  Future<bool> save_auth_credentials_if_current({
+    required String token,
+    required UserInfo info,
+    required int request_revision,
+    bool Function()? is_active,
+  }) async {
+    if (token.trim().isEmpty ||
+        info.id <= 0 ||
+        !is_auth_revision_current(request_revision) ||
+        (is_active != null && !is_active())) {
+      return false;
+    }
+
+    // GetStorage.write 同步更新内存，再异步刷新磁盘。此处不能先 await，
+    // 否则其他登录/退出可在凭证与用户资料之间插入并被旧资料覆盖。
+    final Future<bool> persistence = _token_writer(Constant.tokenKey, token);
+    _set_user_info(info, invalidate_auth_session: true);
+    final int committed_revision = _auth_revision;
+
+    final bool saved = await persistence;
+    return saved &&
+        is_auth_revision_current(committed_revision) &&
+        (is_active == null || is_active());
   }
 
   /// 清空用户信息（登出）。

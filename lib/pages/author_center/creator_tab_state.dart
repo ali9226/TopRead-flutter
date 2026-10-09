@@ -30,6 +30,7 @@ class CreatorTabState extends ChangeNotifier {
   }
 
   Future<void> _load({required bool refresh}) async {
+    if (_disposed) return;
     final generation = refresh ? ++_generation : _generation;
     final nextPage = refresh ? 1 : page + 1;
     if (refresh) {

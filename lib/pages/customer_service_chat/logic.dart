@@ -12,6 +12,7 @@ import 'package:app/config/constant.dart';
 import 'package:app/models/file_upload.dart';
 import 'package:app/websocket/websocket_service.dart';
 import 'package:app/stores/customer_service_chat_history_store.dart';
+import 'package:app/stores/user_information.dart';
 import 'package:app/util/audio_util/play_ringtone.dart';
 import 'package:app/util/log_util.dart';
 import 'style.dart';
@@ -21,6 +22,11 @@ import 'style.dart';
 /// 全局消息、分页和 WebSocket 数据由 [CustomerServiceChatHistoryStore]
 /// 统一管理；当前类只负责页面级控制器、输入交互和滚动行为。
 class ChatLogic {
+  final UserInformation _user_information = Get.find<UserInformation>();
+  final Future<String?> Function(String)? _image_uploader;
+  final void Function({required int message_type, required String content})
+  _message_sender;
+
   /// TODO 靠近底部时收到新消息自动跟随的距离。
   static const double _follow_bottom_threshold = 160;
 
@@ -52,13 +58,27 @@ class ChatLogic {
   /// TODO 页面逻辑是否已经释放。
   bool _is_disposed = false;
 
-  ChatLogic(this.on_update) {
+  ChatLogic(
+    this.on_update, {
+    Future<String?> Function(String)? image_uploader,
+    void Function({required int message_type, required String content})?
+    message_sender,
+  }) : _image_uploader = image_uploader,
+       _message_sender = message_sender ?? _send_chat_message {
     _received_message_revision = _history_store.received_message_revision;
     _history_store.addListener(_handle_store_update);
     scroll_controller.addListener(_handle_scroll);
     focus_node.addListener(_handle_focus_change);
     unawaited(_history_store.open_conversation());
   }
+
+  static void _send_chat_message({
+    required int message_type,
+    required String content,
+  }) => WebSocketService().send_chat_message(
+    message_type: message_type,
+    content: content,
+  );
 
   List<ChatMessageItem> get messages => _history_store.messages;
   bool get is_loading_history => _history_store.is_loading_more;
@@ -134,8 +154,13 @@ class ChatLogic {
     double old_offset,
     double old_max_extent,
   ) {
+    final int request_revision = ++_scroll_request_revision;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!scroll_controller.hasClients) return;
+      if (_is_disposed ||
+          request_revision != _scroll_request_revision ||
+          !scroll_controller.hasClients ||
+          (scroll_controller.offset - old_offset).abs() > 0.5)
+        return;
       final double new_max_extent = scroll_controller.position.maxScrollExtent;
       final double inserted_extent = new_max_extent - old_max_extent;
       final double target_offset = (old_offset + inserted_extent).clamp(
@@ -148,6 +173,7 @@ class ChatLogic {
 
   /// TODO 发送文字消息并立即写入全局缓存。
   void send_text_message() {
+    if (_is_disposed) return;
     final String text = text_controller.text.trim();
     if (text.isEmpty) return;
 
@@ -158,7 +184,7 @@ class ChatLogic {
     _history_store.register_pending_confirmation(local_id);
     text_controller.clear();
     scroll_to_bottom();
-    WebSocketService().send_chat_message(message_type: 1, content: text);
+    _message_sender(message_type: 1, content: text);
   }
 
   /// TODO 将表情插入当前光标位置。
@@ -187,6 +213,8 @@ class ChatLogic {
 
   /// TODO 将选中图片立即加入全局缓存，然后在后台并发上传。
   void send_image_messages(List<String> file_paths) {
+    if (_is_disposed) return;
+    final int identity_revision = _user_information.auth_identity_revision;
     final List<String> valid_paths = file_paths
         .where((String path) => path.isNotEmpty)
         .toList(growable: false);
@@ -198,15 +226,22 @@ class ChatLogic {
         content: file_path,
         is_uploading: true,
       );
-      unawaited(_upload_and_send(local_id, file_path));
+      unawaited(_upload_and_send(local_id, file_path, identity_revision));
     }
     scroll_to_bottom();
   }
 
   /// TODO 上传图片后更新全局消息并通过 WebSocket 发送真实 URL。
-  Future<void> _upload_and_send(int local_id, String file_path) async {
+  Future<void> _upload_and_send(
+    int local_id,
+    String file_path,
+    int identity_revision,
+  ) async {
     try {
-      final String? url = await _upload_file(File(file_path));
+      final String? url = await (_image_uploader == null
+          ? _upload_file(File(file_path))
+          : _image_uploader(file_path));
+      if (!_can_finish_image_upload(identity_revision)) return;
       if (url == null || url.isEmpty) {
         _history_store.mark_image_upload_failed(local_id);
         return;
@@ -215,15 +250,18 @@ class ChatLogic {
       final String remote_url = _resolve_upload_url(url);
       _history_store.mark_image_upload_complete(local_id, remote_url);
       _history_store.register_pending_confirmation(local_id);
-      WebSocketService().send_chat_message(
-        message_type: 3,
-        content: remote_url,
-      );
+      _message_sender(message_type: 3, content: remote_url);
     } catch (error) {
       logUtil(msg: '图片上传失败: $error', type: 'e');
-      _history_store.mark_image_upload_failed(local_id);
+      if (_can_finish_image_upload(identity_revision)) {
+        _history_store.mark_image_upload_failed(local_id);
+      }
     }
   }
+
+  /// 离开聊天页后继续同用户上传；退出或换号后绝不能向新会话发送旧图片。
+  bool _can_finish_image_upload(int identity_revision) =>
+      _user_information.auth_identity_revision == identity_revision;
 
   /// TODO 将上传接口可能返回的相对路径转为完整网络地址。
   String _resolve_upload_url(String value) {
@@ -242,8 +280,10 @@ class ChatLogic {
       final FormData form_data = FormData.fromMap(<String, dynamic>{
         'file': await MultipartFile.fromFile(file.path),
       });
-      final Response<dynamic> response =
-          await DioClient().instance.post(upload_url, data: form_data);
+      final Response<dynamic> response = await DioClient().instance.post(
+        upload_url,
+        data: form_data,
+      );
       if (response.statusCode != 200) return null;
 
       FileUpload result;

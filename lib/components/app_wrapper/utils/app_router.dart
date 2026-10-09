@@ -56,6 +56,9 @@ class AppRouter {
    */
   static void setRouter(GoRouter router) {
     _router = router;
+    _navigationLocked = false;
+    _pendingNavigationLocation = '';
+    _bypassNextBackHandler = false;
     _lastRouteSignature = _buildRouteSignature();
   }
 
@@ -124,16 +127,11 @@ class AppRouter {
   /* TODO
    * 获取当前真实 path。
    *
-   * 这里统一从 routeInformationProvider 读取，而不是从
-   * currentConfiguration.last.route.path 之类的嵌套路由结构里猜。
-   * 原因是 ShellRoute/嵌套路由场景下，后者有机会和用户眼前真正所在的页面不一致。
+   * 从当前栈顶完整 URI 提取 path，覆盖 ShellRoute 和 push 路由。
+   * 移动端 push 时根 routeInformationProvider 的 URL 可能仍属于上一页。
    */
   static String currentPath() {
-    try {
-      return _router.routeInformationProvider.value.uri.path;
-    } catch (_) {
-      return '';
-    }
+    return Uri.tryParse(currentLocation())?.path ?? '';
   }
 
   // TODO 获取当前完整 location（包含 query），用于同路由去重。
@@ -142,20 +140,16 @@ class AppRouter {
   // TODO 如果直接用 URL 判断“当前已在 /”，会误判并跳过真正需要执行的导航。
   static String currentLocation() {
     try {
-      final dynamic configuration = _router.routerDelegate.currentConfiguration;
-      if (configuration != null && configuration.isNotEmpty == true) {
-        final dynamic lastMatch = configuration.last;
-        final dynamic matchedLocation = lastMatch?.matchedLocation;
-        if (matchedLocation is String && matchedLocation.isNotEmpty) {
-          final dynamic uri = lastMatch?.uri;
-          if (uri != null) {
-            final String location = uri.toString();
-            if (location.isNotEmpty) {
-              return location;
-            }
-          }
-          return matchedLocation;
-        }
+      final RouteMatchList configuration =
+          _router.routerDelegate.currentConfiguration;
+      if (configuration.isNotEmpty) {
+        final RouteMatch last_match = configuration.last;
+        // 普通 RouteMatch 没有 uri 属性；push/replace 的 URI 保存在
+        // ImperativeRouteMatch.matches 中，可能与根 URL 不同。
+        return (last_match is ImperativeRouteMatch
+                ? last_match.matches.uri
+                : configuration.uri)
+            .toString();
       }
       return _router.routeInformationProvider.value.uri.toString();
     } catch (_) {
@@ -197,8 +191,8 @@ class AppRouter {
   // TODO 生成一个足够稳定的路由签名，供同步逻辑判断当前页是否真的变了。
   static String _buildRouteSignature() {
     final String routeName = currentRouteName();
-    final String routePath = currentPath();
-    return '$routeName|$routePath';
+    final String location = currentLocation();
+    return '$routeName|$location';
   }
 
   // TODO 在路由动作真正执行后，异步广播一次“当前路由可能已变化”。

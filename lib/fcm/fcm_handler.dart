@@ -27,7 +27,7 @@ class FcmHandler {
   static void onMessageTap(Map<String, dynamic> data) {
     logUtil(msg: 'FCM: 用户点击通知，数据: $data');
 
-    final String type = data['type'] ?? typeNoAction;
+    final String type = data['type']?.toString() ?? typeNoAction;
 
     switch (type) {
       case typeNoAction:
@@ -61,7 +61,7 @@ class FcmHandler {
   ///
   /// 根据 data 中的 route 参数跳转到指定页面。
   static void _handleNavigate(Map<String, dynamic> data) {
-    final String route = data['route'] ?? '/';
+    final String route = data['route']?.toString() ?? '/';
     logUtil(msg: 'FCM: 跳转到路由: $route');
     _navigateTo(route);
   }
@@ -70,15 +70,17 @@ class FcmHandler {
   ///
   /// 根据 data 中的 novel_id 和 publish_status 跳转到小说详情页。
   static void _handleNovelDetail(Map<String, dynamic> data) {
-    final String novelId = data['novel_id'] ?? '';
-    final String publishStatus = data['publish_status'] ?? '1';
+    final String novelId = data['novel_id']?.toString() ?? '';
+    final String publishStatus = data['publish_status']?.toString() ?? '1';
 
     if (novelId.isEmpty) {
       logUtil(msg: 'FCM: novel_id 为空，跳过跳转');
       return;
     }
 
-    logUtil(msg: 'FCM: 跳转到小说详情页，novelId=$novelId, publishStatus=$publishStatus');
+    logUtil(
+      msg: 'FCM: 跳转到小说详情页，novelId=$novelId, publishStatus=$publishStatus',
+    );
 
     // 根据发布状态决定跳转路径
     // publish_status: 1=连载中, 2=已完结, 3=下架, 4=短篇小说
@@ -94,11 +96,11 @@ class FcmHandler {
   /// 根据 data 中的 novel_id、publish_status 和 top_comment_id 跳转到小说详情页，
   /// 并自动打开评论列表，定位到指定评论（顶层评论置顶显示）。
   static void _handleNovelComment(Map<String, dynamic> data) {
-    final String novelId = data['novel_id'] ?? '';
-    final String publishStatus = data['publish_status'] ?? '1';
-    final String parentId = data['parent_id'] ?? '';
-    final String commentId = data['comment_id'] ?? '';
-    final String messageId = data['message_id'] ?? '';
+    final String novelId = data['novel_id']?.toString() ?? '';
+    final String publishStatus = data['publish_status']?.toString() ?? '1';
+    final String parentId = data['parent_id']?.toString() ?? '';
+    final String commentId = data['comment_id']?.toString() ?? '';
+    final String messageId = data['message_id']?.toString() ?? '';
 
     if (novelId.isEmpty) {
       logUtil(msg: 'FCM: novel_id 为空，跳过跳转');
@@ -110,9 +112,12 @@ class FcmHandler {
     final int commentIdInt = int.tryParse(targetCommentId) ?? 0;
     final int novelIdInt = int.tryParse(novelId) ?? 0;
 
-    logUtil(msg: 'FCM: 跳转到小说详情页并打开评论，'
-        'novelId=$novelId, publishStatus=$publishStatus, '
-        'targetCommentId=$targetCommentId');
+    logUtil(
+      msg:
+          'FCM: 跳转到小说详情页并打开评论，'
+          'novelId=$novelId, publishStatus=$publishStatus, '
+          'targetCommentId=$targetCommentId',
+    );
 
     // 根据发布状态决定跳转路径
     final String basePath = publishStatus == '4'
@@ -121,14 +126,19 @@ class FcmHandler {
     final String targetPath = '$basePath?id=$novelId';
 
     // 检查当前是否已在目标小说的阅读页面
-    final String currentPath = AppRouter.currentPath();
-    final bool is_same_novel = currentPath.startsWith(basePath) &&
-        currentPath.contains('id=$novelId');
+    final Uri? current_uri = Uri.tryParse(AppRouter.currentLocation());
+    final bool is_same_novel =
+        novelIdInt > 0 &&
+        current_uri?.path == basePath &&
+        int.tryParse(current_uri?.queryParameters['id'] ?? '') == novelIdInt;
 
     if (is_same_novel) {
       // 已在目标页面，通过 store 直接触发打开评论（无需重建页面）
       logUtil(msg: 'FCM: 已在目标小说页面，直接触发打开评论');
-      CommentNavigation.open_comment(novel_id: novelIdInt, comment_id: commentIdInt);
+      CommentNavigation.open_comment(
+        novel_id: novelIdInt,
+        comment_id: commentIdInt,
+      );
     } else {
       // 不在目标页面，replace 替换当前路由（后退时回到跳转前的页面，不是回到小说A）
       logUtil(msg: 'FCM: 替换当前路由到: $targetPath');

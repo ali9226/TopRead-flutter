@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:app/pages/login/logic.dart';
 import 'package:app/util/dialog/aes_encryption.dart';
-import 'package:app/util/storage_util/index.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,6 +17,8 @@ void main() {
     storage_directory = Directory.systemTemp.createTempSync(
       'login_cache_lifecycle_test_',
     );
+    // 这些测试只读取缓存，初始化空文件避免 GetStorage 自动异步备份。
+    File('${storage_directory.path}/GetStorage.gs').writeAsStringSync('{}');
     binding.defaultBinaryMessenger.setMockMethodCallHandler(
       const MethodChannel('plugins.flutter.io/path_provider'),
       (_) async => storage_directory.path,
@@ -25,13 +26,16 @@ void main() {
     await GetStorage('GetStorage', storage_directory.path).initStorage;
   });
 
-  setUp(() async {
-    await StorageUtil.saveData(accountKey, aesEncryption('cached_reader'));
-    await StorageUtil.saveData(passwordKey, aesEncryption('cached_password'));
+  setUp(() {
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (_) async => storage_directory.path,
+    );
+    GetStorage().writeInMemory(accountKey, aesEncryption('cached_reader'));
+    GetStorage().writeInMemory(passwordKey, aesEncryption('cached_password'));
   });
 
   tearDownAll(() async {
-    await GetStorage().erase();
     binding.defaultBinaryMessenger.setMockMethodCallHandler(
       const MethodChannel('plugins.flutter.io/path_provider'),
       null,

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart' as dio_lib;
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import 'package:app/api/dio_client.dart';
@@ -30,6 +31,20 @@ import 'package:app/util/storage_util/index.dart';
 /// 负责 `redis/get` 接口的请求、重试、缓存和分发。
 /// 支持断网后自动重试、本地缓存兜底、网络恢复后静默刷新。
 class RedisRequestStore extends GetxController {
+  RedisRequestStore({
+    @visibleForTesting
+    Future<Map<String, dynamic>?> Function()? raw_json_loader,
+    @visibleForTesting
+    Future<void> Function(Map<String, dynamic>)? cache_writer,
+  }) : _raw_json_loader = raw_json_loader,
+       _cache_writer = cache_writer;
+
+  final Future<Map<String, dynamic>?> Function()? _raw_json_loader;
+  final Future<void> Function(Map<String, dynamic>)? _cache_writer;
+
+  /// 页面/容器关闭后停止重试，禁止迟到任务操作新注册的全局 Store。
+  bool _active = true;
+
   /// 请求进行中标记，防止并发重复请求。
   final RxBool _is_fetching = false.obs;
 
@@ -52,7 +67,7 @@ class RedisRequestStore extends GetxController {
   static const int _retry_delay_seconds = 5;
 
   /// 当前是否已安排重试定时器（防止重复安排）。
-  bool _has_retry_scheduled = false;
+  Timer? _retry_timer;
 
   /// 网络状态变更监听器。
   Worker? _network_worker;
@@ -78,6 +93,12 @@ class RedisRequestStore extends GetxController {
 
   @override
   void onClose() {
+    _active = false;
+    _retry_timer?.cancel();
+    _retry_timer = null;
+    final Completer<bool>? pending = _pending_completer;
+    _pending_completer = null;
+    if (pending != null && !pending.isCompleted) pending.complete(false);
     _network_worker?.dispose();
     super.onClose();
   }
@@ -86,6 +107,7 @@ class RedisRequestStore extends GetxController {
   ///
   /// 从断网（0）恢复到有网络（>0）时，静默发起一次 redis/get 请求。
   void _on_network_status_changed(int new_status) {
+    if (!_active) return;
     final bool was_offline = _last_network_status == 0;
     _last_network_status = new_status;
     if (was_offline && new_status > 0) {
@@ -99,11 +121,16 @@ class RedisRequestStore extends GetxController {
   /// 应用启动时调用，优先展示缓存数据，
   /// 后续网络请求成功后会静默覆盖缓存。
   Future<void> restore_from_cache() async {
-    if (_has_restored_from_cache) return;
+    if (!_active || _has_restored_from_cache) return;
     _has_restored_from_cache = true;
+    final int revision = LanguageChangeHandler.current_revision;
+    final String language_code = LanguageChangeHandler.current_language_code;
 
     try {
       final String? cached_json_str = await StorageUtil.getData(_cache_key);
+      if (!_active ||
+          !LanguageChangeHandler.is_current_revision(revision, language_code))
+        return;
       if (cached_json_str == null || cached_json_str.isEmpty) return;
 
       final dynamic decoded = jsonDecode(cached_json_str);
@@ -119,6 +146,8 @@ class RedisRequestStore extends GetxController {
 
   /// 全量拉取 Redis 配置并同步到各子 Store。
   Future<bool> fetch_redis_data({bool showTips = false}) async {
+    if (!_active) return false;
+
     /// 请求进行中时不丢弃新请求，而是合并为下一轮请求。
     if (_is_fetching.value) {
       _has_pending_fetch = true;
@@ -159,10 +188,10 @@ class RedisRequestStore extends GetxController {
 
         latest_result = await _fetch_once(show_tips: current_show_tips);
         current_show_tips = false;
-      } while (_has_pending_fetch);
+      } while (_active && _has_pending_fetch);
     } finally {
       _is_fetching.value = false;
-      _set_loading(false);
+      if (_active) _set_loading(false);
       final Completer<bool>? completer = _pending_completer;
       _pending_completer = null;
       if (completer != null && !completer.isCompleted) {
@@ -183,13 +212,15 @@ class RedisRequestStore extends GetxController {
         LanguageChangeHandler.current_language_code;
 
     try {
-      final Map<String, dynamic>? raw_json = await _request_raw_json();
+      final Map<String, dynamic>? raw_json =
+          await (_raw_json_loader?.call() ?? _request_raw_json());
 
       /// 切换期间到达的旧响应不能覆盖新语种数据。
-      if (!LanguageChangeHandler.is_current_revision(
-        request_revision,
-        request_language_code,
-      )) {
+      if (!_active ||
+          !LanguageChangeHandler.is_current_revision(
+            request_revision,
+            request_language_code,
+          )) {
         logUtil(
           msg:
               '丢弃过期 redis/get 响应: '
@@ -207,10 +238,19 @@ class RedisRequestStore extends GetxController {
       }
 
       // 成功获取数据后清除重试标记。
-      _has_retry_scheduled = false;
+      _retry_timer?.cancel();
+      _retry_timer = null;
 
       // 缓存原始 JSON 到本地。
       await _save_to_cache(raw_json);
+
+      // 缓存磁盘刷新也是异步边界，期间可能切语种或销毁旧控制器。
+      if (!_active ||
+          !LanguageChangeHandler.is_current_revision(
+            request_revision,
+            request_language_code,
+          ))
+        return false;
 
       // 分发数据到各子 Store。
       _distribute_data(raw_json);
@@ -222,10 +262,11 @@ class RedisRequestStore extends GetxController {
       );
       return true;
     } catch (error) {
-      if (LanguageChangeHandler.is_current_revision(
-        request_revision,
-        request_language_code,
-      )) {
+      if (_active &&
+          LanguageChangeHandler.is_current_revision(
+            request_revision,
+            request_language_code,
+          )) {
         logUtil(msg: 'redis/get 接口系统异常: $error', type: 'e');
         _finish_language_loading();
         _schedule_retry();
@@ -397,6 +438,10 @@ class RedisRequestStore extends GetxController {
   /// 下次冷启动时可通过 [restore_from_cache] 恢复。
   Future<void> _save_to_cache(Map<String, dynamic> raw_json) async {
     try {
+      if (_cache_writer != null) {
+        await _cache_writer(raw_json);
+        return;
+      }
       final String json_str = jsonEncode(raw_json);
       await StorageUtil.saveData(_cache_key, json_str);
       logUtil(msg: 'redis/get 缓存写入成功，大小=${json_str.length} 字节');
@@ -431,13 +476,13 @@ class RedisRequestStore extends GetxController {
   /// 不设上限，直到请求成功或应用退出。
   /// 重试期间不展示加载状态，不影响用户操作。
   void _schedule_retry() {
-    if (_has_retry_scheduled) return;
-    _has_retry_scheduled = true;
+    if (!_active || _retry_timer != null) return;
 
     logUtil(msg: 'redis/get 将在 $_retry_delay_seconds 秒后静默重试');
 
-    Future<void>.delayed(const Duration(seconds: _retry_delay_seconds), () {
-      _has_retry_scheduled = false;
+    _retry_timer = Timer(const Duration(seconds: _retry_delay_seconds), () {
+      _retry_timer = null;
+      if (!_active) return;
       fetch_redis_data(showTips: false);
     });
   }

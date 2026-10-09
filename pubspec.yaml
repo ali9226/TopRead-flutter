@@ -153,6 +153,8 @@ dependencies:
 dependency_overrides:
 
 dev_dependencies:
+  # 广告瀑布流回归使用独立图片缓存，避免测试依赖真实网络和文件插件。
+  flutter_cache_manager: ^3.4.2
   flutter_test:
     sdk: flutter
 

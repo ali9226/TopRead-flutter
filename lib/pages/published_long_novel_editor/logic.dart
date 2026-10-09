@@ -54,6 +54,11 @@ class PublishedNovelController extends ChangeNotifier {
   int? pending_section;
   bool _disposed = false;
 
+  /// 各 Tab 的输入代次；旧保存成功不能清掉请求期间的新输入。
+  int _details_revision = 0;
+  int _settings_revision = 0;
+  int? _pending_edit_revision;
+
   bool get dirty => details_dirty || settings_dirty || order_dirty;
   bool get locked =>
       loading ||
@@ -70,12 +75,16 @@ class PublishedNovelController extends ChangeNotifier {
   }
 
   Future<void> load() async {
+    if (_disposed || loading) return;
     loading = true;
     error = null;
     notifyListeners();
     try {
-      saved = await load_work(novel_id);
+      final next_saved = await load_work(novel_id);
       if (_disposed) return;
+      saved = next_saved;
+      title.removeListener(mark_details);
+      introduction.removeListener(mark_details);
       title.text = saved!.title;
       introduction.text = saved!.introduction;
       language_code = saved!.language_code;
@@ -119,6 +128,7 @@ class PublishedNovelController extends ChangeNotifier {
   }
 
   void mark_details() {
+    _details_revision++;
     details_dirty = true;
     notifyListeners();
   }
@@ -145,6 +155,7 @@ class PublishedNovelController extends ChangeNotifier {
           : preferences[group]!.add(item);
     }
     settings_dirty = true;
+    _settings_revision++;
     notifyListeners();
   }
 
@@ -166,8 +177,9 @@ class PublishedNovelController extends ChangeNotifier {
       if (url == null) {
         throw Exception(tr('creator_center.cover_upload_failed'));
       }
+      if (_disposed) return;
       cover_url = url;
-      details_dirty = true;
+      mark_details();
     } catch (e) {
       error = '$e';
     } finally {
@@ -179,7 +191,7 @@ class PublishedNovelController extends ChangeNotifier {
 
   /// 后端一次返回完整元数据；正文只在打开单章时读取。
   Future<void> load_chapters() async {
-    if (chapters_loading) return;
+    if (_disposed || chapters_loading || saved == null) return;
     chapters_loading = true;
     error = null;
     notifyListeners();
@@ -286,7 +298,8 @@ class PublishedNovelController extends ChangeNotifier {
 
   /// 网络结果未知时保留相同请求标识，重试不会重复执行排序。
   Future<void> update_order() async {
-    if (saving ||
+    if (_disposed ||
+        saving ||
         saved == null ||
         (!order_dirty && _order_pending == null) ||
         (pending_section != null && pending_section != 2)) {
@@ -308,6 +321,7 @@ class PublishedNovelController extends ChangeNotifier {
       };
       pending_section = 2;
       await call('creator_chapter/reorder', _order_pending!);
+      if (_disposed) return;
       _order_pending = null;
       pending_section = null;
       order_dirty = false;
@@ -327,7 +341,10 @@ class PublishedNovelController extends ChangeNotifier {
   }
 
   Future<void> delete_work() async {
-    if (saving || (pending_section != null && pending_section != 3)) return;
+    if (_disposed ||
+        saving ||
+        (pending_section != null && pending_section != 3))
+      return;
     saving = true;
     error = null;
     notifyListeners();
@@ -356,7 +373,7 @@ class PublishedNovelController extends ChangeNotifier {
 
   /// 当前表单与上次公开快照合并，另一 Tab 的本地修改不会被顺带提交。
   Future<void> update_section(int section) async {
-    if (saving || uploading || saved == null) return;
+    if (_disposed || saving || uploading || saved == null) return;
     if (pending_section != null && pending_section != section) return;
     saving = true;
     error = null;
@@ -414,21 +431,30 @@ class PublishedNovelController extends ChangeNotifier {
               .toList(),
         };
         pending_section = section;
+        _pending_edit_revision = section == 0
+            ? _details_revision
+            : _settings_revision;
       }
       await call('creator_work/publish_long', _pending!);
+      if (_disposed) return;
       // 更新版本号后才能提交另一 Tab，避免用旧基线覆盖新版本。
-      saved = await load_work(novel_id);
+      final next_saved = await load_work(novel_id);
+      if (_disposed) return;
+      saved = next_saved;
+      final saved_edit_revision = _pending_edit_revision;
       _pending = null;
       pending_section = null;
+      _pending_edit_revision = null;
       if (section == 0) {
-        details_dirty = false;
+        details_dirty = saved_edit_revision != _details_revision;
       } else {
-        settings_dirty = false;
+        settings_dirty = saved_edit_revision != _settings_revision;
       }
     } catch (e) {
       if (e is CreatorWorkspaceException && e.serverRejected) {
         _pending = null;
         pending_section = null;
+        _pending_edit_revision = null;
       }
       error = '$e';
       rethrow;
@@ -436,6 +462,33 @@ class PublishedNovelController extends ChangeNotifier {
       saving = false;
       notifyListeners();
     }
+  }
+
+  /// 保存退出必须串行确认各 Tab，上一项失败时保留后续全部本地修改。
+  ///
+  /// 优先重放结果未知的旧操作；每个资料请求都会取得最新公开修订基线，
+  /// 随后的设置请求才不会因为共用旧版本而覆盖前一次修改。
+  Future<bool> save_changes() async {
+    if (_disposed || saving || uploading || pending_section == 3) return false;
+    final pending = pending_section;
+    if (pending != null) {
+      if (pending == 2) {
+        await update_order();
+      } else {
+        await update_section(pending);
+      }
+    }
+    for (final section in [0, 1, 2]) {
+      if (_disposed) return false;
+      if (section == 0 && details_dirty) {
+        await update_section(section);
+      } else if (section == 1 && settings_dirty) {
+        await update_section(section);
+      } else if (section == 2 && order_dirty) {
+        await update_order();
+      }
+    }
+    return !_disposed && !dirty && pending_section == null && error == null;
   }
 
   @override

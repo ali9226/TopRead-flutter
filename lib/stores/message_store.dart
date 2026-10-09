@@ -53,10 +53,17 @@ class MessageStore extends GetxController {
     Future<MessageUnreadCount?> Function()? fetch_unread_count,
     Future<message_api.MessageReadAllResult> Function()? read_all_messages,
     MessageListFetcher? fetch_message_list,
+    Future<bool> Function({required int id})? read_message,
+    Future<bool> Function({required int id})? delete_message,
+    Future<int?> Function()? fetch_chat_unread_count,
   }) : _fetch_unread_count = fetch_unread_count ?? message_api.get_unread_count,
        _read_all_messages = read_all_messages ?? message_api.read_all_messages,
        _fetch_message_list =
-           fetch_message_list ?? message_api.inquire_message_list;
+           fetch_message_list ?? message_api.inquire_message_list,
+       _read_message = read_message ?? message_api.read_message,
+       _delete_message = delete_message ?? message_api.delete_message,
+       _fetch_chat_unread_count =
+           fetch_chat_unread_count ?? _request_chat_unread_count;
 
   /// 单例实例。
   static MessageStore get to => Get.find<MessageStore>();
@@ -69,6 +76,17 @@ class MessageStore extends GetxController {
 
   /// 消息列表请求实现，测试时可注入可控异步结果。
   final MessageListFetcher _fetch_message_list;
+
+  /// 单条消息操作和客服统计入口，允许测试延迟和身份切换。
+  final Future<bool> Function({required int id}) _read_message;
+  final Future<bool> Function({required int id}) _delete_message;
+  final Future<int?> Function() _fetch_chat_unread_count;
+
+  /// 每次全部已读或清空时递增；旧任务只能释放自己持有的操作锁。
+  int _mark_all_operation_id = 0;
+
+  /// 控制器销毁后禁止迟到的请求回写状态。
+  bool _is_disposed = false;
 
   /// 未读计数管理器（集中管理各类型未读数和角标同步）。
   final MessageUnreadCounter _unread = MessageUnreadCounter();
@@ -140,8 +158,6 @@ class MessageStore extends GetxController {
 
   /// 是否已向 FCM 服务注册前台补拉回调。
   bool _foreground_callback_registered = false;
-
-
 
   /// 最近处理的客服消息 ID，用于抵御乱序事件覆盖较新的权威未读数。
   int _latest_chat_message_id = 0;
@@ -226,6 +242,7 @@ class MessageStore extends GetxController {
 
   /// 获取统计数据（总数和未读数）。
   Future<void> fetch_statistics() async {
+    if (_is_disposed) return;
     if (_is_marking_all_read) {
       _unread_reconcile_pending = true;
       return;
@@ -268,6 +285,7 @@ class MessageStore extends GetxController {
 
   /// 执行一轮未读统计请求。
   Future<void> _fetch_statistics_once() async {
+    if (_is_disposed) return;
     final UserInformation user_information = Get.find<UserInformation>();
     if (!user_information.isLoggedIn.value) return;
     final int request_revision = user_information.auth_revision;
@@ -280,7 +298,8 @@ class MessageStore extends GetxController {
 
     final MessageUnreadCount? result = await _fetch_unread_count();
     if (result == null) return;
-    if (!user_information.can_apply_authenticated_response(request_revision)) {
+    if (_is_disposed ||
+        !user_information.can_apply_authenticated_response(request_revision)) {
       return;
     }
     if (_is_marking_all_read ||
@@ -299,6 +318,7 @@ class MessageStore extends GetxController {
     bool is_refresh = false,
     bool silent = false,
   }) async {
+    if (_is_disposed) return;
     if (_is_marking_all_read) {
       _unread_reconcile_pending = true;
       _list_refresh_pending = true;
@@ -378,6 +398,7 @@ class MessageStore extends GetxController {
     required int page,
     required bool is_refresh,
   }) async {
+    if (_is_disposed) return;
     final UserInformation user_information = Get.find<UserInformation>();
     if (!user_information.isLoggedIn.value) return;
     final int request_revision = user_information.auth_revision;
@@ -396,7 +417,10 @@ class MessageStore extends GetxController {
         type: requested_type,
       );
 
-      if (result == null || data_revision != bucket.data_revision) return;
+      if (_is_disposed ||
+          result == null ||
+          data_revision != bucket.data_revision)
+        return;
       if (!user_information.can_apply_authenticated_response(
         request_revision,
       )) {
@@ -456,6 +480,10 @@ class MessageStore extends GetxController {
   Future<void> load_more() async {
     final bucket = _active_bucket;
     if (bucket.request != null || !bucket.has_more) return;
+    if (!bucket.has_loaded) {
+      await fetch_message_list(page: 1, is_refresh: true);
+      return;
+    }
     await fetch_message_list(page: bucket.current_page + 1);
   }
 
@@ -463,12 +491,24 @@ class MessageStore extends GetxController {
 
   /// 标记单条消息为已读（更新所有包含该消息的桶）。
   Future<void> mark_as_read(int message_id) async {
-    final bool success = await message_api.read_message(id: message_id);
-    if (!success) return;
+    final UserInformation user_information = Get.find<UserInformation>();
+    final int request_revision = user_information.auth_revision;
+    if (_is_disposed ||
+        !user_information.can_apply_authenticated_response(request_revision)) {
+      return;
+    }
+    final bool success = await _read_message(id: message_id);
+    if (!success ||
+        _is_disposed ||
+        !user_information.can_apply_authenticated_response(request_revision)) {
+      return;
+    }
 
     MessageData? unread_message;
     for (final bucket in _buckets.values) {
-      final int index = bucket.list.indexWhere((m) => m.id == message_id);
+      final int index = bucket.list.indexWhere(
+        (m) => m.type != MessageType.chat_reply && m.id == message_id,
+      );
       if (index >= 0 && bucket.list[index].is_unread) {
         final old = bucket.list[index];
         unread_message ??= old;
@@ -487,7 +527,14 @@ class MessageStore extends GetxController {
 
   /// 立即在本地标记所有消息为已读，并与服务端权威状态完成一次校准。
   Future<void> mark_all_as_read() async {
-    if (_is_marking_all_read) return;
+    final UserInformation user_information = Get.find<UserInformation>();
+    final int request_revision = user_information.auth_revision;
+    if (_is_disposed ||
+        _is_marking_all_read ||
+        !user_information.can_apply_authenticated_response(request_revision)) {
+      return;
+    }
+    final int operation_id = ++_mark_all_operation_id;
     _is_marking_all_read = true;
     _unread_reconcile_pending = false;
     _list_refresh_pending = false;
@@ -519,10 +566,19 @@ class MessageStore extends GetxController {
     try {
       final message_api.MessageReadAllResult result =
           await _read_all_messages();
-      if (operation_revision != _local_unread_mutation_revision) return;
+      if (_is_disposed ||
+          !user_information.can_apply_authenticated_response(
+            request_revision,
+          ) ||
+          operation_id != _mark_all_operation_id)
+        return;
       if (!result.success) {
         debugPrint('TODO MessageStore mark_all_as_read sync failed');
         should_recover = true;
+      } else if (operation_revision != _local_unread_mutation_revision) {
+        // 同一会话内可能同时删除消息或打开客服，旧快照不能覆盖这些操作。
+        // 仍须在解锁后补拉，避免直接 return 丢失操作期间积累的校准请求。
+        needs_authoritative_fetch = true;
       } else if (result.unread_count != null) {
         if (result.state_version > _latest_server_state_version) {
           _latest_server_state_version = result.state_version;
@@ -533,10 +589,18 @@ class MessageStore extends GetxController {
         needs_authoritative_fetch = true;
       }
     } catch (e) {
+      if (_is_disposed ||
+          !user_information.can_apply_authenticated_response(
+            request_revision,
+          ) ||
+          operation_id != _mark_all_operation_id)
+        return;
       debugPrint('TODO MessageStore mark_all_as_read sync error: $e');
       should_recover = true;
     } finally {
-      _is_marking_all_read = false;
+      if (operation_id == _mark_all_operation_id) {
+        _is_marking_all_read = false;
+      }
     }
 
     if (should_recover) {
@@ -556,8 +620,16 @@ class MessageStore extends GetxController {
 
   /// 标记所有客服消息为已读，并拉取最新未读数据同步本地状态。
   Future<void> _sync_chat_messages_read() async {
+    final UserInformation user_information = Get.find<UserInformation>();
+    final int request_revision = user_information.auth_revision;
     try {
       await message_api.read_all_chat_messages();
+      if (_is_disposed ||
+          !user_information.can_apply_authenticated_response(
+            request_revision,
+          )) {
+        return;
+      }
       await fetch_statistics();
     } catch (e) {
       debugPrint('TODO MessageStore _sync_chat_messages_read error: $e');
@@ -568,20 +640,36 @@ class MessageStore extends GetxController {
   ///
   /// 客服消息：从列表移除 + 标记所有客服消息为已读（不删除数据）。
   /// 其他消息：从列表移除 + 调用删除 API。
-  Future<void> delete_message(int message_id) async {
+  Future<void> delete_message(int message_id, {int? message_type}) async {
+    final UserInformation user_information = Get.find<UserInformation>();
+    final int request_revision = user_information.auth_revision;
+    if (_is_disposed ||
+        !user_information.can_apply_authenticated_response(request_revision)) {
+      return;
+    }
     // 先从列表移除，确保 Dismissible 在同一帧内从树中消失。
     MessageData? deleted_message;
     for (final bucket in _buckets.values) {
-      final index = bucket.list.indexWhere((m) => m.id == message_id);
+      final index = bucket.list.indexWhere(
+        (m) =>
+            m.id == message_id &&
+            (message_type == null || m.type == message_type),
+      );
       if (index >= 0) {
         deleted_message ??= bucket.list[index];
+        final String deleted_identity = bucket.list[index].identity_key;
         bucket.list.value = bucket.list
-            .where((m) => m.id != message_id)
+            .where((m) => m.identity_key != deleted_identity)
             .toList();
       }
     }
 
     if (deleted_message == null) return;
+
+    // 已读消息和客服摘要被删除同样会改变列表；废弃删除前的列表响应，
+    // 避免已经滑动移除的条目被进行中的刷新重新插入。
+    _local_unread_mutation_revision++;
+    _unread_state_revision++;
 
     // 客服消息：移除栏目 + 标记全部已读，不删除数据
     if (deleted_message.type == MessageType.chat_reply) {
@@ -598,12 +686,14 @@ class MessageStore extends GetxController {
 
     // 其他消息：更新未读数 + 调用删除 API
     if (deleted_message.is_unread) {
-      _local_unread_mutation_revision++;
-      _unread_state_revision++;
       _unread.update_by_type(deleted_message.type, -1);
       _unread.recompute_total();
     }
-    final bool success = await message_api.delete_message(id: message_id);
+    final bool success = await _delete_message(id: message_id);
+    if (_is_disposed ||
+        !user_information.can_apply_authenticated_response(request_revision)) {
+      return;
+    }
     if (!success) {
       debugPrint(
         'TODO MessageStore delete_message API failed for id: $message_id',
@@ -640,6 +730,7 @@ class MessageStore extends GetxController {
 
   /// 获取访客的客服聊天未读数（未登录时调用）。
   Future<void> fetch_visitor_chat_unread() async {
+    if (_is_disposed) return;
     final UserInformation user_information = Get.find<UserInformation>();
     final int request_revision = user_information.auth_revision;
     if (!user_information.can_apply_visitor_response(request_revision)) {
@@ -658,7 +749,8 @@ class MessageStore extends GetxController {
     }
 
     final String? visitor_id = await StorageUtil.getData('visitor_uuid');
-    if (!user_information.can_apply_visitor_response(request_revision)) {
+    if (_is_disposed ||
+        !user_information.can_apply_visitor_response(request_revision)) {
       return;
     }
     if (visitor_id == null || visitor_id.isEmpty) {
@@ -670,7 +762,8 @@ class MessageStore extends GetxController {
     final int unread = await message_api.get_visitor_chat_unread(
       visitor_id: visitor_id,
     );
-    if (!user_information.can_apply_visitor_response(request_revision)) {
+    if (_is_disposed ||
+        !user_information.can_apply_visitor_response(request_revision)) {
       return;
     }
     chat_unread.value = unread;
@@ -679,6 +772,7 @@ class MessageStore extends GetxController {
 
   /// 清空所有数据（登出时调用）。
   void clear() {
+    _mark_all_operation_id++;
     _local_unread_mutation_revision++;
     _unread_state_revision++;
     _latest_statistics_request++;
@@ -735,7 +829,6 @@ class MessageStore extends GetxController {
     }
     _dedup.remember_chat(message.id);
   }
-
 
   /// 全部已读同步期间只记录刷新需求，不允许旧实时快照恢复角标。
   bool _defer_realtime_unread_update() {
@@ -989,10 +1082,6 @@ class MessageStore extends GetxController {
     }
   }
 
-
-
-
-
   /// 判断普通消息是否已存在于任意缓存桶。
   bool _is_message_cached(MessageData message) {
     return _buckets.values.any(
@@ -1125,17 +1214,19 @@ class MessageStore extends GetxController {
 
   /// 从后端查询聊天未读数。
   Future<void> fetch_chat_unread() async {
-    if (!Get.find<UserInformation>().isLoggedIn.value) return;
+    final UserInformation user_information = Get.find<UserInformation>();
+    final int request_revision = user_information.auth_revision;
+    final int unread_revision = _unread_state_revision;
+    if (_is_disposed ||
+        !user_information.can_apply_authenticated_response(request_revision)) {
+      return;
+    }
     try {
-      final results = await postRequest<Map<String, dynamic>>(
-        path: 'customer_service_chat/unread_count',
-        showTips: false,
-        fromJson: (json) => json,
-      );
-      if (results.status && results.content != null) {
-        final int unread = results.content!['unread'] is int
-            ? results.content!['unread'] as int
-            : int.tryParse(results.content!['unread']?.toString() ?? '0') ?? 0;
+      final int? unread = await _fetch_chat_unread_count();
+      if (!_is_disposed &&
+          unread != null &&
+          unread_revision == _unread_state_revision &&
+          user_information.can_apply_authenticated_response(request_revision)) {
         chat_unread.value = unread;
         _unread.recompute_total();
       }
@@ -1144,8 +1235,25 @@ class MessageStore extends GetxController {
     }
   }
 
+  /// 读取后端客服未读统计，失败保留已有状态。
+  static Future<int?> _request_chat_unread_count() async {
+    final results = await postRequest<Map<String, dynamic>>(
+      path: 'customer_service_chat/unread_count',
+      showTips: false,
+      fromJson: (json) => json,
+    );
+    if (!results.status || results.content == null) return null;
+    return parse_int(results.content!['unread']);
+  }
+
   @override
   void onClose() {
+    _is_disposed = true;
+    _mark_all_operation_id++;
+    _statistics_refresh_pending = false;
+    for (final bucket in _buckets.values) {
+      bucket.refresh_pending = false;
+    }
     _ws_subscription?.cancel();
     _unread.dispose();
     _foreground_refresh_timer?.cancel();

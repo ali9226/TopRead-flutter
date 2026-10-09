@@ -577,6 +577,7 @@ class _RecommendTabContentState extends State<RecommendTabContent>
                     key: _recommend_waterfall_key,
                     waterfall_id: 'home_recommend',
                     is_dark: is_dark,
+                    scroll_controller: _scroll_controller,
                   ),
                 ),
                 const SizedBox(

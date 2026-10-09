@@ -44,6 +44,8 @@ class _WithdrawState extends State<Withdraw> {
     /// 监听逻辑层状态变化。
     logic.addListener(handleLogicChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
       /// 首帧后加载提现页所需数据。
       logic.init();
     });

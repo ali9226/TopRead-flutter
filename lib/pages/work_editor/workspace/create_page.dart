@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app/stores/language_store.dart';
-import 'package:app/api/creator_workspace.dart';
-import '../single_chapter/logic.dart';
+import 'creation_request.dart';
 import 'index.dart';
 import 'logic.dart';
 
@@ -20,7 +19,7 @@ class _CreateWorkspacePageState extends State<CreateWorkspacePage> {
   int? language;
   bool busy = false;
   String? error;
-  String requestKey = creatorRequestKey();
+  final _creation_request = WorkspaceCreationRequest();
   @override
   void dispose() {
     title.dispose();
@@ -34,13 +33,11 @@ class _CreateWorkspacePageState extends State<CreateWorkspacePage> {
       error = null;
     });
     try {
-      final result =
-          await CreatorWorkspaceApi.call('creator_work/create_draft', {
-            'title': title.text,
-            'work_type': type,
-            'work_language_id': language,
-            'request_key': requestKey,
-          });
+      final result = await _creation_request.create(
+        title: title.text,
+        work_type: type,
+        language_id: language!,
+      );
       if (!mounted) return;
       await Navigator.pushReplacement(
         context,
@@ -71,6 +68,7 @@ class _CreateWorkspacePageState extends State<CreateWorkspacePage> {
       );
     }
     return Obx(() {
+      final locked = busy || _creation_request.has_pending;
       final languages = store.supported_language_list.toList();
       language ??=
           store
@@ -86,9 +84,8 @@ class _CreateWorkspacePageState extends State<CreateWorkspacePage> {
             const SizedBox(height: 20),
             TextField(
               controller: title,
-              enabled: !busy,
+              enabled: !locked,
               maxLength: 255,
-              onChanged: (_) => requestKey = creatorRequestKey(),
               decoration: InputDecoration(
                 labelText: tr('creator_workspace.work_title'),
               ),
@@ -106,11 +103,10 @@ class _CreateWorkspacePageState extends State<CreateWorkspacePage> {
                 ),
               ],
               selected: {type},
-              onSelectionChanged: busy
+              onSelectionChanged: locked
                   ? null
                   : (v) => setState(() {
                       type = v.first;
-                      requestKey = creatorRequestKey();
                     }),
             ),
             const SizedBox(height: 20),
@@ -124,11 +120,10 @@ class _CreateWorkspacePageState extends State<CreateWorkspacePage> {
                     (l) => DropdownMenuItem(value: l.id, child: Text(l.title)),
                   )
                   .toList(),
-              onChanged: busy
+              onChanged: locked
                   ? null
                   : (value) => setState(() {
                       language = value;
-                      requestKey = creatorRequestKey();
                     }),
             ),
             if (error != null)

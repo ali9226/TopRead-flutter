@@ -19,6 +19,9 @@ class AdConfigStore extends GetxController {
   /// 是否已经从本地缓存或网络响应解析过广告列表。
   final RxBool is_config_loaded = false.obs;
 
+  /// 每次权威广告快照提交后的版本，广告池据此及时废弃被撤销的素材。
+  final RxInt config_revision = 0.obs;
+
   /// 只读广告配置快照。
   List<AdConfig> get configs => List<AdConfig>.unmodifiable(_configs);
 
@@ -26,6 +29,7 @@ class AdConfigStore extends GetxController {
   void save_configs(List<AdConfig> configs) {
     _configs.assignAll(configs);
     is_config_loaded.value = true;
+    config_revision.value += 1;
     logUtil(
       msg:
           '[AdConfigStore] save_configs: 共 ${configs.length} 条广告配置, '

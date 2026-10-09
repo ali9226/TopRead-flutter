@@ -14,6 +14,7 @@ import 'package:app/components/language_selection/index.dart';
 import 'package:app/components/recommend_book_card/animated_waterfall.dart';
 import 'package:app/components/recommend_book_card/book_list_item.dart';
 import 'package:app/components/recommend_book_card/logic.dart';
+import 'package:app/components/recommend_book_card/widgets/recommend_waterfall_skeleton.dart';
 import 'package:app/components/top_header_gradient/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/models/popular_search_item.dart';
@@ -339,7 +340,6 @@ class _SearchPageState extends State<SearchPage> {
       } else {
         setState(() {
           _is_loading_more = false;
-          _has_more = false;
         });
       }
     } catch (e) {
@@ -348,7 +348,6 @@ class _SearchPageState extends State<SearchPage> {
       }
       setState(() {
         _is_loading_more = false;
-        _has_more = false;
       });
     }
   }
@@ -430,7 +429,8 @@ class _SearchPageState extends State<SearchPage> {
 
       String meta_text = '';
       if (item.score > 0) {
-        final String scoreText = item.score.toStringAsFixed(2)
+        final String scoreText = item.score
+            .toStringAsFixed(2)
             .replaceAll(RegExp(r'0+$'), '')
             .replaceAll(RegExp(r'\.$'), '');
         meta_text = '${scoreText}分';
@@ -829,6 +829,7 @@ class _SearchPageState extends State<SearchPage> {
                       key: _recommend_waterfall_key,
                       waterfall_id: 'search_recommend',
                       is_dark: is_dark,
+                      scroll_controller: _scroll_controller,
                     ),
                   ] else ...[
                     /// 搜索结果标题。
@@ -847,7 +848,8 @@ class _SearchPageState extends State<SearchPage> {
                     ),
                     const SizedBox(height: Style.section_title_top_gap),
                     if (_is_search_loading)
-                      _build_search_skeleton(is_dark)
+                      // 搜索与热门推荐复用完整卡片骨架，包含封面、文字及分类占位。
+                      RecommendWaterfallSkeleton(is_dark: is_dark)
                     else if (_search_results.isEmpty)
                       _build_empty_result(secondary_text_color)
                     else ...[
@@ -950,45 +952,6 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     return const SizedBox.shrink();
-  }
-
-  Widget _build_search_skeleton(bool is_dark) {
-    final Color base_color = is_dark
-        ? const Color(0xFF252836)
-        : const Color(0xFFF0F1F5);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: List<Widget>.generate(3, (int index) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(
-                child: Container(
-                  height: 200 + (index % 2) * 30.0,
-                  margin: const EdgeInsets.only(right: 6),
-                  decoration: BoxDecoration(
-                    color: base_color,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  height: 220 - (index % 2) * 20.0,
-                  margin: const EdgeInsets.only(left: 6),
-                  decoration: BoxDecoration(
-                    color: base_color,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }),
-    );
   }
 
   Widget _build_empty_result(Color secondary_text_color) {

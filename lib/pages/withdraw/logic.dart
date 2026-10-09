@@ -8,6 +8,7 @@ import 'package:app/api/post_request.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/models/login.dart';
+import 'package:app/models/user_info.dart';
 import 'package:app/models/transaction_inquire_type.dart';
 import 'package:app/stores/app_global_config.dart';
 import 'package:app/stores/user_information.dart';
@@ -23,6 +24,15 @@ import 'package:app/util/number_util.dart';
 /// 3. 维护选中网络、输入金额、滑块金额和按钮状态。
 /// 4. 在余额不足时弹出提示，但仍停留在当前页面。
 class WithdrawLogic extends ChangeNotifier {
+  /// 用户余额请求可替换，便于验证请求晚到时的生命周期。
+  final Future<UserInfo?> Function()? _user_info_loader;
+  bool _is_disposed = false;
+  bool _refresh_in_progress = false;
+  int? _balance_identity_revision;
+
+  WithdrawLogic({Future<UserInfo?> Function()? user_info_loader})
+    : _user_info_loader = user_info_loader;
+
   final UserInformation userInformation = Get.find<UserInformation>();
   final AppGlobalConfigStore appGlobalConfigStore =
       Get.find<AppGlobalConfigStore>();
@@ -44,6 +54,7 @@ class WithdrawLogic extends ChangeNotifier {
   WithdrawShortcut? selectedShortcut;
 
   void init() {
+    if (_is_disposed) return;
     amountController.addListener(_handleAmountInput);
     addressController.addListener(_handleAddressInput);
     amountFocusNode.addListener(_handleAmountFocusChange);
@@ -53,6 +64,7 @@ class WithdrawLogic extends ChangeNotifier {
 
   @override
   void dispose() {
+    _is_disposed = true;
     amountController.removeListener(_handleAmountInput);
     addressController.removeListener(_handleAddressInput);
     amountFocusNode.removeListener(_handleAmountFocusChange);
@@ -64,7 +76,10 @@ class WithdrawLogic extends ChangeNotifier {
     super.dispose();
   }
 
-  bool get canWithdraw => balance >= minWithdrawal && minWithdrawal > 0;
+  bool get canWithdraw =>
+      _balance_identity_revision == userInformation.auth_identity_revision &&
+      balance >= minWithdrawal &&
+      minWithdrawal > 0;
 
   bool get hasTypeOptions => withdrawTypes.isNotEmpty;
 
@@ -84,24 +99,30 @@ class WithdrawLogic extends ChangeNotifier {
   ///
   /// 返回值：`subscriber/get_info` 成功时为 true，供下拉刷新成功后展示提示。
   Future<bool> refreshData() async {
-    if (loading) return false;
+    if (_is_disposed || _refresh_in_progress) return false;
+    _refresh_in_progress = true;
+    final int auth_revision = userInformation.auth_revision;
     loading = true;
     notifyListeners();
 
     var userInfoOk = false;
     try {
       userInfoOk = await _refreshUserInfo();
+      if (!_is_current(auth_revision)) return false;
       await _loadWithdrawInquireType();
+      if (!_is_current(auth_revision)) return false;
       _syncAmountIfNeeded();
       // 弹窗出现前先结束 loading 并刷新一帧，让摘要卡上的余额、最低/最高提现显示为刚拉到的值，
       // 避免遮在弹窗下面仍全是 $0.00。
       loading = false;
       notifyListeners();
-      await _showInsufficientDialogIfNeeded();
+      // 余额请求失败时不能把默认余额 0 当成真实余额提示不足。
+      if (userInfoOk) await _showInsufficientDialogIfNeeded();
       return userInfoOk;
     } finally {
+      _refresh_in_progress = false;
       loading = false;
-      notifyListeners();
+      if (!_is_disposed) notifyListeners();
     }
   }
 
@@ -139,16 +160,19 @@ class WithdrawLogic extends ChangeNotifier {
   }
 
   Future<void> onSubmit() async {
+    if (_is_disposed) return;
     if (!canWithdraw) {
       AppRouter.replace('/');
       return;
     }
     final successMessage = await submitWithdrawRequest();
-    if (successMessage == null) return;
+    if (_is_disposed || successMessage == null) return;
     await showWithdrawSuccessDialog(successMessage);
   }
 
   Future<String?> submitWithdrawRequest() async {
+    if (_is_disposed) return null;
+    final int auth_revision = userInformation.auth_revision;
     if (!canWithdraw) {
       AppRouter.replace('/');
       return null;
@@ -183,6 +207,7 @@ class WithdrawLogic extends ChangeNotifier {
         },
         showTips: false,
       );
+      if (!_is_current(auth_revision)) return null;
 
       if (!results.status) {
         showBottomTip(results.message);
@@ -190,17 +215,19 @@ class WithdrawLogic extends ChangeNotifier {
       }
 
       await _refreshUserInfo();
+      if (!_is_current(auth_revision)) return null;
       notifyListeners();
       return results.message.isNotEmpty
           ? results.message
           : easy.tr('withdraw_page.submit_success');
     } finally {
       submitting = false;
-      notifyListeners();
+      if (!_is_disposed) notifyListeners();
     }
   }
 
   Future<void> showWithdrawSuccessDialog(String message) async {
+    if (_is_disposed) return;
     await showMessage(
       message: message,
       allowMaskDismiss: false,
@@ -215,10 +242,12 @@ class WithdrawLogic extends ChangeNotifier {
       ),
       onLeftPressed: () async {
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_is_disposed) return;
           AppRouter.push('/withdraw_record');
         });
       },
       onRightPressed: () async {
+        if (_is_disposed) return;
         AppRouter.replace('/');
       },
     );
@@ -310,7 +339,9 @@ class WithdrawLogic extends ChangeNotifier {
   }
 
   Future<void> pasteWalletAddress() async {
+    if (_is_disposed) return;
     final data = await Clipboard.getData('text/plain');
+    if (_is_disposed) return;
     final text = data?.text?.trim() ?? '';
 
     if (text.isEmpty) {
@@ -329,23 +360,39 @@ class WithdrawLogic extends ChangeNotifier {
 
   /// 返回值：请求成功并已写入本地用户信息时为 true。
   Future<bool> _refreshUserInfo() async {
-    final results = await postRequest<Login>(
-      path: 'subscriber/get_info',
-      showTips: false,
-      fromJson: (json) => Login.fromJson(json),
-    );
-
-    if (!results.status || results.content == null) return false;
-
-    userInformation.saveUserInfo(results.content!.userInfo);
-    balance = results.content!.userInfo.balance;
+    final int auth_revision = userInformation.auth_revision;
+    final UserInfo? info;
+    if (_user_info_loader != null) {
+      info = await _user_info_loader();
+    } else {
+      final results = await postRequest<Login>(
+        path: 'subscriber/get_info',
+        showTips: false,
+        fromJson: (json) => Login.fromJson(json),
+      );
+      info = results.status ? results.content?.userInfo : null;
+    }
+    if (!_is_current(auth_revision) || info == null) return false;
+    if (!userInformation.save_user_info_if_current(
+      info,
+      request_revision: auth_revision,
+    ))
+      return false;
+    balance = info.balance;
+    _balance_identity_revision = userInformation.auth_identity_revision;
     return true;
   }
+
+  /// 页面关闭、退出或换号后，旧响应不能访问输入控制器或写入余额。
+  bool _is_current(int auth_revision) =>
+      !_is_disposed &&
+      userInformation.can_apply_authenticated_response(auth_revision);
 
   Future<void> _loadWithdrawInquireType() async {
     if (!appGlobalConfigStore.configLoaded.value) {
       await appGlobalConfigStore.loadConfig();
     }
+    if (_is_disposed) return;
 
     withdrawTypes
       ..clear()
@@ -359,7 +406,7 @@ class WithdrawLogic extends ChangeNotifier {
   }
 
   Future<void> _showInsufficientDialogIfNeeded() async {
-    if (canWithdraw || hasShownInsufficientDialog) return;
+    if (_is_disposed || canWithdraw || hasShownInsufficientDialog) return;
 
     hasShownInsufficientDialog = true;
     await showMessage(

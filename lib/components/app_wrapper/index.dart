@@ -120,7 +120,8 @@ class _AppWrapperState extends State<AppWrapper> {
     if (!mounted) return;
 
     final ProjectConfigStore config_store = Get.find<ProjectConfigStore>();
-    final bool is_review_mode = config_store.is_config_loaded.value &&
+    final bool is_review_mode =
+        config_store.is_config_loaded.value &&
         config_store.current.is_apple_review_mode;
 
     // ---- 广告关闭 + 非审核模式：跳过所有隐私流程 ----
@@ -162,11 +163,9 @@ class _AppWrapperState extends State<AppWrapper> {
   /// iOS ATT 弹窗：仅在未决定时请求，已决定则跳过。
   Future<void> _request_att_if_needed() async {
     final AppTrackingAuthorizationStatus att_status =
-        await AppTrackingTransparencyPermissionRequest
-            .get_authorization_status();
+        await AppTrackingTransparencyPermissionRequest.get_authorization_status();
     if (att_status == AppTrackingAuthorizationStatus.not_determined) {
-      await AppTrackingTransparencyPermissionRequest
-          .request_tracking_authorization();
+      await AppTrackingTransparencyPermissionRequest.request_tracking_authorization();
     }
   }
 
@@ -204,6 +203,7 @@ class _AppWrapperState extends State<AppWrapper> {
   void dispose() {
     _router.routerDelegate.removeListener(_handleRouterDelegateChanged);
     AppRouter.clearBackHandler();
+    _router.dispose();
     super.dispose();
   }
 

@@ -2,16 +2,38 @@ import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:app/api/post_request.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/models/withdraw_record.dart';
 import 'package:app/pages/withdraw_record/style.dart';
+import 'package:app/stores/user_information.dart';
 import 'package:app/util/number_util.dart';
 
 /// 提现记录页逻辑层。
 ///
 /// 这里沿用充值记录页的分页和滚动交互，只保留提现需要的字段和状态映射。
 class WithdrawRecordLogic extends ChangeNotifier {
+  /// 列表请求可注入，生产环境继续使用统一 API。
+  final Future<List<WithdrawRecordItem>?> Function({
+    required List<int> no_ids,
+    required int page_size,
+  })?
+  _record_loader;
+  final UserInformation _user_information = Get.find<UserInformation>();
+
+  /// 下拉刷新不显示全屏 loading，但仍必须独占请求。
+  bool _fetch_in_progress = false;
+  bool _is_disposed = false;
+
+  WithdrawRecordLogic({
+    Future<List<WithdrawRecordItem>?> Function({
+      required List<int> no_ids,
+      required int page_size,
+    })?
+    record_loader,
+  }) : _record_loader = record_loader;
+
   final ScrollController scrollController = ScrollController();
   final List<WithdrawRecordItem> records = [];
 
@@ -21,12 +43,14 @@ class WithdrawRecordLogic extends ChangeNotifier {
   bool showBackToTop = false;
 
   void init() {
+    if (_is_disposed) return;
     scrollController.addListener(_handleScroll);
     unawaited(fetchRecords(isRefresh: true, showOverlay: true));
   }
 
   @override
   void dispose() {
+    _is_disposed = true;
     scrollController.removeListener(_handleScroll);
     scrollController.dispose();
     super.dispose();
@@ -42,8 +66,10 @@ class WithdrawRecordLogic extends ChangeNotifier {
     bool isRefresh = false,
     bool showOverlay = false,
   }) async {
-    if (loading || loadingMore) return false;
+    if (_is_disposed || _fetch_in_progress) return false;
     if (!isRefresh && !hasMore) return false;
+    _fetch_in_progress = true;
+    final int auth_revision = _user_information.auth_revision;
 
     final noIds = isRefresh ? <int>[] : records.map((item) => item.id).toList();
 
@@ -56,10 +82,16 @@ class WithdrawRecordLogic extends ChangeNotifier {
 
     var requestSucceeded = false;
     try {
-      final newRecords = await _getRecordList(
-        noIds: noIds,
-        pageSize: TopUpRecordStyle.pageSize,
-      );
+      final newRecords = await (_record_loader == null
+          ? _getRecordList(noIds: noIds, pageSize: TopUpRecordStyle.pageSize)
+          : _record_loader(
+              no_ids: noIds,
+              page_size: TopUpRecordStyle.pageSize,
+            ));
+      if (_is_disposed ||
+          !_user_information.can_apply_authenticated_response(auth_revision)) {
+        return false;
+      }
       if (newRecords == null) {
         requestSucceeded = false;
       } else {
@@ -76,9 +108,10 @@ class WithdrawRecordLogic extends ChangeNotifier {
         notifyListeners();
       }
     } finally {
+      _fetch_in_progress = false;
       loading = false;
       loadingMore = false;
-      notifyListeners();
+      if (!_is_disposed) notifyListeners();
     }
 
     return requestSucceeded;

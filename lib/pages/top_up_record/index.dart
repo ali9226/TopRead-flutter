@@ -68,6 +68,7 @@ class _TopUpRecordState extends State<TopUpRecord> {
     // 等页面首帧绘制完成后再触发初始化逻辑，
     // 可以避免在 initState 的同步阶段直接触发网络请求导致的时机问题。
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       logic.init();
     });
   }

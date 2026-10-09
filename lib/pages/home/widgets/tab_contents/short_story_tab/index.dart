@@ -20,10 +20,11 @@ import 'package:app/pages/home/widgets/tab_contents/short_story_tab/logic.dart';
 import 'package:app/pages/home/widgets/tab_contents/short_story_tab/style.dart';
 import 'package:app/pages/home/widgets/tab_contents/short_story_tab/widgets/dislike_reason_sheet.dart';
 import 'package:app/pages/home/widgets/tab_contents/short_story_tab/widgets/short_story_card.dart';
-import 'package:app/pages/home/widgets/tab_contents/short_story_tab/widgets/short_story_native_ad_card.dart';
+import 'package:app/pages/home/widgets/tab_contents/short_story_tab/widgets/prepared_short_story_native_ad.dart';
 import 'package:app/pages/interest_preference/index.dart';
 import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/router/router_util.dart';
+import 'package:app/util/percentage_probability.dart';
 
 /// 短篇 Tab 内容组件。
 class ShortStoryTabContent extends StatefulWidget {
@@ -64,8 +65,21 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
   /// 广告槽位自增序列号，用于生成全局唯一的广告槽位 ID。
   int _ad_slot_sequence = 0;
 
+  /// 不同页面实例必须使用不同广告身份，避免一个 NativeAd 同时挂载两处。
+  static int _next_ad_session = 0;
+  final int _ad_session = ++_next_ad_session;
+
   /// 已插入的广告槽位 ID 集合，用于释放资源。
   final Set<String> _ad_slot_ids = <String>{};
+
+  /// 已错过的广告不再重新预加载，即使列表因点赞或回到顶部重建。
+  final Set<String> _skipped_ad_slot_ids = <String>{};
+
+  /// 每批新广告只主动预加载一次，避免长列表重建时反复复活池已淘汰的旧槽位。
+  final Set<String> _pending_ad_preloads = <String>{};
+
+  /// 缓存真实提交过的尺寸，让 lazy item 销毁后可以稳定恢复布局。
+  final Map<String, double> _ad_slot_extents = <String, double>{};
 
   static const double _load_more_trigger_distance = 800;
   static const int _skeleton_count = 5;
@@ -87,14 +101,13 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
     /// 场景：语种切换时 Home 页重建导致本 widget 被销毁再创建，
     /// 新 widget 注册的刷新任务因 pipeline 已结束而未被调度。
     /// 当刷新完成且列表仍为空时，自动触发数据加载。
-    _language_refresh_worker = ever(
-      LanguageChangeHandler.is_refreshing,
-      (bool refreshing) {
-        if (!refreshing && mounted && _display_list.isEmpty && !_is_loading) {
-          _load_initial_data();
-        }
-      },
-    );
+    _language_refresh_worker = ever(LanguageChangeHandler.is_refreshing, (
+      bool refreshing,
+    ) {
+      if (!refreshing && mounted && _display_list.isEmpty && !_is_loading) {
+        _load_initial_data();
+      }
+    });
 
     /// 如果全局仓库已有数据，直接恢复并插入广告，不重新请求。
     final HomeBannerStore home_store = Get.find<HomeBannerStore>();
@@ -112,15 +125,15 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
     _scroll_controller.removeListener(_handle_scroll);
     _scroll_controller.dispose();
     _category_scroll_controller.dispose();
-    // 不在 dispose 时释放广告槽位，广告由全局池管理
-    // 切换 Tab 返回时可以复用已加载的广告
+    // Tab 通过 keepAlive 保留；真正销毁页面时只释放本实例独占的槽位。
+    _release_ad_slots();
     super.dispose();
   }
 
   /// 生成全局唯一的广告槽位 ID。
   String _create_ad_slot_id() {
     _ad_slot_sequence += 1;
-    return 'short_story_ad_$_ad_slot_sequence';
+    return 'short_story_ad_${_ad_session}_$_ad_slot_sequence';
   }
 
   /// 释放所有已创建的广告槽位。
@@ -128,6 +141,9 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
     if (_ad_slot_ids.isEmpty) return;
     ShortStoryTabAdPool.remove_all(_ad_slot_ids);
     _ad_slot_ids.clear();
+    _skipped_ad_slot_ids.clear();
+    _pending_ad_preloads.clear();
+    _ad_slot_extents.clear();
   }
 
   /// 根据概率判断是否应该在本批数据中插入广告。
@@ -141,11 +157,7 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
 
     final int probability =
         Get.find<ProjectConfigStore>().current.short_story_tab_ad;
-    if (probability <= 0) return false;
-    if (probability >= 100) return true;
-
-    final int roll = DateTime.now().millisecondsSinceEpoch % 100;
-    return roll < probability;
+    return PercentageProbability.is_hit(probability);
   }
 
   /// 在本批数据的中间位置插入广告槽位。
@@ -154,6 +166,7 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
 
     final String slot_id = _create_ad_slot_id();
     _ad_slot_ids.add(slot_id);
+    _pending_ad_preloads.add(slot_id);
 
     final List<ShortStoryItem> result = List<ShortStoryItem>.of(batch);
     final int insert_index = (result.length + 1) ~/ 2;
@@ -181,7 +194,42 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
   /// 获取广告占位符对应的槽位 ID。
   String _get_ad_slot_id(int index) {
     final int sequence = -_display_list[index].id;
-    return 'short_story_ad_$sequence';
+    return 'short_story_ad_${_ad_session}_$sequence';
+  }
+
+  /// 在 item 进入 cacheExtent 前准备素材；预加载不创建 AdWidget。
+  void _preload_ad_slots({required double width, required bool is_dark}) {
+    if (!AdDisplayPolicy.can_show_ads()) return;
+    final double card_width =
+        width - ShortStoryTabStyle.list_horizontal_padding * 2;
+    if (!card_width.isFinite || card_width <= 0) return;
+    final String label = easy.tr('recommend_card.advertisement');
+    for (final String slot_id in _pending_ad_preloads.toList()) {
+      if (_skipped_ad_slot_ids.contains(slot_id)) continue;
+      ShortStoryTabAdPool.obtain(slot_id).ensure_loaded(
+        card_width: card_width,
+        is_dark: is_dark,
+        advertisement_label: label,
+      );
+      _pending_ad_preloads.remove(slot_id);
+    }
+  }
+
+  /// 错过的边界直接释放素材，保留零高度决策避免异步重试挤动小说卡片。
+  void _on_ad_skipped(String slot_id) {
+    if (!mounted || !_ad_slot_ids.contains(slot_id)) return;
+    _skipped_ad_slot_ids.add(slot_id);
+    _pending_ad_preloads.remove(slot_id);
+    ShortStoryTabAdPool.remove_if_unattached(slot_id);
+  }
+
+  void _on_ad_extent_changed(String slot_id, double extent) {
+    if (!mounted || !_ad_slot_ids.contains(slot_id)) return;
+    if (extent <= 0) {
+      _ad_slot_extents.remove(slot_id);
+    } else {
+      _ad_slot_extents[slot_id] = extent;
+    }
   }
 
   /// Locale 切换前清空旧语种内容并让旧请求失效。
@@ -222,6 +270,7 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
       _is_loading = true;
       _display_list.clear();
       _has_more = true;
+      _is_loading_more = false;
     });
 
     final List<ShortStoryItem> items = await _logic.fetch_short_story_list(
@@ -318,14 +367,17 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
   /// 点赞/取消点赞回调（乐观更新）。
   ///
   /// 立即切换本地 UI 状态，后台发请求，失败时回退。
-  Future<void> _on_like_tap(int index) async {
-    // 广告占位符不处理点赞
-    if (_is_ad_placeholder(index)) return;
+  Future<void> _on_like_tap(int novel_id) async {
+    if (novel_id <= 0 || _like_loading_ids.contains(novel_id)) return;
+    final int generation = _request_generation;
 
     final bool is_logged_in = await showLoginRequiredDialog(
       title: easy.tr('short_story_read.login_required'),
     );
-    if (!is_logged_in) return;
+    if (!is_logged_in || !mounted || generation != _request_generation) return;
+
+    final int index = _display_list.indexWhere((item) => item.id == novel_id);
+    if (index < 0) return;
 
     final ShortStoryItem item = _display_list[index];
 
@@ -346,12 +398,22 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
     /// 发起网络请求。
     final bool? like = await _logic.click_novel_like(novel_id: item.id);
 
-    if (!mounted) return;
+    if (!mounted || generation != _request_generation) {
+      _like_loading_ids.remove(item.id);
+      return;
+    }
+    final int current_index = _display_list.indexWhere(
+      (entry) => entry.id == item.id,
+    );
+    if (current_index < 0) {
+      _like_loading_ids.remove(item.id);
+      return;
+    }
 
     if (like == null) {
       /// 请求失败，回退乐观更新。
       setState(() {
-        _display_list[index] = item;
+        _display_list[current_index] = item;
         _like_loading_ids.remove(item.id);
       });
       return;
@@ -360,7 +422,7 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
     /// 请求成功，以服务端返回值为准更新状态，移除 loading。
     final int server_count = like ? item.like_count + 1 : item.like_count - 1;
     setState(() {
-      _display_list[index] = _display_list[index].copyWith(
+      _display_list[current_index] = _display_list[current_index].copyWith(
         is_liked: like,
         like_count: server_count,
       );
@@ -455,59 +517,85 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
                     onRefresh: _on_refresh,
                     child: _is_loading && _display_list.isEmpty
                         ? _build_skeleton_list(is_dark)
-                        : ListView.builder(
-                            controller: _scroll_controller,
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.only(
-                              top: ShortStoryTabStyle.list_top_spacing,
-                              bottom: ShortStoryTabStyle.list_bottom_spacing,
-                            ),
-                            itemCount:
-                                _display_list.length +
-                                ((_is_loading_more || !_has_more) ? 1 : 0),
-                            itemBuilder: (BuildContext context, int index) {
-                              if (index == _display_list.length) {
-                                return LoadMoreFooter(
-                                  is_dark: is_dark,
-                                  is_loading: _is_loading_more,
-                                  has_more: _has_more,
-                                  on_load_more: _try_load_more,
-                                );
-                              }
-
-                              // 广告占位符渲染广告卡片
-                              if (_is_ad_placeholder(index)) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(
-                                    bottom: ShortStoryTabStyle.card_spacing,
-                                  ),
-                                  child: ShortStoryNativeAdCard(
-                                    slot_id: _get_ad_slot_id(index),
-                                    is_dark: is_dark,
-                                  ),
-                                );
-                              }
-
-                              return Padding(
+                        : LayoutBuilder(
+                            builder: (context, constraints) {
+                              _preload_ad_slots(
+                                width: constraints.maxWidth,
+                                is_dark: is_dark,
+                              );
+                              return ListView.builder(
+                                controller: _scroll_controller,
+                                physics: const AlwaysScrollableScrollPhysics(),
                                 padding: const EdgeInsets.only(
-                                  bottom: ShortStoryTabStyle.card_spacing,
+                                  top: ShortStoryTabStyle.list_top_spacing,
+                                  bottom:
+                                      ShortStoryTabStyle.list_bottom_spacing,
                                 ),
-                                child: ShortStoryCard(
-                                  story_item: _display_list[index],
-                                  is_dark: is_dark,
-                                  is_like_loading: _like_loading_ids.contains(
-                                    _display_list[index].id,
-                                  ),
-                                  on_tap: () {
-                                    routerUtil(
-                                      path:
-                                          '/short_story_read?id=${_display_list[index].id}',
-                                      type: 'push',
+                                itemCount:
+                                    _display_list.length +
+                                    ((_is_loading_more || !_has_more) ? 1 : 0),
+                                itemBuilder: (BuildContext context, int index) {
+                                  if (index == _display_list.length) {
+                                    return LoadMoreFooter(
+                                      is_dark: is_dark,
+                                      is_loading: _is_loading_more,
+                                      has_more: _has_more,
+                                      on_load_more: _try_load_more,
                                     );
-                                  },
-                                  on_long_press: _show_dislike_reason_sheet,
-                                  on_like_tap: () => _on_like_tap(index),
-                                ),
+                                  }
+
+                                  // 广告占位符渲染广告卡片
+                                  if (_is_ad_placeholder(index)) {
+                                    final String slot_id = _get_ad_slot_id(
+                                      index,
+                                    );
+                                    if (_skipped_ad_slot_ids.contains(
+                                      slot_id,
+                                    )) {
+                                      return SizedBox.shrink(
+                                        key: ValueKey(slot_id),
+                                      );
+                                    }
+                                    return PreparedShortStoryNativeAd(
+                                      key: ValueKey(slot_id),
+                                      slot_id: slot_id,
+                                      is_dark: is_dark,
+                                      scroll_controller: _scroll_controller,
+                                      initial_reserved_extent:
+                                          _ad_slot_extents[slot_id] ?? 0,
+                                      on_extent_changed: (extent) =>
+                                          _on_ad_extent_changed(
+                                            slot_id,
+                                            extent,
+                                          ),
+                                      on_skipped: () => _on_ad_skipped(slot_id),
+                                    );
+                                  }
+
+                                  final ShortStoryItem story =
+                                      _display_list[index];
+                                  return Padding(
+                                    key: ValueKey(story.id),
+                                    padding: const EdgeInsets.only(
+                                      bottom: ShortStoryTabStyle.card_spacing,
+                                    ),
+                                    child: ShortStoryCard(
+                                      story_item: _display_list[index],
+                                      is_dark: is_dark,
+                                      is_like_loading: _like_loading_ids
+                                          .contains(_display_list[index].id),
+                                      on_tap: () {
+                                        routerUtil(
+                                          path:
+                                              '/short_story_read?id=${story.id}',
+                                          type: 'push',
+                                        );
+                                      },
+                                      on_long_press: _show_dislike_reason_sheet,
+                                      on_like_tap: () => _on_like_tap(story.id),
+                                    ),
+                                  );
+                                },
                               );
                             },
                           ),

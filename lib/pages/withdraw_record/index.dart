@@ -48,6 +48,8 @@ class _WithdrawRecordState extends State<WithdrawRecord> {
     /// 监听逻辑层状态变化，统一刷新页面。
     logic.addListener(_handleLogicChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
       /// 首帧后再拉取数据，避免阻塞页面首次渲染。
       logic.init();
     });
@@ -262,9 +264,7 @@ class _WithdrawRecordState extends State<WithdrawRecord> {
                         ],
                       ),
                     ),
-                    child: LanguageSelection(
-                      darkBackground: isDark,
-                    ),
+                    child: LanguageSelection(darkBackground: isDark),
                   ),
                 ),
               ),

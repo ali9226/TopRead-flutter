@@ -36,21 +36,36 @@ class GoogleMobileAdsUtil {
       return false;
     }
 
+    final int privacy_revision =
+        AdMobConsentPermissionRequest.privacy_choice_revision.value;
     final bool can_request_ads =
         await AdMobConsentPermissionRequest.request_before_ad();
     if (!can_request_ads) {
       _log('UMP 未允许请求广告，跳过 SDK 初始化', type: 'w');
       return false;
     }
-    if (!AdDisplayPolicy.can_show_ads()) {
-      _log('UMP 完成后广告开关已关闭，跳过 SDK 初始化', type: 'w');
+    if (!AdDisplayPolicy.can_show_ads() ||
+        privacy_revision !=
+            AdMobConsentPermissionRequest.privacy_choice_revision.value) {
+      _log('UMP 完成后广告开关或隐私选择已变化，跳过 SDK 初始化', type: 'w');
       return false;
     }
 
     try {
       await _configure_debug_test_device();
+      if (!AdDisplayPolicy.can_show_ads() ||
+          privacy_revision !=
+              AdMobConsentPermissionRequest.privacy_choice_revision.value) {
+        return false;
+      }
       _initialization ??= MobileAds.instance.initialize();
       final InitializationStatus status = await _initialization!;
+      // 初始化本身不能取消，但等待期间撤回选择的调用者不能继续加载广告。
+      if (!AdDisplayPolicy.can_show_ads() ||
+          privacy_revision !=
+              AdMobConsentPermissionRequest.privacy_choice_revision.value) {
+        return false;
+      }
       _log('SDK 初始化完成，适配器: ${status.adapterStatuses.keys.join(', ')}');
       return true;
     } catch (error, stack_trace) {

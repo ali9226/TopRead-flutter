@@ -14,10 +14,7 @@ class GoogleLoginResult {
   /// Firebase ID Token（用于后端验证）。
   final String firebaseIdToken;
 
-  GoogleLoginResult({
-    required this.user,
-    required this.firebaseIdToken,
-  });
+  GoogleLoginResult({required this.user, required this.firebaseIdToken});
 }
 
 /// 执行 Google 授权登录逻辑（通过 Firebase）。
@@ -32,15 +29,14 @@ Future<GoogleLoginResult?> google_login() async {
     logUtil(msg: "开始 Google 授权登录");
 
     /// 调用 Google 登录授权接口。
-    final GoogleSignInAccount google_user =
-        await GoogleSignIn.instance.authenticate();
+    final GoogleSignInAccount google_user = await GoogleSignIn.instance
+        .authenticate();
 
     /// 获取 Google 授权凭证。
     final GoogleSignInAuthentication google_auth = google_user.authentication;
 
     /// 打印 Google 返回的所有字段，用于调试。
     logUtil(msg: "===== Google 授权返回信息 =====");
-    logUtil(msg: "idToken: ${google_auth.idToken}");
     logUtil(msg: "email: ${google_user.email}");
     logUtil(msg: "displayName: ${google_user.displayName}");
     logUtil(msg: "photoUrl: ${google_user.photoUrl}");
@@ -53,8 +49,8 @@ Future<GoogleLoginResult?> google_login() async {
 
     /// 使用 Firebase 进行登录。
     logUtil(msg: "开始 Firebase Google 登录");
-    final UserCredential user_credential =
-        await FirebaseAuth.instance.signInWithCredential(firebase_credential);
+    final UserCredential user_credential = await FirebaseAuth.instance
+        .signInWithCredential(firebase_credential);
 
     /// 打印 Firebase 返回的用户信息。
     final User? user = user_credential.user;
@@ -73,7 +69,6 @@ Future<GoogleLoginResult?> google_login() async {
 
     /// 获取 Firebase ID Token，用于后端验证。
     final String? firebase_id_token = await user.getIdToken();
-    logUtil(msg: "firebaseIdToken: $firebase_id_token");
     logUtil(msg: "===== Firebase 登录信息结束 =====");
 
     if (firebase_id_token == null || firebase_id_token.isEmpty) {
@@ -82,22 +77,25 @@ Future<GoogleLoginResult?> google_login() async {
       return null;
     }
 
-    return GoogleLoginResult(
-      user: user,
-      firebaseIdToken: firebase_id_token,
-    );
+    return GoogleLoginResult(user: user, firebaseIdToken: firebase_id_token);
   } on GoogleSignInException catch (error) {
     /// 处理 Google 登录特有的异常。
     if (error.code == GoogleSignInExceptionCode.canceled) {
       logUtil(msg: "用户取消了 Google 登录");
     } else {
-      logUtil(msg: "Google 登录失败: ${error.code} - ${error.description}", type: 'e');
+      logUtil(
+        msg: "Google 登录失败: ${error.code} - ${error.description}",
+        type: 'e',
+      );
       showBottomTip(tr('AuthorizedLogin.google_auth_failed'));
     }
     return null;
   } on FirebaseAuthException catch (error) {
     /// 处理 Firebase 认证异常。
-    logUtil(msg: "Firebase Google 登录失败: ${error.code} - ${error.message}", type: 'e');
+    logUtil(
+      msg: "Firebase Google 登录失败: ${error.code} - ${error.message}",
+      type: 'e',
+    );
     showBottomTip(tr('AuthorizedLogin.google_auth_failed'));
     return null;
   } catch (error) {

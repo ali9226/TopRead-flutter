@@ -5,6 +5,7 @@ import 'package:app/api/post_request.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/models/top_up_record.dart';
 import 'package:app/stores/app_global_config.dart';
+import 'package:app/stores/user_information.dart';
 import 'package:app/util/number_util.dart';
 import 'dart:async';
 
@@ -21,6 +22,26 @@ import 'style.dart';
 /// 这样做的核心目的是把业务状态从 `index.dart` 里移出去，
 /// 避免页面文件一边写布局、一边写分页和滚动判断，后续维护会更清晰。
 class TopUpRecordLogic extends ChangeNotifier {
+  /// 列表请求可注入，生产环境继续使用统一 API。
+  final Future<List<TopUpRecordItem>?> Function({
+    required List<int> no_ids,
+    required int page_size,
+  })?
+  _record_loader;
+  final UserInformation _user_information = Get.find<UserInformation>();
+
+  /// 下拉刷新不显示全屏 loading，但仍必须独占请求。
+  bool _fetch_in_progress = false;
+  bool _is_disposed = false;
+
+  TopUpRecordLogic({
+    Future<List<TopUpRecordItem>?> Function({
+      required List<int> no_ids,
+      required int page_size,
+    })?
+    record_loader,
+  }) : _record_loader = record_loader;
+
   final AppGlobalConfigStore appGlobalConfigStore =
       Get.find<AppGlobalConfigStore>();
 
@@ -81,6 +102,7 @@ class TopUpRecordLogic extends ChangeNotifier {
   DateTime _now = DateTime.now();
 
   void init() {
+    if (_is_disposed) return;
     // 初始化时先注册滚动监听，再发首次请求。
     scrollController.addListener(_handleScroll);
     _startCountdownTicker();
@@ -90,6 +112,7 @@ class TopUpRecordLogic extends ChangeNotifier {
 
   @override
   void dispose() {
+    _is_disposed = true;
     // 逻辑销毁前释放滚动监听与控制器，避免内存泄漏。
     _countdownTimer?.cancel();
     scrollController.removeListener(_handleScroll);
@@ -112,10 +135,12 @@ class TopUpRecordLogic extends ChangeNotifier {
     bool showOverlay = false,
   }) async {
     // 正在请求时直接返回，避免用户反复触发并发请求。
-    if (loading || loadingMore) return false;
+    if (_is_disposed || _fetch_in_progress) return false;
 
     // 非刷新场景下，如果已经确认没有更多数据，就不再继续请求。
     if (!isRefresh && !hasMore) return false;
+    _fetch_in_progress = true;
+    final int auth_revision = _user_information.auth_revision;
 
     // 刷新时 no_ids 传空，表示重新取最新结果。
     // 分页时把当前已拿到的 id 全量传给后端，用于排除重复数据。
@@ -132,10 +157,16 @@ class TopUpRecordLogic extends ChangeNotifier {
     var requestSucceeded = false;
     try {
       // 统一通过内部请求方法调用后端接口。
-      final newRecords = await _getRecordList(
-        noIds: noIds,
-        pageSize: TopUpRecordStyle.pageSize,
-      );
+      final newRecords = await (_record_loader == null
+          ? _getRecordList(noIds: noIds, pageSize: TopUpRecordStyle.pageSize)
+          : _record_loader(
+              no_ids: noIds,
+              page_size: TopUpRecordStyle.pageSize,
+            ));
+      if (_is_disposed ||
+          !_user_information.can_apply_authenticated_response(auth_revision)) {
+        return false;
+      }
 
       // 接口失败时保持旧列表状态不动。
       if (newRecords == null) {
@@ -159,10 +190,11 @@ class TopUpRecordLogic extends ChangeNotifier {
         notifyListeners();
       }
     } finally {
+      _fetch_in_progress = false;
       // finally 保证任何情况下都能恢复 loading 状态。
       loading = false;
       loadingMore = false;
-      notifyListeners();
+      if (!_is_disposed) notifyListeners();
     }
 
     return requestSucceeded;
@@ -336,6 +368,7 @@ class TopUpRecordLogic extends ChangeNotifier {
     if (!appGlobalConfigStore.configLoaded.value) {
       await appGlobalConfigStore.loadConfig();
     }
+    if (_is_disposed) return;
 
     final int minutes =
         appGlobalConfigStore.businessConfig.rechargeExpirationTime;

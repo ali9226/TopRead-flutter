@@ -10,8 +10,10 @@ List<Map<String, dynamic>> creatorRows(dynamic value) =>
 
 /* TODO 作品管理只保存元数据；目录按页加载，正文打开时另外请求。 */
 class WorkspaceController extends ChangeNotifier {
-  WorkspaceController(this.novelId);
+  WorkspaceController(this.novelId, {this.call = CreatorWorkspaceApi.call});
   final int novelId;
+  final Future<Map<String, dynamic>> Function(String, Map<String, dynamic>)
+  call;
   Map<String, dynamic> data = {};
   List<Map<String, dynamic>> chapters = [];
   bool busy = false;
@@ -39,33 +41,64 @@ class WorkspaceController extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
-    if (busy) return;
+    if (_disposed || busy) return;
     busy = true;
     error = null;
     notifyListeners();
     try {
-      data = await CreatorWorkspaceApi.call('creator_work/workspace', {
+      final next_data = await call('creator_work/workspace', {
         'novel_id': novelId,
       });
+      if (_disposed) return;
+      final next_novel = creatorMap(next_data['novel']);
+      final directory = creatorNumber(next_novel['work_type']) == 1
+          ? await _directory(
+              requested_page: 1,
+              requested_filter: filter,
+              requested_keyword: keyword,
+              language_id: creatorNumber(next_novel['novel_language_id']),
+            )
+          : null;
+      if (_disposed) return;
+      // 详情和目录一起提交，刷新失败不能让旧章节附着到新的作品语种。
+      data = next_data;
       page = 1;
-      if (isLong) await _directory(false);
+      if (directory != null) {
+        _commit_directory(directory, append: false);
+      } else {
+        chapters = [];
+        hasMore = false;
+      }
     } catch (e) {
-      error = '$e';
+      if (!_disposed) error = '$e';
     } finally {
       busy = false;
       notifyListeners();
     }
   }
 
-  Future<void> _directory(bool append) async {
-    final result = await CreatorWorkspaceApi.call('creator_chapter/directory', {
+  /// 查询使用不可变参数，成功前不改变当前目录的筛选和分页坐标。
+  Future<Map<String, dynamic>> _directory({
+    required int requested_page,
+    required String requested_filter,
+    required String requested_keyword,
+    required int language_id,
+  }) async {
+    final result = await call('creator_chapter/directory', {
       'novel_id': novelId,
-      'novel_language_id': languageId,
-      'page': page,
+      'novel_language_id': language_id,
+      'page': requested_page,
       'page_size': 50,
-      'state': filter,
-      'keyword': keyword,
+      'state': requested_filter,
+      'keyword': requested_keyword,
     });
+    if (result['list'] is! List) {
+      throw const CreatorWorkspaceException('章节目录加载失败，请重试');
+    }
+    return result;
+  }
+
+  void _commit_directory(Map<String, dynamic> result, {required bool append}) {
     chapters = [if (append) ...chapters, ...creatorRows(result['list'])];
     hasMore = result['has_more'] == true;
     data['counts'] = result['counts'];
@@ -76,19 +109,29 @@ class WorkspaceController extends ChangeNotifier {
     String? state,
     String? search,
   }) async {
-    if (busy) return;
-    final oldPage = page;
+    if (_disposed || busy) return;
+    final next_filter = state ?? filter;
+    final next_keyword = search ?? keyword;
+    final append = more && next_filter == filter && next_keyword == keyword;
+    if (append && !hasMore) return;
+    final next_page = append ? page + 1 : 1;
     busy = true;
     error = null;
-    if (state != null) filter = state;
-    if (search != null) keyword = search;
-    page = more ? page + 1 : 1;
     notifyListeners();
     try {
-      await _directory(more);
+      final result = await _directory(
+        requested_page: next_page,
+        requested_filter: next_filter,
+        requested_keyword: next_keyword,
+        language_id: languageId,
+      );
+      if (_disposed) return;
+      _commit_directory(result, append: append);
+      page = next_page;
+      filter = next_filter;
+      keyword = next_keyword;
     } catch (e) {
-      page = oldPage;
-      error = '$e';
+      if (!_disposed) error = '$e';
     } finally {
       busy = false;
       notifyListeners();

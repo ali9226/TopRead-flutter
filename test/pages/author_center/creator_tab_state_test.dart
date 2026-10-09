@@ -115,4 +115,18 @@ void main() {
     expect(published.works.single.id, 1);
     expect(drafts.works.single.id, 2);
   });
+
+  test('销毁后刷新不会通知监听器或发起新请求', () async {
+    var requests = 0;
+    final tab = CreatorTabState(
+      loadPage: (_) async {
+        requests++;
+        return {'list': [], 'total': 0};
+      },
+    );
+    tab.dispose();
+    await tab.refresh();
+    await tab.loadMore();
+    expect(requests, 0);
+  });
 }

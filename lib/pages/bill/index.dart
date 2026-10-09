@@ -7,6 +7,7 @@ import 'package:app/config/color_config.dart';
 import 'package:app/config/theme.dart';
 import 'package:app/models/user_bill.dart';
 import 'package:app/stores/device_info.dart';
+import 'package:app/stores/user_information.dart';
 import 'package:app/util/clipboard/clipboard.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/layout/page_header_spacing.dart';
@@ -53,6 +54,7 @@ class _BillState extends State<Bill> {
   /// 这里主要读取深浅色状态，
   /// 让账单页主题切换时能跟随全局设置自动刷新。
   final DeviceInfo deviceInfo = Get.find<DeviceInfo>();
+  final UserInformation _user_information = Get.find<UserInformation>();
 
   /// 当前页面已经加载出来的账单列表。
   ///
@@ -101,6 +103,8 @@ class _BillState extends State<Bill> {
     scrollController.addListener(handleScroll);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
       /// 等首帧渲染完成后再开始拉数据。
       ///
       /// 这样做的原因是：
@@ -123,11 +127,16 @@ class _BillState extends State<Bill> {
   }
 
   Future<void> initPage() async {
+    final int auth_revision = _user_information.auth_revision;
+
     /// 首次进入页面时，先确认本地是否还有有效 token。
-    final bool hasToken = await checkBillToken();
+    final bool hasToken = await checkBillToken(
+      is_active: () =>
+          mounted && _user_information.is_auth_revision_current(auth_revision),
+    );
 
     /// 没有 token 说明工具函数里已经负责跳去登录页，这里直接结束初始化。
-    if (!hasToken) return;
+    if (!mounted || !hasToken) return;
 
     /// 首次进入统一按“刷新模式”拉取数据。
     ///
@@ -151,15 +160,19 @@ class _BillState extends State<Bill> {
     /// 这是为了避免：
     /// 1. 用户连续下拉触发重复请求。
     /// 2. 滚动到底部时短时间内多次触发分页。
-    if (_fetchInProgress) return false;
+    if (!mounted || _fetchInProgress) return false;
+    final int auth_revision = _user_information.auth_revision;
 
     /// 每次请求前都重新校验 token。
     ///
     /// 不只首次进入要校验，因为用户停留在页面期间 token 也可能已经失效。
-    final bool hasToken = await checkBillToken();
+    final bool hasToken = await checkBillToken(
+      is_active: () =>
+          mounted && _user_information.is_auth_revision_current(auth_revision),
+    );
 
     /// 没有 token 时中止请求，避免继续访问接口。
-    if (!hasToken) return false;
+    if (!mounted || !hasToken || _fetchInProgress) return false;
 
     /// 组装要排除的账单 id 列表。
     ///
@@ -199,14 +212,13 @@ class _BillState extends State<Bill> {
       }
 
       /// 真正向逻辑层请求账单列表。
-      final ({List<UserBillItem> items, bool requestOk}) billFetch =
-          await logic.getBillList(
-        noIds: noIds,
-        pageSize: pageSize,
-      );
+      final ({List<UserBillItem> items, bool requestOk}) billFetch = await logic
+          .getBillList(noIds: noIds, pageSize: pageSize);
 
       /// 如果页面已经销毁，就不要再继续更新状态。
-      if (!mounted) return false;
+      if (!mounted ||
+          !_user_information.can_apply_authenticated_response(auth_revision))
+        return false;
 
       /// 请求失败时不改列表，避免下拉刷新把旧数据误清空；也不提示刷新成功。
       if (!billFetch.requestOk) {

@@ -27,8 +27,9 @@ class Logic {
   ///
   /// 没有 token 时直接跳转到首页，不继续停留在表单页。
   Future<void> checkLoginStatus() async {
-    final String token =
-        (await StorageUtil.getData(Constant.tokenKey) ?? '').trim();
+    final String token = (await StorageUtil.getData(Constant.tokenKey) ?? '')
+        .trim();
+    if (!context.mounted) return;
     if (token.isEmpty) {
       routerUtil(path: '/', type: 'replace');
     }
@@ -39,6 +40,9 @@ class Logic {
   /// [inputValueMap] 包含用户输入的昵称，key 为 'nickname'。
   /// 返回 true 表示提交成功，false 表示提交失败或输入为空。
   Future<bool> submitNewNickname(Map<String, String> inputValueMap) async {
+    if (!context.mounted) return false;
+    final userController = Get.find<UserInformation>();
+    final int request_revision = userController.auth_revision;
     final String inputText = inputValueMap['nickname']?.trim() ?? '';
     if (inputText.isEmpty) {
       showBottomTip(easy.tr('UserInfo.error_03'));
@@ -56,8 +60,12 @@ class Logic {
     if (!results.status) return false;
     if (results.content == null) return false;
 
-    final userController = Get.find<UserInformation>();
-    userController.saveUserInfo(results.content!);
+    if (!context.mounted ||
+        !userController.save_user_info_if_current(
+          results.content!,
+          request_revision: request_revision,
+        ))
+      return false;
     showBottomTip(easy.tr('UserInfo.success_04'));
     return true;
   }

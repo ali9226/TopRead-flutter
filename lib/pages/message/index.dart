@@ -205,7 +205,7 @@ class _MessagePageState extends State<MessagePage> {
   ///
   /// [message] 要删除的消息对象。
   Future<void> _delete_message(MessageData message) async {
-    await message_store.delete_message(message.id);
+    await message_store.delete_message(message.id, message_type: message.type);
   }
 
   /// 根据消息类型获取 SVG 图标名称。

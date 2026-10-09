@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 
@@ -19,6 +20,7 @@ import 'package:app/stores/home_store.dart';
 import 'package:app/stores/project_config_store.dart';
 import 'package:app/stores/recommend_waterfall_store.dart';
 import 'package:app/util/ad_display_policy.dart';
+import 'package:app/util/percentage_probability.dart';
 import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/novel_navigation/index.dart';
 
@@ -40,10 +42,14 @@ class AnimatedRecommendWaterfall extends StatefulWidget {
   /// 当前是否为夜间模式。
   final bool is_dark;
 
+  /// 外层列表控制器，广告准备阶段与真实视口使用同一滚动位置。
+  final ScrollController? scroll_controller;
+
   const AnimatedRecommendWaterfall({
     super.key,
     required this.waterfall_id,
     required this.is_dark,
+    this.scroll_controller,
   });
 
   @override
@@ -160,40 +166,14 @@ class AnimatedRecommendWaterfallState
 
   /// 同步远端广告平台开关到当前瀑布流会话。
   ///
-  /// 关闭时立即移除并释放全部广告槽位；开启时为已经加载的小说批次补充
-  /// 一个新广告槽位，后续分页仍按每批一个广告槽位处理。
+  /// 关闭时由广告位撤下素材并在视口下方收回尺寸，避免可见书籍突然重排。
+  /// 重新开启后仅后续新批次参与概率判断，已经读过的批次不补插广告。
   void _on_ad_policy_changed() {
     final bool can_show_ads = AdDisplayPolicy.can_show_ads();
     if (_can_show_ads == can_show_ads) return;
     _can_show_ads = can_show_ads;
 
-    if (!can_show_ads) {
-      final List<String> ad_slot_ids = _session.items
-          .where((BookListItem item) => item.is_ad)
-          .map((BookListItem item) => item.id)
-          .toList();
-      MasonryNativeAdPool.remove_all(ad_slot_ids);
-      _update_session(() {
-        _session.items.removeWhere((BookListItem item) => item.is_ad);
-        for (final String slot_id in ad_slot_ids) {
-          _session.item_heights.remove(slot_id);
-        }
-      });
-      return;
-    }
-
-    if (_session.items.any((BookListItem item) => item.is_ad)) return;
-    final List<BookListItem> books = _session.items
-        .where((BookListItem item) => item.is_book)
-        .toList();
-    if (books.isEmpty) return;
-    _update_session(() {
-      _session.items
-        ..clear()
-        ..addAll(
-          _insert_fresh_ad_in_batch_middle(books, target_session: _session),
-        );
-    });
+    if (mounted) setState(() {});
   }
 
   /// 原子更新当前会话并通知所有挂载页面。
@@ -210,6 +190,33 @@ class AnimatedRecommendWaterfallState
     target_session.mark_changed();
   }
 
+  /// 构建期撤销插位时延后同步缓存，旧页面与刷新代次均不能回写。
+  void _apply_ad_extent(
+    RecommendWaterfallSession target_session,
+    int generation,
+    String slot_id,
+    double height,
+  ) {
+    void apply() {
+      if (!mounted ||
+          !identical(_session, target_session) ||
+          target_session.request_generation != generation ||
+          target_session.item_heights[slot_id] == height)
+        return;
+      _update_target_session(
+        target_session,
+        () => target_session.item_heights[slot_id] = height,
+      );
+    }
+
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => apply());
+    } else {
+      apply();
+    }
+  }
+
   /// 释放已明确从会话数据中移除的广告槽位。
   void _release_ad_slots(RecommendWaterfallSession target_session) {
     MasonryNativeAdPool.remove_all(
@@ -217,6 +224,7 @@ class AnimatedRecommendWaterfallState
           .where((BookListItem item) => item.is_ad)
           .map((BookListItem item) => item.id),
     );
+    target_session.skipped_ad_slot_ids.clear();
   }
 
   /// Locale 切换前立即隐藏旧语种瀑布流并让旧请求失效。
@@ -359,10 +367,8 @@ class AnimatedRecommendWaterfallState
     }
     // 按概率决定本批次是否展示广告。
     final int probability = Get.find<ProjectConfigStore>().current.waterfall_ad;
-    if (probability <= 0) return List<BookListItem>.of(batch);
-    if (probability < 100) {
-      final int roll = DateTime.now().millisecondsSinceEpoch % 100;
-      if (roll >= probability) return List<BookListItem>.of(batch);
+    if (!PercentageProbability.is_hit(probability)) {
+      return List<BookListItem>.of(batch);
     }
     final String slot_id = target_session.create_ad_slot_id();
     target_session.item_heights[slot_id] = 0;
@@ -421,7 +427,8 @@ class AnimatedRecommendWaterfallState
       // 封面左下角附加信息：评分或热度。
       String meta_text = '';
       if (item.score > 0) {
-        final String rating = item.score.toStringAsFixed(2)
+        final String rating = item.score
+            .toStringAsFixed(2)
             .replaceAll(RegExp(r'0+$'), '')
             .replaceAll(RegExp(r'\.$'), '');
         meta_text = easy.tr(
@@ -578,6 +585,12 @@ class AnimatedRecommendWaterfallState
 
         final Map<String, Rect> positions = _calculate_layout();
         final double total_height = _calculate_total_height(positions);
+        final RecommendWaterfallSession target_session = _session;
+        final int generation = target_session.request_generation;
+        final ScrollController? scroll_controller =
+            widget.scroll_controller ??
+            Scrollable.maybeOf(context)?.widget.controller ??
+            PrimaryScrollController.maybeOf(context);
 
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -613,6 +626,7 @@ class AnimatedRecommendWaterfallState
                       curve: Curves.easeOut,
                       child: _MeasurableWidget(
                         on_height_measured: (double height) {
+                          if (item.is_ad) return;
                           if (_item_heights[item.id] != height && mounted) {
                             _update_session(() {
                               _item_heights[item.id] = height;
@@ -620,10 +634,37 @@ class AnimatedRecommendWaterfallState
                           }
                         },
                         child: item.is_ad
-                            ? MasonryNativeAdCard(
-                                slot_id: item.id,
-                                is_dark: widget.is_dark,
-                              )
+                            ? scroll_controller == null
+                                  ? const SizedBox.shrink()
+                                  : MasonryNativeAdCard(
+                                      slot_id: item.id,
+                                      is_dark: widget.is_dark,
+                                      scroll_controller: scroll_controller,
+                                      initial_reserved_extent:
+                                          _item_heights[item.id],
+                                      is_enabled: !_session.skipped_ad_slot_ids
+                                          .contains(item.id),
+                                      layout_revision: (
+                                        _total_width,
+                                        _column_count,
+                                        rect.top,
+                                        rect.left,
+                                      ),
+                                      on_extent_changed: (double height) {
+                                        _apply_ad_extent(
+                                          target_session,
+                                          generation,
+                                          item.id,
+                                          height,
+                                        );
+                                      },
+                                      on_skipped: () {
+                                        if (!mounted) return;
+                                        _session.skipped_ad_slot_ids.add(
+                                          item.id,
+                                        );
+                                      },
+                                    )
                             : RecommendBookCard(
                                 item: item,
                                 is_dark: widget.is_dark,

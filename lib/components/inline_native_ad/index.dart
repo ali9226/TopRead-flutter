@@ -113,6 +113,9 @@ class ViewportAwareInlineNativeAdBanner extends StatelessWidget {
   /// 免广告或平台关闭时立即卸载素材，正文高度由广告位安全收回。
   final bool is_enabled;
 
+  /// 免广告生效后收回可见广告位高度，并补偿已经滚过的高度。
+  final bool collapse_when_disabled;
+
   /// 广告位真正提交尺寸后通知页面更新正文进度范围。
   final ValueChanged<double>? on_extent_changed;
 
@@ -135,6 +138,7 @@ class ViewportAwareInlineNativeAdBanner extends StatelessWidget {
     this.viewport_top_inset = 0,
     this.layout_revision,
     this.is_enabled = true,
+    this.collapse_when_disabled = false,
     this.on_extent_changed,
     this.badge_text_key = 'short_story_read.ad_free',
     this.show_continue_hint = false,
@@ -149,6 +153,7 @@ class ViewportAwareInlineNativeAdBanner extends StatelessWidget {
       viewport_top_inset: viewport_top_inset,
       layout_revision: layout_revision,
       is_enabled: is_enabled,
+      collapse_when_disabled: collapse_when_disabled,
       on_extent_changed: on_extent_changed,
       trailing_extent:
           InlineNativeAdStyle.spacing_bottom +

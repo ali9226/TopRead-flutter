@@ -20,6 +20,7 @@ import 'package:app/util/storage_util/index.dart';
  * [prefix] 请求路径前缀。
  * [baseUrl] 自定义域名，不传时使用全局配置。
  * [showTips] 是否在失败时自动展示提示。
+ * [authorization_token] 固定本次请求的身份凭证；null 读取当前存储，空字符串明确使用访客身份。
  * [path] 接口路径。
  * [parameter] 原始业务参数。
  * [fromJson] content 为对象时的解析函数。
@@ -29,6 +30,7 @@ Future<ResultsType<T>> postRequest<T>({
   String prefix = Constant.prefix,
   String? baseUrl,
   bool showTips = true,
+  String? authorization_token,
   required String path,
   Map<String, dynamic>? parameter,
   T Function(Map<String, dynamic> json)? fromJson,
@@ -54,8 +56,11 @@ Future<ResultsType<T>> postRequest<T>({
       locale: language,
       key: _PostRequestMessageKey.defaultError,
     );
-    final String? token = await StorageUtil.getData(Constant.tokenKey);
-    final String authorization = token != null ? 'Bearer $token' : '';
+    final String? token =
+        authorization_token ?? await StorageUtil.getData(Constant.tokenKey);
+    final String authorization = token != null && token.isNotEmpty
+        ? 'Bearer $token'
+        : '';
     final int timezone = DateTime.now().timeZoneOffset.inHours;
     final String requestTime = _buildUtcRequestTime(DateTime.now().toUtc());
 

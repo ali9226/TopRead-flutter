@@ -182,6 +182,8 @@ class _CustomerServiceChatPageState extends State<CustomerServiceChatPage>
 
   /// 弹出图片来源选择（相册/拍照）。
   Future<void> _open_image_picker() async {
+    final UserInformation user_information = Get.find<UserInformation>();
+    final int identity_revision = user_information.auth_identity_revision;
     _logic.focus_node.unfocus();
     _logic.close_emoji_panel();
 
@@ -190,7 +192,9 @@ class _CustomerServiceChatPageState extends State<CustomerServiceChatPage>
       widget.is_dark,
     );
 
-    if (!mounted) return;
+    if (!mounted ||
+        identity_revision != user_information.auth_identity_revision)
+      return;
     if (uploaded_urls != null && uploaded_urls.isNotEmpty) {
       _logic.send_image_messages(uploaded_urls);
     }

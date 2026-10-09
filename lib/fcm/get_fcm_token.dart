@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:app/util/log_util.dart';
+import 'package:app/util/device/app_environment.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 /// 获取 FCM Token 的最大等待时间。
@@ -18,7 +19,12 @@ Future<String?> get_fcm_token({
 }) async {
   try {
     final Future<String?> token_future =
-        load_token?.call() ?? FirebaseMessaging.instance.getToken();
+        load_token?.call() ??
+        FirebaseMessaging.instance.getToken(
+          vapidKey: isWebBrowser
+              ? 'BNZQeUAHYOjr5AQeAbdRzwqCB4a-XQNifHD9B_Gxa9N-8NVADu3moHCF2j7u7uS8dtb0Bnp1-eMLqGQOguBwFgo'
+              : null,
+        );
     return await token_future.timeout(timeout);
   } on TimeoutException {
     logUtil(msg: 'FCM: 获取 Token 超时', type: 'w');

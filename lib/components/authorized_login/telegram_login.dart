@@ -4,16 +4,14 @@ import 'dart:async';
 
 import 'package:app/api/post_request.dart';
 import 'package:app/api/results_type.dart';
-import 'package:app/config/constant.dart';
-import 'package:app/fcm/fcm_auth.dart';
 import 'package:app/models/login.dart';
 import 'package:app/permission_request/notification_permission_request.dart';
+import 'package:app/services/post_login_sync_service.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/dialog/pop_up_input.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/router/router_util.dart';
-import 'package:app/util/storage_util/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -23,6 +21,12 @@ import 'package:telegram_login_flutter/telegram_login_flutter.dart';
   执行telegram登录逻辑。
  */
 Future<void> telegram_login(BuildContext context) async {
+  if (!context.mounted) return;
+  final UserInformation user_controller = Get.find<UserInformation>();
+  final int request_revision = user_controller.auth_revision;
+  bool is_current() =>
+      context.mounted &&
+      user_controller.is_auth_revision_current(request_revision);
   const String telegramUrl = "https://novel_telegram_login.kingbet.co.tz";
   const String botId = "8776242482";
   final Uri? telegram_auth_url = Uri.tryParse(telegramUrl);
@@ -43,6 +47,7 @@ Future<void> telegram_login(BuildContext context) async {
     leftButtonText: context.tr('constant.cancel'),
     rightButtonText: context.tr('AuthorizedLogin.authorize_login'),
     onRightPressed: (value) async {
+      if (!is_current()) return false;
       final trimmed = value.trim();
       if (trimmed.isEmpty) {
         showBottomTip(context.tr('AuthorizedLogin.telegram_phone_required'));
@@ -60,7 +65,7 @@ Future<void> telegram_login(BuildContext context) async {
   );
 
   // 如果用户取消了弹窗，phoneNumber 为空
-  if (phoneNumber == null) {
+  if (phoneNumber == null || !is_current()) {
     return;
   }
 
@@ -76,8 +81,10 @@ Future<void> telegram_login(BuildContext context) async {
 
     // 打开 Telegram 应用
     await telegramAuth.launchTelegram();
+    if (!is_current()) return;
     // 发起登录请求
     await telegramAuth.initiateLogin();
+    if (!is_current()) return;
 
     // 轮询检查状态，直到成功或超时
     final startTime = DateTime.now();
@@ -85,6 +92,7 @@ Future<void> telegram_login(BuildContext context) async {
     TelegramUser? telegram_user;
 
     while (DateTime.now().difference(startTime) < timeout) {
+      if (!is_current()) return;
       if (await telegramAuth.checkLoginStatus()) {
         telegram_user = await telegramAuth.getUserData();
         break;
@@ -92,7 +100,7 @@ Future<void> telegram_login(BuildContext context) async {
       await Future.delayed(const Duration(seconds: 2));
     }
 
-    if (!context.mounted) {
+    if (!is_current()) {
       return;
     }
 
@@ -107,10 +115,11 @@ Future<void> telegram_login(BuildContext context) async {
       context: context,
       telegram_auth_url: telegram_auth_url,
       telegram_user: telegram_user,
+      request_revision: request_revision,
     );
   } catch (error) {
     logUtil(msg: "Telegram 授权登录失败: $error", type: 'e');
-    if (context.mounted) {
+    if (is_current()) {
       showBottomTip(context.tr('AuthorizedLogin.telegram_auth_failed'));
     }
   }
@@ -120,6 +129,7 @@ Future<void> _request_telegram_backend_auth({
   required BuildContext context,
   required Uri telegram_auth_url,
   required TelegramUser telegram_user,
+  required int request_revision,
 }) async {
   final ResultsType<Login> results = await postRequest<Login>(
     prefix: '',
@@ -132,7 +142,9 @@ Future<void> _request_telegram_backend_auth({
     fromJson: (Map<String, dynamic> json) => Login.fromJson(json),
   );
 
-  if (!context.mounted) {
+  final UserInformation user_controller = Get.find<UserInformation>();
+  if (!context.mounted ||
+      !user_controller.is_auth_revision_current(request_revision)) {
     return;
   }
 
@@ -146,13 +158,15 @@ Future<void> _request_telegram_backend_auth({
     return;
   }
 
-  await StorageUtil.saveData(Constant.tokenKey, token);
+  if (!await user_controller.save_auth_credentials_if_current(
+    token: token,
+    info: results.content!.userInfo,
+    request_revision: request_revision,
+    is_active: () => context.mounted,
+  ))
+    return;
 
-  final UserInformation user_controller = Get.find<UserInformation>();
-  user_controller.saveUserInfo(results.content!.userInfo);
-
-  // 绑定 FCM Token 到用户。
-  FcmAuth.onLoginSuccess();
+  PostLoginSyncService.start();
 
   // 用户主动完成 Telegram 登录后申请系统通知权限。
   unawaited(NotificationPermissionRequest.request_after_login());

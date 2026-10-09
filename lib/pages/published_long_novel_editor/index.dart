@@ -1,4 +1,3 @@
-
 import 'package:app/components/image_source_sheet/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
@@ -41,8 +40,7 @@ class _PublishedLongNovelEditorPageState
   @override
   void initState() {
     super.initState();
-    tabs = TabController(length: 3, vsync: this)
-      ..addListener(_on_tab_changed);
+    tabs = TabController(length: 3, vsync: this)..addListener(_on_tab_changed);
     model = PublishedNovelController(widget.novel_id)..addListener(_changed);
     model.load();
   }
@@ -61,6 +59,7 @@ class _PublishedLongNovelEditorPageState
 
   Future<void> _leave() async {
     if (model.saving || model.uploading) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     if (model.dirty || model.pending_section != null) {
       String? action;
       await showMessage(
@@ -69,28 +68,17 @@ class _PublishedLongNovelEditorPageState
         leftButtonText: tr('creator_center.no_save'),
         rightButtonText: tr('creator_center.save_and_exit'),
         onLeftPressed: () async => action = 'discard',
-        onRightPressed: () async {
-          action = 'save';
-          // 乐观锁：发起保存请求后立即退出，不等结果
-          for (final section in [0, 1]) {
-            if (section == 0 && model.details_dirty) {
-              model.update_section(section).then((_) {
-                if (model.error == null) showBottomTip(tr('published_editor.updated'));
-              }).catchError((_) {});
-            } else if (section == 1 && model.settings_dirty) {
-              model.update_section(section).then((_) {
-                if (model.error == null) showBottomTip(tr('published_editor.updated'));
-              }).catchError((_) {});
-            }
-          }
-          if (model.order_dirty) {
-            model.update_order().then((_) {
-              if (model.error == null) showBottomTip(tr('published_editor.updated'));
-            }).catchError((_) {});
-          }
-        },
+        onRightPressed: () async => action = 'save',
       );
       if (action == null || !mounted) return;
+      if (action == 'save') {
+        try {
+          if (!await model.save_changes() || !mounted) return;
+        } catch (_) {
+          // 请求失败时保留编辑页与重试快照，不把“已发起”当作“已保存”。
+          return;
+        }
+      }
     }
     setState(() => _allow_pop = true);
     await WidgetsBinding.instance.endOfFrame;
@@ -245,108 +233,112 @@ class _PublishedLongNovelEditorPageState
           resizeToAvoidBottomInset: false,
           backgroundColor: AuthorStyle.background(dark),
           body: Column(
-          children: [
-            PublishedEditorHeader(
-              controller: tabs,
-              is_dark: dark,
-              is_cjk: cjk,
-              loading: model.saved == null && model.loading,
-              on_back: _leave,
-              on_delete:
-                  model.saved == null ||
-                      model.saving ||
-                      model.loading ||
-                      model.uploading ||
-                      (model.pending_section != null &&
-                          model.pending_section != 3)
-                  ? null
-                  : _delete,
-            ),
-            Expanded(
-              child: model.saved == null
-                  ? model.loading
-                      ? SkeletonContent(is_dark: dark, tab_index: tabs.index)
-                      : Center(
-                          child: TextButton(
-                            onPressed: model.load,
-                            child: Text(
-                              model.error ?? tr('published_editor.retry'),
+            children: [
+              PublishedEditorHeader(
+                controller: tabs,
+                is_dark: dark,
+                is_cjk: cjk,
+                loading: model.saved == null && model.loading,
+                on_back: _leave,
+                on_delete:
+                    model.saved == null ||
+                        model.saving ||
+                        model.loading ||
+                        model.uploading ||
+                        (model.pending_section != null &&
+                            model.pending_section != 3)
+                    ? null
+                    : _delete,
+              ),
+              Expanded(
+                child: model.saved == null
+                    ? model.loading
+                          ? SkeletonContent(
+                              is_dark: dark,
+                              tab_index: tabs.index,
+                            )
+                          : Center(
+                              child: TextButton(
+                                onPressed: model.load,
+                                child: Text(
+                                  model.error ?? tr('published_editor.retry'),
+                                ),
+                              ),
+                            )
+                    : Column(
+                        children: [
+                          if (model.saving)
+                            const LinearProgressIndicator(
+                              color: AuthorStyle.gold,
                             ),
-                          ),
-                        )
-                  : Column(
-                      children: [
-                        if (model.saving)
-                          const LinearProgressIndicator(
-                            color: AuthorStyle.gold,
-                          ),
-                        if (model.error != null)
-                          Padding(
-                            padding: WorkspaceStyle.padding,
-                            child: Text(
-                              model.error!,
-                              style: WorkspaceStyle.caption(dark, cjk),
+                          if (model.error != null)
+                            Padding(
+                              padding: WorkspaceStyle.padding,
+                              child: Text(
+                                model.error!,
+                                style: WorkspaceStyle.caption(dark, cjk),
+                              ),
                             ),
-                          ),
-                        Expanded(
-                          child: TabBarView(
-                            controller: tabs,
-                            children: [
-                              _section(
-                                0,
-                                StepBasic(
-                                  is_dark: dark,
-                                  is_editing: true,
-                                  title_controller: model.title,
-                                  introduction_controller: model.introduction,
-                                  language_code: model.language_code,
-                                  cover_local_path: model.cover_local_path,
-                                  cover_url: model.cover_url,
-                                  is_uploading_cover: model.uploading,
-                                  on_pick_cover: () => showImageSourceSheet(
-                                    context: context,
-                                    on_gallery: () =>
-                                        model.pick_cover(ImageSource.gallery),
-                                    on_camera: () =>
-                                        model.pick_cover(ImageSource.camera),
+                          Expanded(
+                            child: TabBarView(
+                              controller: tabs,
+                              children: [
+                                _section(
+                                  0,
+                                  StepBasic(
+                                    is_dark: dark,
+                                    is_editing: true,
+                                    title_controller: model.title,
+                                    introduction_controller: model.introduction,
+                                    language_code: model.language_code,
+                                    cover_local_path: model.cover_local_path,
+                                    cover_url: model.cover_url,
+                                    is_uploading_cover: model.uploading,
+                                    on_pick_cover: () => showImageSourceSheet(
+                                      context: context,
+                                      on_gallery: () =>
+                                          model.pick_cover(ImageSource.gallery),
+                                      on_camera: () =>
+                                          model.pick_cover(ImageSource.camera),
+                                    ),
+                                    on_language_changed: model.set_language,
+                                    extra_bottom_padding: button_reserve,
+                                    show_header: false,
                                   ),
-                                  on_language_changed: model.set_language,
-                                  extra_bottom_padding: button_reserve,
-                                  show_header: false,
+                                  dark,
+                                  cjk,
                                 ),
-                                dark,
-                                cjk,
-                              ),
-                              _section(
-                                1,
-                                StepCategory(
-                                  is_dark: dark,
-                                  selected_preference_map: model.preferences,
-                                  on_toggle_preference: model.toggle_preference,
-                                  showLength: false,
-                                  show_header: false,
+                                _section(
+                                  1,
+                                  StepCategory(
+                                    is_dark: dark,
+                                    selected_preference_map: model.preferences,
+                                    on_toggle_preference:
+                                        model.toggle_preference,
+                                    showLength: false,
+                                    show_header: false,
+                                  ),
+                                  dark,
+                                  cjk,
                                 ),
-                                dark,
-                                cjk,
-                              ),
-                              AbsorbPointer(
-                                absorbing: model.locked,
-                                child: PublishedChapterDirectory(
-                                  model: model,
-                                  is_dark: dark,
-                                  is_cjk: cjk,
-                                  on_open: _chapter,
-                                  on_new_chapter: () => _chapter(),
+                                AbsorbPointer(
+                                  absorbing: model.locked,
+                                  child: PublishedChapterDirectory(
+                                    model: model,
+                                    is_dark: dark,
+                                    is_cjk: cjk,
+                                    on_open: _chapter,
+                                    on_new_chapter: () => _chapter(),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-            ),
-          ],
-        ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );

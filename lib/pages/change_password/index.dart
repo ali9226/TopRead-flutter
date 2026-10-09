@@ -117,8 +117,8 @@ class _ChangePasswordState extends State<ChangePassword> {
   /// 检查本地登录态。
   /// 读取本地 token，为空则重定向到首页；否则完成校验并自动聚焦新密码输入框。
   Future<void> _verifyLoginStatus() async {
-    final String token =
-        (await StorageUtil.getData(Constant.tokenKey) ?? '').trim();
+    final String token = (await StorageUtil.getData(Constant.tokenKey) ?? '')
+        .trim();
     if (!mounted) return;
 
     /// 没有 token 时，直接替换到首页，不继续展示表单。
@@ -142,6 +142,8 @@ class _ChangePasswordState extends State<ChangePassword> {
   /// 校验输入合法性 → 调用修改密码接口 → 刷新 token 和用户信息 → 返回上一页。
   Future<void> _handleSubmit() async {
     if (_isSubmitting) return;
+    final userController = Get.find<UserInformation>();
+    final int request_revision = userController.auth_revision;
     _dismissKeyboard();
 
     final String newPassword = _newPasswordController.text.trim();
@@ -185,13 +187,13 @@ class _ChangePasswordState extends State<ChangePassword> {
       /// 接口返回新 token，保存到本地以刷新登录态。
       final String token = results.content?.token.toString() ?? '';
       if (token.isEmpty) return;
-      await StorageUtil.saveData(Constant.tokenKey, token);
-
-      /// 刷新全局用户信息缓存。
-      final userController = Get.find<UserInformation>();
-      if (results.content?.userInfo != null) {
-        userController.saveUserInfo(results.content!.userInfo);
-      }
+      final bool saved = await userController.save_auth_credentials_if_current(
+        token: token,
+        info: results.content!.userInfo,
+        request_revision: request_revision,
+        is_active: () => mounted,
+      );
+      if (!saved) return;
 
       showBottomTip(easy.tr('UserInfo.success_03'));
 
@@ -227,7 +229,6 @@ class _ChangePasswordState extends State<ChangePassword> {
       child: Scaffold(
         backgroundColor: Style.backgroundColor(isDark: isDark),
         body: _isAuthChecking
-
             /// 登录态校验完成前不渲染内容，避免闪屏。
             ? const SizedBox.shrink()
             : Stack(

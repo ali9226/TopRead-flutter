@@ -91,7 +91,9 @@ class _AuthorizedLoginViewState extends State<AuthorizedLoginView> {
                     easy.tr('AuthorizedLogin.title'),
                     style: TextStyle(
                       fontSize: AuthTextStyle.fontSize,
-                      color: AuthTextStyle.textColor(isDark: device_info.dark.value),
+                      color: AuthTextStyle.textColor(
+                        isDark: device_info.dark.value,
+                      ),
                       fontWeight: AuthTextStyle.fontWeight,
                     ),
                   ),
@@ -151,6 +153,7 @@ class _AuthorizedLoginViewState extends State<AuthorizedLoginView> {
                       !(await widget.onBeforeLogin!())) {
                     return;
                   }
+                  if (!mounted) return;
                   await logic.handle_authorized_login_tap(item);
                 },
           child: SizedBox(

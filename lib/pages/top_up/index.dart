@@ -91,6 +91,7 @@ class _TopUpState extends State<TopUp> {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       // 等首帧结束后再拉配置，避免 initState 同步阶段直接触发异步请求影响首屏节奏。
       initPage();
     });
@@ -98,7 +99,7 @@ class _TopUpState extends State<TopUp> {
 
   Future<void> initPage() async {
     // 如果页面已经在请求中，就不再重复触发初始化，防止并发拉取配置。
-    if (loading) return;
+    if (!mounted || loading) return;
 
     setState(() {
       // 标记进入配置加载态，驱动骨架屏或遮罩显示。

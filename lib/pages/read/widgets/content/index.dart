@@ -372,6 +372,8 @@ class ReadContent extends StatelessWidget {
       key: ValueKey<String>('read-native-ad-$chapter_index'),
       scroll_controller: scroll_controller,
       is_enabled: native_ads_enabled && AdDisplayPolicy.can_show_ads(),
+      // 观看激励视频进入免广告期后，正文立即填满原广告的可见占位。
+      collapse_when_disabled: true,
       layout_revision: (
         logic.body_font_size.value,
         logic.should_show_introduction,

@@ -329,7 +329,7 @@ void main() {
       error: LoadAdError(1, 'test', 'reward request complete', null),
     );
     await _flush_ad_tasks(tester);
-    expect(await rewarded_result, GoogleRewardedAdResult.load_failed);
+    expect(await rewarded_result, GoogleRewardedAdResult.cancelled);
     expect(GoogleRewardedAdUtil.instance.is_running, isFalse);
     binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await _flush_ad_tasks(tester);
@@ -456,6 +456,192 @@ void main() {
     expect(GoogleRewardedAdUtil.instance.is_running, isFalse);
   });
 
+  for (final bool disable_ads in <bool>[false, true]) {
+    test_ad_widgets('激励 SSV 设置期间${disable_ads ? '关闭开关' : '离开页面'}不再展示广告', (
+      tester,
+    ) async {
+      bool page_is_current = true;
+      final Completer<void> server_options_gate = Completer<void>();
+      platform.server_options_gate = server_options_gate;
+      final Future<GoogleRewardedAdResult> result = GoogleRewardedAdUtil
+          .instance
+          .show_rewarded_ad(
+            adUnitId: 'reward-unit',
+            user_id: 'user-id',
+            can_show: () => page_is_current,
+          );
+      await _flush_ad_tasks(tester);
+      final RewardedAd ad = platform.rewarded_loads.single;
+      await platform.emit_event(ad, 'onAdLoaded');
+      await _flush_ad_tasks(tester);
+      expect(platform.server_options_calls, 1);
+      expect(platform.shown_ads, isEmpty);
+
+      if (disable_ads) {
+        project_store.save_config(_project_config(ads_switch: SwitchValue.off));
+      } else {
+        page_is_current = false;
+      }
+      server_options_gate.complete();
+      await _flush_ad_tasks(tester);
+
+      expect(
+        await result,
+        disable_ads
+            ? GoogleRewardedAdResult.disabled
+            : GoogleRewardedAdResult.cancelled,
+      );
+      expect(platform.shown_ads, isEmpty);
+      expect(
+        platform.disposed_ads.where((item) => identical(item, ad)),
+        hasLength(1),
+      );
+      expect(GoogleRewardedAdUtil.instance.is_running, isFalse);
+    });
+  }
+
+  test_ad_widgets('激励加载超过等待窗口后释放互斥锁，迟到广告不影响下一次请求', (tester) async {
+    final Future<GoogleRewardedAdResult> stale_result = GoogleRewardedAdUtil
+        .instance
+        .show_rewarded_ad(adUnitId: 'slow-reward-unit');
+    await _flush_ad_tasks(tester);
+    final RewardedAd stale_ad = platform.rewarded_loads.single;
+    await tester.pump(GoogleRewardedAdUtil.preparation_timeout);
+    await _flush_ad_tasks(tester);
+    expect(await stale_result, GoogleRewardedAdResult.load_failed);
+    expect(GoogleRewardedAdUtil.instance.is_running, isFalse);
+
+    final Future<GoogleRewardedAdResult> current_result = GoogleRewardedAdUtil
+        .instance
+        .show_rewarded_ad(adUnitId: 'current-reward-unit');
+    await _flush_ad_tasks(tester);
+    final RewardedAd current_ad = platform.rewarded_loads.last;
+    await platform.emit_event(stale_ad, 'onAdLoaded');
+    await _flush_ad_tasks(tester);
+    expect(platform.disposed_ads, contains(stale_ad));
+    expect(platform.shown_ads, isEmpty);
+    expect(GoogleRewardedAdUtil.instance.is_running, isTrue);
+
+    await platform.emit_event(current_ad, 'onAdLoaded');
+    await _flush_ad_tasks(tester);
+    expect(platform.shown_ads, <Ad>[current_ad]);
+    await platform.emit_event(current_ad, 'onAdDismissedFullScreenContent');
+    await _flush_ad_tasks(tester);
+    expect(await current_result, GoogleRewardedAdResult.dismissed);
+  });
+
+  test_ad_widgets('激励准备期间切后台后取消，返回时迟到广告也不会弹出', (tester) async {
+    final Future<GoogleRewardedAdResult> result = GoogleRewardedAdUtil.instance
+        .show_rewarded_ad(adUnitId: 'reward-unit');
+    await _flush_ad_tasks(tester);
+    final RewardedAd ad = platform.rewarded_loads.single;
+    return_from_background();
+    await _flush_ad_tasks(tester);
+    expect(await result, GoogleRewardedAdResult.cancelled);
+    expect(GoogleRewardedAdUtil.instance.is_running, isFalse);
+
+    await platform.emit_event(ad, 'onAdLoaded');
+    await _flush_ad_tasks(tester);
+    expect(platform.shown_ads, isEmpty);
+    expect(platform.disposed_ads, contains(ad));
+  });
+
+  test_ad_widgets('激励 SSV 写入超时归还资格，迟到完成也不能展示已释放广告', (tester) async {
+    final Completer<void> server_options_gate = Completer<void>();
+    platform.server_options_gate = server_options_gate;
+    final Future<GoogleRewardedAdResult> result = GoogleRewardedAdUtil.instance
+        .show_rewarded_ad(adUnitId: 'reward-unit', user_id: 'user-id');
+    await _flush_ad_tasks(tester);
+    final RewardedAd ad = platform.rewarded_loads.single;
+    await platform.emit_event(ad, 'onAdLoaded');
+    await _flush_ad_tasks(tester);
+    await tester.pump(GoogleRewardedAdUtil.preparation_timeout);
+    await _flush_ad_tasks(tester);
+    expect(await result, GoogleRewardedAdResult.load_failed);
+    expect(GoogleRewardedAdUtil.instance.is_running, isFalse);
+    expect(platform.disposed_ads, contains(ad));
+
+    server_options_gate.complete();
+    await _flush_ad_tasks(tester);
+    expect(platform.shown_ads, isEmpty);
+    expect(
+      platform.disposed_ads.where((item) => identical(item, ad)),
+      hasLength(1),
+    );
+  });
+
+  test_ad_widgets('全屏激励超过准备期限仍正常播放，隐私更新不丢失已获得奖励', (tester) async {
+    final Future<GoogleRewardedAdResult> result = GoogleRewardedAdUtil.instance
+        .show_rewarded_ad(adUnitId: 'reward-unit');
+    await _flush_ad_tasks(tester);
+    final RewardedAd ad = platform.rewarded_loads.single;
+    await platform.emit_event(ad, 'onAdLoaded');
+    await _flush_ad_tasks(tester);
+    expect(platform.shown_ads, <Ad>[ad]);
+    await tester.pump(GoogleRewardedAdUtil.preparation_timeout);
+    await tester.runAsync(
+      AdMobConsentPermissionRequest.show_privacy_options_form,
+    );
+    await _flush_ad_tasks(tester);
+    expect(GoogleRewardedAdUtil.instance.is_running, isTrue);
+    expect(platform.disposed_ads, isEmpty);
+
+    await platform.emit_event(
+      ad,
+      'onRewardedAdUserEarnedReward',
+      reward: RewardItem(1, 'unlock'),
+    );
+    await platform.emit_event(ad, 'onAdDismissedFullScreenContent');
+    await _flush_ad_tasks(tester);
+    expect(await result, GoogleRewardedAdResult.rewarded);
+    expect(GoogleRewardedAdUtil.instance.is_running, isFalse);
+    expect(
+      platform.disposed_ads.where((item) => identical(item, ad)),
+      hasLength(1),
+    );
+  });
+
+  test_ad_widgets('用户修改隐私选择取消正在加载的激励广告', (tester) async {
+    final Future<GoogleRewardedAdResult> result = GoogleRewardedAdUtil.instance
+        .show_rewarded_ad(adUnitId: 'reward-unit');
+    await _flush_ad_tasks(tester);
+    final RewardedAd ad = platform.rewarded_loads.single;
+    await tester.runAsync(
+      AdMobConsentPermissionRequest.show_privacy_options_form,
+    );
+    await _flush_ad_tasks(tester);
+    expect(await result, GoogleRewardedAdResult.cancelled);
+    expect(GoogleRewardedAdUtil.instance.is_running, isFalse);
+
+    await platform.emit_event(ad, 'onAdLoaded');
+    await _flush_ad_tasks(tester);
+    expect(platform.shown_ads, isEmpty);
+    expect(platform.disposed_ads, contains(ad));
+  });
+
+  test_ad_widgets('用户修改隐私选择取消尚未展示的开屏，下一次返回可加载新广告', (tester) async {
+    final SplashScreenAdService service = create_started_service();
+    return_from_background();
+    await _flush_ad_tasks(tester);
+    final AppOpenAd stale_ad = platform.app_open_loads.single;
+    await tester.runAsync(
+      AdMobConsentPermissionRequest.show_privacy_options_form,
+    );
+    await _flush_ad_tasks(tester);
+    expect(service.is_loading, isFalse);
+    await platform.emit_event(stale_ad, 'onAdLoaded');
+    await _flush_ad_tasks(tester);
+    expect(platform.shown_ads, isEmpty);
+    expect(platform.disposed_ads, contains(stale_ad));
+
+    return_from_background();
+    await _flush_ad_tasks(tester);
+    final AppOpenAd current_ad = platform.app_open_loads.last;
+    await platform.emit_event(current_ad, 'onAdLoaded');
+    await _flush_ad_tasks(tester);
+    expect(platform.shown_ads, <Ad>[current_ad]);
+  });
+
   test_ad_widgets('注销服务后不响应生命周期，未完成广告回调只释放资源', (tester) async {
     final SplashScreenAdService service = create_started_service();
     return_from_background();
@@ -514,6 +700,10 @@ class _FakeAdPlatform {
   /// 可选静音阻塞点，用来验证 show 前跨 await 的配置变化与超时。
   Completer<void>? mute_gate;
 
+  /// 模拟原生 SSV 写入尚未完成的阶段。
+  Completer<void>? server_options_gate;
+  int server_options_calls = 0;
+
   /// 拦截原生调用并保存 SDK 分配的对象；初始化和无返回值方法即时成功。
   Future<Object?> _on_method(MethodCall call) async {
     if (call.method == 'MobileAds#initialize') {
@@ -521,6 +711,10 @@ class _FakeAdPlatform {
     }
     if (call.method == 'MobileAds#setAppMuted') {
       await mute_gate?.future;
+    }
+    if (call.method == 'setServerSideVerificationOptions') {
+      server_options_calls += 1;
+      await server_options_gate?.future;
     }
     if (call.method == 'loadAppOpenAd' || call.method == 'loadRewardedAd') {
       final int ad_id = call.arguments['adId'] as int;
@@ -543,6 +737,7 @@ class _FakeAdPlatform {
     Ad ad,
     String event_name, {
     LoadAdError? error,
+    RewardItem? reward,
   }) async {
     final int ad_id = _ads.entries
         .singleWhere((entry) => identical(entry.value, ad))
@@ -556,6 +751,7 @@ class _FakeAdPlatform {
               'adId': ad_id,
               'eventName': event_name,
               'loadAdError': ?error,
+              'rewardItem': ?reward,
             }),
           ),
           null,
@@ -638,4 +834,7 @@ class _FakeUserMessagingChannel extends UserMessagingChannel {
 
   @override
   Future<FormError?> loadAndShowConsentFormIfRequired() async => null;
+
+  @override
+  Future<FormError?> showPrivacyOptionsForm() async => null;
 }

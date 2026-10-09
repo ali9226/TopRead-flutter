@@ -244,8 +244,138 @@ void main() {
       await store.load_more_history();
       expect(store.received_exclude_ids, hasLength(2));
     });
+
+    test('页面关闭后切换身份仍立即清空聊天，迟到历史不能回写', () async {
+      Get.testMode = true;
+      final UserInformation user_information = Get.put(UserInformation());
+      user_information.saveUserInfo(_build_user_info(1));
+      final _ControlledHistoryStore store = Get.put(_ControlledHistoryStore());
+      final Future<void> opening = store.open_conversation();
+      await Future<void>.delayed(Duration.zero);
+      expect(store.requests, hasLength(1));
+      store.add_local_message(message_type: 1, content: 'old account');
+      store.close_conversation();
+      user_information.begin_logout();
+      expect(store.messages, isEmpty);
+      expect(store.identity_key, isEmpty);
+      store.requests.single.complete(_history_result(1));
+      await opening;
+      expect(store.messages, isEmpty);
+      expect(store.has_loaded, isFalse);
+      expect(store.session_id, 0);
+    });
+
+    test('可见会话切换账号后旧历史结束不能覆盖或解锁新历史', () async {
+      Get.testMode = true;
+      final UserInformation user_information = Get.put(UserInformation());
+      user_information.saveUserInfo(_build_user_info(1));
+      final _ControlledHistoryStore store = Get.put(_ControlledHistoryStore());
+      final Future<void> first_open = store.open_conversation();
+      await Future<void>.delayed(Duration.zero);
+      user_information.saveUserInfo(_build_user_info(2));
+      await Future<void>.delayed(Duration.zero);
+      expect(store.requests, hasLength(2));
+      expect(store.identity_key, 'user_2');
+      store.requests[0].complete(_history_result(1));
+      await first_open;
+      expect(store.messages, isEmpty);
+      expect(store.is_syncing_latest, isTrue);
+      store.requests[1].complete(_history_result(2));
+      await Future<void>.delayed(Duration.zero);
+      expect(store.messages.single.id, 2);
+      expect(store.is_syncing_latest, isFalse);
+      expect(store.has_loaded, isTrue);
+    });
+
+    test('同账号资料更新保留聊天缓存，不触发重复历史请求', () async {
+      Get.testMode = true;
+      final UserInformation user_information = Get.put(UserInformation());
+      user_information.saveUserInfo(_build_user_info(1));
+      final _ControlledHistoryStore store = Get.put(_ControlledHistoryStore());
+      final Future<void> opening = store.open_conversation();
+      await Future<void>.delayed(Duration.zero);
+      store.requests.single.complete(_history_result(1));
+      await opening;
+      user_information.saveUserInfo(
+        UserInfo.fromJson(<String, dynamic>{'id': 1, 'name': 'changed name'}),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(store.messages.single.id, 1);
+      expect(store.requests, hasLength(1));
+    });
+
+    test('控制器销毁后身份和历史准备的迟到结果不再应用', () async {
+      Get.testMode = true;
+      final UserInformation user_information = Get.put(UserInformation());
+      user_information.saveUserInfo(_build_user_info(1));
+      final _ControlledHistoryStore store = _ControlledHistoryStore();
+      final Future<void> opening = store.open_conversation();
+      await Future<void>.delayed(Duration.zero);
+      store.onClose();
+      store.requests.single.complete(_history_result(1));
+      await opening;
+      expect(store.messages, isEmpty);
+      expect(store.has_loaded, isFalse);
+    });
+
+    test('迟到访客准备任务不会关闭新访客请求的加载状态', () async {
+      Get.put(UserInformation());
+      final List<Completer<String>> requests = <Completer<String>>[];
+      final _IdentityTestStore store = _IdentityTestStore(
+        visitor_id_loader: () {
+          final Completer<String> request = Completer<String>();
+          requests.add(request);
+          return request.future;
+        },
+      );
+      final Future<void> first = store.open_conversation();
+      final Future<void> second = store.open_conversation();
+      expect(store.is_initial_loading, isTrue);
+      requests[0].complete('first');
+      await first;
+      expect(store.is_initial_loading, isTrue);
+      requests[1].complete('second');
+      await second;
+      expect(store.is_initial_loading, isFalse);
+      expect(store.identity_key, 'visitor_second');
+    });
   });
 }
+
+class _ControlledHistoryStore extends CustomerServiceChatHistoryStore {
+  final List<Completer<Map<String, dynamic>?>> requests =
+      <Completer<Map<String, dynamic>?>>[];
+
+  _ControlledHistoryStore()
+    : super(visitor_id_loader: () async => 'visitor-id');
+
+  @override
+  Future<Map<String, dynamic>?> request_history({
+    required int user_id,
+    required String visitor_id,
+    required List<int> exclude_ids,
+  }) {
+    final Completer<Map<String, dynamic>?> request =
+        Completer<Map<String, dynamic>?>();
+    requests.add(request);
+    return request.future;
+  }
+}
+
+Map<String, dynamic> _history_result(int id) => <String, dynamic>{
+  'session_id': id,
+  'total': 1,
+  'has_more': false,
+  'list': <Map<String, dynamic>>[
+    <String, dynamic>{
+      'id': id,
+      'sender_type': 2,
+      'message_type': 1,
+      'content': 'account $id',
+      'create_time': '2026-10-07T00:00:00Z',
+    },
+  ],
+};
 
 class _IdentityTestStore extends CustomerServiceChatHistoryStore {
   int synchronization_count = 0;

@@ -9,6 +9,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:app/components/splash_screen/style.dart';
 import 'package:app/config/ad_type_config.dart';
 import 'package:app/models/ad_config.dart';
+import 'package:app/permission_request/admob_consent_permission_request.dart';
 import 'package:app/stores/ad_config_store.dart';
 import 'package:app/stores/project_config_store.dart';
 import 'package:app/services/ad_impression_reporter.dart';
@@ -65,6 +66,9 @@ class SplashScreenAdService extends GetxController with WidgetsBindingObserver {
   /// 请求代次，取消后的 SDK 回调不能覆盖下一次请求。
   int _request_id = 0;
 
+  /// 加载时的隐私选择代次，用户修改选择后不可继续展示旧广告。
+  int _request_privacy_revision = 0;
+
   /// 服务关闭后禁止首帧回调和异步加载继续执行。
   bool _is_disposed = false;
 
@@ -104,6 +108,9 @@ class SplashScreenAdService extends GetxController with WidgetsBindingObserver {
     super.onInit();
     _lifecycle_state = WidgetsBinding.instance.lifecycleState;
     WidgetsBinding.instance.addObserver(this);
+    AdMobConsentPermissionRequest.privacy_choice_revision.addListener(
+      _on_privacy_changed,
+    );
     final AdConfig? config = _select_ad_config();
     _ad_config.value = config;
     if (config == null) return;
@@ -116,6 +123,9 @@ class SplashScreenAdService extends GetxController with WidgetsBindingObserver {
   void onClose() {
     _is_disposed = true;
     WidgetsBinding.instance.removeObserver(this);
+    AdMobConsentPermissionRequest.privacy_choice_revision.removeListener(
+      _on_privacy_changed,
+    );
     _cancel_request();
     super.onClose();
   }
@@ -174,6 +184,8 @@ class SplashScreenAdService extends GetxController with WidgetsBindingObserver {
 
     _cancel_request();
     _ad_config.value = config;
+    _request_privacy_revision =
+        AdMobConsentPermissionRequest.privacy_choice_revision.value;
     _is_resume_request = is_resume;
     _is_ad_impression.value = false;
     _is_loading.value = true;
@@ -202,6 +214,10 @@ class SplashScreenAdService extends GetxController with WidgetsBindingObserver {
     if (_is_disposed || request_id != _request_id || _is_backgrounded) {
       return false;
     }
+    if (_request_privacy_revision !=
+        AdMobConsentPermissionRequest.privacy_choice_revision.value) {
+      return false;
+    }
     if (!_is_resume_request && _is_splash_completed) return false;
     if (!AdDisplayPolicy.can_show_ads()) return false;
     if (_get_splash_screen_ads_probability() <= 0) return false;
@@ -223,6 +239,11 @@ class SplashScreenAdService extends GetxController with WidgetsBindingObserver {
     if (_can_continue_request(request_id, config)) return true;
     if (request_id == _request_id) _cancel_request();
     return false;
+  }
+
+  /// 用户修改隐私选择时取消尚未展示的请求，已进入全屏的广告正常关闭。
+  void _on_privacy_changed() {
+    if (!_has_presented) _cancel_request();
   }
 
   /// 加载广告，并将所有 SDK 回调限定到本次请求和配置。

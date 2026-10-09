@@ -88,6 +88,7 @@ class _DefaultTabContentState extends State<DefaultTabContent>
           key: _recommend_waterfall_key,
           waterfall_id: widget.waterfall_id,
           is_dark: isDark,
+          scroll_controller: _scroll_controller,
         ),
       ],
     );

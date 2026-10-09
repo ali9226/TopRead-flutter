@@ -24,6 +24,8 @@ void main() {
     storage_directory = Directory.systemTemp.createTempSync(
       'submit_mode_test_',
     );
+    // 本文件不验证持久化，空文件避免 GetStorage 初始化创建后台备份。
+    File('${storage_directory.path}/GetStorage.gs').writeAsStringSync('{}');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('plugins.flutter.io/path_provider'),
@@ -41,6 +43,11 @@ void main() {
   });
 
   setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (_) async => storage_directory.path,
+        );
     Get.testMode = true;
     Get.put<AuthorizedLoginStore>(_RecordingAuthenticationStore());
     Get.put<DeviceInfo>(_TestDeviceInfo());
@@ -51,7 +58,6 @@ void main() {
   tearDown(Get.reset);
 
   tearDownAll(() async {
-    await GetStorage().erase();
     await storage_directory.delete(recursive: true);
   });
 

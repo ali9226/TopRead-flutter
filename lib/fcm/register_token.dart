@@ -1,4 +1,4 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:app/fcm/get_fcm_token.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:app/api/post_request.dart';
@@ -17,23 +17,16 @@ class FcmRegisterToken {
   /// 获取 FCM Token 并注册到后端。
   ///
   /// 每次启动都会注册，确保设备信息更新。
-  static Future<void> execute() async {
+  static Future<void> execute({String? token}) async {
     try {
-      final messaging = FirebaseMessaging.instance;
-      final String? token = await messaging.getToken(
-        vapidKey: isWebBrowser
-            ? 'BNZQeUAHYOjr5AQeAbdRzwqCB4a-XQNifHD9B_Gxa9N-8NVADu3moHCF2j7u7uS8dtb0Bnp1-eMLqGQOguBwFgo'
-            : null,
-      );
-      if (token == null) {
+      final String? resolved_token = token ?? await get_fcm_token();
+      if (resolved_token == null || resolved_token.isEmpty) {
         logUtil(msg: 'FCM: 获取 Token 失败', type: 'e');
         return;
       }
 
-      logUtil(msg: 'FCM Token: ${token.substring(0, 20)}...');
-
       // 每次启动都注册，更新设备信息。
-      await _registerToServer(token);
+      await _registerToServer(resolved_token);
     } catch (e) {
       logUtil(msg: 'FCM: 获取 Token 异常: $e', type: 'e');
     }
@@ -55,13 +48,13 @@ class FcmRegisterToken {
         os_version = webInfo.platform ?? '';
       } else if (currentEnvironment == AppEnvironment.ios) {
         final iosInfo = await deviceInfo.iosInfo;
-        device_model = iosInfo.model ?? '';
-        device_name = iosInfo.name ?? '';
+        device_model = iosInfo.model;
+        device_name = iosInfo.name;
         os_version = 'iOS ${iosInfo.systemVersion}';
       } else if (currentEnvironment == AppEnvironment.android) {
         final androidInfo = await deviceInfo.androidInfo;
         device_model = '${androidInfo.brand} ${androidInfo.model}';
-        device_name = androidInfo.device ?? '';
+        device_name = androidInfo.device;
         os_version = 'Android ${androidInfo.version.release}';
       }
     } catch (e) {

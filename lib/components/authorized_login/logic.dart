@@ -6,20 +6,19 @@ import 'package:app/api/post_request.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/components/authorized_login/apple_login.dart';
 import 'package:app/components/authorized_login/telegram_login.dart';
-import 'package:app/config/constant.dart';
-import 'package:app/fcm/fcm_auth.dart';
 import 'package:app/models/login.dart';
 import 'package:app/models/rotation.dart';
 import 'package:app/permission_request/notification_permission_request.dart';
+import 'package:app/services/post_login_sync_service.dart';
 import 'package:app/stores/authorized_login_store.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/customer_service/open_rotation_jump.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/router/router_util.dart';
-import 'package:app/util/storage_util/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import 'google_login.dart';
@@ -29,7 +28,69 @@ class Logic {
   /// 当前上下文。
   final BuildContext context;
 
-  Logic(this.context);
+  Logic(
+    this.context, {
+    @visibleForTesting Future<GoogleLoginResult?> Function()? google_authorizer,
+    @visibleForTesting Future<AppleLoginResult?> Function()? apple_authorizer,
+    @visibleForTesting
+    Future<ResultsType<Login>> Function(Map<String, dynamic>)? login_request,
+    @visibleForTesting VoidCallback? on_login_completed,
+  }) : _google_authorizer = google_authorizer ?? google_login,
+       _apple_authorizer = apple_authorizer ?? apple_login,
+       _login_request = login_request ?? _request_login,
+       _on_login_completed = on_login_completed;
+
+  final Future<GoogleLoginResult?> Function() _google_authorizer;
+  final Future<AppleLoginResult?> Function() _apple_authorizer;
+  final Future<ResultsType<Login>> Function(Map<String, dynamic>)
+  _login_request;
+  final VoidCallback? _on_login_completed;
+
+  static Future<ResultsType<Login>> _request_login(
+    Map<String, dynamic> parameter,
+  ) => postRequest<Login>(
+    path: 'user/firebase_login',
+    parameter: parameter,
+    fromJson: (json) => Login.fromJson(json),
+  );
+
+  /// 认证结果只有在发起页面和会话均有效时才允许提交凭证与跳转。
+  bool _is_current(UserInformation user_controller, int revision) =>
+      context.mounted && user_controller.is_auth_revision_current(revision);
+
+  Future<void> _complete_login(
+    Map<String, dynamic> parameter,
+    UserInformation user_controller,
+    int request_revision,
+    String failure_message_key,
+  ) async {
+    final ResultsType<Login> results = await _login_request(parameter);
+    if (!_is_current(user_controller, request_revision) ||
+        !results.status ||
+        results.content == null)
+      return;
+
+    final Login login_data = results.content!;
+    if (login_data.token.isEmpty || login_data.userInfo.id <= 0) {
+      showBottomTip(tr(failure_message_key));
+      return;
+    }
+    if (!await user_controller.save_auth_credentials_if_current(
+      token: login_data.token,
+      info: login_data.userInfo,
+      request_revision: request_revision,
+      is_active: () => context.mounted,
+    ))
+      return;
+
+    if (_on_login_completed != null) {
+      _on_login_completed();
+      return;
+    }
+    PostLoginSyncService.start();
+    unawaited(NotificationPermissionRequest.request_after_login());
+    routerUtil(path: '/', type: 'replace');
+  }
 
   /// 处理授权登录项点击事件。
   Future<void> handle_authorized_login_tap(Rotation item) async {
@@ -66,17 +127,21 @@ class Logic {
   Future<void> _handle_google_login(
     AuthorizedLoginStore authorized_login_store,
   ) async {
+    if (!context.mounted) return;
+
     /// 占用全局认证锁，防止重复点击或并发启动其他认证流程。
     if (!authorized_login_store.try_start_authentication('google')) {
       return;
     }
+    final UserInformation user_controller = Get.find<UserInformation>();
+    final int request_revision = user_controller.auth_revision;
 
     try {
       /// 通过 Firebase 获取 Google 授权信息。
-      final GoogleLoginResult? result = await google_login();
+      final GoogleLoginResult? result = await _google_authorizer();
 
       /// 授权失败或用户取消，直接返回。
-      if (result == null) {
+      if (result == null || !_is_current(user_controller, request_revision)) {
         return;
       }
 
@@ -90,50 +155,17 @@ class Logic {
         'note': 'firebase Google授权登录',
       };
 
-      /// 打印请求参数，方便调试后端逻辑。
-      logUtil(msg: "===== Google 登录请求参数 =====");
-      logUtil(msg: "请求路径: user/firebase_login");
-      parameter.forEach((key, value) {
-        logUtil(msg: "$key: $value");
-      });
-      logUtil(msg: "===== Google 登录请求参数结束 =====");
-
-      /// 请求后端 Firebase 登录接口。
-      final ResultsType<Login> results = await postRequest<Login>(
-        path: 'user/firebase_login',
-        parameter: parameter,
-        fromJson: (Map<String, dynamic> json) => Login.fromJson(json),
+      await _complete_login(
+        parameter,
+        user_controller,
+        request_revision,
+        'AuthorizedLogin.google_auth_failed',
       );
-
-      if (!results.status || results.content == null) {
-        return;
-      }
-
-      /// 获取 token。
-      final String token = results.content?.token.toString() ?? '';
-      if (token.isEmpty) {
-        showBottomTip(tr('AuthorizedLogin.google_auth_failed'));
-        return;
-      }
-
-      /// 保存 token。
-      await StorageUtil.saveData(Constant.tokenKey, token);
-
-      /// 保存用户信息。
-      final UserInformation user_controller = Get.find<UserInformation>();
-      user_controller.saveUserInfo(results.content!.userInfo);
-
-      /// 绑定 FCM Token 到用户。
-      FcmAuth.onLoginSuccess();
-
-      /// 用户主动完成 Google 登录后申请系统通知权限。
-      unawaited(NotificationPermissionRequest.request_after_login());
-
-      /// 跳转首页。
-      routerUtil(path: '/', type: 'replace');
     } catch (error) {
       logUtil(msg: "Google 登录后端请求失败: $error", type: 'e');
-      showBottomTip(tr('AuthorizedLogin.google_auth_failed'));
+      if (_is_current(user_controller, request_revision)) {
+        showBottomTip(tr('AuthorizedLogin.google_auth_failed'));
+      }
     } finally {
       /// 重置加载状态。
       authorized_login_store.finish_authentication('google');
@@ -144,6 +176,8 @@ class Logic {
   Future<void> _handle_telegram_login(
     AuthorizedLoginStore authorized_login_store,
   ) async {
+    if (!context.mounted) return;
+
     /// 占用全局认证锁，防止重复点击或并发启动其他认证流程。
     if (!authorized_login_store.try_start_authentication('telegram')) {
       return;
@@ -163,17 +197,21 @@ class Logic {
   Future<void> _handle_apple_login(
     AuthorizedLoginStore authorized_login_store,
   ) async {
+    if (!context.mounted) return;
+
     /// 占用全局认证锁，防止重复点击或并发启动其他认证流程。
     if (!authorized_login_store.try_start_authentication('apple')) {
       return;
     }
+    final UserInformation user_controller = Get.find<UserInformation>();
+    final int request_revision = user_controller.auth_revision;
 
     try {
       /// 通过 Firebase 获取 Apple 授权信息。
-      final AppleLoginResult? result = await apple_login();
+      final AppleLoginResult? result = await _apple_authorizer();
 
       /// 授权失败或用户取消，直接返回。
-      if (result == null) {
+      if (result == null || !_is_current(user_controller, request_revision)) {
         return;
       }
 
@@ -189,42 +227,17 @@ class Logic {
         'note': 'firebase Apple授权登录',
       };
 
-      /// 请求后端 Apple 登录接口。
-      final ResultsType<Login> results = await postRequest<Login>(
-        path: 'user/firebase_login',
-        parameter: parameter,
-        fromJson: (Map<String, dynamic> json) => Login.fromJson(json),
+      await _complete_login(
+        parameter,
+        user_controller,
+        request_revision,
+        'AuthorizedLogin.apple_auth_failed',
       );
-
-      if (!results.status || results.content == null) {
-        return;
-      }
-
-      /// 获取 token。
-      final String token = results.content?.token.toString() ?? '';
-      if (token.isEmpty) {
-        showBottomTip(tr('AuthorizedLogin.apple_auth_failed'));
-        return;
-      }
-
-      /// 保存 token。
-      await StorageUtil.saveData(Constant.tokenKey, token);
-
-      /// 保存用户信息。
-      final UserInformation user_controller = Get.find<UserInformation>();
-      user_controller.saveUserInfo(results.content!.userInfo);
-
-      /// 绑定 FCM Token 到用户。
-      FcmAuth.onLoginSuccess();
-
-      /// 用户主动完成 Apple 登录后申请系统通知权限。
-      unawaited(NotificationPermissionRequest.request_after_login());
-
-      /// 跳转首页。
-      routerUtil(path: '/', type: 'replace');
     } catch (error) {
       logUtil(msg: "Apple 登录后端请求失败: $error", type: 'e');
-      showBottomTip(tr('AuthorizedLogin.apple_auth_failed'));
+      if (_is_current(user_controller, request_revision)) {
+        showBottomTip(tr('AuthorizedLogin.apple_auth_failed'));
+      }
     } finally {
       /// 重置加载状态。
       authorized_login_store.finish_authentication('apple');

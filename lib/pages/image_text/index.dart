@@ -52,6 +52,9 @@ class _ImageTextState extends State<ImageText> {
   /// 记录上一次语言代码，语种切换后用于触发重新请求。
   String _last_language_code = '';
 
+  /// 语言、type 或刷新变化后丢弃旧详情请求，避免乱序响应回填。
+  int _detail_request_generation = 0;
+
   @override
   void initState() {
     super.initState();
@@ -60,6 +63,7 @@ class _ImageTextState extends State<ImageText> {
 
     /// 首帧后开始执行参数校验与请求，避免在 initState 直接导航。
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _init_page();
     });
   }
@@ -86,7 +90,16 @@ class _ImageTextState extends State<ImageText> {
   }
 
   @override
+  void didUpdateWidget(ImageText old_widget) {
+    super.didUpdateWidget(old_widget);
+    if (old_widget.type == widget.type) return;
+    _detail_request_generation++;
+    _init_page();
+  }
+
+  @override
   void dispose() {
+    _detail_request_generation++;
     scroll_controller.removeListener(_handle_scroll);
     scroll_controller.dispose();
     super.dispose();
@@ -97,6 +110,7 @@ class _ImageTextState extends State<ImageText> {
   /// 2. 参数缺失时返回首页；
   /// 3. 参数有效时请求详情数据。
   Future<void> _init_page() async {
+    if (!mounted) return;
     type_value = (widget.type ?? '').trim();
 
     if (type_value.isEmpty) {
@@ -113,6 +127,7 @@ class _ImageTextState extends State<ImageText> {
   /// 请求详情数据。
   Future<void> _fetch_detail() async {
     if (!mounted) return;
+    final int generation = ++_detail_request_generation;
 
     setState(() {
       loading = true;
@@ -122,7 +137,7 @@ class _ImageTextState extends State<ImageText> {
       type: type_value,
     );
 
-    if (!mounted) return;
+    if (!mounted || generation != _detail_request_generation) return;
 
     setState(() {
       detail = response;
@@ -224,10 +239,9 @@ class _ImageTextState extends State<ImageText> {
 
     return Obx(() {
       final bool is_dark = device_info.dark.value;
-      final bool is_zh_language =
-          Localizations.localeOf(context).languageCode.toLowerCase().startsWith(
-            'zh',
-          );
+      final bool is_zh_language = Localizations.localeOf(
+        context,
+      ).languageCode.toLowerCase().startsWith('zh');
       final Color background_color = is_dark
           ? ColorConstants.nightBackgroundColor
           : ColorConstants.lightBackgroundColor;
@@ -393,9 +407,7 @@ class _ImageTextState extends State<ImageText> {
                         ],
                       ),
                     ),
-                    child: LanguageSelection(
-                      darkBackground: is_dark,
-                    ),
+                    child: LanguageSelection(darkBackground: is_dark),
                   ),
                 ),
               ),

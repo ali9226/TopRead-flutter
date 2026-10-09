@@ -3,6 +3,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:app/config/constant.dart';
 import 'package:app/websocket/config.dart';
@@ -12,6 +14,7 @@ import 'package:app/websocket/websocket_reconnect.dart';
 import 'package:app/websocket/websocket_connection_lifecycle.dart';
 import 'package:app/util/storage_util/index.dart';
 import 'package:app/util/log_util.dart';
+import 'package:app/stores/user_information.dart';
 import 'package:uuid/uuid.dart';
 
 /// 本地存储访客 UUID 的 key。
@@ -28,10 +31,38 @@ class WebSocketService with WidgetsBindingObserver {
   /// 单例。
   static final WebSocketService _instance = WebSocketService._();
   factory WebSocketService() => _instance;
-  WebSocketService._();
+  WebSocketService._()
+    : _token_loader = _read_token,
+      _channel_factory = WebSocketChannel.connect,
+      _visitor_id_loader = null;
+
+  /// 注入可控通道和身份读取，仅用于验证真实连接的迟到回调。
+  @visibleForTesting
+  WebSocketService.for_test({
+    required Future<String?> Function() token_loader,
+    required WebSocketChannel Function(Uri) channel_factory,
+    Future<String> Function()? visitor_id_loader,
+  }) : _token_loader = token_loader,
+       _channel_factory = channel_factory,
+       _visitor_id_loader = visitor_id_loader;
+
+  final Future<String?> Function() _token_loader;
+  final WebSocketChannel Function(Uri) _channel_factory;
+  final Future<String> Function()? _visitor_id_loader;
+
+  /// 同一安装只准备一次设备 UUID，防止首启的多个请求生成不同标识。
+  Future<String>? _visitor_uuid_future;
+
+  /// 读取请求开始时的内存凭证，避免依赖真实存储的连接测试。
+  static Future<String?> _read_token() =>
+      StorageUtil.getData(Constant.tokenKey);
 
   /// WebSocket 通道。
   WebSocketChannel? _channel;
+
+  /// 当前通道所属认证会话，阻止切换身份后向旧账号发送聊天消息。
+  UserInformation? _channel_user_information;
+  int? _channel_auth_revision;
 
   /// 连接状态。
   WebSocketStatus _status = WebSocketStatus.disconnected;
@@ -39,9 +70,10 @@ class WebSocketService with WidgetsBindingObserver {
   /// 状态流控制器。
   final _status_controller = StreamController<WebSocketStatus>.broadcast();
 
-  /// 消息流控制器。
-  final _message_controller =
-      StreamController<Map<String, dynamic>>.broadcast();
+  /// 消息在当前连接校验后同步分发，避免进入第二个异步队列后跨账号送达。
+  final _message_controller = StreamController<Map<String, dynamic>>.broadcast(
+    sync: true,
+  );
 
   /// 心跳管理器。
   late final WebSocketHeartbeat _heartbeat;
@@ -129,16 +161,25 @@ class WebSocketService with WidgetsBindingObserver {
   ///
   /// 首次访问时生成 UUID 并缓存到本地，后续直接读取。
   /// 可在 connect() 之前单独调用，确保 UUID 已存在。
-  Future<String> get_or_create_visitor_uuid() async {
-    final String? cached = await StorageUtil.getData(_visitor_uuid_key);
-    if (cached != null && cached.isNotEmpty) {
-      return cached;
-    }
+  Future<String> get_or_create_visitor_uuid() {
+    return _visitor_uuid_future ??= _load_or_create_visitor_uuid();
+  }
 
-    final String uuid = const Uuid().v4();
-    await StorageUtil.saveData(_visitor_uuid_key, uuid);
-    logUtil(msg: 'WebSocket 生成新的访客 UUID: $uuid');
-    return uuid;
+  /// 失败后释放准备任务，后续请求可以重新尝试持久化。
+  Future<String> _load_or_create_visitor_uuid() async {
+    try {
+      if (_visitor_id_loader != null) return await _visitor_id_loader();
+      final String? cached = await StorageUtil.getData(_visitor_uuid_key);
+      if (cached != null && cached.isNotEmpty) return cached;
+
+      final String uuid = const Uuid().v4();
+      await StorageUtil.saveData(_visitor_uuid_key, uuid);
+      logUtil(msg: 'WebSocket 生成新的访客 UUID: $uuid');
+      return uuid;
+    } catch (_) {
+      _visitor_uuid_future = null;
+      rethrow;
+    }
   }
 
   /// 连接 WebSocket 服务器。
@@ -155,38 +196,55 @@ class WebSocketService with WidgetsBindingObserver {
     _reconnect.cancel();
     final int connection_id = _connection_lifecycle.begin();
     _update_status(WebSocketStatus.connecting);
+    final UserInformation? user_information =
+        Get.isRegistered<UserInformation>()
+        ? Get.find<UserInformation>()
+        : null;
+    final int? auth_revision = user_information?.auth_revision;
 
     WebSocketChannel? channel;
     try {
       final String base_url = WebsocketConfig.requestUrl;
       String ws_url;
+      bool is_visitor;
 
       // 检查是否有 token（已登录）。
-      final String? token = await StorageUtil.getData(Constant.tokenKey);
+      final String? token = await _token_loader();
       if (token != null && token.isNotEmpty) {
         ws_url = '$base_url?token=${Uri.encodeComponent(token)}';
-        _is_visitor = false;
+        is_visitor = false;
         logUtil(msg: 'WebSocket 以已登录用户身份连接');
       } else {
-        final String visitor_id = await get_or_create_visitor_uuid();
+        final String visitor_id =
+            await (_visitor_id_loader?.call() ?? get_or_create_visitor_uuid());
         ws_url = '$base_url?visitor_id=${Uri.encodeComponent(visitor_id)}';
-        _is_visitor = true;
+        is_visitor = true;
         logUtil(msg: 'WebSocket 以访客身份连接: $visitor_id');
       }
 
       if (!_connection_lifecycle.is_active(connection_id)) {
         return;
       }
+      _is_visitor = is_visitor;
 
       logUtil(msg: 'WebSocket 连接地址: $base_url（认证参数已隐藏）');
 
-      final WebSocketChannel new_channel = WebSocketChannel.connect(
-        Uri.parse(ws_url),
-      );
+      final WebSocketChannel new_channel = _channel_factory(Uri.parse(ws_url));
       channel = new_channel;
       _channel = new_channel;
+      _channel_user_information = user_information;
+      _channel_auth_revision = auth_revision;
       new_channel.stream.listen(
-        _on_message,
+        (dynamic message) {
+          // 关闭/切换身份后，旧通道仍可能收到排队消息。必须与关闭回调一样
+          // 校验连接归属，并阻止身份已切换但尚未重新连接的旧账号推送。
+          if (!_is_current_connection(new_channel, connection_id) ||
+              (auth_revision != null &&
+                  !user_information!.is_auth_revision_current(auth_revision))) {
+            return;
+          }
+          _on_message(message);
+        },
         onDone: () => _on_done(new_channel, connection_id),
         onError: (dynamic error) =>
             _on_error(new_channel, connection_id, error),
@@ -219,6 +277,8 @@ class WebSocketService with WidgetsBindingObserver {
     final WebSocketChannel? channel = _channel;
     _connection_lifecycle.invalidate();
     _channel = null;
+    _channel_user_information = null;
+    _channel_auth_revision = null;
     _heartbeat.stop();
     _reconnect.cancel();
     _update_status(WebSocketStatus.disconnected);
@@ -231,6 +291,12 @@ class WebSocketService with WidgetsBindingObserver {
   /// 发送消息。
   bool send(Map<String, dynamic> data) {
     if (!is_connected || _channel == null) return false;
+    if (_channel_auth_revision != null &&
+        !_channel_user_information!.is_auth_revision_current(
+          _channel_auth_revision!,
+        )) {
+      return false;
+    }
     try {
       _channel!.sink.add(json.encode(data));
       return true;

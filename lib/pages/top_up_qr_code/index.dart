@@ -53,12 +53,16 @@ class _TopUpQrCodeState extends State<TopUpQrCode> {
     logic = Logic(context);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
       /// 首帧后再请求详情，避免影响页面初始渲染。
       initPage();
     });
   }
 
   Future<void> initPage() async {
+    if (!mounted) return;
+
     /// 路由没有带合法订单 id 时，直接视为当前页不可用。
     if (widget.id <= 0) {
       showBottomTip(easy.tr('top_up_qr_code_page.unavailable'));

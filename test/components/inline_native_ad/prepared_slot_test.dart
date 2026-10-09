@@ -108,6 +108,11 @@ Future<void> _pump_reader(
   double viewport_top_inset = 0,
   bool use_list_view = false,
   bool is_enabled = true,
+  double? initial_reserved_extent,
+  bool resize_above_viewport = true,
+  bool retain_attachment_offscreen = true,
+  double preload_viewport_count = double.infinity,
+  VoidCallback? on_skipped,
   ValueChanged<double>? on_extent_changed,
 }) async {
   final Widget reading_content = Column(
@@ -122,6 +127,11 @@ Future<void> _pump_reader(
         layout_revision: prefix_height,
         viewport_top_inset: viewport_top_inset,
         on_extent_changed: on_extent_changed,
+        initial_reserved_extent: initial_reserved_extent,
+        resize_above_viewport: resize_above_viewport,
+        retain_attachment_offscreen: retain_attachment_offscreen,
+        preload_viewport_count: preload_viewport_count,
+        on_skipped: on_skipped,
       ),
       const SizedBox(key: Key('following_text'), height: 1400),
     ],
@@ -222,6 +232,144 @@ Future<void> _pump_two_slot_reader(
 }
 
 void main() {
+  testWidgets('瀑布流远处不创建广告，接近时准备，离开缓存范围释放监听组件', (tester) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    final probe = _AdProbe();
+    await _pump_reader(
+      tester,
+      controller,
+      probe,
+      prefix_height: 2000,
+      retain_attachment_offscreen: false,
+      preload_viewport_count: 1,
+    );
+    expect(find.byType(_FakeNativeAd), findsNothing);
+    controller.jumpTo(1200);
+    await _flush_frames(tester);
+    expect(find.byType(_FakeNativeAd), findsOneWidget);
+    await _prepare_ad(tester, probe);
+    controller.jumpTo(3100);
+    await _flush_frames(tester);
+    expect(find.byType(_FakeNativeAd), findsNothing);
+    expect(
+      tester.getSize(find.byKey(const Key('prepared_slot'))).height,
+      _AdProbe.reserved_extent,
+    );
+    controller.jumpTo(1200);
+    await _flush_frames(tester);
+    expect(find.byType(_FakeNativeAd), findsOneWidget);
+    await _prepare_ad(tester, probe);
+    expect(
+      tester.getSize(find.byKey(const Key('prepared_slot'))).height,
+      _AdProbe.reserved_extent,
+    );
+  });
+
+  testWidgets('信息流广告离屏撤销挂载但保留尺寸，返回可见区域后恢复', (tester) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    final probe = _AdProbe();
+    await _pump_reader(
+      tester,
+      controller,
+      probe,
+      retain_attachment_offscreen: false,
+    );
+    await _prepare_ad(tester, probe);
+    controller.jumpTo(313);
+    await _flush_frames(tester);
+    probe.on_ad_attached();
+    expect(probe.attach_ad, isTrue);
+    controller.jumpTo(1400);
+    await _flush_frames(tester);
+    expect(probe.attach_ad, isFalse);
+    expect(
+      tester.getSize(find.byKey(const Key('prepared_slot'))).height,
+      _AdProbe.reserved_extent,
+    );
+    controller.jumpTo(500);
+    await _flush_frames(tester);
+    expect(probe.attach_ad, isTrue);
+  });
+
+  testWidgets('缓存广告在当前视口恢复时保留尺寸并重新校验首次挂载', (tester) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    final probe = _AdProbe();
+    await _pump_reader(
+      tester,
+      controller,
+      probe,
+      prefix_height: 300,
+      initial_reserved_extent: _AdProbe.reserved_extent,
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('prepared_slot'))).height,
+      _AdProbe.reserved_extent,
+    );
+    expect(probe.attach_ad, isFalse);
+    await _prepare_ad(tester, probe);
+    expect(probe.attach_ad, isTrue);
+    expect(probe.is_disposed, isFalse);
+  });
+
+  testWidgets('瀑布流屏外上方重载不按单列高度补偿或重排可见卡片', (tester) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    final probe = _AdProbe();
+    await _pump_reader(tester, controller, probe, resize_above_viewport: false);
+    await _prepare_ad(tester, probe);
+    controller.jumpTo(313);
+    await _flush_frames(tester);
+    probe.on_ad_attached();
+    controller.jumpTo(1400);
+    await _flush_frames(tester);
+    final position = tester.getTopLeft(find.byKey(const Key('following_text')));
+    probe.on_load_status_changed(NativeAdLoadStatus.loading);
+    await _prepare_ad(
+      tester,
+      probe,
+      card_height: _AdProbe.reloaded_card_height,
+    );
+    expect(controller.offset, 1400);
+    expect(
+      tester.getSize(find.byKey(const Key('prepared_slot'))).height,
+      _AdProbe.reserved_extent,
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const Key('following_text'))),
+      position,
+    );
+    controller.jumpTo(0);
+    await _flush_frames(tester);
+    expect(
+      tester.getSize(find.byKey(const Key('prepared_slot'))).height,
+      _AdProbe.reloaded_reserved_extent,
+    );
+  });
+
+  testWidgets('错过的广告只通知一次，迟到回调不能重新创建广告位', (tester) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    final probe = _AdProbe();
+    int skipped_count = 0;
+    await _pump_reader(
+      tester,
+      controller,
+      probe,
+      prefix_height: 300,
+      on_skipped: () => skipped_count++,
+    );
+    expect(skipped_count, 1);
+    expect(probe.is_disposed, isTrue);
+    probe.on_load_status_changed(NativeAdLoadStatus.loaded);
+    probe.on_layout_height_changed(_AdProbe.card_height);
+    await _flush_frames(tester);
+    expect(skipped_count, 1);
+    expect(tester.getSize(find.byKey(const Key('prepared_slot'))).height, 0);
+  });
+
   testWidgets('准备时零高，提前插入已准备广告不会挤动当前正文', (tester) async {
     final ScrollController scroll_controller = ScrollController();
     addTearDown(scroll_controller.dispose);

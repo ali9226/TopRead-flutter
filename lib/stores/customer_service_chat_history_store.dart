@@ -141,6 +141,9 @@ class CustomerServiceChatHistoryStore extends GetxController {
   /// TODO 异步身份准备序号，防止早期访客请求覆盖后到的登录身份。
   int _identity_preparation_revision = 0;
 
+  /// 当前页面身份准备任务的所有者，旧任务结束不能清除新任务加载状态。
+  int _visible_identity_preparation_id = 0;
+
   /// TODO 当前后端会话键，用于过滤其他账号消息。
   String _session_key = '';
 
@@ -223,7 +226,19 @@ class CustomerServiceChatHistoryStore extends GetxController {
   /// 只在页面已打开时才刷新历史。
   /// 历史数据只在用户打开客服聊天页面时才加载。
   void _on_user_identity_changed() {
-    // TODO 如果页面已打开，刷新历史
+    final int user_id = Get.find<UserInformation>().userInfo.value?.id ?? 0;
+    if (_identity_key.isNotEmpty && user_id == _user_id) return;
+
+    // 常驻缓存及未完成历史请求同样属于旧身份。页面关闭时也必须立刻失效，
+    // 否则旧历史可在退出/切换账号后回写，访客身份准备期间还会显示旧聊天。
+    _identity_preparation_revision++;
+    _identity_revision++;
+    _identity_key = '';
+    _session_key = '';
+    _user_id = 0;
+    _visitor_id = '';
+    _reset_conversation();
+
     if (_active_page_count > 0) {
       unawaited(_refresh_identity_and_history());
     }
@@ -232,8 +247,26 @@ class CustomerServiceChatHistoryStore extends GetxController {
   /// TODO 在页面打开时重新校验身份并补齐漏消息。
   Future<void> _refresh_identity_and_history() async {
     if (!Get.isRegistered<UserInformation>()) return;
-    if (!await _prepare_identity()) return;
+    if (!await _prepare_visible_identity()) return;
     await synchronize_latest_history();
+  }
+
+  /// 为当前可见会话准备身份，并隔离失败及并发任务的加载状态。
+  Future<bool> _prepare_visible_identity() async {
+    final int preparation_id = ++_visible_identity_preparation_id;
+    _is_preparing_identity = true;
+    update();
+    try {
+      return await _prepare_identity();
+    } catch (error) {
+      logUtil(msg: '准备在线客服用户身份失败: $error', type: 'e');
+      return false;
+    } finally {
+      if (preparation_id == _visible_identity_preparation_id) {
+        _is_preparing_identity = false;
+        update();
+      }
+    }
   }
 
   /// TODO 打开聊天会话。
@@ -242,20 +275,12 @@ class CustomerServiceChatHistoryStore extends GetxController {
   /// 缓存的重叠点，将退出页面期间可能缺失的所有消息补齐。
   Future<void> open_conversation() async {
     _active_page_count++;
-    _is_preparing_identity = true;
-    update();
-
-    bool ready = false;
-    try {
-      ready = await _prepare_identity();
-    } catch (error) {
-      logUtil(msg: '准备在线客服用户身份失败: $error', type: 'e');
-    } finally {
-      _is_preparing_identity = false;
-      update();
-    }
-    if (!ready) return;
+    if (!await _prepare_visible_identity()) return;
+    final int opened_identity_revision = _identity_revision;
     await synchronize_latest_history();
+    if (opened_identity_revision != _identity_revision ||
+        _active_page_count == 0)
+      return;
 
     // 用户打开客服页面，标记所有消息为已读
     if (Get.isRegistered<MessageStore>()) {
@@ -285,6 +310,8 @@ class CustomerServiceChatHistoryStore extends GetxController {
     update();
 
     final int request_identity_revision = _identity_revision;
+    final UserInformation user_information = Get.find<UserInformation>();
+    final int auth_revision = user_information.auth_revision;
     final int request_user_id = _user_id;
     final String request_visitor_id = _visitor_id;
 
@@ -294,7 +321,9 @@ class CustomerServiceChatHistoryStore extends GetxController {
         visitor_id: request_visitor_id,
         exclude_ids: _server_message_ids,
       );
-      if (request_identity_revision != _identity_revision) return;
+      if (request_identity_revision != _identity_revision ||
+          !user_information.is_auth_revision_current(auth_revision))
+        return;
       if (result == null) return;
 
       _apply_response_metadata(result);
@@ -322,6 +351,8 @@ class CustomerServiceChatHistoryStore extends GetxController {
     update();
 
     final int request_identity_revision = _identity_revision;
+    final UserInformation user_information = Get.find<UserInformation>();
+    final int auth_revision = user_information.auth_revision;
     final int request_user_id = _user_id;
     final String request_visitor_id = _visitor_id;
     try {
@@ -330,7 +361,9 @@ class CustomerServiceChatHistoryStore extends GetxController {
         visitor_id: request_visitor_id,
         exclude_ids: _server_message_ids,
       );
-      if (request_identity_revision != _identity_revision) return;
+      if (request_identity_revision != _identity_revision ||
+          !user_information.is_auth_revision_current(auth_revision))
+        return;
       if (result == null) return;
 
       _apply_response_metadata(result);
@@ -633,7 +666,14 @@ class CustomerServiceChatHistoryStore extends GetxController {
     // 用户正在客服页面，自动通知后端消息已读。
     if (_active_page_count > 0) {
       if (Get.isRegistered<MessageStore>()) {
-        scheduleMicrotask(() => Get.find<MessageStore>().update_chat_unread(0));
+        final int identity_revision = _identity_revision;
+        scheduleMicrotask(() {
+          if (identity_revision == _identity_revision &&
+              _active_page_count > 0 &&
+              Get.isRegistered<MessageStore>()) {
+            Get.find<MessageStore>().update_chat_unread(0);
+          }
+        });
       }
       if (_session_id > 0) {
         final bool sent = WebSocketService().mark_chat_read(
@@ -738,6 +778,9 @@ class CustomerServiceChatHistoryStore extends GetxController {
 
   @override
   void onClose() {
+    _visible_identity_preparation_id++;
+    _identity_revision++;
+    _identity_preparation_revision++;
     _websocket_subscription?.cancel();
     _user_identity_worker?.dispose();
     super.onClose();

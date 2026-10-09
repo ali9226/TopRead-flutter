@@ -25,6 +25,9 @@ class RecommendWaterfallSession extends ChangeNotifier {
   /// 已测量的卡片高度，用于恢复原有瀑布流排版。
   final Map<String, double> item_heights = <String, double>{};
 
+  /// 已错过展示边界的广告，页面返回后也不在当前批次重新插入。
+  final Set<String> skipped_ad_slot_ids = <String>{};
+
   /// 当前显示操作遮罩的卡片 ID。
   String? active_overlay_id;
 

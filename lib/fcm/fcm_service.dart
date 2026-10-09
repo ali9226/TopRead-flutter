@@ -3,11 +3,15 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:app/fcm/register_token.dart';
 import 'package:app/fcm/fcm_handler.dart';
+import 'package:app/fcm/fcm_auth.dart';
+import 'package:app/stores/user_information.dart';
+import 'package:get/get.dart';
 import 'package:app/util/device/app_environment.dart';
 import 'package:app/util/log_util.dart';
 
@@ -59,6 +63,14 @@ class FcmService {
   /// 点击通知打开 App 订阅。
   StreamSubscription<RemoteMessage>? _on_message_opened_sub;
 
+  /// 合并并发初始化，关闭后通过代次废弃尚未完成的原生调用。
+  Future<void>? _initialization;
+  int _generation = 0;
+  bool _initialized = false;
+
+  /// 终止状态通知延迟导航的定时器，释放服务时同步取消。
+  Timer? _initial_message_timer;
+
   /// 消息回调（外部可注册，处理点击推送后的页面跳转等逻辑）。
   void Function(Map<String, dynamic> data)? on_message_tap;
 
@@ -69,58 +81,147 @@ class FcmService {
   ///
   /// 应在 main.dart 中 Firebase.initializeApp() 之后调用。
   /// 无论是否登录都会注册 Token（用于全量广播推送）。
-  Future<void> init() async {
-    // 设置默认的消息点击处理回调。
-    on_message_tap = FcmHandler.onMessageTap;
+  Future<void> init({
+    @visibleForTesting Future<void> Function(String? token)? synchronize_token,
+  }) {
+    final Future<void>? pending = _initialization;
+    if (pending != null) return pending;
+    if (_initialized) return Future<void>.value();
 
-    // 初始化本地通知。
-    await _init_local_notifications();
+    final int generation = ++_generation;
+    final Future<void> initialization = _initialize(
+      generation,
+      synchronize_token,
+    );
+    _initialization = initialization;
+    return initialization.whenComplete(() {
+      if (identical(_initialization, initialization)) _initialization = null;
+    });
+  }
+
+  Future<void> _initialize(
+    int generation,
+    Future<void> Function(String? token)? synchronize_token,
+  ) async {
+    // 设置默认的消息点击处理回调。
+    on_message_tap ??= FcmHandler.onMessageTap;
+
+    // 浏览器没有移动端本地通知插件；插件异常也不应阻止推送消息订阅。
+    if (isNativeMobileApp) {
+      try {
+        await _init_local_notifications(generation);
+      } catch (error) {
+        logUtil(msg: 'FCM: 初始化本地通知失败: $error', type: 'e');
+      }
+    }
+    if (generation != _generation) return;
 
     // 配置 iOS 前台通知展示方式。该调用不会触发系统权限弹窗。
     if (isIOSApp) {
-      await _messaging.setForegroundNotificationPresentationOptions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      try {
+        await _messaging.setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      } catch (error) {
+        logUtil(msg: 'FCM: 设置前台通知失败: $error', type: 'e');
+      }
     }
-
-    // 获取 FCM Token 并注册到后端（不绑定用户）。
-    await FcmRegisterToken.execute();
-
-    // 先取消旧订阅，避免重复初始化导致回调执行两次。
-    _token_refresh_sub?.cancel();
-    _on_message_sub?.cancel();
-    _on_message_opened_sub?.cancel();
+    if (generation != _generation) return;
 
     // 监听 Token 刷新。
-    _token_refresh_sub = _messaging.onTokenRefresh.listen((String new_token) {
-      logUtil(msg: 'FCM Token 刷新: ${new_token.substring(0, 20)}...');
-      FcmRegisterToken.execute();
-    });
+    _token_refresh_sub = _messaging.onTokenRefresh.listen(
+      (String new_token) {
+        if (generation != _generation) return;
+        // 使用回调中的真实新 Token，避免重新读取时错过这一次刷新。
+        unawaited(_synchronize_token(generation, new_token, synchronize_token));
+      },
+      onError: (Object error) {
+        logUtil(msg: 'FCM: Token 刷新监听失败: $error', type: 'e');
+      },
+    );
 
     // 监听前台消息。
-    _on_message_sub =
-        FirebaseMessaging.onMessage.listen(_on_foreground_message);
+    _on_message_sub = FirebaseMessaging.onMessage.listen(
+      _on_foreground_message,
+    );
 
     // 监听后台消息点击（用户点击通知打开 App）。
-    _on_message_opened_sub =
-        FirebaseMessaging.onMessageOpenedApp.listen(_on_message_opened);
+    _on_message_opened_sub = FirebaseMessaging.onMessageOpenedApp.listen(
+      _on_message_opened,
+    );
+    _initialized = true;
+
+    // Token 获取和注册属于后台同步，不能阻塞消息接收或通知点击。
+    unawaited(_synchronize_token(generation, null, synchronize_token));
 
     // 检查 App 是否通过点击通知启动（终止状态，始终触发导航）。
-    final RemoteMessage? initial_message = await _messaging.getInitialMessage();
-    if (initial_message != null) {
-      Future.delayed(const Duration(seconds: 2), () {
-        logUtil(msg: 'FCM: 通过通知启动 App, data: ${initial_message.data}');
-        on_message_tap?.call(initial_message.data);
+    RemoteMessage? initial_message;
+    try {
+      initial_message = await _messaging.getInitialMessage().timeout(
+        const Duration(seconds: 10),
+      );
+    } catch (error) {
+      logUtil(msg: 'FCM: 读取启动通知失败: $error', type: 'w');
+    }
+    if (generation != _generation) return;
+    Map<String, dynamic>? launch_data = initial_message?.data;
+    // 前台 FCM 生成的本地通知在 App 终止后启动，不会进入 Firebase
+    // getInitialMessage，必须读取本地通知插件保留的启动 payload。
+    if (launch_data == null && isNativeMobileApp) {
+      try {
+        final NotificationAppLaunchDetails? details = await _local_notifications
+            .getNotificationAppLaunchDetails()
+            .timeout(const Duration(seconds: 10));
+        if (details?.didNotificationLaunchApp == true) {
+          final String? payload = details?.notificationResponse?.payload;
+          if (payload != null) {
+            final dynamic decoded = jsonDecode(payload);
+            if (decoded is Map)
+              launch_data = Map<String, dynamic>.from(decoded);
+          }
+        }
+      } catch (error) {
+        logUtil(msg: 'FCM: 读取本地启动通知失败: $error', type: 'w');
+      }
+    }
+    if (generation != _generation) return;
+    if (launch_data != null) {
+      final Map<String, dynamic> data = launch_data;
+      _initial_message_timer = Timer(const Duration(seconds: 2), () {
+        if (generation != _generation) return;
+        logUtil(msg: 'FCM: 通过通知启动 App, data: $data');
+        on_message_tap?.call(data);
       });
     }
 
     logUtil(msg: 'FCM: 推送通知服务初始化完成');
   }
 
+  /// 注册新 Token 后重新绑定当前用户；身份操作仍由 FcmAuth 串行执行。
+  Future<void> _synchronize_token(
+    int generation,
+    String? token,
+    Future<void> Function(String? token)? synchronize_token,
+  ) async {
+    try {
+      if (synchronize_token != null) {
+        await synchronize_token(token);
+        return;
+      }
+      await FcmRegisterToken.execute(token: token);
+      if (generation != _generation || !Get.isRegistered<UserInformation>()) {
+        return;
+      }
+      await FcmAuth.onLoginSuccess();
+    } catch (error) {
+      logUtil(msg: 'FCM: Token 同步失败: $error', type: 'e');
+    }
+  }
+
   /// 初始化本地通知插件。
-  Future<void> _init_local_notifications() async {
+  Future<void> _init_local_notifications(int generation) async {
     // Android 初始化设置。
     const AndroidInitializationSettings android_settings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -141,6 +242,7 @@ class FcmService {
     await _local_notifications.initialize(
       settings: init_settings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
+        if (generation != _generation) return;
         // 用户点击本地通知。
         if (response.payload != null) {
           try {
@@ -285,9 +387,17 @@ class FcmService {
 
   /// 释放全部推送订阅（App 退出或重新初始化前调用）。
   void dispose() {
+    _generation++;
+    _initialized = false;
+    _initialization = null;
+    _initial_message_timer?.cancel();
+    _initial_message_timer = null;
     _token_refresh_sub?.cancel();
     _on_message_sub?.cancel();
     _on_message_opened_sub?.cancel();
+    _token_refresh_sub = null;
+    _on_message_sub = null;
+    _on_message_opened_sub = null;
   }
 
   /// 取消所有本地通知。

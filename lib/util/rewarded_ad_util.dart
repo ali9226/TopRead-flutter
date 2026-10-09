@@ -3,11 +3,14 @@
 import 'dart:async';
 
 import 'package:app/permission_request/admob_consent_permission_request.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/full_screen_ad_guard.dart';
 import 'package:app/util/google_mobile_ads_util.dart';
 import 'package:app/util/log_util.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// 谷歌激励视频广告的最终展示结果。
@@ -53,6 +56,10 @@ class GoogleRewardedAdUtil {
   /// 日志前缀。
   static const String _log_prefix = '[GoogleRewardedAd]';
 
+  /// 必要隐私表单完成后，SDK 初始化、加载与 SSV 准备的最长等待时间。
+  /// 超时后立即归还全屏资格，迟到广告只能释放，不能继续弹出。
+  static const Duration preparation_timeout = Duration(seconds: 30);
+
   /// 当前是否已有广告在加载或展示。
   bool _is_running = false;
 
@@ -72,7 +79,7 @@ class GoogleRewardedAdUtil {
   /// [adUnitId] 广告单元 ID，由后端接口返回。
   /// [user_id] 是服务器端验证使用的用户标识。
   /// [custom_data] 是服务器端验证使用的本次广告业务标识。
-  /// [can_show] 在广告加载完成后执行，用于防止页面销毁后继续弹出广告。
+  /// [can_show] 在隐私、加载与 SSV 准备后重新执行，防止旧页面继续弹出广告。
   Future<GoogleRewardedAdResult> show_rewarded_ad({
     required String adUnitId,
     String? user_id,
@@ -93,60 +100,74 @@ class GoogleRewardedAdUtil {
     }
 
     _is_running = true;
+    final _RewardedAdPreparation preparation = _RewardedAdPreparation(can_show);
     RewardedAd? rewarded_ad;
-    try {
+
+    Future<GoogleRewardedAdResult> prepare_and_show() async {
       // 先完成 UMP 必要表单；未获得广告请求许可时不得初始化广告 SDK。
       final bool can_request_ads =
           await AdMobConsentPermissionRequest.request_before_ad();
+      final GoogleRewardedAdResult? privacy_invalid_result = preparation
+          .invalid_result();
+      if (privacy_invalid_result != null) return privacy_invalid_result;
       if (!can_request_ads) {
         _log('UMP 未允许请求广告，本次不初始化广告 SDK', type: 'w');
         return GoogleRewardedAdResult.consent_unavailable;
       }
-      if (!AdDisplayPolicy.can_show_ads()) {
-        _log('UMP 完成后广告开关已关闭，取消激励广告', type: 'w');
-        return GoogleRewardedAdResult.disabled;
-      }
-
-      rewarded_ad = await _load_rewarded_ad(adUnitId);
-      if (rewarded_ad == null) {
+      preparation.start_timeout();
+      final RewardedAd? loaded_ad = await _load_rewarded_ad(
+        adUnitId,
+        preparation,
+        on_loaded: (RewardedAd ad) => rewarded_ad = ad,
+      );
+      final GoogleRewardedAdResult? load_invalid_result = preparation
+          .invalid_result();
+      if (load_invalid_result != null) return load_invalid_result;
+      if (loaded_ad == null) {
         return GoogleRewardedAdResult.load_failed;
       }
 
-      if (!AdDisplayPolicy.can_show_ads()) {
-        await rewarded_ad.dispose();
-        _log('广告加载完成前平台开关已关闭，释放广告', type: 'w');
-        return GoogleRewardedAdResult.disabled;
-      }
-
-      if (can_show != null && !can_show()) {
-        await rewarded_ad.dispose();
-        _log('页面已失效，取消展示并释放广告', type: 'w');
-        return GoogleRewardedAdResult.cancelled;
-      }
-
       return await _show_loaded_ad(
-        rewarded_ad,
+        loaded_ad,
+        preparation: preparation,
         user_id: user_id,
         custom_data: custom_data,
       );
+    }
+
+    try {
+      return await Future.any<GoogleRewardedAdResult>(
+        <Future<GoogleRewardedAdResult>>[
+          prepare_and_show(),
+          preparation.cancelled,
+        ],
+      );
     } catch (error, stack_trace) {
-      if (rewarded_ad != null) {
-        await rewarded_ad.dispose();
-      }
       _log('激励视频广告流程异常: $error\n$stack_trace', type: 'e');
       return GoogleRewardedAdResult.show_failed;
     } finally {
-      _is_running = false;
-      FullScreenAdGuard.release(this);
+      preparation.dispose();
+      try {
+        await rewarded_ad?.dispose();
+      } catch (error) {
+        _log('激励广告资源释放失败: $error', type: 'w');
+      } finally {
+        _is_running = false;
+        FullScreenAdGuard.release(this);
+      }
     }
   }
 
   /// 初始化 SDK 并加载当前平台的激励广告。
-  Future<RewardedAd?> _load_rewarded_ad(String adUnitId) async {
+  Future<RewardedAd?> _load_rewarded_ad(
+    String adUnitId,
+    _RewardedAdPreparation preparation, {
+    required void Function(RewardedAd ad) on_loaded,
+  }) async {
     try {
       final bool is_initialized = await GoogleMobileAdsUtil.instance
           .ensure_initialized();
-      if (!is_initialized) {
+      if (!is_initialized || preparation.invalid_result() != null) {
         return null;
       }
 
@@ -157,13 +178,22 @@ class GoogleRewardedAdUtil {
         request: const AdRequest(),
         rewardedAdLoadCallback: RewardedAdLoadCallback(
           onAdLoaded: (RewardedAd ad) {
+            if (!preparation.is_active) {
+              unawaited(ad.dispose());
+              if (!completer.isCompleted) completer.complete(null);
+              return;
+            }
             final ResponseInfo? response_info = ad.responseInfo;
             _log(
               '广告加载成功，responseId=${response_info?.responseId}, '
               'adapter=${response_info?.mediationAdapterClassName}',
             );
             if (!completer.isCompleted) {
+              // 在完成 Future 之前登记所有权，取消竞争不能遗漏已返回的广告。
+              on_loaded(ad);
               completer.complete(ad);
+            } else {
+              unawaited(ad.dispose());
             }
           },
           onAdFailedToLoad: (LoadAdError error) {
@@ -189,6 +219,7 @@ class GoogleRewardedAdUtil {
   /// 展示已经加载的广告，并等待全屏页关闭后返回最终结果。
   Future<GoogleRewardedAdResult> _show_loaded_ad(
     RewardedAd rewarded_ad, {
+    required _RewardedAdPreparation preparation,
     String? user_id,
     String? custom_data,
   }) async {
@@ -196,13 +227,6 @@ class GoogleRewardedAdUtil {
         Completer<GoogleRewardedAdResult>();
     bool has_earned_reward = false;
     RewardItem? earned_reward;
-    bool is_disposed = false;
-
-    Future<void> dispose_ad() async {
-      if (is_disposed) return;
-      is_disposed = true;
-      await rewarded_ad.dispose();
-    }
 
     void complete_result(GoogleRewardedAdResult result) {
       if (!result_completer.isCompleted) {
@@ -222,6 +246,10 @@ class GoogleRewardedAdUtil {
       );
       _log('SSV 参数设置完成，userId=$user_id, customData=$custom_data');
     }
+
+    // SSV 参数写入也是异步边界，必须重新检查页面、开关与隐私选择。
+    final GoogleRewardedAdResult? invalid_result = preparation.invalid_result();
+    if (invalid_result != null) return invalid_result;
 
     rewarded_ad.onPaidEvent =
         (
@@ -255,7 +283,6 @@ class GoogleRewardedAdUtil {
           'message=${error.message}',
           type: 'e',
         );
-        unawaited(dispose_ad());
         complete_result(GoogleRewardedAdResult.show_failed);
       },
       onAdDismissedFullScreenContent: (Ad ad) {
@@ -264,7 +291,6 @@ class GoogleRewardedAdUtil {
           '${earned_reward == null ? '' : '，数量=${earned_reward!.amount}, '
                     '类型=${earned_reward!.type}'}',
         );
-        unawaited(dispose_ad());
         complete_result(
           has_earned_reward
               ? GoogleRewardedAdResult.rewarded
@@ -274,8 +300,11 @@ class GoogleRewardedAdUtil {
     );
 
     try {
+      // 在调用 SDK 前结束准备阶段，广告自身引起的后台事件不能取消奖励。
+      preparation.mark_presented();
       await rewarded_ad.show(
         onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
+          if (result_completer.isCompleted) return;
           has_earned_reward = true;
           earned_reward = reward;
           _log('用户获得奖励，amount=${reward.amount}, type=${reward.type}');
@@ -283,7 +312,6 @@ class GoogleRewardedAdUtil {
       );
       return await result_completer.future;
     } catch (error, stack_trace) {
-      await dispose_ad();
       _log('调用广告展示异常: $error\n$stack_trace', type: 'e');
       complete_result(GoogleRewardedAdResult.show_failed);
       return result_completer.future;
@@ -293,5 +321,99 @@ class GoogleRewardedAdUtil {
   /// 输出广告流程日志。
   void _log(String message, {String? type}) {
     logUtil(msg: '$_log_prefix $message', type: type);
+  }
+}
+
+/// 只观察展示前的准备阶段，取消后不会因返回前台而恢复旧请求。
+class _RewardedAdPreparation with WidgetsBindingObserver {
+  _RewardedAdPreparation(this._can_show)
+    : _privacy_revision =
+          AdMobConsentPermissionRequest.privacy_choice_revision.value {
+    WidgetsBinding.instance.addObserver(this);
+    AdMobConsentPermissionRequest.privacy_choice_revision.addListener(
+      _on_privacy_changed,
+    );
+    if (Get.isRegistered<ProjectConfigStore>()) {
+      _policy_worker = ever<int>(
+        Get.find<ProjectConfigStore>().config_revision,
+        (_) {
+          if (!AdDisplayPolicy.can_show_ads()) {
+            _cancel(GoogleRewardedAdResult.disabled);
+          }
+        },
+      );
+    }
+  }
+
+  final bool Function()? _can_show;
+  final int _privacy_revision;
+  final Completer<GoogleRewardedAdResult> _cancelled =
+      Completer<GoogleRewardedAdResult>();
+  Worker? _policy_worker;
+  Timer? _timeout;
+  bool _is_disposed = false;
+  bool _has_presented = false;
+  GoogleRewardedAdResult? _cancelled_result;
+
+  Future<GoogleRewardedAdResult> get cancelled => _cancelled.future;
+  bool get is_active => !_is_disposed && _cancelled_result == null;
+
+  /// 当前准备工作是否仍然属于可展示的用户操作。
+  GoogleRewardedAdResult? invalid_result() {
+    if (_cancelled_result != null) return _cancelled_result;
+    if (_is_disposed) return GoogleRewardedAdResult.cancelled;
+    if (!AdDisplayPolicy.can_show_ads()) return GoogleRewardedAdResult.disabled;
+    if (_privacy_revision !=
+        AdMobConsentPermissionRequest.privacy_choice_revision.value) {
+      return GoogleRewardedAdResult.cancelled;
+    }
+    final AppLifecycleState? state = WidgetsBinding.instance.lifecycleState;
+    if (state != null && state != AppLifecycleState.resumed) {
+      return GoogleRewardedAdResult.cancelled;
+    }
+    if (_can_show != null && !_can_show()) {
+      return GoogleRewardedAdResult.cancelled;
+    }
+    return null;
+  }
+
+  void start_timeout() {
+    if (!is_active) return;
+    _timeout = Timer(GoogleRewardedAdUtil.preparation_timeout, () {
+      _cancel(GoogleRewardedAdResult.load_failed);
+    });
+  }
+
+  void _on_privacy_changed() => _cancel(GoogleRewardedAdResult.cancelled);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _cancel(GoogleRewardedAdResult.cancelled);
+    }
+  }
+
+  void _cancel(GoogleRewardedAdResult result) {
+    if (!is_active || _has_presented) return;
+    _cancelled_result = result;
+    _cancelled.complete(result);
+    _timeout?.cancel();
+  }
+
+  void mark_presented() {
+    _has_presented = true;
+    _timeout?.cancel();
+  }
+
+  void dispose() {
+    _is_disposed = true;
+    _timeout?.cancel();
+    _policy_worker?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    AdMobConsentPermissionRequest.privacy_choice_revision.removeListener(
+      _on_privacy_changed,
+    );
   }
 }

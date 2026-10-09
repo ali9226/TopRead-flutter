@@ -11,7 +11,6 @@ import 'package:app/api/results_type.dart';
 import 'package:app/config/ad_type_config.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/models/ad_config.dart';
-import 'package:app/models/ad_verify_result.dart';
 import 'package:app/models/paragraph_text_selection.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/rewarded_ad_util.dart';
@@ -33,6 +32,7 @@ import 'package:app/pages/read/widgets/auto_read_settings_button/index.dart';
 import 'package:app/stores/comment_navigation.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
+import 'package:app/stores/read_ad_free_store.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/stores/project_config_store.dart';
 import 'package:app/stores/ad_config_store.dart';
@@ -240,44 +240,18 @@ class _ReadPageState extends State<ReadPage>
   /// 在返回前暂停原生广告和免时长弹窗逻辑，避免有效期内误展示。
   bool _is_ad_free_status_ready = false;
 
-  /// 免广告到期时间。
-  DateTime? _ad_free_expire_time;
-
   /// 免广告到期时间展示通知器。
   ///
   /// 每个章节底部的续时入口直接监听该值，不依赖整个章节列表重建。
   final ValueNotifier<DateTime?> _ad_free_expire_time_notifier =
       ValueNotifier<DateTime?>(null);
 
-  /// 当前免广告时长的本地到期计时器。
-  ///
-  /// 用户长时间停留在阅读页时，到期后自动恢复广告展示，无需退出重进页面。
-  Timer? _ad_free_expire_timer;
+  /// 长篇权益在整个应用共享，页面退出后奖励校验仍可继续。
+  late final ReadAdFreeStore _ad_free_store;
+  Worker? _ad_free_state_worker;
 
-  /// 当前是否正在请求、加载或展示长篇阅读激励视频广告。
+  /// 当前页面是否正在准备或展示激励视频。
   bool _is_rewarded_ad_loading = false;
-
-  /// 当前后台奖励校验任务的代次。
-  ///
-  /// 页面销毁或未来开始新的校验任务时递增，使旧任务不能覆盖新状态。
-  int _ad_free_verification_generation = 0;
-
-  /// Google SSV回调的静默校验间隔，总等待时间约90秒。
-  ///
-  /// 回调通常很快，但采用递增间隔可以兼容短暂网络延迟，同时避免频繁请求。
-  static const List<Duration> _ad_free_verification_retry_delays = <Duration>[
-    Duration(seconds: 2),
-    Duration(seconds: 4),
-    Duration(seconds: 8),
-    Duration(seconds: 16),
-    Duration(seconds: 30),
-    Duration(seconds: 30),
-  ];
-
-  /// 常规校验窗口结束后的延迟复核时间。
-  ///
-  /// 本地奖励会先回退到服务端状态，但仍给Google异常延迟回调一次恢复机会。
-  static const Duration _ad_free_late_verification_delay = Duration(minutes: 5);
 
   /// 主题背景色透明度，统一控制底部胶囊背景在夜间模式下的层次。
   static const double _night_bottom_pill_background_alpha = 0.92;
@@ -316,8 +290,16 @@ class _ReadPageState extends State<ReadPage>
     // 进入页面时请求接口，有阅读进度时静默加载目标章节。
     _initialization_future = _init_with_progress_restore();
 
-    // 进入页面时先异步初始化设备免广告状态。
-    unawaited(_initialize_ad_free_status());
+    // 权益按设备与认证用户共享，切换小说不会重新创建奖励生命周期。
+    _ad_free_store = Get.isRegistered<ReadAdFreeStore>()
+        ? Get.find<ReadAdFreeStore>()
+        : Get.put(ReadAdFreeStore(), permanent: true);
+    _ad_free_state_worker = ever(
+      _ad_free_store.state_revision,
+      (_) => _apply_shared_ad_free_state(),
+    );
+    _apply_shared_ad_free_state();
+    unawaited(_ad_free_store.refresh());
 
     // 项目配置异步到达或更新时统一同步正文广告状态。
     _ad_policy_worker = ever(
@@ -655,100 +637,25 @@ class _ReadPageState extends State<ReadPage>
     _unlock_popup_defer_timer = null;
   }
 
-  /// 首次初始化设备免广告状态。
-  ///
-  /// 只有该任务结束后才放行原生广告和免时长弹窗；如果查询结果为
-  /// 有效免广告，则继续保持屏蔽。
-  Future<void> _initialize_ad_free_status() async {
-    await _check_ad_free_status();
+  /// 同步共享权益到当前页面，保持既有广告插槽和阅读位置补偿机制。
+  void _apply_shared_ad_free_state() {
     if (!mounted) return;
-    setState(() => _is_ad_free_status_ready = true);
-    if (_is_ad_free) {
-      _clear_pending_unlock_popup();
-      return;
-    }
+    final bool is_active = _ad_free_store.is_ad_free;
+    final DateTime? expire_time = is_active ? _ad_free_store.expire_time : null;
+    if (is_active) _clear_pending_unlock_popup();
+    setState(() {
+      _is_ad_free = is_active;
+      _is_ad_free_status_ready = _ad_free_store.is_status_ready;
+    });
+    _ad_free_expire_time_notifier.value = expire_time;
     _sync_ad_policy();
   }
 
-  /// 当前是否可以处理阅读页广告和免时长弹窗。
+  /// 当前身份的服务器状态未确认或免广告有效时，屏蔽所有长篇阅读广告。
   bool get _can_process_read_ads => can_process_read_ads(
     is_ad_free_status_ready: _is_ad_free_status_ready,
     is_ad_free: _is_ad_free,
   );
-
-  /// 异步检查设备免广告状态。
-  ///
-  /// 进入阅读页时调用一次，查询当前设备是否在免广告期内。
-  /// 如果在免广告期内，设置 [_is_ad_free] 为 true，跳过所有原生广告展示。
-  Future<void> _check_ad_free_status() async {
-    final int verification_generation = _ad_free_verification_generation;
-    try {
-      final ResultsType<AdFreeStatus> result = await check_ad_free_status();
-      if (!mounted ||
-          verification_generation != _ad_free_verification_generation) {
-        return;
-      }
-      if (result.status && result.content != null) {
-        _apply_server_ad_free_status(result.content!);
-        logUtil(
-          msg:
-              '[ReadAdFree] 免广告状态: is_ad_free=$_is_ad_free, '
-              'remaining=${result.content!.remaining_seconds}s',
-        );
-      }
-    } catch (e) {
-      logUtil(msg: '[ReadAdFree] 查询免广告状态异常: $e', type: 'e');
-    }
-  }
-
-  /// 使用服务端权威状态更新当前阅读页。
-  ///
-  /// Google SSV确认成功或校验超时后都会调用，确保客户端乐观增加的时长
-  /// 最终与服务端一致。
-  void _apply_server_ad_free_status(AdFreeStatus status) {
-    final bool was_ad_free = _is_ad_free;
-    final DateTime? expire_time = status.expire_time == null
-        ? null
-        : DateTime.tryParse(status.expire_time!);
-    final bool is_active =
-        status.is_ad_free &&
-        expire_time != null &&
-        expire_time.isAfter(DateTime.now());
-    if (is_active) _clear_pending_unlock_popup();
-    setState(() {
-      _is_ad_free = is_active;
-      _ad_free_expire_time = is_active ? expire_time : null;
-    });
-    _ad_free_expire_time_notifier.value = is_active ? expire_time : null;
-    _schedule_ad_free_expiration(is_active ? expire_time : null);
-    // 进入页面时处于免广告期的章节尚未判断概率，状态失效后补齐当前窗口。
-    if (was_ad_free && !is_active && _is_ad_free_status_ready) {
-      _sync_ad_policy();
-    }
-  }
-
-  /// 根据当前到期时间安排本地状态失效。
-  ///
-  /// 计时器触发后先恢复广告，再静默查询一次服务端，兼容设备时间误差或
-  /// 其他终端在此期间新增了已确认免广告时长的情况。
-  void _schedule_ad_free_expiration(DateTime? expire_time) {
-    _ad_free_expire_timer?.cancel();
-    _ad_free_expire_timer = null;
-    if (expire_time == null) return;
-
-    final Duration remaining = expire_time.difference(DateTime.now());
-    if (remaining <= Duration.zero) return;
-    _ad_free_expire_timer = Timer(remaining, () {
-      if (!mounted) return;
-      setState(() {
-        _is_ad_free = false;
-        _ad_free_expire_time = null;
-      });
-      _ad_free_expire_time_notifier.value = null;
-      _sync_ad_policy();
-      unawaited(_check_ad_free_status());
-    });
-  }
 
   /// 点击"看视频免30分钟广告"提示时调用。
   ///
@@ -777,11 +684,15 @@ class _ReadPageState extends State<ReadPage>
     setState(() => _is_rewarded_ad_loading = true);
     try {
       logUtil(msg: '[ReadAdFree] 准备激励视频: duration=${duration_minutes}min');
+      final AdFreeRequestIdentity? identity = await _ad_free_store
+          .capture_reward_identity();
+      if (!mounted || identity == null) return;
       final ResultsType<UnlockAdFreeResult> result = await unlock_ad_free_time(
         duration_minutes: duration_minutes,
         novel_id: widget.story_id,
+        identity: identity,
       );
-      if (!mounted) return;
+      if (!mounted || !_ad_free_store.is_identity_current(identity)) return;
 
       if (!result.status || result.content == null) {
         logUtil(msg: '[ReadAdFree] 获取广告配置失败: ${result.message}', type: 'w');
@@ -793,6 +704,7 @@ class _ReadPageState extends State<ReadPage>
       if (!AdDisplayPolicy.can_show_ads()) return;
 
       final UnlockAdFreeResult unlock_result = result.content!;
+      final DateTime reward_status_received_at = DateTime.now();
       final AdConfig? ad_config = unlock_result.ad_config;
       final int reward_duration_minutes = resolve_ad_free_reward_duration(
         requested_duration_minutes: duration_minutes,
@@ -811,6 +723,8 @@ class _ReadPageState extends State<ReadPage>
           ad_config.advertisers == AdTypeConfig.google_advertiser &&
           ad_config.adsId.isNotEmpty &&
           ad_config.uuid.isNotEmpty &&
+          unlock_result.ad_free_status?.user_id == identity.user_id &&
+          unlock_result.ad_free_status?.device_token == identity.device_token &&
           reward_duration_minutes == duration_minutes;
       if (!is_valid_config) {
         logUtil(
@@ -832,9 +746,20 @@ class _ReadPageState extends State<ReadPage>
           .show_rewarded_ad(
             adUnitId: rewarded_ad_config.adsId,
             custom_data: rewarded_ad_config.uuid,
-            can_show: () => mounted,
+            can_show: () =>
+                mounted && _ad_free_store.is_identity_current(identity),
           );
-      if (!mounted) return;
+      // 广告已经完整观看时先持久化奖励；退出小说页面不应丢失该次观看。
+      final bool reward_recorded = ad_result == GoogleRewardedAdResult.rewarded
+          ? await _ad_free_store.record_reward(
+              identity: identity,
+              uuid: rewarded_ad_config.uuid,
+              duration_minutes: reward_duration_minutes,
+              server_status: unlock_result.ad_free_status,
+              server_status_received_at: reward_status_received_at,
+            )
+          : false;
+      if (!mounted || !_ad_free_store.is_identity_current(identity)) return;
 
       switch (ad_result) {
         case GoogleRewardedAdResult.disabled:
@@ -844,14 +769,9 @@ class _ReadPageState extends State<ReadPage>
           }
           break;
         case GoogleRewardedAdResult.rewarded:
-          _apply_optimistic_ad_free_reward(
-            duration_minutes: reward_duration_minutes,
-            server_status: unlock_result.ad_free_status,
-          );
-          showBottomTip(easy.tr('read.ad_free_activated'));
-          unawaited(
-            _verify_ad_free_reward_in_background(rewarded_ad_config.uuid),
-          );
+          if (reward_recorded) {
+            showBottomTip(easy.tr('read.ad_free_activated'));
+          }
           break;
         case GoogleRewardedAdResult.dismissed:
           showBottomTip(easy.tr('read.ad_not_completed'));
@@ -882,134 +802,6 @@ class _ReadPageState extends State<ReadPage>
         setState(() => _is_rewarded_ad_loading = false);
       }
     }
-  }
-
-  /// 在SDK确认用户获得奖励后立即在当前页面叠加免广告时长。
-  ///
-  /// 服务端已有有效时间、页面当前时间和当前设备时间取最大值作为叠加起点，
-  /// 防止覆盖已经确认的剩余时长。
-  void _apply_optimistic_ad_free_reward({
-    required int duration_minutes,
-    AdFreeStatus? server_status,
-  }) {
-    final String? server_expire_value = server_status?.expire_time;
-    final DateTime? server_expire_time = server_expire_value == null
-        ? null
-        : DateTime.tryParse(server_expire_value);
-    final DateTime expire_time = calculate_ad_free_expire_time(
-      now: DateTime.now(),
-      current_expire_time: _ad_free_expire_time,
-      server_expire_time: server_expire_time,
-      duration_minutes: duration_minutes,
-    );
-    _clear_pending_unlock_popup();
-    setState(() {
-      _is_ad_free = true;
-      _ad_free_expire_time = expire_time;
-    });
-    _ad_free_expire_time_notifier.value = expire_time;
-    _schedule_ad_free_expiration(expire_time);
-    logUtil(
-      msg:
-          '[ReadAdFree] 本地乐观发放成功: '
-          'duration=${duration_minutes}min, expire=$expire_time',
-    );
-  }
-
-  /// 后台静默等待Google SSV确认，并用服务端状态校准本地乐观奖励。
-  ///
-  /// 验证成功后同步服务端最终到期时间；在完整重试窗口内始终未确认时，
-  /// 同样同步服务端状态，从而只撤回本次未确认的乐观时长。网络完全不可用时
-  /// 保留当前状态，避免把“暂时无法校验”误判为“没有看完广告”。
-  Future<void> _verify_ad_free_reward_in_background(String uuid) async {
-    final int verification_generation = ++_ad_free_verification_generation;
-    bool received_pending_status = false;
-
-    for (final Duration delay in _ad_free_verification_retry_delays) {
-      await Future<void>.delayed(delay);
-      if (!mounted ||
-          verification_generation != _ad_free_verification_generation) {
-        return;
-      }
-
-      final ResultsType<AdVerifyResult> result = await verify_ad_free_reward(
-        uuid: uuid,
-      );
-      if (!mounted ||
-          verification_generation != _ad_free_verification_generation) {
-        return;
-      }
-      if (!result.status || result.content == null) continue;
-
-      if (result.content!.status == AdVerifyResult.status_completed) {
-        logUtil(msg: '[ReadAdFree] Google SSV验证完成: uuid=$uuid');
-        await _synchronize_ad_free_status(
-          verification_generation: verification_generation,
-          reason: 'verified',
-        );
-        return;
-      }
-      if (result.content!.status == AdVerifyResult.status_not_completed) {
-        received_pending_status = true;
-      }
-    }
-
-    if (!received_pending_status ||
-        !mounted ||
-        verification_generation != _ad_free_verification_generation) {
-      logUtil(msg: '[ReadAdFree] SSV校验期间网络不可用，暂不撤回本地奖励: uuid=$uuid', type: 'w');
-      return;
-    }
-
-    logUtil(msg: '[ReadAdFree] SSV在重试窗口内未确认，回退到服务端状态: uuid=$uuid', type: 'w');
-    await _synchronize_ad_free_status(
-      verification_generation: verification_generation,
-      reason: 'verification_timeout',
-    );
-
-    // Google回调可能因网络异常显著延迟；本地已完成回退后再低频复核一次。
-    await Future<void>.delayed(_ad_free_late_verification_delay);
-    if (!mounted ||
-        verification_generation != _ad_free_verification_generation) {
-      return;
-    }
-    final ResultsType<AdVerifyResult> late_result = await verify_ad_free_reward(
-      uuid: uuid,
-    );
-    if (!mounted ||
-        verification_generation != _ad_free_verification_generation ||
-        !late_result.status ||
-        late_result.content?.status != AdVerifyResult.status_completed) {
-      return;
-    }
-    logUtil(msg: '[ReadAdFree] Google SSV延迟回调已确认: uuid=$uuid');
-    await _synchronize_ad_free_status(
-      verification_generation: verification_generation,
-      reason: 'late_verified',
-    );
-  }
-
-  /// 查询并应用服务端最终免广告状态。
-  Future<void> _synchronize_ad_free_status({
-    required int verification_generation,
-    required String reason,
-  }) async {
-    final ResultsType<AdFreeStatus> result = await check_ad_free_status();
-    if (!mounted ||
-        verification_generation != _ad_free_verification_generation) {
-      return;
-    }
-    if (!result.status || result.content == null) {
-      logUtil(msg: '[ReadAdFree] 同步服务端状态失败，保留当前状态: reason=$reason', type: 'w');
-      return;
-    }
-    _apply_server_ad_free_status(result.content!);
-    logUtil(
-      msg:
-          '[ReadAdFree] 已同步服务端状态: reason=$reason, '
-          'isAdFree=${result.content!.is_ad_free}, '
-          'remaining=${result.content!.remaining_seconds}s',
-    );
   }
 
   /// 为项目配置到达前已经加载的章节补齐一次性概率判断。
@@ -1300,8 +1092,7 @@ class _ReadPageState extends State<ReadPage>
   void dispose() {
     _progress_save_timer?.cancel();
     _unlock_popup_defer_timer?.cancel();
-    _ad_free_expire_timer?.cancel();
-    _ad_free_verification_generation++;
+    _ad_free_state_worker?.dispose();
     // 退出页面时保存一次阅读进度。
     _save_current_progress_on_exit();
     _auto_read_ticker?.dispose();
