@@ -8,6 +8,7 @@ import 'package:app/pages/read/widgets/introduction_section/widgets/tag_section/
 import 'package:app/pages/read/widgets/introduction_section/widgets/intro_summary_section/index.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/comment_section/index.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/components/title_with_story_id/index.dart';
 import 'package:app/stores/project_config_store.dart';
 import './style.dart';
 
@@ -26,11 +27,16 @@ class ReadIntroductionSection extends StatelessWidget {
   /// 关注状态变更回调。
   final ValueChanged<bool>? on_focus_changed;
 
+  /// 替换封面成功回调，携带新的封面信息。
+  final void Function(String cover_url, int cover_width, int cover_height)?
+  on_cover_replaced;
+
   const ReadIntroductionSection({
     super.key,
     required this.is_dark,
     required this.detail,
     this.on_focus_changed,
+    this.on_cover_replaced,
   });
 
   @override
@@ -62,11 +68,14 @@ class ReadIntroductionSection extends StatelessWidget {
         // 封面与标题之间保持固定垂直节奏。
         const SizedBox(height: IntroductionStyle.title_top_spacing),
         // 书名在头图区居中展示，保证视觉焦点明确。
+        // 书名后内联小说 ID 徽标，仅登录且 debug=2 用户可见、点击可复制。
         Center(
-          child: Text(
-            detail.title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
+          child: TitleWithStoryId(
+            title: detail.title,
+            story_id: detail.story_id,
+            on_cover_replaced: on_cover_replaced,
+            text_align: TextAlign.center,
+            title_style: TextStyle(
               color: title_color,
               fontSize: IntroductionStyle.title_font_size,
               fontWeight: FontConfig.adjustedWeight(FontWeight.w500),

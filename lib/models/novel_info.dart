@@ -163,6 +163,50 @@ class NovelInfo {
     );
   }
 
+
+  /// 仅替换语种封面字段，返回新的 [NovelInfo]。
+  NovelInfo replace_cover({
+    required String cover_url,
+    required int cover_width,
+    required int cover_height,
+  }) {
+    return NovelInfo(
+      id: id,
+      title: title,
+      subtitle: subtitle,
+      score: score,
+      focus_on: focus_on,
+      is_liked: is_liked,
+      is_favorited: is_favorited,
+      author_id: author_id,
+      source_type: source_type,
+      publish_status: publish_status,
+      recommend_status: recommend_status,
+      sorting: sorting,
+      read_count: read_count,
+      comment_count: comment_count,
+      like_count: like_count,
+      favorite_count: favorite_count,
+      latest_chapter_no: latest_chapter_no,
+      latest_update_time: latest_update_time,
+      remark: remark,
+      create_time: create_time,
+      update_time: update_time,
+      remove_status: remove_status,
+      remove_time: remove_time,
+      author_name: author_name,
+      author_avatar: author_avatar,
+      language_info: language_info.replace_cover(
+        cover_url: cover_url,
+        cover_width: cover_width,
+        cover_height: cover_height,
+      ),
+      category_list: category_list,
+      comment_list: comment_list,
+      chapter_info: chapter_info,
+    );
+  }
+
   static int _parse_int(dynamic value) {
     if (value == null) return 0;
     if (value is int) return value;
@@ -227,6 +271,31 @@ class NovelLanguageInfo {
       seo_description: json['seo_description']?.toString() ?? '',
       create_time: json['create_time']?.toString() ?? '',
       update_time: json['update_time']?.toString() ?? '',
+    );
+  }
+
+
+  /// 仅替换封面字段，返回新的 [NovelLanguageInfo]。
+  NovelLanguageInfo replace_cover({
+    required String cover_url,
+    required int cover_width,
+    required int cover_height,
+  }) {
+    return NovelLanguageInfo(
+      id: id,
+      novel_id: novel_id,
+      language_id: language_id,
+      title: title,
+      introduction: introduction,
+      word_count: word_count,
+      chapter_count: chapter_count,
+      cover_url: cover_url,
+      cover_width: cover_width,
+      cover_height: cover_height,
+      seo_keywords: seo_keywords,
+      seo_description: seo_description,
+      create_time: create_time,
+      update_time: update_time,
     );
   }
 

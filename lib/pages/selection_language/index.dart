@@ -11,6 +11,7 @@ import 'package:app/stores/device_info.dart';
 import 'package:app/stores/language_store.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/language_util/language_change_handler.dart';
+import 'package:app/util/language_util/language_permission.dart';
 import 'package:app/util/router/router_back.dart';
 
 import 'logic.dart';
@@ -64,6 +65,9 @@ class _SelectionLanguageState extends State<SelectionLanguage> {
   }
 
   Future<void> submit() async {
+    // 选择期间退出或被撤销权限时，旧的中文选择也不能继续提交。
+    selectionCode = LanguagePermission.resolve_language_code(selectionCode);
+
     /// 如果用户没有改动语言，直接关闭页面。
     if (context.locale.languageCode == selectionCode) {
       routerBack(context);

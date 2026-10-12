@@ -13,6 +13,7 @@ import 'package:app/stores/shell_tab_info.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/storage_util/index.dart';
 import 'package:app/components/app_wrapper/index.dart';
+import 'package:app/components/language_permission_guard/index.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/stores/redis_request.dart';
 import 'package:app/stores/customer_service_store.dart';
@@ -127,10 +128,13 @@ void main() async {
         // TODO 启动时优先按本地已保存语种，否则按设备语种匹配结果启动。
         startLocale: Locale(lang),
 
+        // 只由 LanguageStore.language_key 保存偏好，避免第二份旧中文缓存复活。
+        saveLocale: false,
+
         // TODO 如果无法识别语种，统一回退英文。
         fallbackLocale: Locale(fallback_language_code),
 
-        child: AppWrapper(),
+        child: LanguagePermissionGuard(child: AppWrapper()),
       ),
     ),
   );

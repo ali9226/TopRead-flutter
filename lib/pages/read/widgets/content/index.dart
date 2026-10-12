@@ -112,6 +112,13 @@ class ReadContent extends StatelessWidget {
             is_dark: is_dark,
             detail: detail,
             on_focus_changed: on_focus_changed,
+            // 调试用户点击"替换封面"后同步本地详情并刷新封面展示。
+            on_cover_replaced: (cover_url, cover_width, cover_height) =>
+                logic.update_story_cover(
+                  cover_url: cover_url,
+                  cover_width: cover_width,
+                  cover_height: cover_height,
+                ),
           ),
           SizedBox(height: ContentStyle.reading_top_spacing),
         ],

@@ -3,9 +3,11 @@
 import 'dart:ui';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:get/get.dart';
 import 'package:app/models/language_info.dart';
 import 'package:app/stores/language_store.dart';
+import 'package:app/util/language_util/language_permission.dart';
 import 'package:app/util/storage_util/index.dart';
 
 /// 语言工具。
@@ -52,6 +54,12 @@ class LanguageUtil {
     final String? cache_language = await StorageUtil.getData(
       LanguageStore.language_key,
     );
+    // 旧中文偏好必须覆盖为英语，不能继续尝试中文设备语种。
+    if (cache_language != null &&
+        !LanguagePermission.is_language_allowed(cache_language)) {
+      await StorageUtil.saveData(LanguageStore.language_key, 'en');
+      return 'en';
+    }
     final LanguageInfo? cache_language_info = _find_supported_language(
       cache_language,
     );
@@ -59,11 +67,16 @@ class LanguageUtil {
       return cache_language_info.language_code;
     }
 
-    final List<Locale> locales = PlatformDispatcher.instance.locales.isNotEmpty
-        ? PlatformDispatcher.instance.locales
-        : <Locale>[PlatformDispatcher.instance.locale];
+    final device_dispatcher = WidgetsBinding.instance.platformDispatcher;
+    final List<Locale> locales = device_dispatcher.locales.isNotEmpty
+        ? device_dispatcher.locales
+        : <Locale>[device_dispatcher.locale];
 
     for (final Locale locale in locales) {
+      if (!LanguagePermission.is_language_allowed(locale.languageCode)) {
+        await StorageUtil.saveData(LanguageStore.language_key, 'en');
+        return 'en';
+      }
       final LanguageInfo? current_language_info = _find_supported_language(
         locale.languageCode,
       );
@@ -99,11 +112,9 @@ class LanguageUtil {
   static String get_fallback_language_code() {
     final LanguageStore? language_store = _get_language_store();
     if (language_store != null) {
-      return language_store.default_language_code;
-    }
-
-    if (_asset_language_code_list.isNotEmpty) {
-      return _asset_language_code_list.first;
+      return LanguagePermission.resolve_language_code(
+        language_store.default_language_code,
+      );
     }
 
     return 'en';
@@ -171,7 +182,8 @@ class LanguageUtil {
     final String normalized_language_code = _normalize_language_code(
       language_code,
     );
-    return _asset_language_code_list.contains(normalized_language_code);
+    return LanguagePermission.is_language_allowed(normalized_language_code) &&
+        _asset_language_code_list.contains(normalized_language_code);
   }
 
   /// 获取当前语种对应的接口图标地址。
@@ -181,7 +193,8 @@ class LanguageUtil {
     final LanguageInfo? current_language_info = _find_supported_language(
       language_code,
     );
-    if (current_language_info != null && current_language_info.icon.isNotEmpty) {
+    if (current_language_info != null &&
+        current_language_info.icon.isNotEmpty) {
       return current_language_info.icon;
     }
     return '';
@@ -211,19 +224,24 @@ class LanguageUtil {
     if (normalized_language_code.isEmpty) {
       return false;
     }
-    return _asset_language_code_list.contains(normalized_language_code);
+    return LanguagePermission.is_language_allowed(normalized_language_code) &&
+        _asset_language_code_list.contains(normalized_language_code);
   }
 
   /// 断网且接口缓存不可用时使用的离线兜底语种代码列表。
   static List<String> get offline_fallback_language_code_list {
-    final List<String> fallback_list = <String>['en', 'sw']
-        .where((String item) => _asset_language_code_list.contains(item))
-        .toList();
+    final List<String> fallback_list = <String>[
+      'en',
+      'sw',
+    ].where((String item) => _asset_language_code_list.contains(item)).toList();
     if (fallback_list.isNotEmpty) {
       return fallback_list;
     }
     return _asset_language_code_list.isNotEmpty
-        ? List<String>.from(_asset_language_code_list.take(2))
+        ? _asset_language_code_list
+              .where(LanguagePermission.is_language_allowed)
+              .take(2)
+              .toList()
         : <String>['en'];
   }
 
@@ -236,7 +254,9 @@ class LanguageUtil {
     final String normalized_language_code = _normalize_language_code(
       language_code,
     );
-    if (offline_fallback_language_code_list.contains(normalized_language_code)) {
+    if (offline_fallback_language_code_list.contains(
+      normalized_language_code,
+    )) {
       return 'assets/img/$normalized_language_code.png';
     }
     return get_language_asset_image(get_fallback_language_code());
@@ -249,7 +269,8 @@ class LanguageUtil {
     final String normalized_language_code = _normalize_language_code(
       language_code ?? '',
     );
-    if (normalized_language_code.isEmpty) {
+    if (normalized_language_code.isEmpty ||
+        !LanguagePermission.is_language_allowed(normalized_language_code)) {
       return null;
     }
 

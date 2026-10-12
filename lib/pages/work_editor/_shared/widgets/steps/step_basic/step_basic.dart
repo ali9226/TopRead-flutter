@@ -13,6 +13,7 @@ import 'package:app/pages/work_editor/_shared/widgets/editor_section_card.dart';
 import 'package:app/pages/work_editor/_shared/widgets/step_utils.dart';
 import 'package:app/stores/language_store.dart';
 import 'package:app/util/language_util/index.dart';
+import 'package:app/util/language_util/language_permission.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
@@ -119,8 +120,6 @@ class StepBasic extends StatelessWidget {
 
   /// TODO 构建封面选择器。
   Widget _build_cover_picker(BuildContext context) {
-    final bool has_cover = cover_url != null || cover_local_path != null;
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -168,6 +167,7 @@ class StepBasic extends StatelessWidget {
                     ),
                   ],
                 ),
+
                 /// 上传/更换按钮（向上偏移 5px）。
                 Transform.translate(
                   offset: const Offset(0, -5),
@@ -228,7 +228,7 @@ class StepBasic extends StatelessWidget {
           width: WorkEditorStyle.cover_width,
           height: WorkEditorStyle.cover_height,
           fit: BoxFit.cover,
-          placeholder: (_, __) => Center(
+          placeholder: (_, _) => Center(
             child: SizedBox(
               width: 20,
               height: 20,
@@ -238,7 +238,7 @@ class StepBasic extends StatelessWidget {
               ),
             ),
           ),
-          errorWidget: (_, __, ___) => _build_placeholder_icon(),
+          errorWidget: (_, _, _) => _build_placeholder_icon(),
         ),
       );
     }
@@ -295,9 +295,11 @@ class StepBasic extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              easy.tr(has_cover
-                  ? 'creator_center.change_cover'
-                  : 'creator_center.upload_cover'),
+              easy.tr(
+                has_cover
+                    ? 'creator_center.change_cover'
+                    : 'creator_center.upload_cover',
+              ),
               style: TextStyle(
                 fontSize: 12,
                 color: ColorConstants.lightTextColor,
@@ -362,45 +364,54 @@ class StepBasic extends StatelessWidget {
   /// TODO 构建语种选择器。
   Widget _build_language_picker(BuildContext context) {
     final LanguageStore store = Get.find<LanguageStore>();
-    final LanguageInfo? current_lang = store.find_supported_language_by_code(
-      language_code,
-    );
-    final String display_name =
-        current_lang?.title ?? language_code.toUpperCase();
+    return Obx(() {
+      final LanguageInfo? current_lang = store.find_supported_language_by_code(
+        language_code,
+      );
+      // 隐藏受限语种的展示，不修改已有作品模型的原始语种和 ID。
+      final bool language_is_allowed = LanguagePermission.is_language_allowed(
+        language_code,
+      );
+      final String display_name = language_is_allowed
+          ? current_lang?.title ?? language_code.toUpperCase()
+          : easy.tr('creator_center.language_label');
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: () => _show_language_sheet(context),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        decoration: BoxDecoration(
-          color: AuthorStyle.secondary_surface(is_dark),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AuthorStyle.border(is_dark)),
-        ),
-        child: Row(
-          children: <Widget>[
-            _build_flag_icon(
-              current_lang ?? LanguageInfo(code: language_code),
-              size: 22,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                display_name,
-                style: StepUtils.input_text_style(is_dark),
+      return InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _show_language_sheet(context),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(
+            color: AuthorStyle.secondary_surface(is_dark),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AuthorStyle.border(is_dark)),
+          ),
+          child: Row(
+            children: <Widget>[
+              if (language_is_allowed) ...<Widget>[
+                _build_flag_icon(
+                  current_lang ?? LanguageInfo(code: language_code),
+                  size: 22,
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Text(
+                  display_name,
+                  style: StepUtils.input_text_style(is_dark),
+                ),
               ),
-            ),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              color: AuthorStyle.secondary_text(is_dark),
-              size: 22,
-            ),
-          ],
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: AuthorStyle.secondary_text(is_dark),
+                size: 22,
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   /// TODO 构建语种旗帜图标。
@@ -431,7 +442,7 @@ class StepBasic extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.contain,
-        errorWidget: (_, __, ___) => Image.asset(
+        errorWidget: (_, _, _) => Image.asset(
           LanguageUtil.get_language_asset_image(code),
           width: size,
           height: size,
@@ -451,7 +462,6 @@ class StepBasic extends StatelessWidget {
   /// TODO 显示语种选择弹窗。
   void _show_language_sheet(BuildContext context) {
     final LanguageStore store = Get.find<LanguageStore>();
-    final List<LanguageInfo> languages = store.visible_language_list;
 
     showModalBottomSheet<void>(
       context: context,
@@ -462,16 +472,14 @@ class StepBasic extends StatelessWidget {
           width: double.infinity,
           decoration: BoxDecoration(
             color: AuthorStyle.surface(is_dark),
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               BottomSheetDragHandle(is_dark: is_dark),
               Padding(
-                padding:
-                    const EdgeInsets.only(left: 12, right: 12, bottom: 8),
+                padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
                 child: Row(
                   children: <Widget>[
                     Text(
@@ -495,71 +503,89 @@ class StepBasic extends StatelessWidget {
                 ),
               ),
               Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  padding: EdgeInsets.fromLTRB(
-                    12,
-                    8,
-                    12,
-                    MediaQuery.paddingOf(sheet_context).bottom + 16,
-                  ),
-                  itemCount: languages.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 4),
-                  itemBuilder: (BuildContext _, int index) {
-                    final LanguageInfo lang = languages[index];
-                    final bool is_selected =
-                        lang.language_code == language_code;
+                child: Obx(() {
+                  // 弹窗保持响应式，登录状态或权限变化后立即隐藏受限选项。
+                  final List<LanguageInfo> languages = store
+                      .visible_language_list
+                      .toList();
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.fromLTRB(
+                      12,
+                      8,
+                      12,
+                      MediaQuery.paddingOf(sheet_context).bottom + 16,
+                    ),
+                    itemCount: languages.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 4),
+                    itemBuilder: (BuildContext _, int index) {
+                      final LanguageInfo lang = languages[index];
+                      final bool is_selected =
+                          lang.language_code == language_code;
 
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () {
-                        Navigator.pop(sheet_context);
-                        on_language_changed(lang.language_code);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: is_selected
-                              ? ColorConstants.themeColor.withValues(alpha: 0.10)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                          border: is_selected
-                              ? Border.all(
-                                  color: ColorConstants.themeColor.withValues(alpha: 0.30),
-                                )
-                              : null,
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            _build_flag_icon(lang, size: 24),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                lang.title,
-                                style: TextStyle(
-                                  color: AuthorStyle.primary_text(is_dark),
-                                  fontSize: 15,
-                                  fontWeight: is_selected
-                                      ? FontConfig.adjustedWeight(FontWeight.w500)
-                                      : AuthorStyle.body_weight,
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          // 防止列表重建前点击旧选项绕过刚变更的权限。
+                          if (!LanguagePermission.is_language_allowed(
+                            lang.language_code,
+                          )) {
+                            return;
+                          }
+                          Navigator.pop(sheet_context);
+                          on_language_changed(lang.language_code);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: is_selected
+                                ? ColorConstants.themeColor.withValues(
+                                    alpha: 0.10,
+                                  )
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            border: is_selected
+                                ? Border.all(
+                                    color: ColorConstants.themeColor.withValues(
+                                      alpha: 0.30,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          child: Row(
+                            children: <Widget>[
+                              _build_flag_icon(lang, size: 24),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  lang.title,
+                                  style: TextStyle(
+                                    color: AuthorStyle.primary_text(is_dark),
+                                    fontSize: 15,
+                                    fontWeight: is_selected
+                                        ? FontConfig.adjustedWeight(
+                                            FontWeight.w500,
+                                          )
+                                        : AuthorStyle.body_weight,
+                                  ),
                                 ),
                               ),
-                            ),
-                            if (is_selected)
-                              Icon(
-                                Icons.check_circle_rounded,
-                                color: ColorConstants.themeColor,
-                                size: 20,
-                              ),
-                          ],
+                              if (is_selected)
+                                Icon(
+                                  Icons.check_circle_rounded,
+                                  color: ColorConstants.themeColor,
+                                  size: 20,
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  );
+                }),
               ),
             ],
           ),

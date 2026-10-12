@@ -242,6 +242,27 @@ class Logic extends GetxController
     _store.set_novel_info(updated);
   }
 
+  /// 替换封面成功后同步本地详情数据，驱动界面重新展示封面。
+  ///
+  /// [cover_url] 新的封面地址。
+  /// [cover_width] 新的封面宽度。
+  /// [cover_height] 新的封面高度。
+  void update_story_cover({
+    required String cover_url,
+    required int cover_width,
+    required int cover_height,
+  }) {
+    final info = _store.novel_info.value;
+    if (info == null) return;
+    _store.set_novel_info(
+      info.replace_cover(
+        cover_url: cover_url,
+        cover_width: cover_width,
+        cover_height: cover_height,
+      ),
+    );
+  }
+
   /// 正文字号。
   late final RxDouble body_font_size;
 

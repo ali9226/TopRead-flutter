@@ -2,6 +2,8 @@
 
 import 'package:get/get.dart';
 import 'package:app/models/language_info.dart';
+import 'package:app/stores/user_information.dart';
+import 'package:app/util/language_util/language_permission.dart';
 import 'package:app/util/storage_util/index.dart';
 
 /* TODO
@@ -14,8 +16,14 @@ class LanguageStore extends GetxController {
   /// 本地存在翻译文件的语种代码列表（如 ['en', 'zh', 'sw', 'fr']）。
   final List<String> asset_language_code_list;
 
-  /// 原始语种列表。
+  /// 当前用户有权使用的语种列表，所有对外入口都经过权限过滤。
   final RxList<LanguageInfo> language_list = <LanguageInfo>[].obs;
+
+  /// 私有的接口原始数据，登录权限变化时可重新计算，不暴露给菜单。
+  List<LanguageInfo> _source_language_list = <LanguageInfo>[];
+
+  /// 用户资料及登录状态订阅，控制器关闭时释放。
+  Worker? _user_permission_worker;
 
   /// 过滤后应用支持的语种列表。
   final RxList<LanguageInfo> supported_language_list = <LanguageInfo>[].obs;
@@ -37,6 +45,19 @@ class LanguageStore extends GetxController {
   void onInit() {
     super.onInit();
     _load_language_list_from_storage();
+    if (Get.isRegistered<UserInformation>()) {
+      final UserInformation user_information = Get.find<UserInformation>();
+      _user_permission_worker = everAll([
+        user_information.userInfo,
+        user_information.isLoggedIn,
+      ], (_) => _refresh_available_language_list());
+    }
+  }
+
+  @override
+  void onClose() {
+    _user_permission_worker?.dispose();
+    super.onClose();
   }
 
   /// TODO 从本地存储恢复语种列表。
@@ -57,11 +78,31 @@ class LanguageStore extends GetxController {
   }
 
   /// TODO 保存语种列表并计算派生状态
-  /// 
+  ///
   /// 核心逻辑：将接口返回的列表与本地 i18n 资源进行交叉匹配。
   void save_language_list(List<LanguageInfo> data, {bool persist = true}) {
-    // 1. 原始数据备份
-    final List<LanguageInfo> next_language_list = List<LanguageInfo>.from(data);
+    _source_language_list = List<LanguageInfo>.from(data);
+    _refresh_available_language_list();
+    loaded.value = true;
+
+    // 原始列表仅用于私有缓存；恢复时仍会重新检查当前用户权限。
+    if (persist) {
+      StorageUtil.saveList(
+        language_list_key,
+        _source_language_list
+            .map((LanguageInfo item) => item.to_json())
+            .toList(),
+      );
+    }
+  }
+
+  /// 资料刷新、登录、退出均重新派生列表，接口返回中文也不能绕过权限。
+  void _refresh_available_language_list() {
+    final List<LanguageInfo> next_language_list = _source_language_list
+        .where(
+          (item) => LanguagePermission.is_language_allowed(item.language_code),
+        )
+        .toList();
 
     // 2. 过滤出本地有翻译资源的语种
     final List<LanguageInfo> next_supported_language_list = next_language_list
@@ -78,27 +119,17 @@ class LanguageStore extends GetxController {
     language_list.assignAll(next_language_list);
     supported_language_list.assignAll(next_supported_language_list);
     visible_language_list.assignAll(next_visible_language_list);
-    
+
     // 5. 确定默认语种
     default_language_info.value = _resolve_default_language_info(
       next_supported_language_list,
     );
-    
-    loaded.value = true;
-
-    // 6. 持久化存储
-    if (persist) {
-      StorageUtil.saveList(
-        language_list_key,
-        next_language_list.map((LanguageInfo item) => item.to_json()).toList(),
-      );
-    }
   }
 
   /// 判断语种是否受本地资源支持
   bool _is_supported_language(LanguageInfo item) {
     // 规范化接口代码（如 en-US -> en）
-    final String code = item.language_code; 
+    final String code = item.language_code;
     if (code.isEmpty || item.is_removed) {
       return false;
     }
@@ -112,6 +143,9 @@ class LanguageStore extends GetxController {
       if (item.is_default_language) {
         return item;
       }
+    }
+    for (final LanguageInfo item in data) {
+      if (item.language_code == 'en') return item;
     }
     if (data.isNotEmpty) {
       return data.first;
@@ -135,7 +169,11 @@ class LanguageStore extends GetxController {
     if (default_language_info.value != null) {
       return default_language_info.value!.language_code;
     }
-    return asset_language_code_list.isNotEmpty ? asset_language_code_list.first : 'en';
+    if (asset_language_code_list.contains('en')) return 'en';
+    return asset_language_code_list.firstWhere(
+      LanguagePermission.is_language_allowed,
+      orElse: () => 'en',
+    );
   }
 
   String _normalize_language_code(String code) {

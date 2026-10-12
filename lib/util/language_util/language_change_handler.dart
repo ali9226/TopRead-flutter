@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:app/fcm/register_token.dart';
 import 'package:app/stores/language_store.dart';
 import 'package:app/util/log_util.dart';
+import 'package:app/util/language_util/language_permission.dart';
 import 'package:app/util/storage_util/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -164,9 +165,14 @@ class LanguageChangeHandler {
     BuildContext context,
     String new_language_code,
   ) async {
-    final String normalized_code = _normalize_language_code(new_language_code);
+    final String normalized_code = LanguagePermission.resolve_language_code(
+      new_language_code,
+    );
     if (_last_language_code == normalized_code &&
         context.locale.languageCode == normalized_code) {
+      if (!LanguagePermission.is_language_allowed(new_language_code)) {
+        await StorageUtil.saveData(LanguageStore.language_key, normalized_code);
+      }
       return false;
     }
 
@@ -177,7 +183,9 @@ class LanguageChangeHandler {
     );
 
     _last_language_code = normalized_code;
-    final _LanguageRefreshRun refresh_run = _LanguageRefreshRun(refresh_context);
+    final _LanguageRefreshRun refresh_run = _LanguageRefreshRun(
+      refresh_context,
+    );
     _active_run = refresh_run;
     is_refreshing.value = true;
     logUtil(
@@ -195,6 +203,9 @@ class LanguageChangeHandler {
     if (!context.mounted || !refresh_context.is_current) {
       return false;
     }
+    if (!LanguagePermission.is_language_allowed(normalized_code)) {
+      return change_language(context, 'en');
+    }
 
     await context.setLocale(Locale(normalized_code));
     if (!refresh_context.is_current) {
@@ -207,7 +218,9 @@ class LanguageChangeHandler {
 
   /// 兼容已先行切换 Locale 的旧调用入口。
   static Future<void> onLanguageChanged(String new_language_code) async {
-    final String normalized_code = _normalize_language_code(new_language_code);
+    final String normalized_code = LanguagePermission.resolve_language_code(
+      new_language_code,
+    );
     if (_last_language_code == normalized_code) return;
 
     final LanguageRefreshContext refresh_context = LanguageRefreshContext(
@@ -215,7 +228,9 @@ class LanguageChangeHandler {
       revision: ++_revision,
     );
     _last_language_code = normalized_code;
-    final _LanguageRefreshRun refresh_run = _LanguageRefreshRun(refresh_context);
+    final _LanguageRefreshRun refresh_run = _LanguageRefreshRun(
+      refresh_context,
+    );
     _active_run = refresh_run;
     is_refreshing.value = true;
 
@@ -370,7 +385,15 @@ class LanguageChangeHandler {
       LanguageStore.language_key,
     );
     if (current_code == null) return;
-    _last_language_code = _normalize_language_code(current_code);
+    _last_language_code = LanguagePermission.resolve_language_code(
+      current_code,
+    );
+    if (!LanguagePermission.is_language_allowed(current_code)) {
+      await StorageUtil.saveData(
+        LanguageStore.language_key,
+        _last_language_code!,
+      );
+    }
     await _update_fcm_language(_last_language_code!);
   }
 }

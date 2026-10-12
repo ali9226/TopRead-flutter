@@ -36,6 +36,7 @@ import 'package:app/pages/short_story_read/utils/calculate_current_story_scroll_
 import 'package:app/pages/short_story_read/utils/resolve_story_native_ad_insert_index.dart';
 import 'package:app/pages/ranking_full_list/widgets/starfield_decoration.dart';
 import 'package:app/components/novel_cover/index.dart';
+import 'package:app/components/title_with_story_id/index.dart';
 import 'package:app/pages/short_story_read/widgets/skeleton_screen.dart';
 import 'package:app/pages/short_story_read/widgets/catalog/catalog_sheet.dart';
 import 'package:app/pages/short_story_read/widgets/reading_settings_sheet.dart';
@@ -2218,6 +2219,15 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   }
 
   /// 构建顶部下拉查看上一篇提示。
+  /// 替换封面成功回调：同步本地详情与缓存并刷新封面展示。
+  void _on_cover_replaced(String cover_url, int cover_width, int cover_height) {
+    _logic.update_story_cover(
+      cover_url: cover_url,
+      cover_width: cover_width,
+      cover_height: cover_height,
+    );
+  }
+
   Widget _buildPreviousPullHeader({
     required bool is_dark,
     required double status_bar_height,
@@ -2570,9 +2580,11 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Text(
-                                _logic.title,
-                                style: TextStyle(
+                              child: TitleWithStoryId(
+                                title: _logic.title,
+                                story_id: _logic.story_id,
+                                on_cover_replaced: _on_cover_replaced,
+                                title_style: TextStyle(
                                   fontSize: title_font_size,
                                   fontWeight: FontConfig.adjustedWeight(
                                     FontWeight.w500,
@@ -2585,9 +2597,11 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                           ],
                         )
                       else
-                        Text(
-                          _logic.title,
-                          style: TextStyle(
+                        TitleWithStoryId(
+                          title: _logic.title,
+                          story_id: _logic.story_id,
+                          on_cover_replaced: _on_cover_replaced,
+                          title_style: TextStyle(
                             fontSize: title_font_size,
                             fontWeight: FontConfig.adjustedWeight(
                               FontWeight.w500,

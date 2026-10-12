@@ -378,6 +378,22 @@ class ShortStoryReadLogic {
     _write_story_detail_cache(story_id, updated);
   }
 
+  /// 替换封面成功后同步本地详情与缓存，驱动界面重新展示封面。
+  void update_story_cover({
+    required String cover_url,
+    required int cover_width,
+    required int cover_height,
+  }) {
+    if (story_data.value == null) return;
+    final updated = story_data.value!.copyWith(
+      cover_url: cover_url,
+      cover_width: cover_width,
+      cover_height: cover_height,
+    );
+    story_data.value = updated;
+    _write_story_detail_cache(story_id, updated);
+  }
+
   /// 点赞数。
   int get like_count => story_data.value?.like_count ?? 0;
 
