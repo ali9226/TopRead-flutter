@@ -14,6 +14,7 @@ import 'package:app/pages/bookshelf/widgets/bookshelf_book_card.dart';
 import 'package:app/stores/bookshelf_store.dart';
 import 'package:app/util/dialog/show_message.dart';
 import 'package:app/util/novel_navigation/index.dart';
+import 'package:app/util/router/router_util.dart';
 
 /// 书架网格内容类型（历史/收藏）。
 enum BookshelfContentType { history, favorite }
@@ -59,7 +60,7 @@ class BookshelfGridContent extends StatefulWidget {
   final void Function(String item_id)? on_item_removed;
 
   /// 删除/取消收藏的API调用函数（由外部传入）。
-  final Future<bool> Function(String novel_id)? on_delete;
+  final Future<bool> Function(BookshelfBookItem book_item)? on_delete;
 
   const BookshelfGridContent({
     super.key,
@@ -441,8 +442,15 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
     await widget.on_refresh?.call();
   }
 
-  /// 跳转到阅读页面。
+  /// 跳转到阅读页面：漫画进漫画详情，小说按发布状态进对应阅读页。
   void _navigate_to_read(BookshelfBookItem book_item) {
+    if (book_item.content_type == 'comic') {
+      routerUtil(
+        path: '/comics/detail?id=${book_item.novel_id}',
+        type: 'push',
+      );
+      return;
+    }
     navigate_to_novel(
       id: int.tryParse(book_item.novel_id) ?? 0,
       title: book_item.title,
@@ -481,7 +489,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
         if (!mounted) return;
 
         final bool removed =
-            await widget.on_delete?.call(book_item.novel_id) ?? false;
+            await widget.on_delete?.call(book_item) ?? false;
         if (!mounted || !removed) return;
 
         // 标记为正在移除，触发位置重排动画 + 淡出动画。

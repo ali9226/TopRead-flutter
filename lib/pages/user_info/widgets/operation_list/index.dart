@@ -21,6 +21,7 @@ import 'package:app/util/dialog/show_message.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/router/router_util.dart';
+import 'package:app/pages/comics/logic.dart';
 import 'operation_li.dart';
 import 'logic.dart';
 import 'style.dart';
@@ -159,6 +160,20 @@ class _OperationListState extends State<OperationList> {
                   ? '/author_center'
                   : '/author_apply';
               routerUtil(path: path);
+            },
+          ),
+        );
+      }
+      if (isLoggedIn) {
+        group1Children.add(
+          OperationLi(
+            icon: "image",
+            title: easy.tr('comics.my_comics'),
+            type: 1,
+            showDivider: true,
+            onTap: () {
+              if (!comics_require_login()) return;
+              routerUtil(path: '/comics/mine');
             },
           ),
         );

@@ -1,11 +1,9 @@
 import 'dart:io';
 import 'dart:math';
-import 'package:app/config/font_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
-import 'package:app/config/layout_config.dart';
 import 'package:app/pages/user_info/widgets/utils/upload_avatar.dart';
 import 'package:app/components/image_source_sheet/index.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
@@ -179,11 +177,6 @@ class _UserInfoTopState extends State<UserInfoTop>
     final double safeLeft = mediaPadding.left;
     final double safeRight = mediaPadding.right;
     final double safeHorizontal = mediaPadding.horizontal;
-    final bool isImmersiveStatusBar = statusBarHeight > 0;
-    final double resolvedTopPadding =
-        Style.topPadding + (isImmersiveStatusBar ? statusBarHeight : 0);
-    final double contentTopPadding =
-        resolvedTopPadding + Style.avatarSpacingFromLanguage;
 
     return SizedBox(
       width: double.infinity,
@@ -560,93 +553,3 @@ class _UserInfoTopState extends State<UserInfoTop>
   }
 }
 
-class _AvatarActionTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool dark;
-  final Color iconBackground;
-  final Color iconColor;
-  final VoidCallback onTap;
-
-  const _AvatarActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.dark,
-    required this.iconBackground,
-    required this.iconColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: dark ? const Color(0xFF161F2B) : const Color(0xFFF8FAFD),
-      borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
-            border: Border.all(
-              color: dark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : const Color(0xFFE7ECF3),
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: iconBackground,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                alignment: Alignment.center,
-                child: Icon(icon, color: iconColor, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                        color: dark ? Colors.white : const Color(0xFF111827),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                        color: dark
-                            ? Colors.white.withValues(alpha: 0.55)
-                            : const Color(0xFF6B7280),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 16,
-                color: dark
-                    ? Colors.white.withValues(alpha: 0.45)
-                    : const Color(0xFF94A3B8),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

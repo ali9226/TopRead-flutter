@@ -29,8 +29,11 @@ class BookshelfBookItem {
   /// 数据唯一标识。
   final String id;
 
-  /// 小说ID。
+  /// 作品ID（小说或漫画）。
   final String novel_id;
+
+  /// 内容类型：'novel' 小说，'comic' 漫画。
+  final String content_type;
 
   /// 标题文案。
   final String title;
@@ -65,6 +68,7 @@ class BookshelfBookItem {
   BookshelfBookItem({
     required this.id,
     required this.novel_id,
+    this.content_type = 'novel',
     required this.title,
     this.publish_status = 1,
     this.introduction = '',
@@ -523,6 +527,7 @@ class BookshelfStore extends GetxController {
     final List<Color> colors =
         _cover_gradient_colors[index % _cover_gradient_colors.length];
     final bool has_progress = item.read_progress > 0;
+    final bool is_comic = item.content_type == 'comic';
 
     String progress_key;
     Map<String, String> progress_args;
@@ -539,12 +544,15 @@ class BookshelfStore extends GetxController {
     return BookshelfBookItem(
       id: item.id,
       novel_id: item.novel_id,
+      content_type: item.content_type,
       title: item.novel_title,
       publish_status: item.publish_status,
       introduction: item.introduction,
       category_names: item.category_names,
       progress_key: progress_key,
       progress_args: progress_args,
+      // 漫画封面角标标识内容类型，便于与小说区分。
+      tag_key: is_comic ? 'bookshelf.tags.comic' : null,
       cover_image_url: item.cover_url.isNotEmpty ? item.cover_url : null,
       cover_start_color: colors[0],
       cover_end_color: colors[1],
@@ -741,8 +749,12 @@ class BookshelfStore extends GetxController {
         _cover_gradient_colors[index % _cover_gradient_colors.length];
     final bool has_progress = item.read_progress > 0;
 
+    final bool is_comic = item.content_type == 'comic';
     String? tag_key;
-    if (item.publish_status == 2) {
+    // 漫画角标标识内容类型；小说角标标识连载状态。
+    if (is_comic) {
+      tag_key = 'bookshelf.tags.comic';
+    } else if (item.publish_status == 2) {
       tag_key = 'bookshelf.tags.completed';
     } else if (item.publish_status == 1) {
       tag_key = 'bookshelf.tags.serializing';
@@ -766,6 +778,7 @@ class BookshelfStore extends GetxController {
     return BookshelfBookItem(
       id: item.id,
       novel_id: item.novel_id,
+      content_type: item.content_type,
       title: item.novel_title,
       publish_status: item.publish_status,
       introduction: item.introduction,

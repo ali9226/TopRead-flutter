@@ -36,11 +36,19 @@ class CategoryFilter extends StatefulWidget {
   /// 初始选中的分类 id（可选，用于从外部传入默认选中项）。
   final int? initial_category_id;
 
+  /// 外部传入的分类列表（如漫画分类）；为空时使用 PreferenceStore 偏好分类。
+  final List<PreferenceItem>? categories;
+
+  /// 外部分类是否正在加载；为 true 时展示骨架屏。
+  final bool is_loading;
+
   const CategoryFilter({
     super.key,
     required this.on_category_changed,
     this.category_scroll_controller,
     this.initial_category_id,
+    this.categories,
+    this.is_loading = false,
   });
 
   @override
@@ -68,7 +76,11 @@ class _CategoryFilterState extends State<CategoryFilter> {
     super.initState();
     _category_scroll_controller =
         widget.category_scroll_controller ?? ScrollController();
-    _logic = CategoryFilterLogic(context, initial_category_id: widget.initial_category_id);
+    _logic = CategoryFilterLogic(
+      context,
+      initial_category_id: widget.initial_category_id,
+      external_category_list: widget.categories,
+    );
     
     // 如果有初始分类 id，在首帧后滚动到对应位置
     if (widget.initial_category_id != null && widget.initial_category_id! > 0) {
@@ -78,6 +90,14 @@ class _CategoryFilterState extends State<CategoryFilter> {
         }
       });
     }
+  }
+
+  @override
+  void didUpdateWidget(CategoryFilter old_widget) {
+    super.didUpdateWidget(old_widget);
+    // 分类列表异步加载完成后父组件会传入新数据，同步到逻辑层。
+    // 始终赋值，避免调用方原地修改列表时比较引用失效。
+    _logic.external_category_list = widget.categories;
   }
 
   @override
@@ -200,9 +220,16 @@ class _CategoryFilterState extends State<CategoryFilter> {
       }
       _last_language_code = language_code;
 
-      /// 偏好数据未加载完成或正在刷新时，展示骨架屏。
-      final PreferenceStore preference_store = Get.find<PreferenceStore>();
-      final bool show_skeleton = !preference_store.loaded.value || preference_store.is_loading.value;
+      /// 分类数据未就绪时展示骨架屏。
+      /// 外部传入分类时由 [is_loading] 控制；否则等待偏好数据加载。
+      bool show_skeleton = widget.is_loading;
+      if (widget.categories == null) {
+        final PreferenceStore preference_store = Get.find<PreferenceStore>();
+        show_skeleton =
+            show_skeleton ||
+            !preference_store.loaded.value ||
+            preference_store.is_loading.value;
+      }
       if (show_skeleton) {
         return _build_skeleton_bar(is_dark);
       }

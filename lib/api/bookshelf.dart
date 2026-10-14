@@ -65,6 +65,9 @@ class ReadRecordItem {
   /// 分类名称（逗号分隔）。
   final String category_names;
 
+  /// 内容类型：'novel' 小说，'comic' 漫画。
+  final String content_type;
+
   ReadRecordItem({
     required this.id,
     required this.novel_id,
@@ -85,6 +88,7 @@ class ReadRecordItem {
     this.cover_height = 0,
     required this.chapter_count,
     required this.category_names,
+    this.content_type = 'novel',
   });
 
   factory ReadRecordItem.from_json(Map<String, dynamic> json) {
@@ -108,6 +112,7 @@ class ReadRecordItem {
       cover_height: _parse_int(json['cover_height']),
       chapter_count: _parse_int(json['chapter_count']),
       category_names: json['category_names']?.toString() ?? '',
+      content_type: json['content_type']?.toString() ?? 'novel',
     );
   }
 
@@ -193,6 +198,9 @@ class FavoriteItem {
   /// 分类名称（逗号分隔）。
   final String category_names;
 
+  /// 内容类型：'novel' 小说，'comic' 漫画。
+  final String content_type;
+
   FavoriteItem({
     required this.id,
     required this.novel_id,
@@ -216,6 +224,7 @@ class FavoriteItem {
     required this.introduction,
     required this.read_progress,
     required this.category_names,
+    this.content_type = 'novel',
   });
 
   factory FavoriteItem.from_json(Map<String, dynamic> json) {
@@ -242,6 +251,7 @@ class FavoriteItem {
       introduction: json['introduction']?.toString() ?? '',
       read_progress: _parse_double(json['read_progress']),
       category_names: json['category_names']?.toString() ?? '',
+      content_type: json['content_type']?.toString() ?? 'novel',
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:app/pages/home/widgets/home_tab_bar/index.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/index.dart';
 import 'package:app/pages/home/widgets/tab_contents/short_story_tab/index.dart';
+import 'package:app/pages/home/widgets/tab_contents/comics_tab/index.dart';
 import 'package:app/pages/home/widgets/tab_contents/default_tab/index.dart';
 import 'package:app/stores/home_store.dart';
 import 'package:app/models/home_classification.dart';
@@ -33,6 +34,10 @@ class HomeTabs extends StatelessWidget {
         }
         if (classification_id == 145) {
           return const ShortStoryTabContent(key: ValueKey('short_story_tab'));
+        }
+        // 漫画分类：展示漫画列表。
+        if (classification_id == 146) {
+          return const ComicsTabContent(key: ValueKey('comics_tab'));
         }
         final String classification_scope = classification_id > 0
             ? '$classification_id'

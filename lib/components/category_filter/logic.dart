@@ -28,7 +28,15 @@ class CategoryFilterLogic {
   /// 当前页面上下文。
   final BuildContext context;
 
-  CategoryFilterLogic(this.context, {int? initial_category_id}) {
+  /// 外部传入的分类列表（如漫画分类）；为空时回退到 PreferenceStore。
+  /// 可在 widget 更新时替换，支持分类异步加载完成后的刷新。
+  List<PreferenceItem>? external_category_list;
+
+  CategoryFilterLogic(
+    this.context, {
+    int? initial_category_id,
+    List<PreferenceItem>? external_category_list,
+  }) : external_category_list = external_category_list {
     // 如果传入了初始分类 id，则设置为默认选中
     if (initial_category_id != null && initial_category_id > 0) {
       selected_category_id.value = initial_category_id;
@@ -41,11 +49,10 @@ class CategoryFilterLogic {
     return device_info.theme.value == ThemeMode.dark;
   }
 
-  /// 从 PreferenceStore 中获取 id=2 的分类列表。
-  ///
-  /// 返回 preference_list 中 id=2 的 Preference 对象的 data_list，
-  /// 如果未找到则返回空列表。
+  /// 分类列表：优先使用外部传入的分类（如漫画分类），
+  /// 否则从 PreferenceStore 中获取 id=2 的分类列表。
   List<PreferenceItem> get category_list {
+    if (external_category_list != null) return external_category_list!;
     final Preference? preference =
         Get.find<PreferenceStore>().find_preference_by_id(2);
     return preference?.data_list ?? <PreferenceItem>[];

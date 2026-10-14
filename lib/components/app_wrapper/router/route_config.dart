@@ -29,6 +29,11 @@ import 'package:app/pages/author_center/editor_route.dart';
 import 'package:app/pages/published_long_novel_editor/index.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/work_editor/index.dart';
+import 'package:app/pages/comics/detail/index.dart';
+import 'package:app/pages/comics/reader/index.dart';
+import 'package:app/pages/comics/comments/index.dart';
+import 'package:app/pages/comics/mine/index.dart';
+import 'package:app/pages/comics/editor/index.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/pages/login/index.dart' as login_page;
 
@@ -92,6 +97,44 @@ class RouteConfig {
               builder: (context, state) => const SizedBox.shrink(),
             ),
           ],
+        ),
+        // 漫画具有独立作品、语种与图片阅读路由，支持分享深链接。
+        GoRoute(
+          path: '/comics/detail',
+          pageBuilder: (context, state) => buildRoutePage(state: state, child: ComicDetailPage(
+            comic_id: int.tryParse(state.uri.queryParameters['id'] ?? '') ?? 0,
+          )),
+        ),
+        GoRoute(
+          path: '/comics/read',
+          pageBuilder: (context, state) => buildRoutePage(state: state, child: ComicReaderPage(
+            chapter_id: int.tryParse(state.uri.queryParameters['chapter_id'] ?? '') ?? 0,
+            initial_page: int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 0,
+          )),
+        ),
+        GoRoute(
+          path: '/comics/comments',
+          pageBuilder: (context, state) => buildRoutePage(state: state, child: ComicCommentsPage(
+            comic_id: int.tryParse(state.uri.queryParameters['comic_id'] ?? '') ?? 0,
+            chapter_id: int.tryParse(state.uri.queryParameters['chapter_id'] ?? ''),
+          )),
+        ),
+        // 创作入口：我的漫画列表与漫画编辑器。
+        GoRoute(
+          path: '/comics/mine',
+          name: 'comics_mine',
+          pageBuilder: (context, state) =>
+              buildRoutePage(state: state, child: const ComicsMinePage()),
+        ),
+        GoRoute(
+          path: '/comics/editor',
+          name: 'comics_editor',
+          pageBuilder: (context, state) => buildRoutePage(
+            state: state,
+            child: ComicEditorPage(
+              comic_id: int.tryParse(state.uri.queryParameters['id'] ?? '') ?? 0,
+            ),
+          ),
         ),
         GoRoute(
           path: '/login',
