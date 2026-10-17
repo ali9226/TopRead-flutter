@@ -1,112 +1,81 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'dart:ui';
-
 import 'package:easy_localization/easy_localization.dart' as easy;
-
 import 'package:flutter/material.dart';
-
+import 'package:app/components/svg_icon/index.dart';
 import 'package:app/models/comics.dart';
 import 'package:app/pages/comics/detail/style.dart';
 import 'package:app/pages/comics/widgets/comic_image.dart';
 
-/// 沉浸式海报头：整幅封面 + 渐变遮罩 + 悬浮返回/评论入口。
-///
-/// 封面按宽度铺满，高度随屏幕宽度比例变化；底部渐变过渡到内容卡片背景，
-/// 保证叠加后的标题在任何封面上都清晰可读。
+/// TODO 复用小说详情的封面尺寸与留白，完整书封独立展示，取消满幅裁切和白色渐变。
 class ComicDetailHeroHeader extends StatelessWidget {
-  /// 作品详情数据。
   final ComicDetail detail;
-
-  /// 返回按钮点击回调。
   final VoidCallback on_back;
-
-  /// 评论按钮点击回调。
   final VoidCallback on_comments;
-
-  /// 当前是否为夜间模式。
   final bool is_dark;
-
+  final Widget? cover_image;
   const ComicDetailHeroHeader({
     super.key,
     required this.detail,
     required this.on_back,
     required this.on_comments,
     required this.is_dark,
+    this.cover_image,
   });
 
   @override
   Widget build(BuildContext context) {
-    final String cover_url =
-        detail.selected_language?.cover_url.isNotEmpty == true
+    final cover_url = detail.selected_language?.cover_url.isNotEmpty == true
         ? detail.selected_language!.cover_url
         : detail.comic.cover_url;
-
-    /// 内容卡片背景色，渐变终点与此一致，形成无缝过渡。
-    final Color card_bg = is_dark
-        ? ComicDetailStyle.content_card_dark
-        : ComicDetailStyle.content_card_light;
+    final double top_padding = MediaQuery.paddingOf(context).top;
 
     return SliverToBoxAdapter(
+      // TODO 封面 100% 宽度、固定高度，顶部贯穿状态栏；返回/评论浮于封面之上。
       child: SizedBox(
-        height: _hero_height(context),
-        width: double.infinity,
+        key: const ValueKey('comic_detail_cover'),
+        height: ComicDetailStyle.cover_height,
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            /// 封面图。
-            ComicImage(url: cover_url, semantic_label: detail.comic.title),
-
-            /// 遮罩层：轻微压暗 + 底部渐变到卡片背景。
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: <Color>[
-                      Colors.black.withValues(
-                        alpha: ComicDetailStyle.hero_scrim_opacity,
-                      ),
-                      Colors.black.withValues(
-                        alpha: ComicDetailStyle.hero_scrim_opacity * 0.6,
-                      ),
-                      card_bg.withValues(
-                        alpha: ComicDetailStyle.hero_gradient_end_opacity,
-                      ),
-                      card_bg,
-                    ],
-                    stops: const <double>[
-                      0.0,
-                      ComicDetailStyle.hero_gradient_start,
-                      0.86,
-                      1.0,
-                    ],
-                  ),
-                ),
+            /// 封面图：铺满整个区域（含状态栏），底部圆角。
+            ClipRRect(
+              key: const ValueKey('comic_detail_cover_art'),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(ComicDetailStyle.cover_radius),
+                bottomRight: Radius.circular(ComicDetailStyle.cover_radius),
               ),
+              child:
+                  cover_image ??
+                  ComicImage(
+                    url: cover_url,
+                    semantic_label: detail.comic.title,
+                    fit: BoxFit.cover,
+                  ),
             ),
 
-            /// 顶部悬浮操作区：返回 + 评论。
+            /// 顶部悬浮操作：下移状态栏高度，浮在封面之上。
             Positioned(
-              top: MediaQuery.paddingOf(context).top +
-                  ComicDetailStyle.floating_action_margin.top,
+              top: top_padding + ComicDetailStyle.floating_action_margin.top,
               left: ComicDetailStyle.floating_action_margin.left,
               right: ComicDetailStyle.floating_action_margin.right,
               child: Row(
                 children: <Widget>[
-                  _FloatingGlassButton(
-                    icon: Icons.arrow_back_rounded,
-                    semantic_label: easy.tr('comics.cancel'),
+                  ComicDetailFloatingButton(
+                    key: const ValueKey('comic_detail_back'),
+                    svg_name: 'right',
+                    reverse: true,
+                    label: MaterialLocalizations.of(context).backButtonTooltip,
                     is_dark: is_dark,
-                    onTap: on_back,
+                    on_pressed: on_back,
                   ),
                   const Spacer(),
-                  _FloatingGlassButton(
-                    icon: Icons.chat_bubble_outline_rounded,
-                    semantic_label: easy.tr('comics.comments'),
+                  ComicDetailFloatingButton(
+                    key: const ValueKey('comic_detail_comments'),
+                    svg_name: 'message',
+                    label: easy.tr('comics.comments'),
                     is_dark: is_dark,
-                    onTap: on_comments,
+                    on_pressed: on_comments,
                   ),
                 ],
               ),
@@ -116,66 +85,54 @@ class ComicDetailHeroHeader extends StatelessWidget {
       ),
     );
   }
-
-  /// 计算海报高度：按屏幕宽度缩放，并限制在可读区间内。
-  double _hero_height(BuildContext context) {
-    final double width = MediaQuery.sizeOf(context).width;
-    return (width * ComicDetailStyle.hero_height_factor).clamp(
-      ComicDetailStyle.hero_min_height,
-      ComicDetailStyle.hero_max_height,
-    );
-  }
 }
 
-/// 海报上的玻璃拟态悬浮按钮。
-class _FloatingGlassButton extends StatelessWidget {
-  /// 图标数据。
-  final IconData icon;
-
-  /// 无障碍语义标签。
-  final String semantic_label;
-
-  /// 当前是否为夜间模式。
+/// TODO 48像素点击区内使用36像素无描边半透明圆，日黑底白图标、夜白底黑图标。
+class ComicDetailFloatingButton extends StatelessWidget {
+  final String svg_name;
+  final bool reverse;
+  final String label;
   final bool is_dark;
-
-  /// 点击回调。
-  final VoidCallback onTap;
-
-  const _FloatingGlassButton({
-    required this.icon,
-    required this.semantic_label,
+  final VoidCallback on_pressed;
+  const ComicDetailFloatingButton({
+    super.key,
+    required this.svg_name,
+    this.reverse = false,
+    required this.label,
     required this.is_dark,
-    required this.onTap,
+    required this.on_pressed,
   });
-
   @override
   Widget build(BuildContext context) => Tooltip(
-    message: semantic_label,
+    message: label,
     child: Semantics(
       button: true,
-      label: semantic_label,
-      child: ClipOval(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: ComicDetailStyle.floating_button_blur,
-            sigmaY: ComicDetailStyle.floating_button_blur,
-          ),
-          child: Material(
-            color: Colors.white.withValues(
-              alpha: is_dark
-                  ? ComicDetailStyle.floating_button_bg_opacity * 0.7
-                  : ComicDetailStyle.floating_button_bg_opacity,
-            ),
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onTap,
-              child: SizedBox.square(
-                dimension: ComicDetailStyle.back_button_size,
-                child: Icon(
-                  icon,
-                  size: ComicDetailStyle.back_icon_size,
-                  color: is_dark ? Colors.white : const Color(0xFF161C28),
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkResponse(
+          onTap: on_pressed,
+          radius: ComicDetailStyle.touch_target / 2,
+          customBorder: const CircleBorder(),
+          child: SizedBox.square(
+            dimension: ComicDetailStyle.touch_target,
+            child: Center(
+              child: Material(
+                color: ComicDetailStyle.floating_background(is_dark),
+                shape: const CircleBorder(),
+                child: SizedBox.square(
+                  dimension: ComicDetailStyle.floating_visual_size,
+                  child: Center(
+                    child: RotatedBox(
+                      quarterTurns: reverse ? 2 : 0,
+                      child: SvgIcon(
+                        name: svg_name,
+                        width: ComicDetailStyle.back_icon_size,
+                        height: ComicDetailStyle.back_icon_size,
+                        color: ComicDetailStyle.floating_foreground(is_dark),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

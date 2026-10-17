@@ -1,33 +1,20 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'dart:ui';
-
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-
 import 'package:app/pages/comics/reader/style.dart';
+import 'package:app/pages/comics/reader/widgets/control_button.dart';
 
-/// 阅读页底部渐变遮罩控制条：上一章 / 页码胶囊 / 下一章。
-///
-/// 顶部叠一条细进度条，底部渐变遮罩让控件悬浮于画面之上。
+/// TODO 与小说ReadBottomBar保持同一布局：轻量前后章和进度区、下方图标文字操作，无卡片边框。
 class ComicReaderBottomScrim extends StatelessWidget {
-  /// 当前页码（从 0 开始）。
   final int page_index;
-
-  /// 总页数。
   final int page_count;
-
-  /// 是否有上一章。
   final bool has_previous_chapter;
-
-  /// 是否有下一章。
   final bool has_next_chapter;
-
-  /// 上一章点击回调。
   final VoidCallback on_previous_chapter;
-
-  /// 下一章点击回调。
   final VoidCallback on_next_chapter;
-
+  final VoidCallback? on_open_catalog;
+  final VoidCallback? on_comments;
   const ComicReaderBottomScrim({
     super.key,
     required this.page_index,
@@ -36,122 +23,134 @@ class ComicReaderBottomScrim extends StatelessWidget {
     required this.has_next_chapter,
     required this.on_previous_chapter,
     required this.on_next_chapter,
+    this.on_open_catalog,
+    this.on_comments,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final double bottom_padding = MediaQuery.paddingOf(context).bottom;
-    final String page_label = page_count > 0
-        ? '${page_index + 1} / $page_count'
-        : '';
-
-    return SizedBox(
-      height: ComicReaderStyle.bottom_bar_height + bottom_padding,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          /// 底部渐变遮罩。
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: <Color>[
-                    Colors.transparent,
-                    Colors.black.withValues(
-                      alpha: ComicReaderStyle.bottom_scrim_opacity * 0.5,
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: ComicReaderStyle.panel_background(context),
+      border: Border(
+        top: BorderSide(
+          color: ComicReaderStyle.border_color(context),
+          width: ComicReaderStyle.divider_width,
+        ),
+      ),
+    ),
+    child: SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: ComicReaderStyle.toolbar_padding,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Expanded(
+                    child: ComicReaderControlButton(
+                      icon: Icons.arrow_back_rounded,
+                      show_icon: false,
+                      label: tr('comics.previous_chapter'),
+                      on_pressed: has_previous_chapter
+                          ? on_previous_chapter
+                          : null,
                     ),
-                    Colors.black.withValues(
-                      alpha: ComicReaderStyle.bottom_scrim_opacity,
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal:
+                            ComicReaderStyle.progress_horizontal_padding,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            tr(
+                              'comics.reader_page_progress',
+                              namedArgs: <String, String>{
+                                'page':
+                                    '${page_count > 0 ? page_index + 1 : 0}',
+                                'total': '$page_count',
+                              },
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            style: TextStyle(
+                              color: ComicReaderStyle.secondary_foreground(
+                                context,
+                              ),
+                              fontSize: ComicReaderStyle.page_font_size,
+                              fontWeight: ComicReaderStyle.weight_regular,
+                            ),
+                          ),
+                          const SizedBox(
+                            height: ComicReaderStyle.progress_label_gap,
+                          ),
+                          LinearProgressIndicator(
+                            value: page_count > 0
+                                ? ((page_index + 1) / page_count).clamp(0, 1)
+                                : 0,
+                            minHeight: ComicReaderStyle.progress_track_height,
+                            borderRadius: BorderRadius.circular(
+                              ComicReaderStyle.progress_radius,
+                            ),
+                            color: ComicReaderStyle.secondary_foreground(
+                              context,
+                            ),
+                            backgroundColor: ComicReaderStyle.track_background(
+                              context,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ComicReaderControlButton(
+                      icon: Icons.arrow_forward_rounded,
+                      show_icon: false,
+                      label: tr('comics.next_chapter'),
+                      on_pressed: has_next_chapter ? on_next_chapter : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (on_open_catalog != null || on_comments != null)
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Expanded(
+                      child: ComicReaderControlButton(
+                        icon: Icons.format_list_numbered_rounded,
+                        svg_name: 'menu',
+                        vertical: true,
+                        label: tr('comics.chapters'),
+                        on_pressed: on_open_catalog,
+                      ),
+                    ),
+                    Expanded(
+                      child: ComicReaderControlButton(
+                        icon: Icons.chat_bubble_outline_rounded,
+                        svg_name: 'message',
+                        vertical: true,
+                        label: tr('comics.chapter_comments'),
+                        on_pressed: on_comments,
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ),
-
-          /// 控件行。
-          Positioned(
-            left: ComicReaderStyle.bottom_padding_h,
-            right: ComicReaderStyle.bottom_padding_h,
-            bottom: bottom_padding,
-            height: ComicReaderStyle.bottom_bar_height,
-            child: Row(
-              children: <Widget>[
-                _NavButton(
-                  icon: Icons.skip_previous_rounded,
-                  enabled: has_previous_chapter,
-                  onTap: on_previous_chapter,
-                ),
-                Expanded(
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: ComicReaderStyle.page_pill_padding_h,
-                        vertical: ComicReaderStyle.page_pill_padding_v,
-                      ),
-                      decoration: BoxDecoration(
-                        color: ComicReaderStyle.pill_background,
-                        borderRadius: BorderRadius.circular(
-                          ComicReaderStyle.page_pill_radius,
-                        ),
-                      ),
-                      child: Text(
-                        page_label,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: ComicReaderStyle.page_font_size,
-                          fontWeight: ComicReaderStyle.weight_medium,
-                          fontFeatures: const <FontFeature>[
-                            FontFeature.tabularFigures(),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                _NavButton(
-                  icon: Icons.skip_next_rounded,
-                  enabled: has_next_chapter,
-                  onTap: on_next_chapter,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 章节切换图标按钮。
-class _NavButton extends StatelessWidget {
-  /// 图标数据。
-  final IconData icon;
-
-  /// 是否可点击。
-  final bool enabled;
-
-  /// 点击回调。
-  final VoidCallback onTap;
-
-  const _NavButton({
-    required this.icon,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-    borderRadius: BorderRadius.circular(12),
-    onTap: enabled ? onTap : null,
-    child: SizedBox.square(
-      dimension: ComicReaderStyle.nav_button_size,
-      child: Icon(
-        icon,
-        size: ComicReaderStyle.nav_icon_size,
-        color: enabled ? Colors.white : ComicReaderStyle.disabled_icon,
+          ],
+        ),
       ),
     ),
   );

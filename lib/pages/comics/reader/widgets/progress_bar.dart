@@ -30,17 +30,13 @@ class ComicReaderProgressBar extends StatelessWidget {
         children: <Widget>[
           /// 未读轨道。
           Positioned.fill(
-            child: ColoredBox(
-              color: ComicReaderStyle.progress_inactive_color,
-            ),
+            child: ColoredBox(color: ComicReaderStyle.progress_inactive_color),
           ),
 
           /// 已读部分。
           FractionallySizedBox(
             widthFactor: progress,
-            child: ColoredBox(
-              color: ComicReaderStyle.progress_active_color,
-            ),
+            child: ColoredBox(color: ComicReaderStyle.progress_active_color),
           ),
         ],
       ),

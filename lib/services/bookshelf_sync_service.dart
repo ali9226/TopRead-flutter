@@ -1,5 +1,8 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
 import 'package:get/get.dart';
 import 'package:app/stores/bookshelf_store.dart';
+import 'package:app/stores/user_information.dart';
 
 /// 书架数据同步入口。
 ///
@@ -9,13 +12,15 @@ class BookshelfSyncService {
   const BookshelfSyncService._();
 
   /// 阅读历史发生变化后刷新已加载列表。
-  static Future<void> history_changed() async {
+  static Future<void> history_changed({int? auth_revision}) async {
+    if (!_can_refresh(auth_revision)) return;
     if (!Get.isRegistered<BookshelfStore>()) return;
     await Get.find<BookshelfStore>().refresh_history_if_requested();
   }
 
   /// 收藏关系发生变化后刷新已加载列表。
-  static Future<void> favorite_changed() async {
+  static Future<void> favorite_changed({int? auth_revision}) async {
+    if (!_can_refresh(auth_revision)) return;
     if (!Get.isRegistered<BookshelfStore>()) return;
     await Get.find<BookshelfStore>().refresh_favorite_if_requested();
   }
@@ -24,5 +29,14 @@ class BookshelfSyncService {
   static Future<void> focus_changed() async {
     if (!Get.isRegistered<BookshelfStore>()) return;
     await Get.find<BookshelfStore>().refresh_focus_if_loaded();
+  }
+
+  /// TODO 有会话快照时仅刷新操作发起的账号，退出后不触发旧身份的后台请求。
+  static bool _can_refresh(int? auth_revision) {
+    if (!Get.isRegistered<UserInformation>()) return auth_revision == null;
+    final user = Get.find<UserInformation>();
+    return user.isLoggedIn.value &&
+        (auth_revision == null ||
+            user.can_apply_authenticated_response(auth_revision));
   }
 }

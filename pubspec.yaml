@@ -198,9 +198,11 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/audio/tile_quest/
     - assets/i18n/
     - assets/i18n/zh.json
     - assets/i18n/en.json
     - assets/svg/
     - assets/img/
+    - assets/img/game/
     - assets/img/splash_screen/

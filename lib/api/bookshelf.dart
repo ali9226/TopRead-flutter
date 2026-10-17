@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:app/api/post_request.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/config/constant.dart';
+import 'package:app/models/bookshelf_normalization.dart';
 import 'package:app/util/storage_util/index.dart';
 
 /// 阅读历史项数据模型。
@@ -68,6 +69,13 @@ class ReadRecordItem {
   /// 内容类型：'novel' 小说，'comic' 漫画。
   final String content_type;
 
+  /// TODO 漫画章节与页内进度；第零页也是已经开始阅读，不能被视为未读。
+  final String chapter_title;
+  final double? chapter_number;
+  final int page_index;
+  final int page_count;
+  final String language;
+
   ReadRecordItem({
     required this.id,
     required this.novel_id,
@@ -89,9 +97,15 @@ class ReadRecordItem {
     required this.chapter_count,
     required this.category_names,
     this.content_type = 'novel',
+    this.chapter_title = '',
+    this.chapter_number,
+    this.page_index = 0,
+    this.page_count = 0,
+    this.language = '',
   });
 
   factory ReadRecordItem.from_json(Map<String, dynamic> json) {
+    json = normalize_bookshelf_json(json);
     return ReadRecordItem(
       id: json['id']?.toString() ?? '',
       novel_id: json['novel_id']?.toString() ?? '',
@@ -113,6 +127,13 @@ class ReadRecordItem {
       chapter_count: _parse_int(json['chapter_count']),
       category_names: json['category_names']?.toString() ?? '',
       content_type: json['content_type']?.toString() ?? 'novel',
+      chapter_title: json['chapter_title']?.toString() ?? '',
+      chapter_number: json['chapter_number'] == null
+          ? null
+          : _parse_double(json['chapter_number']),
+      page_index: _parse_int(json['page_index']),
+      page_count: _parse_int(json['page_count']),
+      language: json['language']?.toString() ?? '',
     );
   }
 
@@ -201,6 +222,14 @@ class FavoriteItem {
   /// 内容类型：'novel' 小说，'comic' 漫画。
   final String content_type;
 
+  /// TODO 收藏漫画携带最后阅读位置，使收藏卡片可直接续读。
+  final String? chapter_id;
+  final String chapter_title;
+  final double? chapter_number;
+  final int page_index;
+  final int page_count;
+  final String language;
+
   FavoriteItem({
     required this.id,
     required this.novel_id,
@@ -225,9 +254,16 @@ class FavoriteItem {
     required this.read_progress,
     required this.category_names,
     this.content_type = 'novel',
+    this.chapter_id,
+    this.chapter_title = '',
+    this.chapter_number,
+    this.page_index = 0,
+    this.page_count = 0,
+    this.language = '',
   });
 
   factory FavoriteItem.from_json(Map<String, dynamic> json) {
+    json = normalize_bookshelf_json(json);
     return FavoriteItem(
       id: json['id']?.toString() ?? '',
       novel_id: json['novel_id']?.toString() ?? '',
@@ -252,6 +288,14 @@ class FavoriteItem {
       read_progress: _parse_double(json['read_progress']),
       category_names: json['category_names']?.toString() ?? '',
       content_type: json['content_type']?.toString() ?? 'novel',
+      chapter_id: json['chapter_id']?.toString(),
+      chapter_title: json['chapter_title']?.toString() ?? '',
+      chapter_number: json['chapter_number'] == null
+          ? null
+          : _parse_double(json['chapter_number']),
+      page_index: _parse_int(json['page_index']),
+      page_count: _parse_int(json['page_count']),
+      language: json['language']?.toString() ?? '',
     );
   }
 
@@ -549,8 +593,8 @@ Future<bool> save_read_progress({
         path: 'novel_read_record/save_progress',
         parameter: {
           'novel_id': novel_id,
-          if (novel_language_id != null) 'novel_language_id': novel_language_id,
-          if (chapter_id != null) 'chapter_id': chapter_id,
+          'novel_language_id': ?novel_language_id,
+          'chapter_id': ?chapter_id,
           'chapter_offset': chapter_offset,
           'read_progress': read_progress,
         },

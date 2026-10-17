@@ -196,6 +196,9 @@ class ComicReading {
   final int previous_chapter_id;
   final int next_chapter_id;
 
+  /// TODO 当前账号服务端有效续读记录，用于直接进入读页时比较本地与远端新旧。
+  final Map<String, dynamic> read_record;
+
   const ComicReading({
     required this.comic,
     required this.language,
@@ -203,6 +206,7 @@ class ComicReading {
     required this.images,
     required this.previous_chapter_id,
     required this.next_chapter_id,
+    this.read_record = const <String, dynamic>{},
   });
 
   factory ComicReading.from_json(Map<String, dynamic> json) => ComicReading(
@@ -212,5 +216,6 @@ class ComicReading {
     images: comics_list(json['images']).map(ComicImageData.from_json).toList(),
     previous_chapter_id: comics_int(json['previous_chapter_id']),
     next_chapter_id: comics_int(json['next_chapter_id']),
+    read_record: comics_map(json['read_record']),
   );
 }

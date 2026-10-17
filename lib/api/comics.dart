@@ -15,16 +15,25 @@ class ComicsRequestException implements Exception {
 Future<Map<String, dynamic>> comics_request(
   String action, [
   Map<String, dynamic> parameter = const <String, dynamic>{},
+  String? authorization_token,
 ]) async {
   final result = await postRequest<Map<String, dynamic>>(
     path: action.contains('/') ? action : 'comics/$action',
     parameter: parameter,
     showTips: false,
+    authorization_token: authorization_token,
     fromJson: (json) => json,
   );
   if (!result.status) throw ComicsRequestException(result.message);
   return result.content ?? <String, dynamic>{};
 }
+
+/// TODO 需要登录的写入绑定发起请求时的凭证，保留原有一/二参数公共调用。
+Future<Map<String, dynamic>> comics_session_request(
+  String action,
+  Map<String, dynamic> parameter, {
+  required String authorization_token,
+}) => comics_request(action, parameter, authorization_token);
 
 Future<ComicDetail> comics_detail(int comic_id, {String? language}) async =>
     ComicDetail.from_json(
@@ -34,7 +43,11 @@ Future<ComicDetail> comics_detail(int comic_id, {String? language}) async =>
       }),
     );
 
-Future<ComicReading> comics_read(int chapter_id) async =>
-    ComicReading.from_json(
-      await comics_request('read', <String, dynamic>{'chapter_id': chapter_id}),
-    );
+Future<ComicReading> comics_read(
+  int chapter_id, {
+  String? authorization_token,
+}) async => ComicReading.from_json(
+  await comics_request('read', <String, dynamic>{
+    'chapter_id': chapter_id,
+  }, authorization_token),
+);

@@ -1,50 +1,92 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'package:app/config/color_config.dart';
-import 'package:app/models/comics.dart';
+import 'package:app/components/comment_list/widgets/comment_input.dart';
+import 'package:app/components/comment_list/widgets/comment_skeleton.dart';
+import 'package:app/config/font_config.dart';
 import 'package:app/pages/comics/comments/comment_item.dart';
 import 'package:app/pages/comics/comments/logic.dart';
+import 'package:app/pages/comics/comments/style.dart';
 import 'package:app/pages/comics/style.dart';
 import 'package:app/pages/comics/widgets/empty_state.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-/// 普通评论和章节评论共享界面，底部输入框随键盘和安全区调整。
+/// TODO 普通漫画评论与章评论共用小说列表项及输入栏，章 ID 只决定独立的数据范围。
 class ComicCommentsPage extends StatefulWidget {
+  const ComicCommentsPage({
+    super.key,
+    required this.comic_id,
+    this.chapter_id,
+    this.controller,
+  });
   final int comic_id;
   final int? chapter_id;
-  const ComicCommentsPage({super.key, required this.comic_id, this.chapter_id});
+  final ComicCommentsLogic? controller;
   @override
   State<ComicCommentsPage> createState() => _ComicCommentsPageState();
 }
 
 class _ComicCommentsPageState extends State<ComicCommentsPage> {
-  late final ComicCommentsLogic _logic = ComicCommentsLogic(
-    comic_id: widget.comic_id,
-    chapter_id: widget.chapter_id,
-  );
+  late ComicCommentsLogic _logic;
   final ScrollController _scroll = ScrollController();
   final FocusNode _focus = FocusNode();
+  int _identity_epoch = 0;
+
   @override
   void initState() {
     super.initState();
-    _logic.load();
+    _bind_logic();
     _scroll.addListener(_on_scroll);
+  }
+
+  /// TODO 测试可注入同一生产控制器，真实页面仍通过统一加密接口加载。
+  void _bind_logic() {
+    _logic =
+        widget.controller ??
+        ComicCommentsLogic(
+          comic_id: widget.comic_id,
+          chapter_id: widget.chapter_id,
+        );
+    _identity_epoch = _logic.identity_epoch;
     _logic.addListener(_on_change);
+    _logic.load();
+  }
+
+  @override
+  void didUpdateWidget(covariant ComicCommentsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.comic_id == widget.comic_id &&
+        oldWidget.chapter_id == widget.chapter_id &&
+        identical(oldWidget.controller, widget.controller)) {
+      return;
+    }
+    _logic.removeListener(_on_change);
+    if (oldWidget.controller == null) _logic.dispose();
+    _focus.unfocus();
+    _bind_logic();
   }
 
   void _on_scroll() {
-    if (_scroll.position.extentAfter < 400) _logic.load(more: true);
+    if (_scroll.hasClients &&
+        _scroll.position.extentAfter < ComicCommentsStyle.load_more_distance) {
+      _logic.load(more: true);
+    }
   }
 
+  /// TODO 切换账号重建公共输入栏，清理旧草稿和焦点；选择回复时只聚焦一次。
   void _on_change() {
-    if (_logic.replying != null && !_focus.hasFocus) _focus.requestFocus();
+    if (_identity_epoch != _logic.identity_epoch) {
+      _identity_epoch = _logic.identity_epoch;
+      _focus.unfocus();
+    } else if (_logic.replying != null && !_focus.hasFocus) {
+      _focus.requestFocus();
+    }
   }
 
   @override
   void dispose() {
     _logic.removeListener(_on_change);
-    _logic.dispose();
+    if (widget.controller == null) _logic.dispose();
     _scroll.dispose();
     _focus.dispose();
     super.dispose();
@@ -53,225 +95,142 @@ class _ComicCommentsPageState extends State<ComicCommentsPage> {
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _logic,
-    builder: (context, child) => Scaffold(
-      backgroundColor: ComicsStyle.background(context),
-      appBar: AppBar(
-        backgroundColor: ComicsStyle.background(context),
-        surfaceTintColor: Colors.transparent,
-        title: Text(
-          tr(
-            widget.chapter_id == null
-                ? 'comics.comments'
-                : 'comics.chapter_comments',
-          ),
-          style: ComicsStyle.text(context, size: 18, strong: true),
-        ),
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: ComicsStyle.content_width,
-          ),
-          child: Column(
+    builder: (context, _) {
+      final dark = ComicsStyle.is_dark(context);
+      final scaler = MediaQuery.textScalerOf(context);
+      final title_size = ComicsStyle.is_cjk(context)
+          ? ComicCommentsStyle.title_size_cjk
+          : ComicCommentsStyle.title_size_alphabetic;
+      final toolbar_height =
+          (scaler.scale(title_size) * ComicsStyle.line_height_alphabetic +
+                  (_logic.total > 0
+                      ? scaler.scale(ComicCommentsStyle.count_size) *
+                            ComicsStyle.line_height_alphabetic
+                      : 0) +
+                  ComicCommentsStyle.toolbar_vertical_padding)
+              .clamp(ComicCommentsStyle.toolbar_height, double.infinity)
+              .toDouble();
+      return Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: ComicsStyle.surface(context),
+        appBar: AppBar(
+          toolbarHeight: toolbar_height,
+          backgroundColor: ComicsStyle.surface(context),
+          surfaceTintColor: Colors.transparent,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _logic.load,
-                  child: ListView(
-                    controller: _scroll,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: ComicsStyle.page_padding,
-                    ),
-                    children: <Widget>[
-                      if (_logic.loading || _logic.items.isEmpty)
-                        ComicsEmptyState(
-                          loading: _logic.loading,
-                          error: _logic.error,
-                          message: tr('comics.empty_comments'),
-                          on_retry: _logic.load,
-                        ),
-                      for (final comment in _logic.items)
-                        _thread(context, comment),
-                      if (!_logic.loading && _logic.has_more)
-                        Center(
-                          child: _logic.loading_more
-                              ? const CircularProgressIndicator()
-                              : TextButton(
-                                  style: ComicsStyle.text_button(context),
-                                  onPressed: () => _logic.load(more: true),
-                                  child: Text(
-                                    tr(
-                                      _logic.error == null
-                                          ? 'comics.load_more'
-                                          : 'comics.retry',
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      const SizedBox(height: ComicsStyle.large_gap),
-                    ],
-                  ),
+              Text(
+                tr(
+                  widget.chapter_id == null
+                      ? 'comics.comments'
+                      : 'comics.chapter_comments',
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: ComicsStyle.ink(context),
+                  fontSize: ComicsStyle.is_cjk(context)
+                      ? ComicCommentsStyle.title_size_cjk
+                      : ComicCommentsStyle.title_size_alphabetic,
+                  fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                 ),
               ),
-              SafeArea(
-                top: false,
-                child: Container(
-                  padding: const EdgeInsets.all(ComicsStyle.gap),
-                  decoration: BoxDecoration(
-                    color: ComicsStyle.surface(context),
-                    border: Border(
-                      top: BorderSide(color: ComicsStyle.outline(context)),
-                    ),
+              if (_logic.total > 0)
+                Text(
+                  tr(
+                    'comment.count_label',
+                    namedArgs: <String, String>{'count': '${_logic.total}'},
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      if (_logic.replying != null)
-                        Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: Text(
-                                tr(
-                                  'comics.replying_to',
-                                  namedArgs: <String, String>{
-                                    'name':
-                                        '${_logic.replying!['nickname'] ?? ''}',
-                                  },
-                                ),
-                                style: ComicsStyle.text(
-                                  context,
-                                  size: 12,
-                                  color: ComicsStyle.muted(context),
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: tr('comics.cancel_reply'),
-                              onPressed: _logic.cancel_reply,
-                              icon: const Icon(Icons.close, size: 18),
-                            ),
-                          ],
-                        ),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: <Widget>[
-                          Expanded(
-                            child: TextField(
-                              controller: _logic.input,
-                              focusNode: _focus,
-                              minLines: 1,
-                              maxLines: 4,
-                              maxLength: 2000,
-                              style: ComicsStyle.text(context),
-                              decoration: InputDecoration(
-                                hintText: tr('comics.comment_hint'),
-                                counterText: '',
-                                filled: true,
-                                fillColor: ComicsStyle.background(context),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    ComicsStyle.cover_radius,
-                                  ),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: ComicsStyle.small_gap),
-                          FilledButton(
-                            onPressed: _logic.sending ? null : _logic.send,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: ColorConstants.themeColor,
-                              foregroundColor: ColorConstants.lightTextColor,
-                              minimumSize: const Size(48, 48),
-                            ),
-                            child: _logic.sending
-                                ? const SizedBox.square(
-                                    dimension: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.arrow_upward_rounded),
-                          ),
-                        ],
-                      ),
-                    ],
+                  style: ComicsStyle.text(
+                    context,
+                    size: ComicCommentsStyle.count_size,
+                    color: ComicsStyle.muted(context),
                   ),
                 ),
-              ),
             ],
           ),
         ),
-      ),
-    ),
-  );
-
-  Widget _thread(BuildContext context, Map<String, dynamic> comment) {
-    final root_id = comics_int(comment['id']);
-    final thread = _logic.threads[root_id];
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: ComicsStyle.outline(context))),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          ComicCommentItem(comment: comment, logic: _logic, root_id: root_id),
-          if (comics_int(comment['reply_count']) > 0 || thread != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 46),
-              child: TextButton(
-                style: ComicsStyle.text_button(context),
-                onPressed: () => _logic.replies(root_id),
-                child: Text(
-                  thread?.expanded == true
-                      ? tr('comics.hide_replies')
-                      : tr(
-                          'comics.show_replies',
-                          namedArgs: <String, String>{
-                            'count': '${comics_int(comment['reply_count'])}',
-                          },
+        body: Column(
+          children: <Widget>[
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _logic.load,
+                child: ListView(
+                  controller: _scroll,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: <Widget>[
+                    if (_logic.loading && _logic.items.isEmpty)
+                      CommentSkeleton(is_dark: dark),
+                    if (!_logic.loading && _logic.items.isEmpty)
+                      ComicsEmptyState(
+                        error: _logic.error,
+                        message: tr('comics.empty_comments'),
+                        on_retry: _logic.load,
+                      ),
+                    for (final comment in _logic.items)
+                      ComicCommentItem(
+                        key: ValueKey<int>(comment.id),
+                        comment: comment,
+                        logic: _logic,
+                      ),
+                    if (_logic.error != null && _logic.items.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(
+                          ComicCommentsStyle.footer_padding,
                         ),
-                  style: ComicsStyle.text(context, size: 12, strong: true),
+                        child: Column(
+                          children: <Widget>[
+                            Text(
+                              _logic.error!,
+                              textAlign: TextAlign.center,
+                              style: ComicsStyle.text(
+                                context,
+                                color: ComicsStyle.muted(context),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  _logic.load(more: _logic.has_more),
+                              child: Text(tr('comics.retry')),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (_logic.loading_more)
+                      const Padding(
+                        padding: EdgeInsets.all(
+                          ComicCommentsStyle.footer_padding,
+                        ),
+                        child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    if (!_logic.loading_more &&
+                        _logic.has_more &&
+                        _logic.error == null)
+                      Center(
+                        child: TextButton(
+                          onPressed: () => _logic.load(more: true),
+                          child: Text(tr('comics.load_more')),
+                        ),
+                      ),
+                    const SizedBox(height: ComicCommentsStyle.footer_padding),
+                  ],
                 ),
               ),
             ),
-          if (thread?.expanded == true)
-            Padding(
-              padding: const EdgeInsets.only(left: 20),
-              child: Column(
-                children: <Widget>[
-                  for (final reply in thread!.items)
-                    ComicCommentItem(
-                      comment: reply,
-                      logic: _logic,
-                      root_id: root_id,
-                      reply: true,
-                    ),
-                  if (thread.loading)
-                    const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  if (thread.error != null)
-                    TextButton(
-                      style: ComicsStyle.text_button(context),
-                      onPressed: () => _logic.replies(root_id, refresh: true),
-                      child: Text(tr('comics.retry')),
-                    ),
-                  if (!thread.loading && thread.items.length < thread.total)
-                    TextButton(
-                      style: ComicsStyle.text_button(context),
-                      onPressed: () => _logic.replies(root_id, more: true),
-                      child: Text(tr('comics.load_more')),
-                    ),
-                ],
-              ),
+            CommentInput(
+              key: ValueKey<int>(_logic.identity_epoch),
+              is_dark: dark,
+              on_send: _logic.send,
+              focus_node: _focus,
+              reply_target: _logic.replying,
+              on_cancel_reply: _logic.cancel_reply,
             ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      );
+    },
+  );
 }

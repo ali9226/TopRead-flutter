@@ -32,6 +32,7 @@ class _ComicReaderImageState extends State<ComicReaderImage> {
   double? _ratio;
   bool _failed = false;
   bool _loaded = false;
+  int _image_request = 0;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -56,13 +57,14 @@ class _ComicReaderImageState extends State<ComicReaderImage> {
     _loaded = false;
     _ratio = null;
     _provider = CachedNetworkImageProvider(widget.image.image_url);
+    final request_id = ++_image_request;
     _stream = _provider!.resolve(createLocalImageConfiguration(context));
     _listener = ImageStreamListener(
       (info, synchronous_call) {
         final ratio = info.image.width / info.image.height;
         // 同步缓存命中时推迟通知，避免在父组件 build 中调用 setState。
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
+          if (!mounted || request_id != _image_request) return;
           setState(() {
             _ratio = ratio;
             _loaded = true;
@@ -72,7 +74,9 @@ class _ComicReaderImageState extends State<ComicReaderImage> {
       },
       onError: (Object error, StackTrace? stack_trace) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) setState(() => _failed = true);
+          if (mounted && request_id == _image_request) {
+            setState(() => _failed = true);
+          }
         });
       },
     );

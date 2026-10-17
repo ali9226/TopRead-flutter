@@ -116,8 +116,10 @@ class ComicReaderChapterEnd extends StatelessWidget {
             child: Column(
               children: <Widget>[
                 if (has_next_chapter)
-                  SizedBox(
-                    height: ComicReaderStyle.end_button_height,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: ComicReaderStyle.end_button_height,
+                    ),
                     child: FilledButton(
                       onPressed: on_next_chapter,
                       style: FilledButton.styleFrom(
@@ -135,17 +137,19 @@ class ComicReaderChapterEnd extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          Text(
-                            tr('comics.next_chapter'),
-                            style: TextStyle(
-                              fontSize: ComicReaderStyle.pick_font_size(
-                                is_cjk: is_cjk,
-                                cjk: ComicReaderStyle.end_button_font_size_cjk,
-                                alphabetic:
-                                    ComicReaderStyle
-                                        .end_button_font_size_alphabetic,
+                          Flexible(
+                            child: Text(
+                              tr('comics.next_chapter'),
+                              style: TextStyle(
+                                fontSize: ComicReaderStyle.pick_font_size(
+                                  is_cjk: is_cjk,
+                                  cjk:
+                                      ComicReaderStyle.end_button_font_size_cjk,
+                                  alphabetic: ComicReaderStyle
+                                      .end_button_font_size_alphabetic,
+                                ),
+                                fontWeight: ComicReaderStyle.weight_medium,
                               ),
-                              fontWeight: ComicReaderStyle.weight_medium,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -155,8 +159,10 @@ class ComicReaderChapterEnd extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(height: ComicReaderStyle.end_button_gap),
-                SizedBox(
-                  height: ComicReaderStyle.end_secondary_height,
+                ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: ComicReaderStyle.end_secondary_height,
+                  ),
                   child: TextButton(
                     onPressed: on_comments,
                     style: TextButton.styleFrom(
@@ -174,8 +180,7 @@ class ComicReaderChapterEnd extends StatelessWidget {
                           is_cjk: is_cjk,
                           cjk: ComicReaderStyle.end_button_font_size_cjk,
                           alphabetic:
-                              ComicReaderStyle
-                                  .end_button_font_size_alphabetic,
+                              ComicReaderStyle.end_button_font_size_alphabetic,
                         ),
                         fontWeight: ComicReaderStyle.weight_regular,
                       ),

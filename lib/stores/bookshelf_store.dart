@@ -65,6 +65,20 @@ class BookshelfBookItem {
   /// 封面渐变结束色。
   final Color cover_end_color;
 
+  /// TODO 漫画续读数据保留章节和零起始页码；小说卡片继续使用原有百分比文案。
+  final String? chapter_id;
+  final String chapter_title;
+  final double? chapter_number;
+  final int page_index;
+  final int page_count;
+  final int chapter_count;
+  final String language;
+
+  /// TODO 同一作品只有一张卡片，小说与漫画的相同数字 ID 属于不同命名空间。
+  String get identity => '$content_type:${novel_id.isNotEmpty ? novel_id : id}';
+  bool get has_comic_progress =>
+      content_type == 'comic' && (int.tryParse(chapter_id ?? '') ?? 0) > 0;
+
   BookshelfBookItem({
     required this.id,
     required this.novel_id,
@@ -79,6 +93,13 @@ class BookshelfBookItem {
     this.cover_image_url,
     required this.cover_start_color,
     required this.cover_end_color,
+    this.chapter_id,
+    this.chapter_title = '',
+    this.chapter_number,
+    this.page_index = 0,
+    this.page_count = 0,
+    this.chapter_count = 0,
+    this.language = '',
   });
 }
 
@@ -121,6 +142,10 @@ class BookshelfStore extends GetxController {
   ///
   /// 用于承接恰好在统一刷新流程中首次打开书架的场景。
   Worker? _language_refresh_worker;
+
+  /// TODO 常驻书架随登录身份变化清空缓存，旧会话请求不能重新填入旧账号的收藏。
+  Worker? _identity_worker;
+  int _identity_revision = 0;
 
   /// 当前书架多语言数据版本。
   ///
@@ -248,6 +273,20 @@ class BookshelfStore extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    if (Get.isRegistered<UserInformation>()) {
+      final user = Get.find<UserInformation>();
+      _identity_revision = user.auth_identity_revision;
+      _identity_worker = ever(user.userInfo, (_) {
+        if (_identity_revision == user.auth_identity_revision) return;
+        _identity_revision = user.auth_identity_revision;
+        final history_requested = _history_requested;
+        final favorite_requested = _favorite_requested;
+        clear();
+        if (!user.isLoggedIn.value) return;
+        if (history_requested) unawaited(load_history_if_needed());
+        if (favorite_requested) unawaited(load_favorite_if_needed());
+      });
+    }
     _language_refresh_subscription =
         LanguageChangeHandler.register_refresh_task(
           phase: LanguageRefreshPhase.content,
@@ -262,6 +301,7 @@ class BookshelfStore extends GetxController {
 
   @override
   void onClose() {
+    _identity_worker?.dispose();
     _language_refresh_worker?.dispose();
     _language_refresh_subscription?.dispose();
     super.onClose();
@@ -505,7 +545,7 @@ class BookshelfStore extends GetxController {
         _merge_unique_items<BookshelfBookItem>(
           current_items: reset ? const <BookshelfBookItem>[] : history_list,
           incoming_items: new_items,
-          identity_of: (BookshelfBookItem item) => item.id,
+          identity_of: (BookshelfBookItem item) => item.identity,
         ),
       );
       _history_page = request_page;
@@ -531,7 +571,10 @@ class BookshelfStore extends GetxController {
 
     String progress_key;
     Map<String, String> progress_args;
-    if (has_progress) {
+    if (is_comic && (int.tryParse(item.chapter_id ?? '') ?? 0) > 0) {
+      progress_key = 'bookshelf.progress.comic_reading';
+      progress_args = <String, String>{'chapter': item.chapter_title};
+    } else if (has_progress) {
       progress_key = 'bookshelf.progress.read_progress';
       progress_args = <String, String>{
         'progress': item.read_progress.toStringAsFixed(0),
@@ -542,7 +585,7 @@ class BookshelfStore extends GetxController {
     }
 
     return BookshelfBookItem(
-      id: item.id,
+      id: is_comic ? 'comic:${item.novel_id}' : item.id,
       novel_id: item.novel_id,
       content_type: item.content_type,
       title: item.novel_title,
@@ -556,6 +599,13 @@ class BookshelfStore extends GetxController {
       cover_image_url: item.cover_url.isNotEmpty ? item.cover_url : null,
       cover_start_color: colors[0],
       cover_end_color: colors[1],
+      chapter_id: item.chapter_id,
+      chapter_title: item.chapter_title,
+      chapter_number: item.chapter_number,
+      page_index: item.page_index,
+      page_count: item.page_count,
+      chapter_count: item.chapter_count,
+      language: item.language,
     );
   }
 
@@ -726,7 +776,7 @@ class BookshelfStore extends GetxController {
         _merge_unique_items<BookshelfBookItem>(
           current_items: reset ? const <BookshelfBookItem>[] : favorite_list,
           incoming_items: new_items,
-          identity_of: (BookshelfBookItem item) => item.id,
+          identity_of: (BookshelfBookItem item) => item.identity,
         ),
       );
       _favorite_page = request_page;
@@ -762,7 +812,10 @@ class BookshelfStore extends GetxController {
 
     String progress_key;
     Map<String, String> progress_args;
-    if (has_progress) {
+    if (is_comic && (int.tryParse(item.chapter_id ?? '') ?? 0) > 0) {
+      progress_key = 'bookshelf.progress.comic_reading';
+      progress_args = <String, String>{'chapter': item.chapter_title};
+    } else if (has_progress) {
       progress_key = 'bookshelf.progress.read_progress';
       progress_args = <String, String>{
         'progress': item.read_progress.toStringAsFixed(0),
@@ -776,7 +829,7 @@ class BookshelfStore extends GetxController {
     }
 
     return BookshelfBookItem(
-      id: item.id,
+      id: is_comic ? 'comic:${item.novel_id}' : item.id,
       novel_id: item.novel_id,
       content_type: item.content_type,
       title: item.novel_title,
@@ -789,6 +842,13 @@ class BookshelfStore extends GetxController {
       cover_image_url: item.cover_url.isNotEmpty ? item.cover_url : null,
       cover_start_color: colors[0],
       cover_end_color: colors[1],
+      chapter_id: item.chapter_id,
+      chapter_title: item.chapter_title,
+      chapter_number: item.chapter_number,
+      page_index: item.page_index,
+      page_count: item.page_count,
+      chapter_count: item.chapter_count,
+      language: item.language,
     );
   }
 

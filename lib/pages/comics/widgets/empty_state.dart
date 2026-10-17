@@ -50,7 +50,15 @@ class ComicsEmptyState extends StatelessWidget {
         if (!loading && error != null && on_retry != null) ...<Widget>[
           const SizedBox(height: ComicsStyle.gap),
           OutlinedButton.icon(
-            style: ComicsStyle.outlined_button(context),
+            // TODO 阅读画布固定近黑，显式前景色同时用于重试操作，不能随日间主题变成黑字。
+            style: foreground_color == null
+                ? ComicsStyle.outlined_button(context)
+                : ComicsStyle.outlined_button(context).copyWith(
+                    foregroundColor: WidgetStatePropertyAll(foreground_color),
+                    side: WidgetStatePropertyAll(
+                      BorderSide(color: foreground_color!),
+                    ),
+                  ),
             onPressed: on_retry,
             icon: const Icon(Icons.refresh),
             label: Text(tr('comics.retry')),

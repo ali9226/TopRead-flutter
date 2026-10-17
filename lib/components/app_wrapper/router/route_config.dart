@@ -23,6 +23,7 @@ import 'package:app/pages/short_story_read/index.dart';
 import 'package:app/pages/customer_service_chat/index.dart';
 import 'package:app/pages/about_topread/index.dart';
 import 'package:app/pages/debug/index.dart';
+import 'package:app/pages/tile_quest/index.dart';
 import 'package:app/pages/author_apply/index.dart';
 import 'package:app/pages/author_center/index.dart';
 import 'package:app/pages/author_center/editor_route.dart';
@@ -98,26 +99,52 @@ class RouteConfig {
             ),
           ],
         ),
+        // 独立游戏页面保留个人中心的路由栈，不要求登录。
+        GoRoute(
+          path: '/tile_quest',
+          name: 'tile_quest',
+          pageBuilder: (context, state) =>
+              buildRoutePage(state: state, child: const TileQuestPage()),
+        ),
         // 漫画具有独立作品、语种与图片阅读路由，支持分享深链接。
         GoRoute(
           path: '/comics/detail',
-          pageBuilder: (context, state) => buildRoutePage(state: state, child: ComicDetailPage(
-            comic_id: int.tryParse(state.uri.queryParameters['id'] ?? '') ?? 0,
-          )),
+          pageBuilder: (context, state) => buildRoutePage(
+            state: state,
+            child: ComicDetailPage(
+              comic_id:
+                  int.tryParse(state.uri.queryParameters['id'] ?? '') ?? 0,
+              language: state.uri.queryParameters['language'],
+            ),
+          ),
         ),
         GoRoute(
           path: '/comics/read',
-          pageBuilder: (context, state) => buildRoutePage(state: state, child: ComicReaderPage(
-            chapter_id: int.tryParse(state.uri.queryParameters['chapter_id'] ?? '') ?? 0,
-            initial_page: int.tryParse(state.uri.queryParameters['page'] ?? '') ?? 0,
-          )),
+          pageBuilder: (context, state) => buildRoutePage(
+            state: state,
+            child: ComicReaderPage(
+              chapter_id:
+                  int.tryParse(state.uri.queryParameters['chapter_id'] ?? '') ??
+                  0,
+              initial_page: int.tryParse(
+                state.uri.queryParameters['page'] ?? '',
+              ),
+            ),
+          ),
         ),
         GoRoute(
           path: '/comics/comments',
-          pageBuilder: (context, state) => buildRoutePage(state: state, child: ComicCommentsPage(
-            comic_id: int.tryParse(state.uri.queryParameters['comic_id'] ?? '') ?? 0,
-            chapter_id: int.tryParse(state.uri.queryParameters['chapter_id'] ?? ''),
-          )),
+          pageBuilder: (context, state) => buildRoutePage(
+            state: state,
+            child: ComicCommentsPage(
+              comic_id:
+                  int.tryParse(state.uri.queryParameters['comic_id'] ?? '') ??
+                  0,
+              chapter_id: int.tryParse(
+                state.uri.queryParameters['chapter_id'] ?? '',
+              ),
+            ),
+          ),
         ),
         // 创作入口：我的漫画列表与漫画编辑器。
         GoRoute(
@@ -132,7 +159,8 @@ class RouteConfig {
           pageBuilder: (context, state) => buildRoutePage(
             state: state,
             child: ComicEditorPage(
-              comic_id: int.tryParse(state.uri.queryParameters['id'] ?? '') ?? 0,
+              comic_id:
+                  int.tryParse(state.uri.queryParameters['id'] ?? '') ?? 0,
             ),
           ),
         ),
@@ -327,7 +355,9 @@ class RouteConfig {
               child: CreatorEditorRoute(
                 work_type: entry.value,
                 novel_id: int.tryParse(state.uri.queryParameters['id'] ?? ''),
-                initial_work: state.extra is CreatorWorkDraft ? state.extra as CreatorWorkDraft : null,
+                initial_work: state.extra is CreatorWorkDraft
+                    ? state.extra as CreatorWorkDraft
+                    : null,
               ),
             ),
           ),
@@ -336,7 +366,9 @@ class RouteConfig {
           name: 'published_long_novel_editor',
           pageBuilder: (context, state) => buildRoutePage(
             state: state,
-            child: PublishedLongNovelEditorPage(novel_id: int.tryParse(state.pathParameters['id'] ?? '') ?? 0),
+            child: PublishedLongNovelEditorPage(
+              novel_id: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+            ),
           ),
         ),
         GoRoute(
@@ -345,8 +377,8 @@ class RouteConfig {
           pageBuilder: (context, state) {
             final CreatorWorkDraft? initial_work =
                 state.extra is CreatorWorkDraft
-                    ? state.extra as CreatorWorkDraft
-                    : null;
+                ? state.extra as CreatorWorkDraft
+                : null;
             return buildRoutePage(
               state: state,
               child: CreatorWorkEditorPage(initial_work: initial_work),

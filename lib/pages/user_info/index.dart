@@ -6,6 +6,7 @@ import 'package:app/config/theme.dart';
 import 'package:app/pages/user_info/widgets/statistics/index.dart';
 import 'package:app/pages/user_info/widgets/operation_list/index.dart';
 import 'package:app/pages/user_info/widgets/user_info_top.dart';
+import 'package:app/pages/user_info/widgets/tile_quest_entry/index.dart';
 import 'package:app/stores/shell_tab_info.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/stores/device_info.dart';
@@ -176,6 +177,9 @@ class _UserInfoState extends State<UserInfo> {
                               children: [
                                 /// 只有登录后才展示统计区。
                                 if (isLoggedIn) Statistics(key: _statisticsKey),
+
+                                /// 独立离线游戏，访客与已登录用户均可进入。
+                                TileQuestEntry(is_dark: isDark),
 
                                 /// 常用操作入口列表。
                                 OperationList(),

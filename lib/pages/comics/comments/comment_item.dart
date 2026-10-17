@@ -1,28 +1,55 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/comment_list/models/comment_data.dart';
+import 'package:app/components/comment_list/widgets/comment_item.dart';
 import 'package:app/config/color_config.dart';
-import 'package:app/models/comics.dart';
 import 'package:app/pages/comics/comments/logic.dart';
+import 'package:app/pages/comics/comments/style.dart';
 import 'package:app/pages/comics/style.dart';
-import 'package:app/pages/comics/widgets/comic_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-/// 回复列表扁平展示但保留回复对象，长评论完整换行，日期明确为 UTC。
+/// TODO 同一小说评论项呈现漫画主评论及其扁平回复，数据与审核范围仍完全独立。
 class ComicCommentItem extends StatelessWidget {
-  final Map<String, dynamic> comment;
-  final ComicCommentsLogic logic;
-  final int root_id;
-  final bool reply;
   const ComicCommentItem({
     super.key,
     required this.comment,
     required this.logic,
-    required this.root_id,
-    this.reply = false,
   });
+  final CommentData comment;
+  final ComicCommentsLogic logic;
 
-  Future<void> _delete(BuildContext context) async {
+  /// TODO 长按菜单只提供已实现的复制和本人删除，不误调用小说举报接口。
+  Future<void> _actions(BuildContext context, CommentData target) async {
+    final delete = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ListTile(
+              leading: const Icon(Icons.copy_outlined),
+              title: Text(tr('comment.action.copy')),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: target.content));
+                Navigator.pop(context, false);
+              },
+            ),
+            if (logic.user_id > 0 && target.user_id == logic.user_id)
+              ListTile(
+                leading: Icon(
+                  Icons.delete_outline,
+                  color: ColorConstants.dangerColor,
+                ),
+                title: Text(tr('comics.delete_comment')),
+                onTap: () => Navigator.pop(context, true),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (delete != true || !context.mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -30,175 +57,104 @@ class ComicCommentItem extends StatelessWidget {
         content: Text(tr('comics.delete_comment_confirm')),
         actions: <Widget>[
           TextButton(
-            style: ComicsStyle.text_button(context),
             onPressed: () => Navigator.pop(context, false),
             child: Text(tr('comics.cancel')),
           ),
           TextButton(
-            style: ComicsStyle.text_button(context),
             onPressed: () => Navigator.pop(context, true),
             child: Text(
               tr('comics.delete'),
-              style: ComicsStyle.text(
-                context,
-                color: ColorConstants.dangerColor,
-              ),
+              style: TextStyle(color: ColorConstants.dangerColor),
             ),
           ),
         ],
       ),
     );
-    if (confirmed == true) await logic.delete(comment, root_id);
+    if (confirmed == true) await logic.delete(target, comment.id);
   }
+
+  /// TODO 在途点赞呈现公共忙碌状态，正文、头像和日夜排版全部来自小说组件。
+  CommentData _display(CommentData data) =>
+      data.copy_with(is_sending: logic.busy_comments.contains(data.id));
 
   @override
   Widget build(BuildContext context) {
-    final id = comics_int(comment['id']);
-    final nickname = comment['nickname']?.toString() ?? '';
-    final raw_time = comment['create_time']?.toString() ?? '';
-    final normalized_time = raw_time.isEmpty
-        ? null
-        : DateTime.tryParse(
-            raw_time.contains('Z') ||
-                    RegExp(r'[+-]\d\d:\d\d$').hasMatch(raw_time)
-                ? raw_time
-                : '${raw_time.replaceFirst(' ', 'T')}Z',
-          );
-    final date = normalized_time == null
-        ? ''
-        : '${DateFormat('yyyy-MM-dd HH:mm').format(normalized_time.toUtc())} UTC';
-    final liked = comics_bool(comment['is_liked']);
-    final deleted =
-        comics_bool(comment['is_deleted']) || comment['status'] == 'deleted';
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        reply ? 16 : 0,
-        ComicsStyle.gap,
-        0,
-        ComicsStyle.small_gap,
+    final thread = logic.threads[comment.id];
+    final count = logic.reply_counts[comment.id] ?? 0;
+    return CommentItem(
+      comment: _display(comment).copy_with(
+        replies: thread?.expanded == true
+            ? thread!.items.map(_display).toList()
+            : const <CommentData>[],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          ClipOval(
-            child: SizedBox.square(
-              dimension: reply ? 28 : 36,
-              child: '${comment['avatar_url'] ?? ''}'.isEmpty
-                  ? ColoredBox(
-                      color: ComicsStyle.outline(context),
-                      child: Icon(
-                        Icons.person_outline,
-                        size: reply ? 18 : 22,
+      is_dark: ComicsStyle.is_dark(context),
+      on_reply: (target, _) => logic.reply_to(target, comment.id),
+      on_like: logic.like,
+      on_long_press: (target) => _actions(context, target),
+      thread_controls: count > 0 || thread != null
+          ? Padding(
+              padding: const EdgeInsets.only(
+                left: ComicCommentsStyle.replies_indent,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  key: ValueKey<String>('comic_thread_${comment.id}'),
+                  onPressed: () => logic.replies(comment.id),
+                  child: Text(
+                    thread?.expanded == true
+                        ? tr('comics.hide_replies')
+                        : tr(
+                            'comics.show_replies',
+                            namedArgs: <String, String>{'count': '$count'},
+                          ),
+                  ),
+                ),
+              ),
+            )
+          : null,
+      thread_footer: thread?.expanded == true
+          ? Padding(
+              padding: const EdgeInsets.only(
+                left: ComicCommentsStyle.replies_indent,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  if (thread!.loading)
+                    const Padding(
+                      padding: EdgeInsets.all(
+                        ComicCommentsStyle.footer_padding,
+                      ),
+                      child: SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  if (thread.error != null) ...<Widget>[
+                    Text(
+                      thread.error!,
+                      style: ComicsStyle.text(
+                        context,
                         color: ComicsStyle.muted(context),
                       ),
-                    )
-                  : ComicImage(
-                      url: '${comment['avatar_url']}',
-                      semantic_label: nickname,
                     ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  nickname,
-                  style: ComicsStyle.text(context, size: 13, strong: true),
-                ),
-                if (date.isNotEmpty)
-                  Text(
-                    date,
-                    style: ComicsStyle.text(
-                      context,
-                      size: 10,
-                      color: ComicsStyle.muted(context),
+                    TextButton(
+                      onPressed: () => logic.replies(comment.id, refresh: true),
+                      child: Text(tr('comics.retry')),
                     ),
-                  ),
-                const SizedBox(height: ComicsStyle.small_gap),
-                if (reply && '${comment['reply_to_nickname'] ?? ''}'.isNotEmpty)
-                  Text(
-                    tr(
-                      'comics.replying_to',
-                      namedArgs: <String, String>{
-                        'name': '${comment['reply_to_nickname']}',
-                      },
+                  ],
+                  if (!thread.loading &&
+                      thread.error == null &&
+                      thread.has_more)
+                    TextButton(
+                      onPressed: () => logic.replies(comment.id, more: true),
+                      child: Text(tr('comics.load_more')),
                     ),
-                    style: ComicsStyle.text(
-                      context,
-                      size: 11,
-                      color: ComicsStyle.muted(context),
-                    ),
-                  ),
-                SelectableText(
-                  deleted
-                      ? tr('comics.comment_deleted')
-                      : '${comment['comment_content'] ?? ''}',
-                  style: ComicsStyle.text(
-                    context,
-                    color: deleted ? ComicsStyle.muted(context) : null,
-                  ),
-                ),
-                if (!deleted)
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 4,
-                    children: <Widget>[
-                      TextButton.icon(
-                        style: ComicsStyle.text_button(context),
-                        onPressed: logic.busy_comments.contains(id)
-                            ? null
-                            : () => logic.like(comment),
-                        icon: Icon(
-                          liked
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          size: 16,
-                          color: liked
-                              ? ColorConstants.dangerColor
-                              : ComicsStyle.muted(context),
-                        ),
-                        label: Text(
-                          '${comics_int(comment['like_count'])}',
-                          style: ComicsStyle.text(
-                            context,
-                            size: 12,
-                            color: ComicsStyle.muted(context),
-                          ),
-                        ),
-                      ),
-                      TextButton(
-                        style: ComicsStyle.text_button(context),
-                        onPressed: () => logic.reply_to(comment, root_id),
-                        child: Text(
-                          tr('comics.reply'),
-                          style: ComicsStyle.text(
-                            context,
-                            size: 12,
-                            color: ComicsStyle.muted(context),
-                          ),
-                        ),
-                      ),
-                      if (logic.user_id == comics_int(comment['user_id']))
-                        IconButton(
-                          tooltip: tr('comics.delete'),
-                          onPressed: logic.busy_comments.contains(id)
-                              ? null
-                              : () => _delete(context),
-                          icon: Icon(
-                            Icons.delete_outline_rounded,
-                            size: 18,
-                            color: ComicsStyle.muted(context),
-                          ),
-                        ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
+                ],
+              ),
+            )
+          : null,
     );
   }
 }

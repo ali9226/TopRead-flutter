@@ -3,12 +3,52 @@
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
+import 'package:app/pages/comics/style.dart';
 
-/// 漫画阅读页设计参数：沉浸式画布、渐变遮罩工具条、章节收尾区集中管理。
-///
-/// 设计语言：全黑画布 + 顶部/底部细渐变遮罩 + 极简悬浮控件，
-/// 避免厚重玻璃拟态，让画面本身成为主角。
+/// TODO 漫画画布、小说风格阅读工具栏与章节收尾区的设计参数统一管理。
+/// 控件使用稳定对比度，隐藏后保留完整图片画布，日间与夜间分别配置颜色。
 class ComicReaderStyle {
+  /// TODO 实色控件底板随主题变化，不能依赖漫画图片自身颜色产生对比。
+  static Color panel_background(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+      ? const Color(0xFF161B22)
+      : Colors.white;
+  static Color foreground(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+      ? Colors.white
+      : const Color(0xFF1F1A12);
+  static Color secondary_foreground(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+      ? Colors.white.withValues(alpha: 0.7)
+      : const Color(0xFF7A6A56);
+  static Color border_color(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+      ? const Color(0xFF21262D)
+      : const Color(0xFFEEEEEE);
+  static Color disabled_color(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+      ? const Color(0xFF9398A4)
+      : const Color(0xFF777E88);
+  static const double control_target = 48;
+  static Color track_background(BuildContext context) =>
+      secondary_foreground(context).withValues(alpha: 0.15);
+  static double action_label_size(BuildContext context) =>
+      ComicsStyle.is_cjk(context) ? 11 : 10;
+  static const double toolbar_padding = 8;
+  static const double top_title_padding = 6;
+  static const double divider_width = 0.5;
+  static const double progress_radius = 4;
+  static const double progress_label_gap = 4;
+  static const double action_label_gap = 4;
+  static const double progress_horizontal_padding = 6;
+  static const double control_radius = 8;
+  static const double control_padding = 4;
+  static const double control_vertical_padding = 5;
+  static const double control_icon_gap = 6;
+  static const double control_font_cjk = 14;
+  static const double control_font_alphabetic = 13;
+  static const double subtitle_size = 11;
+
   /// 阅读画布最大宽度，超宽屏居中留白。
   static const double canvas_max_width = 920;
 
@@ -17,39 +57,15 @@ class ComicReaderStyle {
 
   // ==================== 顶部工具条 ====================
 
-  /// 顶部渐变遮罩总高度（含安全区补偿由 UI 层叠加）。
-  static const double top_scrim_height = 120;
-
-  /// 顶部渐变遮罩高度（不含安全区）。
-  static const double top_bar_height = 52;
-
-  /// 顶部控件水平内边距。
-  static const double top_padding_h = 12;
-
-  /// 顶部渐变最大不透明度。
-  static const double top_scrim_opacity = 0.72;
-
   /// 标题字号（CJK）。
-  static const double title_font_size_cjk = 15;
+  static const double title_font_size_cjk = 14;
 
   /// 标题字号（拉丁语系）。
-  static const double title_font_size_alphabetic = 14;
+  static const double title_font_size_alphabetic = 13;
 
-  /// 标题最大行数。
-  static const int title_max_lines = 1;
+  // ==================== 页进度 ====================
 
-  /// 顶部图标按钮点击区尺寸。
-  static const double top_icon_target = 44;
-
-  /// 顶部图标尺寸。
-  static const double top_icon_size = 22;
-
-  /// 顶部按钮间距。
-  static const double top_button_gap = 2;
-
-  // ==================== 顶部细进度条 ====================
-
-  /// 顶部细进度条高度。
+  /// 页进度轨道高度。
   static const double progress_track_height = 2.5;
 
   /// 进度条已读部分颜色。
@@ -60,32 +76,8 @@ class ComicReaderStyle {
 
   // ==================== 底部控制条 ====================
 
-  /// 底部渐变遮罩总高度。
-  static const double bottom_scrim_height = 140;
-
-  /// 底部控件区高度。
-  static const double bottom_bar_height = 64;
-
-  /// 底部控件水平内边距。
-  static const double bottom_padding_h = 20;
-
-  /// 底部渐变最大不透明度。
-  static const double bottom_scrim_opacity = 0.82;
-
-  /// 页码胶囊水平内边距。
-  static const double page_pill_padding_h = 14;
-
-  /// 页码胶囊垂直内边距。
-  static const double page_pill_padding_v = 7;
-
-  /// 页码胶囊圆角。
-  static const double page_pill_radius = 999;
-
   /// 页码字号。
-  static const double page_font_size = 13;
-
-  /// 章节切换按钮尺寸。
-  static const double nav_button_size = 44;
+  static const double page_font_size = 11;
 
   /// 章节切换按钮图标尺寸。
   static const double nav_icon_size = 22;
@@ -153,29 +145,27 @@ class ComicReaderStyle {
   static const double end_button_gap = 6;
 
   /// 次按钮高度。
-  static const double end_secondary_height = 44;
+  static const double end_secondary_height = 48;
 
   // ==================== 控件显隐动画 ====================
 
   /// 控件显隐动画时长。
   static const int controls_animation_ms = 240;
 
+  /// TODO 系统减少动画时操作条立即显隐，保留手势与无障碍语义。
+  static Duration controls_duration(BuildContext context) =>
+      MediaQuery.disableAnimationsOf(context) ||
+          MediaQuery.accessibleNavigationOf(context)
+      ? Duration.zero
+      : const Duration(milliseconds: controls_animation_ms);
+
   /// 控件显隐动画曲线。
   static const Curve controls_curve = Curves.easeOutCubic;
 
-  /// 隐藏时底部控件位移距离。
-  static const double controls_slide_offset = 80;
-
   // ==================== 色彩 ====================
-
-  /// 底部玻璃胶囊底色。
-  static const Color pill_background = Color(0x1FFFFFFF);
 
   /// 次要文字颜色。
   static const Color muted_text = Color(0xB3FFFFFF);
-
-  /// 禁用图标颜色。
-  static const Color disabled_icon = Color(0x47FFFFFF);
 
   /// 平台适配字重：正文。
   static FontWeight get weight_regular =>

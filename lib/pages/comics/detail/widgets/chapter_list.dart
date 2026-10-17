@@ -2,172 +2,167 @@
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-
+import 'package:app/config/color_config.dart';
 import 'package:app/models/comics.dart';
 import 'package:app/pages/comics/detail/style.dart';
 import 'package:app/pages/comics/style.dart';
 
-/// 章节目录：编号 + 标题 + 页数，轻触进入阅读。
+/// Sliver目录只构建可见章节，千章作品不会在首屏创建全部图片或文字组件。
 class ComicDetailChapterList extends StatelessWidget {
-  /// 章节列表。
   final List<ComicChapter> chapters;
-
-  /// 当前是否为夜间模式。
   final bool is_dark;
-
-  /// 点击章节回调，参数为章节 id。
+  final int resume_chapter_id;
   final ValueChanged<int> on_open;
-
   const ComicDetailChapterList({
     super.key,
     required this.chapters,
     required this.is_dark,
+    this.resume_chapter_id = 0,
     required this.on_open,
   });
-
   @override
   Widget build(BuildContext context) {
     if (chapters.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: Text(
-            tr('comics.empty_chapters'),
-            style: TextStyle(
-              color: ComicsStyle.muted(context),
-              fontSize: ComicDetailStyle.chapter_meta_font_size,
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: ComicDetailStyle.section_top_spacing,
+          ),
+          child: Center(
+            child: Text(
+              tr('comics.empty_chapters'),
+              style: ComicDetailStyle.label_style(
+                context,
+                ComicsStyle.is_cjk(context),
+                color: ComicDetailStyle.muted(context),
+              ),
             ),
           ),
         ),
       );
     }
-
-    return Column(
-      children: <Widget>[
-        for (int index = 0; index < chapters.length; index++) ...<Widget>[
-          if (index > 0)
-            const SizedBox(height: ComicDetailStyle.chapter_spacing),
-          _ChapterTile(
-            number: index + 1,
-            chapter: chapters[index],
-            is_dark: is_dark,
-            onTap: () => on_open(chapters[index].id),
-          ),
-        ],
-      ],
+    return SliverList.separated(
+      itemCount: chapters.length,
+      separatorBuilder: (context, index) => Divider(
+        height: ComicDetailStyle.chapter_separator_height,
+        thickness: ComicDetailStyle.chapter_separator_height,
+        color: ComicDetailStyle.outline(context),
+      ),
+      itemBuilder: (context, index) => ComicDetailChapterTile(
+        key: ValueKey('comic_detail_chapter_${chapters[index].id}'),
+        number: index + 1,
+        chapter: chapters[index],
+        is_dark: is_dark,
+        selected: chapters[index].id == resume_chapter_id,
+        on_open: () => on_open(chapters[index].id),
+      ),
     );
   }
 }
 
-/// 单个章节条目。
-class _ChapterTile extends StatelessWidget {
-  /// 章节序号（从 1 开始）。
+/// 章节图标与序号对齐，完整标题保留在无障碍语义中，辅助大字号会自然增高。
+class ComicDetailChapterTile extends StatelessWidget {
   final int number;
-
-  /// 章节数据。
   final ComicChapter chapter;
-
-  /// 当前是否为夜间模式。
   final bool is_dark;
-
-  /// 点击回调。
-  final VoidCallback onTap;
-
-  const _ChapterTile({
+  final bool selected;
+  final VoidCallback on_open;
+  const ComicDetailChapterTile({
+    super.key,
     required this.number,
     required this.chapter,
     required this.is_dark,
-    required this.onTap,
+    this.selected = false,
+    required this.on_open,
   });
-
   @override
   Widget build(BuildContext context) {
-    final Color background = is_dark
-        ? ComicDetailStyle.surface_dark
-        : ComicDetailStyle.surface_light;
-    final Color number_color = is_dark
-        ? Colors.white.withValues(alpha: 0.36)
-        : const Color(0xFF9AA3B2);
-
-    return Material(
-      color: background,
-      borderRadius: BorderRadius.circular(ComicDetailStyle.chapter_radius),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(ComicDetailStyle.chapter_radius),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: ComicDetailStyle.chapter_padding_h,
-            vertical: ComicDetailStyle.chapter_padding_v,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              /// 章节序号。
-              SizedBox(
-                width: ComicDetailStyle.chapter_number_width,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    number.toString().padLeft(2, '0'),
-                    style: TextStyle(
-                      color: number_color,
-                      fontSize: ComicDetailStyle.chapter_number_font_size,
-                      fontWeight: ComicDetailStyle.weight_medium,
-                      fontFeatures: const <FontFeature>[
-                        FontFeature.tabularFigures(),
-                      ],
+    final is_cjk = ComicsStyle.is_cjk(context);
+    final foreground = ComicDetailStyle.ink(context);
+    final secondary = ComicDetailStyle.muted(context);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: chapter.title,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: on_open,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: ComicDetailStyle.touch_target,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: ComicDetailStyle.chapter_padding_v,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  SizedBox(
+                    width: ComicDetailStyle.chapter_marker_width,
+                    child: selected
+                        ? Container(
+                            width: ComicDetailStyle.chapter_marker_width,
+                            height: ComicDetailStyle.chapter_marker_height,
+                            decoration: BoxDecoration(
+                              color: ColorConstants.dangerColor,
+                              borderRadius: BorderRadius.circular(
+                                ComicDetailStyle.chapter_marker_radius,
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: ComicDetailStyle.chapter_marker_gap),
+                  SizedBox(
+                    width: ComicDetailStyle.chapter_number_width,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        number.toString().padLeft(2, '0'),
+                        style:
+                            ComicDetailStyle.label_style(
+                              context,
+                              is_cjk,
+                              color: selected ? foreground : secondary,
+                            ).copyWith(
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-
-              /// 标题 + 页数。
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
+                  const SizedBox(width: ComicDetailStyle.chapter_title_gap),
+                  Expanded(
+                    child: Text(
                       chapter.title,
                       maxLines: ComicDetailStyle.chapter_title_max_lines,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: ComicsStyle.ink(context),
-                        fontSize: ComicDetailStyle.chapter_title_font_size,
-                        height: 1.4,
-                        fontWeight: ComicDetailStyle.weight_medium,
+                      style: ComicDetailStyle.text(
+                        context,
+                        size: ComicDetailStyle.chapter_title_font_size,
+                        color: foreground,
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        top: ComicDetailStyle.chapter_meta_top_spacing,
-                      ),
-                      child: Text(
-                        tr(
-                          'comics.page_count',
-                          namedArgs: <String, String>{
-                            'count': '${chapter.page_count}',
-                          },
-                        ),
-                        style: TextStyle(
-                          color: ComicsStyle.muted(context),
-                          fontSize: ComicDetailStyle.chapter_meta_font_size,
-                          fontWeight: ComicDetailStyle.weight_regular,
-                        ),
-                      ),
+                  ),
+                  const SizedBox(width: ComicDetailStyle.chapter_title_gap),
+                  Text(
+                    tr(
+                      'comics.page_count',
+                      namedArgs: {'count': '${chapter.page_count}'},
                     ),
-                  ],
-                ),
+                    style: ComicDetailStyle.label_style(
+                      context,
+                      is_cjk,
+                      color: secondary,
+                    ),
+                  ),
+                ],
               ),
-
-              /// 右侧箭头。
-              Icon(
-                Icons.chevron_right_rounded,
-                color: number_color,
-                size: 20,
-              ),
-            ],
+            ),
           ),
         ),
       ),

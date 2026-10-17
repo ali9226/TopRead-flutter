@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
@@ -124,7 +126,9 @@ class BookshelfBookCard extends StatelessWidget {
                 style: title_text_style,
               ),
               const SizedBox(height: Style.book_meta_top_spacing),
-              if (is_single_line)
+              if (book_item.content_type == 'comic')
+                _build_comic_meta(meta_text_style)
+              else if (is_single_line)
                 _build_single_line_meta(meta_text_style)
               else
                 _build_multi_line_meta(meta_text_style, meta_text_color),
@@ -254,6 +258,66 @@ class BookshelfBookCard extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  /// TODO 漫画始终展示续读章节与页码，长标题或长分类不能把阅读进度挤掉。
+  Widget _build_comic_meta(TextStyle style) {
+    final category = _get_category_text();
+    final has_progress = book_item.has_comic_progress;
+    final chapter = book_item.chapter_title.isNotEmpty
+        ? book_item.chapter_title
+        : book_item.chapter_number?.toString().replaceFirst(
+                RegExp(r'\.0+$'),
+                '',
+              ) ??
+              '';
+    final progress = easy.tr(
+      book_item.progress_key,
+      namedArgs: <String, String>{
+        ...book_item.progress_args,
+        if (has_progress) 'chapter': chapter,
+      },
+    );
+    final page = book_item.page_index < 0 ? 0 : book_item.page_index;
+    final page_label = has_progress && book_item.page_count > 0
+        ? easy.tr(
+            'bookshelf.progress.comic_page',
+            namedArgs: <String, String>{
+              'page': '${(page + 1).clamp(1, book_item.page_count)}',
+              'total': '${book_item.page_count}',
+            },
+          )
+        : '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        if (category.isNotEmpty) ...<Widget>[
+          Text(
+            category,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: style,
+          ),
+          const SizedBox(height: Style.book_single_line_meta_gap),
+        ],
+        Text(
+          progress,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: style,
+        ),
+        if (page_label.isNotEmpty) ...<Widget>[
+          const SizedBox(height: Style.book_single_line_meta_gap),
+          Text(
+            page_label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: style,
+          ),
+        ],
+      ],
     );
   }
 

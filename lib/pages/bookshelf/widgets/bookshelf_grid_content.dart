@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/components/fixed_bottom_navigation/style.dart'
@@ -12,6 +14,9 @@ import 'package:app/pages/bookshelf/logic.dart';
 import 'package:app/pages/bookshelf/style.dart';
 import 'package:app/pages/bookshelf/widgets/bookshelf_book_card.dart';
 import 'package:app/stores/bookshelf_store.dart';
+import 'package:app/stores/user_information.dart';
+import 'package:app/util/dialog/show_bottom_tip.dart';
+import 'package:get/get.dart';
 import 'package:app/util/dialog/show_message.dart';
 import 'package:app/util/novel_navigation/index.dart';
 import 'package:app/util/router/router_util.dart';
@@ -90,6 +95,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
 
   /// 正在播放删除动画的项目 ID 集合。
   final Set<String> _removing_ids = <String>{};
+  int _identity_revision = 0;
 
   /// 每个卡片的实际测量高度。
   final Map<String, double> _item_heights = <String, double>{};
@@ -106,7 +112,23 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
   @override
   void initState() {
     super.initState();
+    _identity_revision = Get.isRegistered<UserInformation>()
+        ? Get.find<UserInformation>().auth_identity_revision
+        : 0;
     _scroll_controller.addListener(_handle_scroll);
+  }
+
+  @override
+  void didUpdateWidget(covariant BookshelfGridContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final revision = Get.isRegistered<UserInformation>()
+        ? Get.find<UserInformation>().auth_identity_revision
+        : 0;
+    if (revision != _identity_revision) {
+      _identity_revision = revision;
+      _removing_ids.clear();
+      _item_heights.clear();
+    }
   }
 
   @override
@@ -232,7 +254,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
     final Set<String> seen = <String>{};
     final List<BookshelfBookItem> result = <BookshelfBookItem>[];
     for (final BookshelfBookItem item in items) {
-      if (seen.add(item.id)) {
+      if (seen.add(item.identity)) {
         result.add(item);
       }
     }
@@ -446,7 +468,9 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
   void _navigate_to_read(BookshelfBookItem book_item) {
     if (book_item.content_type == 'comic') {
       routerUtil(
-        path: '/comics/detail?id=${book_item.novel_id}',
+        path: book_item.has_comic_progress
+            ? '/comics/read?chapter_id=${book_item.chapter_id}&page=${book_item.page_index}&resume=1'
+            : '/comics/detail?id=${book_item.novel_id}',
         type: 'push',
       );
       return;
@@ -462,6 +486,14 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
   ///
   /// 服务端确认成功后标记删除并播放动画。
   void _show_action_dialog(BookshelfBookItem book_item) {
+    // TODO 弹窗和删除动画均绑定发起账号，切换身份后不能删除新账号的同号作品。
+    final user = Get.isRegistered<UserInformation>()
+        ? Get.find<UserInformation>()
+        : null;
+    final revision = user?.auth_revision;
+    bool current() =>
+        user == null ||
+        (revision != null && user.can_apply_authenticated_response(revision));
     final String message = widget.type == BookshelfContentType.history
         ? easy.tr(
             'bookshelf.delete_dialog.message',
@@ -486,11 +518,15 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
       rightButtonText: rightButtonText,
       rightButtonColor: ColorConstants.dangerColor,
       onRightPressed: () async {
-        if (!mounted) return;
-
-        final bool removed =
-            await widget.on_delete?.call(book_item) ?? false;
-        if (!mounted || !removed) return;
+        if (!mounted || !current()) return;
+        bool removed;
+        try {
+          removed = await widget.on_delete?.call(book_item) ?? false;
+        } catch (failure) {
+          if (mounted && current()) showBottomTip(failure.toString());
+          return;
+        }
+        if (!mounted || !current() || !removed) return;
 
         // 标记为正在移除，触发位置重排动画 + 淡出动画。
         setState(() {
@@ -501,7 +537,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
         Future<void>.delayed(
           const Duration(milliseconds: _delete_animation_duration_ms),
         ).then((_) {
-          if (mounted) {
+          if (mounted && current()) {
             setState(() {
               _removing_ids.remove(book_item.id);
               _item_heights.remove(book_item.id);

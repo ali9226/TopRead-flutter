@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
@@ -41,6 +43,12 @@ class CommentItem extends StatelessWidget {
   /// 评论定位锚点构建器。
   final CommentTargetKeyBuilder? target_key_builder;
 
+  /// TODO 独立数据源可在正文后添加线程展开入口，小说默认不添加额外区域。
+  final Widget? thread_controls;
+
+  /// TODO 独立分页线程的加载与重试区域，放在回复后、分隔线前。
+  final Widget? thread_footer;
+
   const CommentItem({
     super.key,
     required this.comment,
@@ -50,6 +58,8 @@ class CommentItem extends StatelessWidget {
     this.on_long_press,
     this.highlighted_comment_id = 0,
     this.target_key_builder,
+    this.thread_controls,
+    this.thread_footer,
   });
 
   @override
@@ -84,6 +94,7 @@ class CommentItem extends StatelessWidget {
             action_color: action_color,
             nickname_color: nickname_color,
           ),
+          ?thread_controls,
           if (comment.replies.isNotEmpty)
             _build_reply_section(
               is_cjk: is_cjk,
@@ -92,12 +103,11 @@ class CommentItem extends StatelessWidget {
               action_color: action_color,
               nickname_color: nickname_color,
             ),
+          ?thread_footer,
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: CommentListStyle.list_horizontal_padding,
-            ).add(const EdgeInsets.only(
-              left: CommentListStyle.divider_indent,
-            )),
+            ).add(const EdgeInsets.only(left: CommentListStyle.divider_indent)),
             child: Divider(
               height: CommentListStyle.divider_thickness,
               thickness: CommentListStyle.divider_thickness,
@@ -119,7 +129,8 @@ class CommentItem extends StatelessWidget {
   }) {
     final bool is_highlighted = highlighted_comment_id == comment.id;
     // 已删除评论禁用所有交互
-    final bool is_disabled = comment.is_sending || comment.is_disliked || comment.is_deleted;
+    final bool is_disabled =
+        comment.is_sending || comment.is_disliked || comment.is_deleted;
 
     return _HighlightWrapper(
       highlighted: is_highlighted,
@@ -138,12 +149,15 @@ class CommentItem extends StatelessWidget {
                   ? null
                   : () => on_long_press!(comment),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: CommentListStyle.list_horizontal_padding,
-                ).add(const EdgeInsets.only(
-                  top: CommentListStyle.item_top_padding,
-                  bottom: CommentListStyle.item_bottom_padding,
-                )),
+                padding:
+                    const EdgeInsets.symmetric(
+                      horizontal: CommentListStyle.list_horizontal_padding,
+                    ).add(
+                      const EdgeInsets.only(
+                        top: CommentListStyle.item_top_padding,
+                        bottom: CommentListStyle.item_bottom_padding,
+                      ),
+                    ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -232,7 +246,9 @@ class CommentItem extends StatelessWidget {
             child: InkWell(
               key: ValueKey<String>('comment_reply_tap_${reply.id}'),
               onTap: is_disabled ? null : () => on_reply(reply, target_context),
-              onLongPress: is_disabled || on_long_press == null ? null : () => on_long_press!(reply),
+              onLongPress: is_disabled || on_long_press == null
+                  ? null
+                  : () => on_long_press!(reply),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: CommentListStyle.list_horizontal_padding,
@@ -402,8 +418,9 @@ class CommentItem extends StatelessWidget {
       return Text(target.content, style: content_style);
     }
 
-    return RichText(
-      text: TextSpan(
+    // TODO Text.rich 继承应用字体及系统字号，回复正文与主评论使用相同的可读性设置。
+    return Text.rich(
+      TextSpan(
         style: content_style,
         children: <InlineSpan>[
           TextSpan(text: '${tr('comment.reply')} '),
@@ -520,19 +537,19 @@ class CommentItem extends StatelessWidget {
         target.is_sending
             ? _SendingIndicator(is_dark: is_dark)
             : (target.is_disliked || target.is_deleted)
-                ? _DisabledLikeButton(
-                    is_dark: is_dark,
-                    like_count: target.like_count,
-                    compact: is_reply,
-                  )
-                : _CommentLikeButton(
-                    key: ValueKey<String>('comment_like_${target.id}'),
-                    is_dark: is_dark,
-                    is_liked: target.is_liked,
-                    like_count: target.like_count,
-                    compact: is_reply,
-                    on_tap: () => on_like(target),
-                  ),
+            ? _DisabledLikeButton(
+                is_dark: is_dark,
+                like_count: target.like_count,
+                compact: is_reply,
+              )
+            : _CommentLikeButton(
+                key: ValueKey<String>('comment_like_${target.id}'),
+                is_dark: is_dark,
+                is_liked: target.is_liked,
+                like_count: target.like_count,
+                compact: is_reply,
+                on_tap: () => on_like(target),
+              ),
       ],
     );
   }
@@ -904,7 +921,9 @@ class _DisabledLikeButton extends StatelessWidget {
         minHeight: CommentListStyle.like_touch_height,
       ),
       child: Padding(
-        padding: const EdgeInsets.only(left: CommentListStyle.like_left_padding),
+        padding: const EdgeInsets.only(
+          left: CommentListStyle.like_left_padding,
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.end,

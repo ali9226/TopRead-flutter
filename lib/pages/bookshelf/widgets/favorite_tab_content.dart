@@ -1,9 +1,14 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/api/bookshelf.dart';
 import 'package:app/api/comics.dart';
 import 'package:app/pages/bookshelf/widgets/bookshelf_grid_content.dart';
 import 'package:app/stores/bookshelf_store.dart';
+import 'package:app/stores/user_information.dart';
+import 'package:app/config/constant.dart';
+import 'package:app/util/storage_util/index.dart';
 
 /// 收藏 Tab 内容。
 ///
@@ -65,11 +70,18 @@ class _FavoriteTabContentState extends State<FavoriteTabContent>
   /// 取消收藏：漫画走 comics/collect，小说走 novel_favorite/remove。
   Future<bool> _handle_delete(BookshelfBookItem book_item) async {
     if (book_item.content_type == 'comic') {
-      final result = await comics_request('collect', <String, dynamic>{
+      final user = Get.find<UserInformation>();
+      final revision = user.auth_revision;
+      final token = await StorageUtil.getData(Constant.tokenKey) ?? '';
+      if (!user.can_apply_authenticated_response(revision) || token.isEmpty) {
+        return false;
+      }
+      final result = await comics_session_request('collect', <String, dynamic>{
         'comic_id': int.tryParse(book_item.novel_id) ?? 0,
         'collected': false,
-      });
-      return result['collected'] == false;
+      }, authorization_token: token);
+      return user.can_apply_authenticated_response(revision) &&
+          result['collected'] == false;
     }
     return remove_favorite(novel_id: int.tryParse(book_item.novel_id) ?? 0);
   }

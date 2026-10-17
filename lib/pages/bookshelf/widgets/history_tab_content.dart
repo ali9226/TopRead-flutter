@@ -1,9 +1,11 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/api/bookshelf.dart';
-import 'package:app/api/comics.dart';
 import 'package:app/pages/bookshelf/widgets/bookshelf_grid_content.dart';
 import 'package:app/stores/bookshelf_store.dart';
+import 'package:app/services/comics_library_removal.dart';
 
 /// 历史 Tab 内容。
 ///
@@ -65,10 +67,9 @@ class _HistoryTabContentState extends State<HistoryTabContent>
   /// 删除阅读记录：漫画走 comics/remove_history，小说走 novel_read_record/remove。
   Future<bool> _handle_delete(BookshelfBookItem book_item) async {
     if (book_item.content_type == 'comic') {
-      final result = await comics_request('remove_history', <String, dynamic>{
-        'comic_id': int.tryParse(book_item.novel_id) ?? 0,
-      });
-      return result['comic_id'] != null;
+      return remove_comic_history(
+        comic_id: int.tryParse(book_item.novel_id) ?? 0,
+      );
     }
     return remove_read_record(novel_id: int.tryParse(book_item.novel_id) ?? 0);
   }

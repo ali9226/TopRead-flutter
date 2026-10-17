@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
@@ -103,7 +105,7 @@ class CommentComposerSurface extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: CommentListStyle.input_action_spacing),
-                _build_send_button(is_cjk: is_cjk, is_dark: is_dark),
+                _build_send_button(context, is_cjk: is_cjk, is_dark: is_dark),
               ],
             ),
           ),
@@ -305,7 +307,11 @@ class CommentComposerSurface extends StatelessWidget {
   }
 
   /// 构建发送按钮，仅在有有效文字时允许点击。
-  Widget _build_send_button({required bool is_cjk, required bool is_dark}) {
+  Widget _build_send_button(
+    BuildContext context, {
+    required bool is_cjk,
+    required bool is_dark,
+  }) {
     final Color bg_color = has_text
         ? ColorConstants.themeColor
         : is_dark
@@ -354,13 +360,15 @@ class CommentComposerSurface extends StatelessWidget {
               milliseconds: CommentListStyle.input_state_animation_duration_ms,
             ),
             curve: Curves.easeOutCubic,
-            style: TextStyle(
-              fontSize: is_cjk
-                  ? CommentListStyle.send_button_font_size_cjk
-                  : CommentListStyle.send_button_font_size_alphabetic,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-              color: text_color,
-            ),
+            // TODO 保留应用字体，再覆盖按钮自身的字号及字重，Overlay 与固定栏保持一致。
+            style: (Theme.of(context).textTheme.labelLarge ?? const TextStyle())
+                .copyWith(
+                  fontSize: is_cjk
+                      ? CommentListStyle.send_button_font_size_cjk
+                      : CommentListStyle.send_button_font_size_alphabetic,
+                  fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                  color: text_color,
+                ),
             child: Text(tr('comment.send')),
           ),
         ),

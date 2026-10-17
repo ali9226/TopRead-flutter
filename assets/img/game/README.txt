@@ -1,0 +1,1 @@
+Tile Quest asset pack v2. 32 independent tile PNGs at 256x256 with alpha-transparent rounded corners; 3 power-ups, 4 buttons, 2 trays, 1 app icon. Assets were extracted from generated artwork; inspect before production use. Transparent outside rounded silhouette, not all internal shadow pixels isolated.
