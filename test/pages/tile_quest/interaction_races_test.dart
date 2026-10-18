@@ -77,6 +77,7 @@ class _RaceWork implements TileQuestWorkService {
           ),
       ],
       level: level,
+      difficulty: 4,
       seed: seed,
       unlocked_level: unlocked_level,
       challenge_id: challenge_id!,
@@ -126,7 +127,10 @@ void main() {
   test(
     'same-frame legal actions remain complete until the next challenge',
     () async {
-      final saves = TileQuestSaveService(store: _RaceStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _RaceStore(),
+      );
       final work = _RaceWork()..tile_count = 270;
       final logic = _logic(saves, work);
       await logic.initialize();
@@ -147,7 +151,10 @@ void main() {
     test(
       'leaving invalidates an outstanding $computing before its result commits',
       () async {
-        final saves = TileQuestSaveService(store: _RaceStore());
+        final saves = TileQuestSaveService(
+          encode_snapshot: encode_tile_quest_snapshot,
+          store: _RaceStore(),
+        );
         final work = _RaceWork();
         final feedback = _RaceFeedback();
         final logic = _logic(saves, work, feedback: feedback);
@@ -187,7 +194,10 @@ void main() {
 
   test('slow ordered saves do not hold the new board input lock', () async {
     final store = _RaceStore();
-    final saves = TileQuestSaveService(store: store);
+    final saves = TileQuestSaveService(
+      encode_snapshot: encode_tile_quest_snapshot,
+      store: store,
+    );
     final logic = _logic(saves, _RaceWork());
     await logic.initialize();
     await logic.flush_save();
@@ -215,7 +225,10 @@ void main() {
     'one pending shuffle rejects duplicate inputs and preserves background metadata',
     () async {
       var now = 0;
-      final saves = TileQuestSaveService(store: _RaceStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _RaceStore(),
+      );
       final work = _RaceWork();
       final feedback = _RaceFeedback();
       final logic = _logic(saves, work, feedback: feedback, now_ms: () => now);
@@ -257,7 +270,10 @@ void main() {
   test(
     'a revoked worker cannot clear the replacement session busy lock',
     () async {
-      final saves = TileQuestSaveService(store: _RaceStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _RaceStore(),
+      );
       final work = _RaceWork();
       final first = _logic(saves, work);
       await first.initialize();
@@ -290,7 +306,10 @@ void main() {
   test(
     'repeated restart and next requests share the synchronous generation lock',
     () async {
-      final saves = TileQuestSaveService(store: _RaceStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _RaceStore(),
+      );
       final work = _RaceWork()..tile_count = 3;
       final logic = _logic(saves, work);
       await logic.initialize();
@@ -323,7 +342,10 @@ void main() {
   testWidgets(
     'a stale displayed board cannot tap or spend tools after shuffle commits',
     (tester) async {
-      final saves = TileQuestSaveService(store: _RaceStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _RaceStore(),
+      );
       final feedback = _RaceFeedback();
       final logic = _logic(saves, _RaceWork(), feedback: feedback);
       await _mount(tester, logic);
@@ -361,7 +383,10 @@ void main() {
     tester,
   ) async {
     var now = 0;
-    final saves = TileQuestSaveService(store: _RaceStore());
+    final saves = TileQuestSaveService(
+      encode_snapshot: encode_tile_quest_snapshot,
+      store: _RaceStore(),
+    );
     final logic = _logic(saves, _RaceWork(), now_ms: () => now);
     await _mount(tester, logic);
     now = 1000;
@@ -397,7 +422,10 @@ void main() {
   testWidgets(
     'old challenge feedback is ignored after reset and during departure',
     (tester) async {
-      final saves = TileQuestSaveService(store: _RaceStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _RaceStore(),
+      );
       final feedback = _RaceFeedback();
       final logic = _logic(saves, _RaceWork(), feedback: feedback);
       await _mount(tester, logic);
@@ -428,7 +456,10 @@ void main() {
     'exit during initialization cancels publication and duplicate exits share a save fence',
     () async {
       final store = _RaceStore();
-      final saves = TileQuestSaveService(store: store);
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: store,
+      );
       final gate = Completer<void>();
       final work = _RaceWork()..generation_gate = gate;
       final logic = _logic(saves, work);
@@ -454,7 +485,10 @@ void main() {
   testWidgets(
     'old winner controls cannot act on a newly committed next level',
     (tester) async {
-      final saves = TileQuestSaveService(store: _RaceStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _RaceStore(),
+      );
       final logic = _logic(saves, _RaceWork()..tile_count = 3);
       await _mount(tester, logic);
       for (final id in <int>[0, 1, 2]) {
@@ -495,7 +529,10 @@ void main() {
   testWidgets(
     'same-frame restart requests create only one confirmation route',
     (tester) async {
-      final saves = TileQuestSaveService(store: _RaceStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _RaceStore(),
+      );
       final logic = _logic(saves, _RaceWork());
       await _mount(tester, logic);
       final scene = tester.widget<TileQuestScene>(find.byType(TileQuestScene));

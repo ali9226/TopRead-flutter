@@ -16,6 +16,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'shuffle_probe.dart';
+import 'scene_probe.dart';
 
 const _export_motion = bool.fromEnvironment('TILE_QUEST_EXPORT_MOTION');
 const _size = Size(390, 844);
@@ -153,79 +155,30 @@ Map<int, List<(int, double)>> _full_size_cards(
   Map<int, Rect> original,
 ) {
   final result = <int, List<(int, double)>>{};
-  final pattern = RegExp(
-    r'^(?:tile_quest_(?:flight|tile|reserve)|tray)_(\d+)$',
-  );
-  for (final element in find.byType(QuestTileCard).evaluate()) {
-    int? id;
-    var opacity = 1.0;
-    element.visitAncestorElements((ancestor) {
-      final widget = ancestor.widget;
-      if (widget is Opacity) opacity *= widget.opacity;
-      final key = widget.key;
-      if (key is ValueKey<String>) {
-        final match = pattern.firstMatch(key.value);
-        if (match != null) id ??= int.parse(match.group(1)!);
-      }
-      return true;
-    });
-    if (id == null) continue;
-    final expected = original[id];
-    expect(expected, isNotNull, reason: 'unexpected painted card $id');
-    final box = element.findRenderObject()! as RenderBox;
-    final matrix = box.getTransformTo(null).storage;
-    final scale_x = math.sqrt(matrix[0] * matrix[0] + matrix[1] * matrix[1]);
-    final scale_y = math.sqrt(matrix[4] * matrix[4] + matrix[5] * matrix[5]);
-    expect(
-      scale_x,
-      closeTo(1, .000001),
-      reason: 'card $id is narrowed or scaled horizontally',
-    );
-    expect(
-      scale_y,
-      closeTo(1, .000001),
-      reason: 'card $id is scaled vertically',
-    );
-    expect(box.size.width, closeTo(expected!.width, .000001));
-    expect(box.size.height, closeTo(expected.height, .000001));
-    final corner = box.localToGlobal(Offset.zero);
-    final horizontal = box.localToGlobal(Offset(box.size.width, 0));
-    final vertical = box.localToGlobal(Offset(0, box.size.height));
-    expect((horizontal - corner).distance, closeTo(expected.width, .000001));
-    expect((vertical - corner).distance, closeTo(expected.height, .000001));
-    (result[id!] ??= []).add(((element.widget as QuestTileCard).type, opacity));
+  for (final frame in quest_scene_frames(tester).values) {
+    final expected = original[frame.id]!;
+    expect(frame.rect.width, closeTo(expected.width, .000001));
+    expect(frame.rect.height, closeTo(expected.height, .000001));
+    result[frame.id] = [
+      if (frame.previous_type != null &&
+          frame.previous_type != frame.type &&
+          frame.face_progress < 1)
+        (frame.previous_type!, 1),
+      if (frame.previous_type == null ||
+          frame.previous_type == frame.type ||
+          frame.face_progress >= 1)
+        (frame.type, 1)
+      else if (frame.face_progress > 0)
+        (frame.type, frame.face_progress),
+    ];
   }
   expect(result.keys.toSet(), original.keys.toSet());
   return result;
 }
 
-Map<int, Rect> _positioned_cards(WidgetTester tester) {
-  final result = <int, Rect>{};
-  final pattern = RegExp(
-    r'^(?:tile_quest_(?:flight|tile|reserve)|tray)_(\d+)$',
-  );
-  for (final element
-      in find.byWidgetPredicate((widget) => widget is Positioned).evaluate()) {
-    final key = element.widget.key;
-    if (key is! ValueKey<String>) continue;
-    final match = pattern.firstMatch(key.value);
-    if (match == null) continue;
-    final id = int.parse(match.group(1)!);
-    expect(
-      result.containsKey(id),
-      isFalse,
-      reason: 'card $id has two positioning containers',
-    );
-    final box = element.findRenderObject()! as RenderBox;
-    result[id] = Rect.fromLTWH(
-      box.localToGlobal(Offset.zero).dx,
-      box.localToGlobal(Offset.zero).dy,
-      box.size.width,
-      box.size.height,
-    );
-  }
-  return result;
-}
+Map<int, Rect> _positioned_cards(WidgetTester tester) => {
+  for (final frame in quest_scene_frames(tester).values) frame.id: frame.rect,
+};
 
 void _record_blended_faces(
   Map<int, List<(int, double)>> current,
@@ -370,13 +323,11 @@ void main() {
       final host = await _mount(tester, boundary, engine);
       final initial_positions = <int, Rect>{
         for (final tile in engine.state.tiles.where((tile) => !tile.is_removed))
-          tile.id: tester.getRect(
-            find.byKey(ValueKey('tile_quest_tile_${tile.id}')),
-          ),
+          tile.id: quest_scene_frames(tester)[tile.id]!.rect,
       };
       final tray_positions = <int, Rect>{
         for (final id in engine.state.tray)
-          id: tester.getRect(find.byKey(ValueKey('tray_$id'))),
+          id: quest_scene_frames(tester)[id]!.rect,
       };
       await _capture(tester, boundary, '$_preview_directory/before.png');
       host.currentState!.shuffle();
@@ -415,7 +366,7 @@ void main() {
         }
         for (final entry in tray_positions.entries) {
           _same_rect(
-            tester.getRect(find.byKey(ValueKey('tray_${entry.key}'))),
+            quest_scene_frames(tester)[entry.key]!.rect,
             entry.value,
             reason: 'held tray card ${entry.key} never joins the shuffle',
           );
@@ -425,7 +376,7 @@ void main() {
           _record_blended_faces(faces, result, observed_faces, blended);
           final positions = _positioned_cards(tester);
           for (final id in sampled_ids) {
-            expect(_flight(id), findsOneWidget);
+            expect(quest_shuffle_frames(tester), contains(id));
             final visible = positions[id]!;
             expect(visible.left, greaterThanOrEqualTo(-.01));
             expect(visible.right, lessThanOrEqualTo(_size.width + .01));
@@ -452,20 +403,14 @@ void main() {
       }
       for (final entry in initial_positions.entries) {
         expect(_flight(entry.key), findsNothing);
-        final board = find.byKey(ValueKey('tile_quest_tile_${entry.key}'));
+        final frame = quest_scene_frames(tester)[entry.key]!;
         _same_rect(
-          tester.getRect(board),
+          frame.rect,
           entry.value,
           reason: 'every card returns to its exact logical destination',
         );
-        expect(
-          tester
-              .widget<QuestTileCard>(
-                find.byKey(ValueKey('board_card_${entry.key}')),
-              )
-              .type,
-          result.after.tile_by_id(entry.key).type,
-        );
+        expect(frame.zone, QuestTileZone.board);
+        expect(frame.type, result.after.tile_by_id(entry.key).type);
       }
       await tester.pumpAndSettle();
       await _capture(tester, boundary, '$_preview_directory/after.png');

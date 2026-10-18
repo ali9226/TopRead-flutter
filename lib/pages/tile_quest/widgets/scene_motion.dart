@@ -1,5 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
-import 'package:flutter/animation.dart';
+import 'dart:math' as math;
 import '../game/models.dart';
 import '../style.dart';
 
@@ -10,7 +10,6 @@ class QuestSceneMotion {
   final double queued_at;
   final bool preflight;
   double started_at = 0;
-  double source_progress = 0;
   double travel_ms = 0;
   bool match_feedback_sent = false;
   late final Set<int> moved_ids = result.moved_ids.toSet();
@@ -54,25 +53,23 @@ class QuestSceneMotion {
   int get incoming_id => result.moved_ids.single;
   List<int> get insertion_tray => result.settlement_tray;
 
+  /// 每张新牌从点击时刻独立计时，整段飞行都使用同一条曲线。
+  /// 排在匹配或其他插入后面的牌也能直接落入槽位，不再在半空等队列。
   double preflight_progress(double now) => preflight
-      ? TileQuestStyle.preflight_progress *
-            Curves.easeOutCubic.transform(
-              ((now - queued_at) / TileQuestStyle.preflight_duration_ms).clamp(
-                0.0,
-                1.0,
-              ),
-            )
+      ? _smooth_progress(
+          (now - queued_at) / TileQuestStyle.flight_duration.inMilliseconds,
+        )
       : 0;
 
+  /// 规则呈现仍按事务顺序交接；交接仅等待尚未完成的飞行部分。
+  /// 已经并行落槽的牌无需重复补飞，匹配则从交接后正常保持、消散。
   void start(double now) {
     started_at = now;
-    source_progress = preflight_progress(now);
     final base = TileQuestStyle.flight_duration.inMilliseconds.toDouble();
     travel_ms = inserts
-        ? (base * (1 - source_progress)).clamp(
-            TileQuestStyle.queued_flight_min_ms,
-            base,
-          )
+        ? preflight
+              ? (base - (now - queued_at)).clamp(0.0, base)
+              : base
         : result.action == TileQuestAction.shuffle
         ? TileQuestStyle.shuffle_duration_ms
         : TileQuestStyle.tool_motion_ms;
@@ -82,15 +79,16 @@ class QuestSceneMotion {
       ? TileQuestStyle.tray_compact_ms
       : 0;
   double get match_start => travel_ms + TileQuestStyle.match_hold_ms;
-  double get compact_start => match_start + TileQuestStyle.match_fade_ms;
-  double get duration_ms => matches ? compact_start + compact_ms : travel_ms;
+  double get compact_start => match_start;
+  double get duration_ms => matches
+      ? match_start + math.max(TileQuestStyle.match_fade_ms, compact_ms)
+      : travel_ms;
   double get ends_at => started_at + duration_ms;
   double elapsed(double now) => (now - started_at).clamp(0.0, duration_ms);
-  double travel(double now) => Curves.easeInOutCubic.transform(
-    (elapsed(now) / travel_ms).clamp(0.0, 1.0),
-  );
+  double travel(double now) =>
+      travel_ms <= 0 ? 1 : _smooth_progress(elapsed(now) / travel_ms);
   double flight(double now) =>
-      source_progress + (1 - source_progress) * travel(now);
+      preflight ? preflight_progress(now) : travel(now);
   double fade(double now) => matches
       ? ((elapsed(now) - match_start) / TileQuestStyle.match_fade_ms).clamp(
           0.0,
@@ -99,7 +97,12 @@ class QuestSceneMotion {
       : 0;
   double compact(double now) => compact_ms == 0
       ? 0
-      : Curves.easeOutCubic.transform(
-          ((elapsed(now) - compact_start) / compact_ms).clamp(0.0, 1.0),
-        );
+      : _smooth_progress((elapsed(now) - compact_start) / compact_ms);
+
+  /// 使用同一条解析曲线，起落速度均为零，调用方不得再次套入缓动。
+  /// 不依赖 Cubic 的迭代求根，洗牌与道具每帧只计算一次共享进度。
+  static double _smooth_progress(double value) {
+    final time = value.clamp(0.0, 1.0);
+    return time * time * (3 - 2 * time);
+  }
 }

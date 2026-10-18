@@ -4,6 +4,7 @@ import 'package:app/pages/tile_quest/game/generator.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:app/pages/tile_quest/game/validator.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'certificate_replay.dart';
 
 /// Adjacent cells meet edge-to-edge. Deliberate whole-cell holes and separate
 /// heaps are part of the irregular layouts; fractional sight gaps are not.
@@ -82,52 +83,58 @@ void main() {
     },
   );
 
-  test('all difficulties have compact, reproducible and solvable layouts', () {
-    for (var difficulty = 1; difficulty <= 10; difficulty++) {
-      for (final seed in [0, 27, 730]) {
-        final state = TileQuestGenerator.generate(
-          level: 2,
-          difficulty: difficulty,
-          seed: seed,
-        );
-        expect_compact_layers(state);
-        final same_seed = TileQuestGenerator.generate(
-          level: 2,
-          difficulty: difficulty,
-          seed: seed,
-        );
-        expect(same_seed.to_json(), state.to_json());
-        final barrier = state.expert_barrier;
-        if (barrier != null) {
-          expect(
-            TileQuestValidator.validate_tool_solution(
-              state,
-              barrier.witness,
-              remove_uses: 3,
-            ).valid,
-            isTrue,
+  test(
+    'all difficulties keep compact layouts and their required tool budget',
+    () {
+      for (var difficulty = 1; difficulty <= 10; difficulty++) {
+        for (final seed in [0, 27, 730]) {
+          final state = TileQuestGenerator.generate(
+            level: 2,
+            difficulty: difficulty,
+            seed: seed,
           );
-          expect(
-            TileQuestValidator.validate_tool_solution(
-              state,
-              barrier.witness,
-              remove_uses: 2,
-            ).valid,
-            isFalse,
+          expect_compact_layers(state);
+          final same_seed = TileQuestGenerator.generate(
+            level: 2,
+            difficulty: difficulty,
+            seed: seed,
           );
-          continue;
-        }
-        expect(TileQuestValidator.validate_solution(state).valid, isTrue);
+          expect(same_seed.to_json(), state.to_json());
+          final barrier = state.expert_barrier;
+          if (barrier != null) {
+            expect(
+              TileQuestValidator.validate_tool_solution(
+                state,
+                barrier.witness,
+                remove_uses: barrier.minimum_remove_uses,
+              ).valid,
+              isTrue,
+            );
+            expect(
+              TileQuestValidator.validate_tool_solution(
+                state,
+                barrier.witness,
+                remove_uses: barrier.minimum_remove_uses - 1,
+              ).valid,
+              isFalse,
+            );
+            if (difficulty == 10) continue;
+          }
+          expect(TileQuestValidator.validate_solution(state).valid, isTrue);
 
-        // Replay the certified order through actual tray rules so tighter
-        // neighboring rectangles cannot accidentally leave a blocked step.
-        final engine = TileQuestEngine(state);
-        for (final tile_id in state.certified_solution) {
-          final result = engine.tap_tile(tile_id);
-          expect(result.accepted, isTrue, reason: result.reason);
+          // Replay the certified order through actual tray rules so tighter
+          // neighboring rectangles cannot accidentally leave a blocked step.
+          final engine = TileQuestEngine(state);
+          for (final tile_id in state.certified_solution) {
+            final result = replay_certificate_step(engine, tile_id);
+            expect(result.accepted, isTrue, reason: result.reason);
+          }
+          expect(engine.state.status, TileQuestStatus.won);
+          if (difficulty >= 5) {
+            expect(engine.state.tools_used, greaterThanOrEqualTo(1));
+          }
         }
-        expect(engine.state.status, TileQuestStatus.won);
       }
-    }
-  });
+    },
+  );
 }

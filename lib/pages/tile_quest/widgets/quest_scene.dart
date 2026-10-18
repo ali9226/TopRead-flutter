@@ -2,20 +2,24 @@
 import 'dart:collection';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import '../game/models.dart';
 import '../game/config.dart';
 import '../style.dart';
 import '../services/feedback_service.dart';
-import 'board_backing.dart';
+import 'board_canvas.dart';
 import 'board_motion.dart';
+import 'insertion_timeline.dart';
 import 'match_particles.dart';
 import 'quest_controls.dart';
 import 'quest_text.dart';
 import 'scene_layout.dart';
 import 'scene_motion.dart';
+import 'motion_canvas.dart';
+import 'shuffle_textures.dart';
 import 'slot_wells.dart';
-import 'tile_card.dart';
+import 'tile_frame.dart';
 
 /// Rule transactions commit independently. One ordered visual clock owns every
 /// flying/held tile, including the temporary seventh tile before a match.
@@ -56,11 +60,16 @@ class _TileQuestSceneState extends State<TileQuestScene>
   final Queue<QuestSceneMotion> _pending = Queue<QuestSceneMotion>();
   final Set<TileQuestActionResult> _seen_actions = {};
   final List<TileQuestActionResult> _completed_actions = [];
-  final Map<(int, bool), Widget> _cards = {};
+  final ValueNotifier<int?> _pressed = ValueNotifier(null);
+  final Map<int, QuestParticleField> _particle_fields = {};
+  QuestBoardCanvas? _board_cache;
+  List<TileQuestTile> _board_cache_tiles = const [];
+  final QuestShuffleTextures _shuffle_textures = QuestShuffleTextures();
   final ValueNotifier<double> _clock = ValueNotifier<double>(0);
   late final Ticker _ticker;
   late TileQuestState _presented;
   QuestSceneMotion? _active;
+  QuestInsertionTimeline? _insertions;
   double _ticker_origin = 0;
   bool _reported_busy = false;
   bool _entering = false;
@@ -91,16 +100,33 @@ class _TileQuestSceneState extends State<TileQuestScene>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _shuffle_textures.resolve(
+      context,
+      widget.state.tiles.map((tile) => tile.type),
+    );
+  }
+
+  @override
   void didUpdateWidget(covariant TileQuestScene oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.state.challenge_id != widget.state.challenge_id) {
       _ticker.stop();
       _pending.clear();
       _active = null;
+      _insertions = null;
       _seen_actions.clear();
       _completed_actions.clear();
-      _cards.clear();
+      _particle_fields.clear();
+      _board_cache = null;
+      _board_cache_tiles = const [];
+      _pressed.value = null;
       _presented = widget.state;
+      _shuffle_textures.resolve(
+        context,
+        widget.state.tiles.map((tile) => tile.type),
+      );
       _clock.value = 0;
       _start_entrance();
     }
@@ -109,26 +135,32 @@ class _TileQuestSceneState extends State<TileQuestScene>
         : widget.recent_actions;
     for (final result in events) {
       if (!result.accepted || !_seen_actions.add(result)) continue;
-      final id = result.action == TileQuestAction.tap
-          ? result.moved_ids.single
-          : null;
+      final inserts =
+          result.action == TileQuestAction.tap ||
+          result.action == TileQuestAction.return_reserve;
+      final id = inserts ? result.moved_ids.single : null;
       final has_prior_motion =
           id != null &&
           ((_active?.result.moved_ids.contains(id) ?? false) ||
               _pending.any((item) => item.result.moved_ids.contains(id)) ||
-              _presented.tray.contains(id) ||
-              _presented.reserve.contains(id));
+              _presented.tray.contains(id));
+      // 撤回、移出和洗牌会改变后续牌的起点，必须等屏障交接后再飞。
+      final has_tool_barrier =
+          (_active != null && !_active!.inserts) ||
+          _pending.any((motion) => !motion.inserts);
       _pending.add(
         QuestSceneMotion(
           result,
           _clock.value,
-          preflight: id != null && !has_prior_motion,
+          preflight: id != null && !has_prior_motion && !has_tool_barrier,
         ),
       );
     }
     if (!_entering && _active == null && _pending.isNotEmpty) {
       _begin_next(_clock.value);
       _start_clock();
+    } else if (_insertions != null) {
+      _extend_insertions(_clock.value);
     }
   }
 
@@ -166,9 +198,16 @@ class _TileQuestSceneState extends State<TileQuestScene>
   }
 
   void _begin_next(double now, {double? observed_at}) {
-    final motion = _pending.removeFirst()..start(now);
+    final motion = _pending.removeFirst();
     _presented = motion.result.before;
     _active = motion;
+    if (motion.inserts) {
+      _insertions = QuestInsertionTimeline(motion.result.before, now)
+        ..add(motion, now);
+      _extend_insertions(now);
+    } else {
+      motion.start(now);
+    }
     _report_busy(true);
     if (!motion.inserts &&
         (observed_at ?? now) - now <= TileQuestStyle.feedback_frame_window_ms) {
@@ -177,6 +216,13 @@ class _TileQuestSceneState extends State<TileQuestScene>
             ? TileQuestFeedbackEvent.shuffle
             : TileQuestFeedbackEvent.tool,
       );
+    }
+  }
+
+  /// 连续插入共享呈现批次；道具保持在队首，等待所有牌与碎粒完成。
+  void _extend_insertions(double now) {
+    while (_pending.isNotEmpty && _pending.first.inserts) {
+      _insertions!.add(_pending.removeFirst(), now);
     }
   }
 
@@ -196,11 +242,12 @@ class _TileQuestSceneState extends State<TileQuestScene>
   /// A delayed frame may complete multiple transactions, but cannot reorder them.
   void _tick(Duration elapsed) {
     final now = _ticker_origin + elapsed.inMicroseconds / 1000;
-    bool changed = false;
+    // Only the outer tree needs setState; motion visuals ride _clock.
+    var outer_changed = false;
     if (_entering &&
         now - _entry_started_at >= TileQuestStyle.entry_duration_ms) {
       _entering = false;
-      changed = true;
+      outer_changed = true;
       if (_pending.isNotEmpty) {
         _begin_next(
           _entry_started_at + TileQuestStyle.entry_duration_ms,
@@ -208,30 +255,55 @@ class _TileQuestSceneState extends State<TileQuestScene>
         );
       }
     }
-    while (_active != null && now >= _active!.ends_at) {
-      final completed = _active!;
-      _match_feedback(completed, now);
+    while (_active != null &&
+        now >= (_insertions?.ends_at ?? _active!.ends_at)) {
+      final batch = _insertions;
+      final completed = batch?.motions.last ?? _active!;
+      final completed_at = batch?.ends_at ?? completed.ends_at;
+      if (batch != null) {
+        for (final motion in batch.motions) {
+          _match_feedback(motion, now);
+        }
+      } else {
+        _match_feedback(completed, now);
+      }
+      final reserve_before = _presented.reserve;
+      final action = completed.result.action;
       _presented = completed.result.after;
-      _completed_actions.add(completed.result);
+      if (!listEquals(reserve_before, _presented.reserve)) outer_changed = true;
+      // Undo and shuffle return tiles to the visible board set; taps leave
+      // them removed so only the clock-driven motion layer needs to update.
+      if (action == TileQuestAction.undo || action == TileQuestAction.shuffle) {
+        outer_changed = true;
+      }
+      _completed_actions.addAll(
+        batch?.motions.map((motion) => motion.result) ?? [completed.result],
+      );
       _active = null;
+      _insertions = null;
       if (completed.result.before.status != completed.result.after.status &&
-          now - completed.ends_at <= TileQuestStyle.feedback_frame_window_ms) {
+          now - completed_at <= TileQuestStyle.feedback_frame_window_ms) {
         if (completed.result.after.status == TileQuestStatus.won) {
           _send_feedback(TileQuestFeedbackEvent.won);
         } else if (completed.result.after.status == TileQuestStatus.lost) {
           _send_feedback(TileQuestFeedbackEvent.lost);
         }
       }
-      changed = true;
-      if (_pending.isNotEmpty) _begin_next(completed.ends_at, observed_at: now);
+      if (_pending.isNotEmpty) _begin_next(completed_at, observed_at: now);
     }
-    if (_active != null) _match_feedback(_active!, now);
+    if (_insertions != null) {
+      for (final motion in _insertions!.motions) {
+        _match_feedback(motion, now);
+      }
+    } else if (_active != null) {
+      _match_feedback(_active!, now);
+    }
     _clock.value = now;
     if (_active == null && !_entering) {
       _ticker.stop();
       _report_busy(false);
     }
-    if (changed && mounted) setState(() {});
+    if (outer_changed && mounted) setState(() {});
   }
 
   void _report_busy(bool value) {
@@ -248,11 +320,14 @@ class _TileQuestSceneState extends State<TileQuestScene>
   void dispose() {
     _ticker.dispose();
     _clock.dispose();
+    _shuffle_textures.dispose();
+    _pressed.dispose();
     super.dispose();
   }
 
   Set<int> get _moving_board_ids => {
     if (_active != null) ..._active!.result.moved_ids,
+    if (_insertions != null) ..._insertions!.incoming_ids,
     for (final motion in _pending) ...motion.result.moved_ids,
   };
 
@@ -339,13 +414,17 @@ class _TileQuestSceneState extends State<TileQuestScene>
                   ],
                 ),
               ),
-            // The board, header and slot backgrounds are outside the frame listener.
-            // Decoded image widgets are cached and repaint-isolated across positions.
             Positioned.fill(
-              child: ListenableBuilder(
-                listenable: _clock,
-                builder: (context, child) =>
-                    _motion_layer(layout, _clock.value),
+              child: QuestMotionCanvas(
+                key: const ValueKey('tile_quest_motion_canvas'),
+                layout: layout,
+                clock: _clock,
+                textures: _shuffle_textures,
+                snapshot_at: (now) => _motion_snapshot(layout, now),
+                particle_fields: _particle_fields,
+                reduced_motion: MediaQuery.disableAnimationsOf(context),
+                can_return: _can_return,
+                on_reserve: widget.on_reserve,
               ),
             ),
           ],
@@ -382,156 +461,97 @@ class _TileQuestSceneState extends State<TileQuestScene>
   List<Widget> _board_tiles(QuestSceneLayout layout) {
     if (_entering) return const [];
     final hidden = _moving_board_ids;
-    final groups = <int, List<TileQuestTile>>{};
-    for (final tile in widget.state.tiles) {
-      if (!tile.is_removed && !hidden.contains(tile.id)) {
-        (groups[tile.layer] ??= []).add(tile);
-      }
-    }
-    final layers = groups.keys.toList()..sort();
-    return [
-      for (final layer in layers) ...[
-        Positioned.fill(
-          child: IgnorePointer(
-            child: RepaintBoundary(
-              child: CustomPaint(
-                painter: QuestBoardBacking(
-                  tiles: groups[layer]!,
-                  layout: layout,
-                ),
-              ),
-            ),
-          ),
-        ),
-        for (final tile in groups[layer]!..sort((a, b) => a.id.compareTo(b.id)))
-          Positioned.fromRect(
-            key: ValueKey('tile_quest_tile_${tile.id}'),
-            rect: layout.board_tile(tile),
-            child: RepaintBoundary(
-              child: QuestTileCard(
-                key: ValueKey('board_card_${tile.id}'),
-                type: tile.type,
-                blocked: tile.is_blocked,
-                label:
-                    '${quest_tile_assets[tile.type % quest_tile_assets.length]} ${tile.id}',
-                on_tap:
-                    widget.busy ||
-                        _board_locked ||
-                        tile.is_blocked ||
-                        widget.state.status != TileQuestStatus.playing
-                    ? null
-                    : () => widget.on_tile(tile.id),
-              ),
-            ),
-          ),
-      ],
+    final visible = [
+      for (final tile in widget.state.tiles)
+        if (!tile.is_removed && !hidden.contains(tile.id)) tile,
     ];
+    final enabled =
+        !widget.busy &&
+        !_board_locked &&
+        widget.state.status == TileQuestStatus.playing;
+    final cached = _board_cache;
+    if (cached == null ||
+        !listEquals(visible, _board_cache_tiles) ||
+        cached.painter.layout.unit != layout.unit ||
+        cached.painter.layout.board_origin != layout.board_origin ||
+        cached.painter.layout.size != layout.size ||
+        cached.painter.enabled != enabled) {
+      _board_cache_tiles = visible;
+      _board_cache = QuestBoardCanvas(
+        key: const ValueKey('tile_quest_board_canvas'),
+        tiles: visible,
+        layout: layout,
+        textures: _shuffle_textures,
+        pressed: _pressed,
+        enabled: enabled,
+        on_press: (id) => _pressed.value = id,
+        on_tile: (id) => widget.on_tile(id),
+      );
+    }
+    return [Positioned.fill(child: _board_cache!)];
   }
 
-  Widget _cached_card(int type, {bool blocked = false}) => _cards.putIfAbsent(
-    (type, blocked),
-    () => RepaintBoundary(
-      child: QuestTileCard(type: type, blocked: blocked),
-    ),
-  );
+  bool _can_return(int id) =>
+      _show_tools &&
+      !widget.busy &&
+      !_board_locked &&
+      widget.state.status == TileQuestStatus.playing &&
+      widget.state.is_reserve_available(id);
 
-  Widget _tile(
+  QuestTileFrame _tile(
     int id,
     int type,
     Rect rect, {
     bool flying = false,
-    double opacity = 1,
-    double scale = 1,
     double rotation = 0,
     double? dissolve,
-    int? previous_type,
-    double face_progress = 1,
     bool reserve = false,
     bool blocked = false,
-  }) {
-    // 教学关不呈现任何备用牌或可归还点击区域。
-    if (reserve && !_show_tools) return const SizedBox.shrink();
-    Widget child = _cached_card(type, blocked: blocked);
-    if (previous_type != null && previous_type != type && face_progress < 1) {
-      final previous = _cached_card(previous_type, blocked: blocked);
-      child = face_progress <= 0
-          ? previous
-          : Stack(
-              fit: StackFit.expand,
-              children: [
-                // 底板持续不透明，新图案以完整正常尺寸柔和覆盖。
-                previous,
-                Opacity(opacity: face_progress, child: child),
-              ],
-            );
-    }
-    if (dissolve != null) {
-      child = QuestMatchParticles(
-        type: type,
-        seed: id,
-        progress: dissolve,
-        child: child,
-      );
-    }
-    if (reserve) {
-      child = GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap:
-            widget.busy ||
-                _board_locked ||
-                widget.state.status != TileQuestStatus.playing ||
-                blocked ||
-                !widget.state.is_reserve_available(id)
-            ? null
-            : () => widget.on_reserve(id),
-        child: child,
-      );
-    } else {
-      child = IgnorePointer(child: child);
-    }
-    return Positioned.fromRect(
-      key: ValueKey(
-        flying
-            ? 'tile_quest_flight_$id'
-            : reserve
-            ? 'tile_quest_reserve_$id'
-            : 'tray_$id',
-      ),
-      rect: rect,
-      child: Opacity(
-        opacity: opacity.clamp(0.0, 1.0),
-        child: Transform.rotate(
-          angle: rotation,
-          child: Transform.scale(scale: scale, child: child),
-        ),
-      ),
-    );
-  }
+  }) => QuestTileFrame(
+    id: id,
+    type: type,
+    rect: rect,
+    zone: flying
+        ? QuestTileZone.flight
+        : reserve
+        ? QuestTileZone.reserve
+        : QuestTileZone.tray,
+    rotation: rotation,
+    dissolve: dissolve,
+    blocked: blocked,
+  );
 
   Rect _flight_rect(Rect start, Rect end, double progress) {
     final rect = Rect.lerp(start, end, progress)!;
     final lift =
         math.sin(progress * math.pi) *
-        math.min(18.0, (start.center - end.center).distance * .06);
+        math.min(
+          TileQuestStyle.flight_lift_max,
+          (start.center - end.center).distance *
+              TileQuestStyle.flight_lift_distance_fraction,
+        );
     return rect.translate(0, -lift);
   }
 
-  Widget _motion_layer(QuestSceneLayout layout, double now) {
+  QuestMotionSnapshot _motion_snapshot(QuestSceneLayout layout, double now) {
     final rendered = <int>{};
-    final children = <Widget>[];
+    final children = <QuestTileFrame>[];
+    QuestShuffleStage? shuffle;
     final active = _active;
     if (_entering) {
       final tiles = _entry_tiles;
       for (var rank = 0; rank < tiles.length; rank++) {
         final tile = tiles[rank];
+        rendered.add(tile.id);
         final progress = QuestBoardMotion.entrance_progress(
           rank,
           tiles.length,
           now - _entry_started_at,
         );
         children.add(
-          Positioned.fromRect(
-            key: ValueKey('tile_quest_entry_${tile.id}'),
+          QuestTileFrame(
+            id: tile.id,
+            type: tile.type,
             rect: QuestBoardMotion.entrance_rect(
               layout,
               tile,
@@ -539,15 +559,12 @@ class _TileQuestSceneState extends State<TileQuestScene>
               tiles.length,
               now - _entry_started_at,
             ),
-            child: IgnorePointer(
-              child: Transform.rotate(
-                angle:
-                    (tile.id.isEven ? 1 : -1) *
-                    TileQuestStyle.entry_rotation *
-                    (1 - progress),
-                child: _cached_card(tile.type, blocked: tile.is_blocked),
-              ),
-            ),
+            zone: QuestTileZone.entry,
+            blocked: tile.is_blocked,
+            rotation:
+                (tile.id.isEven ? 1 : -1) *
+                TileQuestStyle.entry_rotation *
+                (1 - progress),
           ),
         );
       }
@@ -576,11 +593,12 @@ class _TileQuestSceneState extends State<TileQuestScene>
     } else if (active.inserts) {
       _insertion_tiles(active, layout, now, children, rendered);
     } else {
-      _tool_tiles(active, layout, now, children, rendered);
+      shuffle = _tool_tiles(active, layout, now, children, rendered);
     }
     for (final motion in _pending) {
       final result = motion.result;
-      if (result.action == TileQuestAction.tap &&
+      if ((result.action == TileQuestAction.tap ||
+              (motion.inserts && motion.preflight)) &&
           !rendered.contains(motion.incoming_id)) {
         final id = motion.incoming_id;
         rendered.add(id);
@@ -595,117 +613,65 @@ class _TileQuestSceneState extends State<TileQuestScene>
           ),
         );
       } else if (result.action == TileQuestAction.shuffle) {
-        // Pending shuffles keep their old visible faces until their flip starts.
-        for (final id in result.moved_ids) {
-          if (!rendered.add(id)) continue;
-          final tile = result.before.tile_by_id(id);
-          children.add(
-            _tile(
-              id,
-              tile.type,
-              layout.board_tile(tile),
-              flying: true,
-              blocked: tile.is_blocked,
-            ),
-          );
-        }
+        final excluded = Set<int>.of(rendered);
+        rendered.addAll(result.moved_ids);
+        shuffle = QuestShuffleStage(
+          motion,
+          waiting: true,
+          excluded_ids: excluded,
+        );
       }
     }
-    return Stack(clipBehavior: Clip.none, children: children);
+    return QuestMotionSnapshot(children, shuffle: shuffle);
   }
 
+  /// 每张牌只绘制一次；已匹配牌在自己的时钟上粒子化，槽位可提前复用。
   void _insertion_tiles(
     QuestSceneMotion motion,
     QuestSceneLayout layout,
     double now,
-    List<Widget> children,
+    List<QuestTileFrame> children,
     Set<int> rendered,
   ) {
-    final result = motion.result;
-    final order = motion.insertion_tray;
-    final fade = motion.fade(now), compact = motion.compact(now);
-    Widget? incoming_card;
-    for (var index = 0; index < order.length; index++) {
-      final id = order[index];
-      rendered.add(id);
-      final is_match = result.matched_ids.contains(id);
-      if (is_match && motion.elapsed(now) >= motion.compact_start) continue;
-      final destination = layout.tray_tile(index);
-      final incoming = id == motion.incoming_id;
-      final Rect rect;
-      if (motion.elapsed(now) < motion.travel_ms) {
-        rect = incoming
-            ? _flight_rect(
-                layout.location(result.before, id),
-                destination,
-                motion.flight(now),
-              )
-            : Rect.lerp(
-                layout.location(result.before, id),
-                destination,
-                motion.travel(now),
-              )!;
-      } else if (!is_match && motion.matches) {
-        rect = Rect.lerp(
-          destination,
-          layout.tray_tile(result.after.tray.indexOf(id)),
-          compact,
-        )!;
-      } else {
-        rect = destination;
-      }
-      final card = _tile(
-        id,
-        result.before.tile_by_id(id).type,
-        rect,
-        flying: incoming,
-        dissolve: is_match ? fade : null,
-      );
-      if (incoming) {
-        incoming_card = card;
-      } else {
-        children.add(card);
-      }
-    }
-    for (var index = 0; index < result.after.reserve.length; index++) {
-      final id = result.after.reserve[index];
-      rendered.add(id);
+    final batch = _insertions!;
+    for (final track in batch.tracks.values) {
+      rendered.add(track.id);
+      if (track.ends_at != null && now >= track.ends_at!) continue;
       children.add(
         _tile(
-          id,
-          result.after.tile_by_id(id).type,
-          Rect.lerp(
-            layout.location(result.before, id),
-            layout.location(result.after, id),
-            motion.travel(now),
-          )!,
-          reserve: true,
-          blocked: !result.after.is_reserve_available(id),
+          track.id,
+          track.type,
+          track.rect(layout, now),
+          flying: track.incoming,
+          dissolve: track.fade_at == null ? null : track.fade(now),
+          reserve: track.reserve,
+          blocked: track.reserve && !batch.after.is_reserve_available(track.id),
         ),
       );
     }
-    // A returning top tile must stay above the lower tile it is leaving.
-    if (incoming_card != null) children.add(incoming_card);
   }
 
   /// Move every held neighbor in the same transaction, with one visual per id.
-  void _tool_tiles(
+  /// Shuffle cards are batched into one canvas pass instead of hundreds of
+  /// per-frame widget subtrees; static reserve cards stay ordinary widgets.
+  QuestShuffleStage? _tool_tiles(
     QuestSceneMotion motion,
     QuestSceneLayout layout,
     double now,
-    List<Widget> children,
+    List<QuestTileFrame> children,
     Set<int> rendered,
   ) {
     final result = motion.result;
-    final ids = motion.tool_ids;
+    final is_shuffle = result.action == TileQuestAction.shuffle;
+    final ids = is_shuffle
+        ? <int>{...result.after.tray, ...result.after.reserve}
+        : motion.tool_ids;
     final progress = motion.travel(now);
-    final shuffle_progress = (motion.elapsed(now) / motion.travel_ms).clamp(
-      0.0,
-      1.0,
-    );
+    if (is_shuffle) rendered.addAll(result.moved_ids);
     for (final id in ids) {
       rendered.add(id);
       final tile = result.after.tile_by_id(id);
+      final moved = motion.moved_ids.contains(id);
       var source = layout.location(result.before, id);
       if (result.action == TileQuestAction.undo &&
           result.before.tile_by_id(id).is_removed &&
@@ -735,49 +701,23 @@ class _TileQuestSceneState extends State<TileQuestScene>
         }
       }
       final destination = layout.location(result.after, id);
-      final moved = motion.moved_ids.contains(id);
-      final shuffle = result.action == TileQuestAction.shuffle && moved;
-      final shuffle_index = motion.moved_indices[id] ?? 0;
-      final shuffle_count = result.moved_ids.length;
-      final face = shuffle
-          ? QuestBoardMotion.shuffle_face_progress(
-              shuffle_progress,
-              index: shuffle_index,
-              count: shuffle_count,
-            )
-          : 1.0;
       children.add(
         _tile(
           id,
           tile.type,
-          shuffle
-              ? QuestBoardMotion.shuffle_rect(
-                  layout,
-                  source,
-                  shuffle_index,
-                  shuffle_count,
-                  shuffle_progress,
-                )
-              : moved
+          moved
               ? _flight_rect(source, destination, progress)
               : Rect.lerp(source, destination, progress)!,
           flying: moved,
           reserve: !moved && result.after.reserve.contains(id),
-          blocked: shuffle
-              ? tile.is_blocked
-              : result.after.reserve.contains(id) &&
-                    !result.after.is_reserve_available(id),
-          scale: shuffle ? QuestBoardMotion.shuffle_scale(shuffle_progress) : 1,
-          previous_type: shuffle ? result.before.tile_by_id(id).type : null,
-          face_progress: face,
-          rotation: shuffle
-              ? QuestBoardMotion.shuffle_rotation(
-                  shuffle_progress,
-                  index: shuffle_index,
-                )
-              : 0,
+          blocked:
+              result.after.reserve.contains(id) &&
+              !result.after.is_reserve_available(id),
         ),
       );
     }
+    return is_shuffle && result.moved_ids.isNotEmpty
+        ? QuestShuffleStage(motion)
+        : null;
   }
 }

@@ -48,12 +48,15 @@ class _TileQuestPageState extends State<TileQuestPage> {
     super.didChangeDependencies();
     if (_preloaded) return;
     _preloaded = true;
-    // 高难度会用到全部图案；预热完整但有限的 32 张缩略图，避免落牌时
+    // 高难度会用到全部图案；预热全部十五种图案的缩略图，避免落牌时
     // 后半组图案尚未解码而只显示底面。
     for (final name in quest_tile_assets) {
       unawaited(
         precacheImage(
-          ResizeImage(AssetImage('assets/img/game/tile_$name.png'), width: 192),
+          ResizeImage(
+            AssetImage('assets/img/game/tile_$name.png'),
+            width: TileQuestStyle.tile_cache_width,
+          ),
           context,
         ),
       );

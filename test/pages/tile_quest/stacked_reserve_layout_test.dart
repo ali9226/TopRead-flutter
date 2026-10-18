@@ -6,9 +6,11 @@ import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:app/pages/tile_quest/game/validator.dart';
 import 'package:app/pages/tile_quest/widgets/quest_controls.dart';
 import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
+import 'package:app/pages/tile_quest/widgets/motion_canvas.dart';
 import 'package:app/pages/tile_quest/widgets/scene_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'scene_probe.dart';
 
 const _frame = Duration(milliseconds: 8);
 const _tolerance = .01;
@@ -26,6 +28,7 @@ TileQuestState _fixture() => TileQuestState(
       ),
   ],
   level: 2,
+  difficulty: 4,
   unlocked_level: 2,
   seed: 2026,
   challenge_id: 'stacked-reserve-layout',
@@ -94,8 +97,6 @@ Future<GlobalKey<_ReserveHarnessState>> _mount(WidgetTester tester) async {
   return key;
 }
 
-Finder _reserve(int id) => find.byKey(ValueKey('tile_quest_reserve_$id'));
-
 Finder get _remove => find.byWidgetPredicate(
   (widget) => widget is QuestToolButton && widget.tool == TileQuestTool.remove,
 );
@@ -105,23 +106,16 @@ Rect _slot(WidgetTester tester, int index) =>
 
 /// 持牌、飞牌和棋盘牌中的同一 id 每帧必须只有一个可见副本。
 Rect _visible_rect(WidgetTester tester, int id) {
-  final candidates = <Finder>[
-    for (final key in <String>[
-      'tile_quest_flight_$id',
-      'tray_$id',
-      'tile_quest_tile_$id',
-      'tile_quest_reserve_$id',
-    ])
-      find.byKey(ValueKey(key)),
-  ].where((finder) => finder.evaluate().isNotEmpty).toList();
-  expect(
-    candidates,
-    hasLength(1),
-    reason: 'tile $id has one rendered location',
-  );
-  expect(candidates.single, findsOneWidget);
-  return tester.getRect(candidates.single);
+  final frame = quest_scene_frames(tester)[id];
+  expect(frame, isNotNull, reason: 'tile $id has one rendered location');
+  return frame!.rect;
 }
+
+QuestMotionPainter _motion_painter(WidgetTester tester) => tester
+    .widgetList<CustomPaint>(find.byType(CustomPaint))
+    .map((widget) => widget.painter)
+    .whereType<QuestMotionPainter>()
+    .single;
 
 void _same_rect(Rect actual, Rect expected, {String? reason}) {
   expect(actual.left, closeTo(expected.left, _tolerance), reason: reason);
@@ -141,11 +135,12 @@ void _inventory(TileQuestState state) {
   TileQuestValidator.validate_state(state);
 }
 
-bool _has_return_callback(WidgetTester tester, int id) => tester
-    .widgetList<GestureDetector>(
-      find.descendant(of: _reserve(id), matching: find.byType(GestureDetector)),
-    )
-    .any((gesture) => gesture.onTap != null);
+bool _has_return_callback(WidgetTester tester, int id) {
+  final frame = quest_scene_frames(tester)[id];
+  return frame?.zone == QuestTileZone.reserve &&
+      !frame!.blocked &&
+      _motion_painter(tester).can_return(id);
+}
 
 void _counter(String value) {
   expect(
@@ -176,10 +171,8 @@ Future<void> _remove_batch(
     await tester.pump(_frame);
     for (final id in all_held) {
       _visible_rect(tester, id);
-      saw_flight |= find
-          .byKey(ValueKey('tile_quest_flight_$id'))
-          .evaluate()
-          .isNotEmpty;
+      saw_flight |=
+          quest_scene_frames(tester)[id]?.zone == QuestTileZone.flight;
     }
     _inventory(host.engine.state);
     if (!host.presentation_busy) break;
@@ -188,7 +181,7 @@ Future<void> _remove_batch(
   await tester.pumpAndSettle();
   final layout = QuestSceneLayout(const Size(390, 844), host.engine.state);
   for (final id in all_held) {
-    expect(_reserve(id), findsOneWidget);
+    expect(quest_scene_frames(tester)[id]?.zone, QuestTileZone.reserve);
     _same_rect(
       _visible_rect(tester, id),
       layout.reserve_tile(
@@ -277,16 +270,10 @@ void main() {
     for (final id in <int>[3, 4, 5]) {
       expect(_has_return_callback(tester, id), isTrue);
     }
-    final motion_stack = tester.widget<Stack>(
-      find.ancestor(of: _reserve(0), matching: find.byType(Stack)).first,
-    );
+    final paint_order = quest_scene_frames(tester).keys.toList();
     for (var column = 0; column < 3; column++) {
-      final lower_index = motion_stack.children.indexWhere(
-        (child) => child.key == ValueKey('tile_quest_reserve_$column'),
-      );
-      final upper_index = motion_stack.children.indexWhere(
-        (child) => child.key == ValueKey('tile_quest_reserve_${column + 3}'),
-      );
+      final lower_index = paint_order.indexOf(column);
+      final upper_index = paint_order.indexOf(column + 3);
       expect(lower_index, greaterThanOrEqualTo(0));
       expect(
         upper_index,
@@ -315,21 +302,13 @@ void main() {
     var saw_return_flight = false;
     for (var frame = 0; frame < 150; frame++) {
       await tester.pump(_frame);
-      final flight = find.byKey(const ValueKey('tile_quest_flight_3'));
-      if (flight.evaluate().isNotEmpty) {
+      final frames = quest_scene_frames(tester);
+      if (frames[3]?.zone == QuestTileZone.flight) {
         saw_return_flight = true;
-        final moving_stack = tester.widget<Stack>(
-          find.ancestor(of: flight, matching: find.byType(Stack)).first,
-        );
+        final paint_order = frames.keys.toList();
         expect(
-          moving_stack.children.indexWhere(
-            (child) => child.key == const ValueKey('tile_quest_flight_3'),
-          ),
-          greaterThan(
-            moving_stack.children.indexWhere(
-              (child) => child.key == const ValueKey('tile_quest_reserve_0'),
-            ),
-          ),
+          paint_order.indexOf(3),
+          greaterThan(paint_order.indexOf(0)),
           reason: 'the returning top tile paints above the newly exposed tile',
         );
       }

@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 import 'package:app/pages/tile_quest/game/engine.dart';
+import 'package:app/pages/tile_quest/game/config.dart';
 import 'package:app/pages/tile_quest/game/geometry.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:app/pages/tile_quest/logic.dart';
@@ -10,6 +11,7 @@ import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
 import 'package:app/pages/tile_quest/widgets/scene_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'scene_probe.dart';
 
 const _portrait = Size(390, 844);
 const _frame = Duration(milliseconds: 16);
@@ -24,7 +26,7 @@ TileQuestState _fixture({
     for (var index = 0; index < count; index++)
       TileQuestTile(
         id: first_id + index,
-        type: (index ~/ 3) % 32,
+        type: (index ~/ 3) % TileQuestConfig.max_tile_types,
         layer: count > 60 ? (count - 1 - index) ~/ 30 : 0,
         x: (index % 6).toDouble(),
         y: (count > 60 ? (index % 30) ~/ 6 : index ~/ 6).toDouble(),
@@ -33,6 +35,7 @@ TileQuestState _fixture({
   return TileQuestState(
     tiles: TileQuestGeometry(tiles).refresh(tiles),
     level: 2,
+    difficulty: 4,
     unlocked_level: 2,
     seed: 97,
     challenge_id: challenge,
@@ -80,6 +83,7 @@ class _FixtureWork implements TileQuestWorkService {
   }) async => TileQuestState(
     tiles: fixture.tiles,
     level: level,
+    difficulty: 4,
     seed: seed,
     unlocked_level: unlocked_level,
     challenge_id: challenge_id!,
@@ -183,33 +187,18 @@ Future<GlobalKey<_RapidHarnessState>> _mount(
   return key;
 }
 
-/// 检查真实Scene的定位容器；即使重复副本在画面重叠，也必须报错。
+/// 读取真实绘制帧；探针会对棋盘、动作和洗牌画布之间的重复牌直接报错。
 Map<int, Rect> _visuals(WidgetTester tester) {
   final result = <int, Rect>{};
-  final pattern = RegExp(
-    r'^(?:tile_quest_(?:flight|tile|reserve|entry)|tray)_(\d+)$',
-  );
-  for (final element
-      in find.byWidgetPredicate((widget) => widget is Positioned).evaluate()) {
-    final widget = element.widget;
-    final key = widget.key;
-    if (key is! ValueKey<String>) continue;
-    final match = pattern.firstMatch(key.value);
-    if (match == null) continue;
-    final id = int.parse(match.group(1)!);
-    expect(
-      result.containsKey(id),
-      isFalse,
-      reason: 'tile $id is painted twice',
-    );
-    final rect = tester.getRect(find.byKey(key));
+  for (final frame in quest_scene_frames(tester).values) {
+    final rect = frame.rect;
     expect(
       [rect.left, rect.top, rect.width, rect.height].every((v) => v.isFinite),
       isTrue,
     );
     expect(rect.width, greaterThan(0));
     expect(rect.height, greaterThan(0));
-    result[id] = rect;
+    result[frame.id] = rect;
   }
   return result;
 }
@@ -233,14 +222,10 @@ void _settled(WidgetTester tester, TileQuestState state, Size size) {
     _same(actual[id]!, layout.location(state, id));
   }
   expect(
-    find.byWidgetPredicate(
-      (widget) =>
-          widget.key is ValueKey<String> &&
-          (widget.key! as ValueKey<String>).value.startsWith(
-            'tile_quest_flight_',
-          ),
-    ),
-    findsNothing,
+    quest_scene_frames(
+      tester,
+    ).values.where((frame) => frame.zone == QuestTileZone.flight),
+    isEmpty,
   );
   expect(tester.takeException(), isNull);
 }
@@ -249,7 +234,10 @@ void main() {
   testWidgets(
     'more than 256 production controller transactions in one frame preserve the first flight',
     (tester) async {
-      final service = TileQuestSaveService(store: _MemoryStore());
+      final service = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _MemoryStore(),
+      );
       final logic = TileQuestLogic(
         save_service: service,
         work_service: _FixtureWork(_fixture(count: 300)),
@@ -360,6 +348,26 @@ void main() {
       await tester.pumpAndSettle();
       _settled(tester, controller.current, _portrait);
       expect(controller.current.reserve, [3, 6, 12, 15]);
+      expect(controller.busy_events, [true, false]);
+    },
+  );
+
+  testWidgets(
+    'queued shuffle never duplicates a tile currently flying toward Undo',
+    (tester) async {
+      final host = await _mount(tester);
+      final controller = host.currentState!;
+      controller.tap(0);
+      controller.tool(TileQuestTool.undo);
+      controller.tool(TileQuestTool.shuffle);
+      await tester.pump();
+      for (var frame = 0; frame < 180; frame++) {
+        await tester.pump(_frame);
+        expect(_visuals(tester).length, 36);
+        if (controller.busy_events.lastOrNull == false) break;
+      }
+      await tester.pumpAndSettle();
+      _settled(tester, controller.current, _portrait);
       expect(controller.busy_events, [true, false]);
     },
   );

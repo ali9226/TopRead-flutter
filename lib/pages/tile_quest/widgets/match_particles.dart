@@ -4,7 +4,8 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'tile_card.dart';
+import 'match_particle_style.dart';
+import 'shuffle_textures.dart';
 
 /// 一张牌分为 144 个保留原图颜色的碎粒；三个匹配牌最多绘制 432 粒。
 /// 共用场景时钟，不创建粒子 Widget、额外 ticker 或逐帧随机数。
@@ -15,37 +16,22 @@ class QuestMatchParticles extends StatefulWidget {
     required this.seed,
     required this.progress,
     required this.child,
+    this.textures,
   });
 
   final int type, seed;
   final double progress;
   final Widget child;
 
+  /// 复用场景已经准备好的完整立体牌，消除时不提交新的纹理解码或烘焙。
+  final QuestShuffleTextures? textures;
+
   @override
   State<QuestMatchParticles> createState() => _QuestMatchParticlesState();
 }
 
 class _QuestMatchParticlesState extends State<QuestMatchParticles> {
-  ImageStream? _stream;
-  ImageInfo? _image;
-  int? _resolved_type;
   late QuestParticleField _field = QuestParticleField(widget.seed);
-  late final ImageStreamListener _listener = ImageStreamListener(
-    (image, synchronous) {
-      _image?.dispose();
-      _image = image;
-      if (mounted) setState(() {});
-    },
-    onError: (Object error, StackTrace? stack) {
-      // 解码失败时仍柔和淡出已有牌，不影响规则或视觉队列完成。
-    },
-  );
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _resolve_image();
-  }
 
   @override
   void didUpdateWidget(covariant QuestMatchParticles oldWidget) {
@@ -53,48 +39,28 @@ class _QuestMatchParticlesState extends State<QuestMatchParticles> {
     if (oldWidget.seed != widget.seed) {
       _field = QuestParticleField(widget.seed);
     }
-    if (oldWidget.type != widget.type) _resolve_image();
-  }
-
-  void _resolve_image() {
-    if (_resolved_type == widget.type) return;
-    _resolved_type = widget.type;
-    _stream?.removeListener(_listener);
-    _image?.dispose();
-    _image = null;
-    // 与 Image.asset(cacheWidth: 192) 完全相同的缓存键；飞牌途中就准备好。
-    _stream = ResizeImage.resizeIfNeeded(
-      192,
-      null,
-      AssetImage(
-        'assets/img/game/tile_${quest_tile_assets[widget.type % quest_tile_assets.length]}.png',
-      ),
-    ).resolve(createLocalImageConfiguration(context));
-    _stream!.addListener(_listener);
-  }
-
-  @override
-  void dispose() {
-    _stream?.removeListener(_listener);
-    _image?.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final progress = widget.progress.clamp(0.0, 1.0);
     if (progress == 0) return widget.child;
-    if (_image == null) {
-      return Opacity(opacity: 1 - progress, child: widget.child);
+    final textures = widget.textures;
+    final atlas = textures?.atlas;
+    final source = textures?.source_of(widget.type, blocked: false);
+    if (atlas != null && source != null) {
+      return CustomPaint(
+        painter: QuestMatchParticlePainter(
+          image: atlas,
+          source_rect: source,
+          field: _field,
+          progress: progress,
+          reduced_motion: MediaQuery.disableAnimationsOf(context),
+        ),
+      );
     }
-    return CustomPaint(
-      painter: QuestMatchParticlePainter(
-        image: _image!.image,
-        field: _field,
-        progress: progress,
-        reduced_motion: MediaQuery.disableAnimationsOf(context),
-      ),
-    );
+    // 独立卡无场景图集时保持完整立体牌淡出，绝不把裸图标切换为碎片。
+    return Opacity(opacity: 1 - progress, child: widget.child);
   }
 }
 
@@ -132,9 +98,13 @@ class QuestMatchParticlePainter extends CustomPainter {
     required this.field,
     required this.progress,
     this.reduced_motion = false,
+    this.source_rect,
   });
 
   final ui.Image image;
+
+  /// 图集中完整牌的内容区域；未提供时沿用单张纹理的完整正方形。
+  final Rect? source_rect;
   final QuestParticleField field;
   final double progress;
   final bool reduced_motion;
@@ -144,7 +114,15 @@ class QuestMatchParticlePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (progress >= 1 || size.isEmpty) return;
     final edge = math.min(size.width, size.height);
-    final source_edge = math.min(image.width, image.height).toDouble();
+    final source =
+        source_rect ??
+        Rect.fromLTWH(
+          0,
+          0,
+          math.min(image.width, image.height).toDouble(),
+          math.min(image.width, image.height).toDouble(),
+        );
+    final source_edge = source.shortestSide;
     final cell = source_edge / QuestParticleField.columns;
     final base_scale = edge / source_edge;
     final origin = size.center(Offset.zero) - Offset(edge / 2, edge / 2);
@@ -154,8 +132,17 @@ class QuestMatchParticlePainter extends CustomPainter {
           .clamp(0.0, 1.0);
       // 起步速度为零，随后散开并带少许重力；延迟错落避免整齐爆炸。
       final travel = local * local / (local + .10);
-      final fade = math.pow(1 - local, 1.3).toDouble();
-      final shrink = 1 - Curves.easeInOutCubic.transform(local) * .94;
+      final remaining = 1 - local;
+      // 与原 remaining^1.3 的全区间透明度误差小于 2/255；只需乘加。
+      final fade =
+          remaining *
+          (QuestMatchParticleStyle.fade_linear +
+              remaining *
+                  (QuestMatchParticleStyle.fade_quadratic +
+                      remaining * QuestMatchParticleStyle.fade_cubic));
+      // 五次 smoothstep 起止速度和加速度均为零，无贝塞尔逆向迭代求根。
+      final eased = local * local * local * (local * (local * 6 - 15) + 10);
+      final shrink = 1 - eased * QuestMatchParticleStyle.shrink_fraction;
       final angle = field.rotation[index] * travel * motion_scale;
       final scos = math.cos(angle) * base_scale * shrink;
       final ssin = math.sin(angle) * base_scale * shrink;
@@ -176,10 +163,10 @@ class QuestMatchParticlePainter extends CustomPainter {
       field.transforms[offset + 1] = ssin;
       field.transforms[offset + 2] = center.dx - (scos - ssin) * cell / 2;
       field.transforms[offset + 3] = center.dy - (scos + ssin) * cell / 2;
-      field.sources[offset] = column * cell;
-      field.sources[offset + 1] = row * cell;
-      field.sources[offset + 2] = (column + 1) * cell;
-      field.sources[offset + 3] = (row + 1) * cell;
+      field.sources[offset] = source.left + column * cell;
+      field.sources[offset + 1] = source.top + row * cell;
+      field.sources[offset + 2] = source.left + (column + 1) * cell;
+      field.sources[offset + 3] = source.top + (row + 1) * cell;
       field.colors[index] = ((fade * 255).round() << 24) | 0x00FFFFFF;
     }
     canvas.drawRawAtlas(
@@ -197,6 +184,7 @@ class QuestMatchParticlePainter extends CustomPainter {
   bool shouldRepaint(covariant QuestMatchParticlePainter oldDelegate) =>
       progress != oldDelegate.progress ||
       image != oldDelegate.image ||
+      source_rect != oldDelegate.source_rect ||
       field != oldDelegate.field ||
       reduced_motion != oldDelegate.reduced_motion;
 }

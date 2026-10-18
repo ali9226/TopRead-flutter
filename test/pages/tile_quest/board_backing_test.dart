@@ -68,6 +68,7 @@ Future<_BoardPixels> _paint_board({
 TileQuestState _board_state(List<TileQuestTile> tiles) => TileQuestState(
   tiles: tiles,
   level: 2,
+  difficulty: 4,
   seed: 1,
   challenge_id: 'backing_pixels',
 );

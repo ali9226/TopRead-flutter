@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'dart:async';
+import 'certificate_replay.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -113,6 +114,16 @@ TileQuestLogic _logic(
 
 Future<void> _drain() => Future<void>.delayed(Duration.zero);
 
+Future<void> _wait_for(bool Function() ready) async {
+  final watch = Stopwatch()..start();
+  while (!ready()) {
+    if (watch.elapsed > const Duration(seconds: 5)) {
+      throw StateError('Background save did not reach the expected checkpoint');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 1));
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -162,39 +173,133 @@ void main() {
     },
   );
 
-  test('queue captures each snapshot and never writes concurrently', () async {
-    final _GatedStore store = _GatedStore();
-    final TileQuestSaveService service = TileQuestSaveService(store: store);
-    final TileQuestEngine engine = TileQuestEngine(
-      TileQuestGenerator.generate(level: 1, seed: 42),
+  test(
+    'queue captures immutable snapshots and never writes concurrently',
+    () async {
+      final _GatedStore store = _GatedStore();
+      final TileQuestSaveService service = TileQuestSaveService(store: store);
+      final TileQuestEngine engine = TileQuestEngine(
+        TileQuestGenerator.generate(level: 1, seed: 42),
+      );
+      final Future<void> first = service.save(engine);
+      await _wait_for(() => store.started_values.length == 1);
+      engine.tap_tile(engine.state.certified_solution.first);
+      final Future<void> second = service.save(engine);
+      bool load_finished = false;
+      final Future<TileQuestLoadedSave> loading = service.load().then((value) {
+        load_finished = true;
+        return value;
+      });
+      await _drain();
+      expect(store.started_values, hasLength(1));
+      expect(load_finished, isFalse);
+      store.gates.first.complete();
+      await first;
+      await _wait_for(() => store.started_values.length == 2);
+      expect(store.started_values, hasLength(2));
+      expect(load_finished, isFalse);
+      store.gates.last.complete();
+      await second;
+      final TileQuestLoadedSave loaded = await loading;
+      expect(loaded.engine!.state.tray, engine.state.tray);
+      final Map<String, dynamic> first_json =
+          jsonDecode(store.started_values.first) as Map<String, dynamic>;
+      final TileQuestEngine original = TileQuestEngine.restore(
+        Map<String, dynamic>.from(first_json['engine'] as Map),
+      );
+      expect(original.state.tray, isEmpty);
+      expect(loaded.engine!.state.tray, hasLength(1));
+    },
+  );
+
+  test(
+    'waiting writes coalesce to the newest immutable state and flush it',
+    () async {
+      final store = _GatedStore();
+      final service = TileQuestSaveService(store: store);
+      final engine = TileQuestEngine(
+        TileQuestGenerator.generate(level: 1, seed: 42),
+      );
+      final first = service.save(engine);
+      await _wait_for(() => store.started_values.length == 1);
+      final pending = <Future<void>>[];
+      for (final id in List<int>.of(engine.state.certified_solution).take(3)) {
+        engine.tap_tile(id);
+        pending.add(service.save(engine));
+      }
+      final expected = engine.export_json();
+      // A later mutation without save must not alter the pending snapshot.
+      engine.update_metadata(sound_enabled: false);
+      store.gates.first.complete();
+      await first;
+      await _wait_for(() => store.started_values.length == 2);
+      expect(store.started_values, hasLength(2));
+      store.gates.last.complete();
+      await Future.wait(pending);
+      await service.flush();
+      expect((await service.load()).engine!.export_json(), expected);
+      expect(store.write_count, 2);
+    },
+  );
+
+  testWidgets(
+    'tap saves share a fixed window without postponing its deadline',
+    (tester) async {
+      final store = _MemoryStore();
+      final service = TileQuestSaveService(
+        store: store,
+        encode_snapshot: encode_tile_quest_snapshot,
+      );
+      final logic = _logic(service);
+      await logic.initialize();
+      await logic.flush_save();
+      final initial_writes = store.write_count;
+      final path = List<int>.of(logic.state!.certified_solution);
+      await logic.tap_tile(path[0]);
+      await tester.pump(const Duration(milliseconds: 120));
+      await logic.tap_tile(path[1]);
+      await tester.pump(const Duration(milliseconds: 119));
+      expect(store.write_count, initial_writes);
+      await tester.pump(const Duration(milliseconds: 1));
+      await service.flush();
+      expect(store.write_count, initial_writes + 1);
+      expect((await service.load()).engine!.state.tray, logic.state!.tray);
+      logic.onClose();
+      await service.flush();
+    },
+  );
+
+  testWidgets('background and restart flush and cancel a pending tap window', (
+    tester,
+  ) async {
+    final store = _MemoryStore();
+    final service = TileQuestSaveService(
+      store: store,
+      encode_snapshot: encode_tile_quest_snapshot,
     );
-    final Future<void> first = service.save(engine);
-    engine.tap_tile(engine.state.certified_solution.first);
-    final Future<void> second = service.save(engine);
-    bool load_finished = false;
-    final Future<TileQuestLoadedSave> loading = service.load().then((value) {
-      load_finished = true;
-      return value;
-    });
-    await _drain();
-    expect(store.started_values, hasLength(1));
-    expect(load_finished, isFalse);
-    store.gates.first.complete();
-    await first;
-    await _drain();
-    expect(store.started_values, hasLength(2));
-    expect(load_finished, isFalse);
-    store.gates.last.complete();
-    await second;
-    final TileQuestLoadedSave loaded = await loading;
-    expect(loaded.engine!.state.tray, engine.state.tray);
-    final Map<String, dynamic> first_json =
-        jsonDecode(store.started_values.first) as Map<String, dynamic>;
-    final TileQuestEngine original = TileQuestEngine.restore(
-      Map<String, dynamic>.from(first_json['engine'] as Map),
+    final logic = _logic(service);
+    await logic.initialize();
+    await logic.flush_save();
+    await logic.tap_tile(logic.state!.certified_solution.first);
+    logic.set_foreground(false);
+    await service.flush();
+    expect((await service.load()).engine!.state.tray, logic.state!.tray);
+    final background_writes = store.write_count;
+    await tester.pump(TileQuestConfig.progress_save_window * 2);
+    expect(store.write_count, background_writes);
+    logic.set_foreground(true);
+    await logic.tap_tile(logic.state!.certified_solution.first);
+    await logic.restart();
+    await service.flush();
+    expect(
+      (await service.load()).engine!.state.challenge_id,
+      logic.state!.challenge_id,
     );
-    expect(original.state.tray, isEmpty);
-    expect(loaded.engine!.state.tray, hasLength(1));
+    final restart_writes = store.write_count;
+    await tester.pump(TileQuestConfig.progress_save_window * 2);
+    expect(store.write_count, restart_writes);
+    logic.onClose();
+    await service.flush();
   });
 
   test('isolate worker transfers generated and shuffled engines', () async {
@@ -317,6 +422,46 @@ void main() {
       await service.flush();
     }
   });
+
+  test(
+    'retired palette discards the board but keeps validated preferences',
+    () async {
+      final original = TileQuestEngine(
+        TileQuestGenerator.generate(level: 1, seed: 42, unlocked_level: 2),
+      );
+      original.update_metadata(sound_enabled: false);
+      final engine_json = original.export_json();
+      final state_json = engine_json['state'] as Map<String, dynamic>;
+      // 模拟旧 32 图案表，不能用 type % 15 合并类型来续玩旧棋盘。
+      for (final tile in state_json['tiles'] as List) {
+        tile['type'] = (tile['type'] as int) + 15;
+      }
+      final store = _MemoryStore()
+        ..value = jsonEncode({
+          'version': TileQuestSaveService.save_version,
+          'engine': engine_json,
+        });
+      final service = TileQuestSaveService(store: store);
+      final loaded = await service.load();
+      expect(loaded.recovered, isTrue);
+      expect(loaded.engine, isNull);
+      expect(loaded.previous_seed, 42);
+      expect(loaded.unlocked_level, 2);
+      expect(loaded.sound_enabled, isFalse);
+      final logic = _logic(service);
+      await logic.initialize();
+      expect(logic.state!.level, 1);
+      expect(logic.state!.unlocked_level, 2);
+      expect(logic.state!.sound_enabled, isFalse);
+      expect(logic.state!.seed, isNot(42));
+      expect(
+        logic.state!.tiles.map((tile) => tile.type),
+        everyElement(inInclusiveRange(0, TileQuestConfig.max_tile_types - 1)),
+      );
+      logic.onClose();
+      await service.flush();
+    },
+  );
 
   test('save failure is visible and retry repairs the queue', () async {
     final _MemoryStore store = _MemoryStore();
@@ -592,14 +737,20 @@ void main() {
     await logic.initialize();
     expect(await logic.next_level(), isFalse);
     for (final int id in List<int>.of(logic.state!.certified_solution)) {
-      expect((await logic.tap_tile(id))!.accepted, isTrue);
+      expect(
+        (await replay_logic_certificate_step(logic, id))!.accepted,
+        isTrue,
+      );
     }
     expect(logic.state!.status, TileQuestStatus.won);
     expect(logic.state!.unlocked_level, 2);
     expect(await logic.next_level(), isTrue);
     expect(logic.state!.level, 2);
     for (final int id in List<int>.of(logic.state!.certified_solution)) {
-      expect((await logic.tap_tile(id))!.accepted, isTrue);
+      expect(
+        (await replay_logic_certificate_step(logic, id))!.accepted,
+        isTrue,
+      );
     }
     expect(logic.state!.status, TileQuestStatus.won);
     expect(logic.state!.unlocked_level, 2);

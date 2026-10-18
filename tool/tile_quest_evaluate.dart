@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:app/pages/tile_quest/game/config.dart';
 import 'package:app/pages/tile_quest/game/generator.dart';
+import 'package:app/pages/tile_quest/game/expert_barrier.dart';
 import 'tile_quest/evaluator.dart';
 
 /// Usage: fvm dart run tool/tile_quest_evaluate.dart [seeds=20] [depth=3]
@@ -46,6 +47,11 @@ void main(List<String> arguments) {
       'tile_count': profiles.tile_count,
       'type_count': profiles.type_count,
       'layers': profiles.layers,
+      'minimum_remove_uses': difficulty == 10
+          ? TileQuestExpertBarrier.required_remove_uses
+          : difficulty >= TileQuestConfig.mandatory_tool_difficulty
+          ? TileQuestExpertBarrier.tool_required_remove_uses
+          : 0,
       'target_human_failure_rate_uncalibrated': profiles.target_failure_rate,
       'strategies': {
         for (final entry in runs.entries)
@@ -70,7 +76,9 @@ void main(List<String> arguments) {
           'Simulated policy clear rates are not human clear rates. Targets '
           'remain uncalibrated; use larger seed batches and player testing. '
           'limited_search has optimistic knowledge of patterns revealed by future '
-          'moves, including currently covered tiles; other policies see exposed tiles.',
+          'moves, including currently covered tiles; other policies see exposed tiles. '
+          'Difficulties 5–10 have static geometric barriers that cannot be completed '
+          'without Remove, so every tool-free clear rate must be zero there.',
       'seeds_per_difficulty': seeds,
       'search_depth': depth,
       'search_node_budget_per_decision': evaluator.node_budget,

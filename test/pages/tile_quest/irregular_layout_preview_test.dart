@@ -10,6 +10,7 @@ import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:app/pages/tile_quest/widgets/atmosphere.dart';
 import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
 import 'package:app/pages/tile_quest/widgets/tile_card.dart';
+import 'package:app/pages/tile_quest/widgets/tile_skin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -105,14 +106,13 @@ Future<void> _export_preview(
     final context = key.currentContext!;
     final types = state.tiles.map((tile) => tile.type).toSet();
     await Future.wait<void>(<Future<void>>[
+      precacheImage(QuestTileSkin.provider, context),
       for (final type in types)
         precacheImage(
           ResizeImage.resizeIfNeeded(
             192,
             null,
-            AssetImage(
-              'assets/img/game/tile_${quest_tile_assets[type % quest_tile_assets.length]}.png',
-            ),
+            AssetImage('assets/img/game/tile_${quest_tile_assets[type]}.png'),
           ),
           context,
         ),

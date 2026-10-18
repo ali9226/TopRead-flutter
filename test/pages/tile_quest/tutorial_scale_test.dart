@@ -12,6 +12,7 @@ import 'package:app/pages/tile_quest/widgets/scene_layout.dart';
 import 'package:app/pages/tile_quest/widgets/tile_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'scene_probe.dart';
 
 const _epsilon = .000001;
 const _shape_seeds = <int>[1, 3, 11, 0, 5, 13];
@@ -89,9 +90,9 @@ void main() {
   test(
     'tutorial selects reproducible red, blue and green shapes across seeds',
     () {
-      const red_shapes = <String>{'strawberry', 'apple', 'heart', 'rose'};
-      const blue_shapes = <String>{'blue_gem', 'snowflake'};
-      const green_shapes = <String>{'leaf', 'clover', 'cactus', 'pine_tree'};
+      const red_shapes = <String>{'strawberry', 'apple', 'watermelon'};
+      const blue_shapes = <String>{'blue_gem', 'snowflake', 'blueberries'};
+      const green_shapes = <String>{'leaf', 'avocado'};
       final palettes = <String>{};
       for (var seed = 0; seed < 128; seed++) {
         final state = TileQuestGenerator.generate(level: 1, seed: seed);
@@ -231,18 +232,17 @@ void main() {
       await tester.pumpAndSettle();
       for (final lower in state.tiles.where((tile) => tile.layer == 0)) {
         final upper = _upper_partner(state, lower);
-        final lower_card = tester.widget<QuestTileCard>(
-          find.byKey(ValueKey('board_card_${lower.id}')),
-        );
-        final upper_card = tester.widget<QuestTileCard>(
-          find.byKey(ValueKey('board_card_${upper.id}')),
-        );
+        final frames = quest_scene_frames(tester);
+        final lower_card = frames[lower.id]!;
+        final upper_card = frames[upper.id]!;
         expect(lower_card.blocked, isTrue);
-        expect(lower_card.on_tap, isNull);
         expect(upper_card.blocked, isFalse);
-        expect(upper_card.on_tap, isNotNull);
-        final lower_rect = layout.board_tile(lower);
-        final upper_rect = layout.board_tile(upper);
+        final order = frames.keys.toList();
+        expect(order.indexOf(upper.id), greaterThan(order.indexOf(lower.id)));
+        final lower_rect = lower_card.rect;
+        final upper_rect = upper_card.rect;
+        expect(lower_rect, layout.board_tile(lower));
+        expect(upper_rect, layout.board_tile(upper));
         expect(upper_rect.center.dx, closeTo(lower_rect.center.dx, _epsilon));
         expect(
           upper_rect.top - lower_rect.top,

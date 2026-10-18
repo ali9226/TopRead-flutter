@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 import 'dart:convert';
+import 'certificate_replay.dart';
 import 'package:app/pages/tile_quest/game/config.dart';
 import 'package:app/pages/tile_quest/game/engine.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
@@ -237,9 +238,7 @@ void main() {
     expect(engine.state.reserve_columns, before.reserve_columns);
     expect(TileQuestValidator.validate_solution(engine.state).valid, isTrue);
     for (final id in List<int>.from(engine.state.certified_solution)) {
-      final action = engine.state.reserve.contains(id)
-          ? engine.return_reserve(id)
-          : engine.tap_tile(id);
+      final action = replay_certificate_step(engine, id);
       expect(action.accepted, isTrue, reason: '$id: ${action.reason}');
       expect_inventory(engine.state);
     }
@@ -256,9 +255,7 @@ void main() {
       expect(result.accepted, isTrue, reason: result.reason);
       expect(TileQuestValidator.validate_solution(engine.state).valid, isTrue);
       for (final id in List<int>.from(engine.state.certified_solution)) {
-        final action = engine.state.reserve.contains(id)
-            ? engine.return_reserve(id)
-            : engine.tap_tile(id);
+        final action = replay_certificate_step(engine, id);
         expect(action.accepted, isTrue);
       }
       expect(engine.state.status, TileQuestStatus.won);

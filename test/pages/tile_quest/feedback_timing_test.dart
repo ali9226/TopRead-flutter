@@ -16,6 +16,8 @@ import 'package:app/pages/tile_quest/widgets/scene_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'scene_probe.dart';
+
 /// 录制控制器真正送到音频边界的事件，同时验证所有权和生命周期清理。
 class _RecordingFeedback
     implements TileQuestFeedbackService, TileQuestFeedbackLifecycle {
@@ -85,6 +87,7 @@ class _FeedbackWork implements TileQuestWorkService {
         ),
     ],
     level: level,
+    difficulty: 4,
     seed: seed,
     unlocked_level: unlocked_level,
     challenge_id: challenge_id!,
@@ -146,7 +149,10 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       for (final ready_before_budget in <bool>[true, false]) {
         final feedback = _RecordingFeedback()..prepare_gate = Completer<void>();
-        final saves = TileQuestSaveService(store: _FeedbackStore());
+        final saves = TileQuestSaveService(
+          encode_snapshot: encode_tile_quest_snapshot,
+          store: _FeedbackStore(),
+        );
         final logic = _logic(saves, feedback);
         await tester.pumpWidget(MaterialApp(home: TileQuestPage(logic: logic)));
         await tester.pump();
@@ -189,7 +195,8 @@ void main() {
           TileQuestFeedbackEvent.entry,
         ]);
         await _close_page(tester);
-        await saves.flush();
+        // 存档编码在真实 isolate 中执行，等待时让真实事件循环派发结果。
+        await tester.runAsync(saves.flush);
         expect(feedback.dispose_count, 1);
       }
     },
@@ -198,7 +205,10 @@ void main() {
   test(
     'next level and restart stop the previous cue before generating a board',
     () async {
-      final saves = TileQuestSaveService(store: _FeedbackStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _FeedbackStore(),
+      );
       final feedback = _RecordingFeedback();
       final logic = _logic(saves, feedback, types: <int>[0, 0, 0]);
       await logic.initialize();
@@ -252,7 +262,10 @@ void main() {
           TileQuestStatus.lost => <int>[for (var id = 0; id < 21; id++) id % 7],
         };
         final logic = _logic(
-          TileQuestSaveService(store: _FeedbackStore()),
+          TileQuestSaveService(
+            encode_snapshot: encode_tile_quest_snapshot,
+            store: _FeedbackStore(),
+          ),
           feedback,
           types: types,
         );
@@ -291,13 +304,10 @@ void main() {
           reason: 'old match/tool/shuffle/result cues cannot burst on resume',
         );
         expect(logic.state!.to_json(), expected);
+        final frames = quest_scene_frames(tester);
         expect(
-          find.byWidgetPredicate((widget) {
-            final key = widget.key;
-            return key is ValueKey<String> &&
-                key.value.startsWith('tile_quest_flight_');
-          }),
-          findsNothing,
+          frames.values.where((frame) => frame.zone == QuestTileZone.flight),
+          isEmpty,
         );
         expect(
           find.byType(QuestResult),
@@ -305,24 +315,16 @@ void main() {
         );
         final layout = QuestSceneLayout(const Size(390, 844), logic.state!);
         for (final id in logic.state!.reserve) {
-          expect(
-            tester.getRect(find.byKey(ValueKey('tile_quest_reserve_$id'))),
-            layout.location(logic.state!, id),
-          );
+          expect(frames[id]!.rect, layout.location(logic.state!, id));
         }
         for (final id in logic.state!.tray) {
-          expect(
-            tester.getRect(find.byKey(ValueKey('tray_$id'))),
-            layout.location(logic.state!, id),
-          );
+          expect(frames[id]!.rect, layout.location(logic.state!, id));
         }
         for (final tile in logic.state!.tiles.where(
           (tile) => !tile.is_removed,
         )) {
-          expect(
-            find.byKey(ValueKey('tile_quest_tile_${tile.id}')),
-            findsOneWidget,
-          );
+          expect(frames[tile.id]!.zone, QuestTileZone.board);
+          expect(frames[tile.id]!.rect, layout.board_tile(tile));
         }
 
         if (outcome == TileQuestStatus.won) {
@@ -362,7 +364,10 @@ void main() {
     (tester) async {
       final feedback = _RecordingFeedback();
       final logic = _logic(
-        TileQuestSaveService(store: _FeedbackStore()),
+        TileQuestSaveService(
+          encode_snapshot: encode_tile_quest_snapshot,
+          store: _FeedbackStore(),
+        ),
         feedback,
         types: <int>[0, 0, 0],
       );
@@ -408,17 +413,11 @@ void main() {
         isEmpty,
       );
       expect(find.byType(QuestResult), findsNothing);
-      final opacity = tester.widget<Opacity>(
-        find
-            .descendant(
-              of: find.byKey(const ValueKey('tile_quest_flight_2')),
-              matching: find.byType(Opacity),
-            )
-            .first,
-      );
+      final final_particle_frame = quest_scene_frames(tester)[2]!;
+      expect(final_particle_frame.dissolve, greaterThan(0));
       expect(
-        opacity.opacity,
-        greaterThan(0),
+        final_particle_frame.dissolve,
+        lessThan(1),
         reason: 'the last group remains visible until its fade ends',
       );
 
@@ -450,7 +449,10 @@ void main() {
   ) async {
     final feedback = _RecordingFeedback();
     final logic = _logic(
-      TileQuestSaveService(store: _FeedbackStore()),
+      TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _FeedbackStore(),
+      ),
       feedback,
       types: <int>[for (var id = 0; id < 21; id++) id % 7],
     );
@@ -491,7 +493,10 @@ void main() {
   test(
     'logical matches and tools emit no presentation cues before rendering',
     () async {
-      final saves = TileQuestSaveService(store: _FeedbackStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _FeedbackStore(),
+      );
       final feedback = _RecordingFeedback();
       final logic = _logic(saves, feedback);
       await logic.initialize();
@@ -522,7 +527,10 @@ void main() {
   test(
     'mute, background and leaving stop audio and reject late visual callbacks',
     () async {
-      final saves = TileQuestSaveService(store: _FeedbackStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _FeedbackStore(),
+      );
       final feedback = _RecordingFeedback();
       final logic = _logic(saves, feedback);
       await logic.initialize();
@@ -568,7 +576,10 @@ void main() {
   test(
     'session takeover stops only the old page and rejects all of its late cues',
     () async {
-      final saves = TileQuestSaveService(store: _FeedbackStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _FeedbackStore(),
+      );
       final old_feedback = _RecordingFeedback();
       final new_feedback = _RecordingFeedback();
       final old_page = _logic(saves, old_feedback);
@@ -602,7 +613,10 @@ void main() {
   test(
     'audio lifecycle errors cannot interrupt rules, saving or page cleanup',
     () async {
-      final saves = TileQuestSaveService(store: _FeedbackStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _FeedbackStore(),
+      );
       final feedback = _RecordingFeedback()..fail_operations = true;
       final logic = _logic(saves, feedback);
       await logic.initialize();

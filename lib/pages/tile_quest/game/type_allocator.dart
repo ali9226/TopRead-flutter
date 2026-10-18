@@ -45,7 +45,15 @@ class TileQuestTypeAllocator {
     final deep_start = profile.difficulty >= 9
         ? warmup_types + delayed_match_groups.length
         : 0;
-    final deep_types = profile.type_count - deep_start;
+    // Middle difficulties keep the opening sprites in the ordinary inventory.
+    // Only the actual rare key is excluded; removing all three opening types
+    // as well would make fifteen-sprite middle boards substantially easier.
+    final protected_types = delayed_positions.values.toSet();
+    final ordinary_types = List<int>.generate(
+      profile.type_count - deep_start,
+      (index) => deep_start + index,
+    ).where((type) => !protected_types.contains(type)).toList();
+    final deep_types = ordinary_types.length;
     if (deep_types <= 0) {
       throw ArgumentError('A deep ordinary type is required');
     }
@@ -59,7 +67,7 @@ class TileQuestTypeAllocator {
               delayed_match_groups.length;
       group++
     ) {
-      supply[deep_start + group % deep_types] += 3;
+      supply[ordinary_types[group % deep_types]] += 3;
     }
     return _allocate(
       supply,
@@ -76,7 +84,7 @@ class TileQuestTypeAllocator {
 
   /// Continue from an empty held area using exactly the supplied triple stock.
   /// There is no tutorial prefix and no conversion to successive plain triples.
-  /// Indices may be sparse across all 32 sprites after a seeded palette shuffle.
+  /// Indices may be sparse across all fifteen sprites after a seeded palette shuffle.
   static List<int> remaining(
     List<int> supply, {
     required DifficultyProfile profile,
@@ -137,7 +145,10 @@ class TileQuestTypeAllocator {
       }
       final seal_active = sequence.length < seal_until;
       final forced_type = delayed_positions[sequence.length];
-      final forced_next = delayed_openings.contains(sequence.length + 1);
+      var forced_ahead = 0;
+      while (delayed_openings.contains(sequence.length + 1 + forced_ahead)) {
+        forced_ahead++;
+      }
       final safe = <int>[];
       for (var type = 0; type < supply.length; type++) {
         if (supply[type] == 0 || (seal_active && type == sealed_type)) continue;
@@ -151,7 +162,10 @@ class TileQuestTypeAllocator {
         // A key is held through a real geometric dependency chain. Reserve
         // slack before its first two mandatory taps, then require an ordinary
         // closing pair at pressure six rather than pretending the key is free.
-        final projected = next + (forced_next ? 1 : 0);
+        // Several protected openings can be consecutive in the topological
+        // order. Reserve slack for the entire run before choosing this tile;
+        // reserving only one slot can strand the second forced opening.
+        final projected = next + forced_ahead;
         if (projected >= TileQuestConfig.tray_capacity) continue;
         if (projected == TileQuestConfig.tray_capacity - 1) {
           final can_close = List<int>.generate(supply.length, (index) => index)
@@ -168,9 +182,27 @@ class TileQuestTypeAllocator {
               );
           if (!can_close) continue;
         }
+        if (delayed_positions.isNotEmpty &&
+            !_has_key_window(
+              sequence.length,
+              type,
+              next,
+              counts,
+              supply,
+              delayed_positions,
+              delayed_types,
+            )) {
+          continue;
+        }
         safe.add(type);
       }
-      if (safe.isEmpty) throw StateError('Phased schedule exhausted');
+      if (safe.isEmpty) {
+        throw StateError(
+          'Phased schedule exhausted at ${sequence.length}, '
+          'occupancy $occupancy, forced $forced_type, ahead $forced_ahead, '
+          'counts $counts, supply $supply',
+        );
+      }
       // Retain a final ordinary triple of each sprite for the deep phase. The
       // schedule must expand its variety rather than consume early sprites to
       // exhaustion and finish with a simpler, tiny leftover palette.
@@ -185,7 +217,12 @@ class TileQuestTypeAllocator {
                 .toList()
           : safe;
       final phase_safe = unreserved.isEmpty ? safe : unreserved;
-      final active_types = hard
+      // The harder boards expose the full ordinary matching vocabulary
+      // immediately after the gentle opening. With fifteen sprites, a gradual
+      // type ramp would otherwise leave only one ordinary deep type beside the
+      // protected keys and accidentally produce a long run of easy triples.
+      final demanding = profile.difficulty >= 6;
+      final active_types = hard || demanding
           ? supply.length
           : min(
               supply.length,
@@ -195,9 +232,11 @@ class TileQuestTypeAllocator {
                     ((supply.length - warmup_types) * pow(progress, .8)).ceil(),
                   ),
             );
-      final pressure =
-          2 +
-          ((profile.target_tray_pressure - 2) * min(1, progress * 1.7)).floor();
+      final pressure = demanding
+          ? profile.target_tray_pressure
+          : 2 +
+                ((profile.target_tray_pressure - 2) * min(1, progress * 1.7))
+                    .floor();
       final staged = phase_safe
           .where((type) => type < active_types || counts[type] > 0)
           .toList();
@@ -219,7 +258,10 @@ class TileQuestTypeAllocator {
       final close_chance = .94 + (profile.close_probability - .94) * progress;
       final should_close =
           occupancy >= pressure ||
-          random.nextDouble() < close_chance * pow(1 - progress, 3);
+          random.nextDouble() <
+              (demanding
+                  ? profile.close_probability
+                  : close_chance * pow(1 - progress, 3));
       final pool = should_close && closing.isNotEmpty
           ? (aged.isEmpty ? closing : aged)
           : opening.isNotEmpty
@@ -237,5 +279,65 @@ class TileQuestTypeAllocator {
       }
     }
     return sequence;
+  }
+
+  /// An opening two steps away can strand five unrelated singles even though
+  /// the immediately following step has not yet been reserved. Replay the small
+  /// fixed key window before committing a choice. This checks real matching
+  /// counts rather than relying on random generation retries to escape a trap.
+  static bool _has_key_window(
+    int position,
+    int chosen_type,
+    int next_occupancy,
+    List<int> counts,
+    List<int> supply,
+    Map<int, int> delayed_positions,
+    Set<int> delayed_types,
+  ) {
+    const lookahead = 3;
+    var last_forced = position;
+    for (var offset = 1; offset <= lookahead; offset++) {
+      if (delayed_positions.containsKey(position + offset)) {
+        last_forced = position + offset;
+      }
+    }
+    if (last_forced == position) return true;
+    final chosen_count = counts[chosen_type];
+    counts[chosen_type] = (chosen_count + 1) % 3;
+    supply[chosen_type]--;
+
+    bool search(int step, int occupancy) {
+      if (step > last_forced) {
+        if (occupancy < TileQuestConfig.tray_capacity - 1) return true;
+        return List<int>.generate(supply.length, (index) => index).any(
+          (type) =>
+              !delayed_types.contains(type) &&
+              counts[type] == 2 &&
+              supply[type] > 0,
+        );
+      }
+      final forced = delayed_positions[step];
+      for (var type = 0; type < supply.length; type++) {
+        if (supply[type] == 0 ||
+            (forced != null ? type != forced : delayed_types.contains(type))) {
+          continue;
+        }
+        final old_count = counts[type];
+        final occupancy_after = occupancy + (old_count == 2 ? -2 : 1);
+        if (occupancy_after >= TileQuestConfig.tray_capacity) continue;
+        counts[type] = (old_count + 1) % 3;
+        supply[type]--;
+        final valid = search(step + 1, occupancy_after);
+        counts[type] = old_count;
+        supply[type]++;
+        if (valid) return true;
+      }
+      return false;
+    }
+
+    final valid = search(position + 1, next_occupancy);
+    counts[chosen_type] = chosen_count;
+    supply[chosen_type]++;
+    return valid;
   }
 }

@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
-    'deep Shuffle allocation preserves sparse 32-type stock and every safe prefix',
+    'deep Shuffle allocation preserves sparse fifteen-type stock and every safe prefix',
     () {
       var pressure_six_runs = 0;
       for (var seed = 0; seed < 80; seed++) {
@@ -68,6 +68,31 @@ void main() {
       expect(pressure_six_runs, greaterThanOrEqualTo(72));
     },
   );
+
+  test('forced hidden keys cannot strand a near-full ordinary prefix', () {
+    final profile = DifficultyProfile.for_difficulty(9);
+    for (var seed = 0; seed < 80; seed++) {
+      final sequence = TileQuestTypeAllocator.initial(
+        profile,
+        opening_count: 30,
+        random: Random(seed),
+        delayed_match_groups: const [
+          [46, 49, 403],
+          [54, 433, 451],
+        ],
+      );
+      final counts = List<int>.filled(TileQuestConfig.max_tile_types, 0);
+      var occupancy = 0;
+      for (final type in sequence) {
+        counts[type] = (counts[type] + 1) % 3;
+        occupancy = counts.fold(0, (sum, count) => sum + count);
+        expect(occupancy, lessThan(TileQuestConfig.tray_capacity));
+      }
+      expect(sequence, hasLength(profile.tile_count));
+      expect(occupancy, 0);
+      expect(sequence.toSet(), hasLength(profile.type_count));
+    }
+  });
 
   test(
     'deep allocation rejects partial triples rather than losing inventory',

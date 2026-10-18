@@ -36,9 +36,12 @@ class TileQuestValidator {
     TileQuestState state,
     List<int> path, {
     int? remove_uses,
+    TileQuestGeometry? geometry,
   }) {
     final by_id = {for (final tile in state.tiles) tile.id: tile};
-    final geometry = TileQuestGeometry(state.tiles);
+    // State validation already built this immutable dependency graph. Reuse it
+    // for the certificate instead of scanning every rectangle pair again.
+    final graph = geometry ?? TileQuestGeometry(state.tiles);
     final remaining = state.tiles
         .where((tile) => !tile.is_removed)
         .map((tile) => tile.id)
@@ -106,7 +109,7 @@ class TileQuestValidator {
         columns.remove(id);
         // A reserved tile is returned through exactly the same settlement rules.
       } else if (remaining.contains(id) &&
-          !geometry.blockers[id]!.any(remaining.contains)) {
+          !graph.blockers[id]!.any(remaining.contains)) {
         remaining.remove(id);
       } else {
         return const TileQuestSolutionCheck(
@@ -121,10 +124,14 @@ class TileQuestValidator {
         (held) => by_id[held]!.type == tile.type,
       );
       tray.insert(same < 0 ? tray.length : same + 1, id);
-      final matches = tray
-          .where((item) => by_id[item]!.type == tile.type)
-          .toList();
-      if (matches.length == 3) tray.removeWhere(matches.contains);
+      while (true) {
+        final group = tray
+            .where((item) => by_id[item]!.type == tile.type)
+            .toList();
+        if (group.length < 3) break;
+        final triple = group.take(3).toList();
+        tray.removeWhere(triple.contains);
+      }
       if (tray.length > maximum) maximum = tray.length;
       if (tray.length >= TileQuestConfig.tray_capacity) {
         return TileQuestSolutionCheck(
@@ -144,7 +151,9 @@ class TileQuestValidator {
   }
 
   /// Strict invariants protect gameplay from corrupted or stale disk state.
-  static void validate_state(TileQuestState state) {
+  /// Return the verified dependency graph so the engine can retain it for taps
+  /// without rebuilding the same quadratic rectangle intersection table.
+  static TileQuestGeometry validate_state(TileQuestState state) {
     Never invalid(String message) => throw FormatException(message);
     if (state.tiles.isEmpty ||
         state.tiles.length > TileQuestConfig.max_tiles ||
@@ -268,6 +277,11 @@ class TileQuestValidator {
       invalid('Inconsistent match or tool count');
     }
     final geometry = TileQuestGeometry(state.tiles);
+    if (state.level == 2 &&
+        state.difficulty >= TileQuestConfig.mandatory_tool_difficulty &&
+        state.expert_barrier == null) {
+      invalid('Required tool barrier is missing');
+    }
     state.expert_barrier?.validate(state, geometry: geometry);
     final refreshed = geometry.refresh(state.tiles);
     for (var index = 0; index < refreshed.length; index++) {
@@ -282,12 +296,17 @@ class TileQuestValidator {
     if ((state.status == TileQuestStatus.won) != complete ||
         (state.status == TileQuestStatus.lost) != (state.tray.length == 7) ||
         (state.status == TileQuestStatus.won &&
+            state.level == 2 &&
+            state.difficulty >= TileQuestConfig.mandatory_tool_difficulty &&
+            state.tools_used == 0) ||
+        (state.status == TileQuestStatus.won &&
             state.unlocked_level < (state.level + 1).clamp(1, 2))) {
       invalid('Inconsistent game status');
     }
     if (state.certified_solution.isNotEmpty &&
-        !validate_solution(state).valid) {
+        !_replay(state, state.certified_solution, geometry: geometry).valid) {
       invalid('Invalid solution certificate');
     }
+    return geometry;
   }
 }

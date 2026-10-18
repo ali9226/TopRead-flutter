@@ -7,9 +7,11 @@ import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:app/pages/tile_quest/style.dart';
 import 'package:app/pages/tile_quest/widgets/match_particles.dart';
 import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
+import 'package:app/pages/tile_quest/widgets/tile_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'scene_probe.dart';
 
 Future<ui.Image> _asset_image() async {
   final data = await rootBundle.load('assets/img/game/tile_strawberry.png');
@@ -17,9 +19,21 @@ Future<ui.Image> _asset_image() async {
     data.buffer.asUint8List(),
     targetWidth: 192,
   );
-  final image = (await codec.getNextFrame()).image;
+  final icon = (await codec.getNextFrame()).image;
   codec.dispose();
-  return image;
+  final recorder = ui.PictureRecorder();
+  QuestTileSurface.paint(
+    Canvas(recorder),
+    const Rect.fromLTWH(0, 0, 192, 192),
+    icon: icon,
+  );
+  final picture = recorder.endRecording();
+  try {
+    return await picture.toImage(192, 192);
+  } finally {
+    icon.dispose();
+    picture.dispose();
+  }
 }
 
 Future<(int, int, int)> _pixels(ui.Image asset, double progress) async {
@@ -136,28 +150,28 @@ void main() {
     key.currentState!.match();
     await tester.pump();
     expect(key.currentState!.engine.state.tray, isEmpty);
-    expect(find.byType(QuestMatchParticles), findsNWidgets(3));
-    expect(
-      tester
-          .widgetList<QuestMatchParticles>(find.byType(QuestMatchParticles))
-          .every((widget) => widget.progress == 0),
-      isTrue,
-    );
+    final matched_ids = key.currentState!.action!.matched_ids;
+    expect(matched_ids, hasLength(3));
+    final first_frames = quest_scene_frames(tester);
+    for (final id in matched_ids) {
+      expect(first_frames[id], isNotNull);
+      expect(first_frames[id]!.dissolve, 0);
+    }
     await tester.pump(
       TileQuestStyle.flight_duration +
           Duration(milliseconds: TileQuestStyle.match_hold_ms.toInt()),
     );
     await tester.pump(const Duration(milliseconds: 180));
-    for (final widget in tester.widgetList<QuestMatchParticles>(
-      find.byType(QuestMatchParticles),
-    )) {
+    final middle_frames = quest_scene_frames(tester);
+    for (final id in matched_ids) {
       expect(
-        widget.progress,
+        middle_frames[id]!.dissolve,
         closeTo(180 / TileQuestStyle.match_fade_ms, .001),
       );
     }
     await tester.pumpAndSettle(const Duration(milliseconds: 16));
-    expect(find.byType(QuestMatchParticles), findsNothing);
+    final final_frames = quest_scene_frames(tester);
+    expect(matched_ids.where(final_frames.containsKey), isEmpty);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     await tester.pump();

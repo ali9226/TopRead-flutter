@@ -40,18 +40,16 @@ class QuestBoardMotion {
   ///
   /// 聚拢权重在边界的一、二阶导数均为零；环绕角速度在阶段交界保持
   /// 连续，避免旧版聚完停下、转完又停下产生的机械感。
-  static Rect shuffle_rect(
+  static Rect shuffle_rect_with(
     QuestSceneLayout layout,
     Rect source,
     int index,
     int count,
-    double progress,
+    double phase,
+    double presence,
   ) {
-    final time = progress.clamp(0.0, 1.0);
-    if (time == 0 || time == 1) return source;
-    final presence = _shuffle_presence(time);
+    if (presence <= 0) return source;
     final slot = index / math.max(1, count);
-    final phase = shuffle_turns(time) * math.pi * 2;
     final initial_angle = slot * math.pi * 2 - math.pi / 2;
     final angle = initial_angle + phase;
     // 横纵使用同一个像素半径。取消逐牌环带和半径起伏，避免整体轮廓
@@ -64,6 +62,27 @@ class QuestBoardMotion {
       width: source.width,
       height: source.height,
     );
+  }
+
+  static Rect shuffle_rect(
+    QuestSceneLayout layout,
+    Rect source,
+    int index,
+    int count,
+    double progress,
+  ) {
+    final time = progress.clamp(0.0, 1.0);
+    if (time == 0 || time == 1) return source;
+    final f = shuffle_frame(layout, time);
+    return shuffle_rect_with(layout, source, index, count, f.phase, f.presence);
+  }
+
+  static double shuffle_rotation(double progress, {int index = 0}) {
+    final time = progress.clamp(0.0, 1.0);
+    if (time == 0 || time == 1) return 0;
+    final presence = _shuffle_presence(time);
+    final phase = shuffle_turns(time) * math.pi * 2;
+    return shuffle_rotation_with(phase, presence, index: index);
   }
 
   /// 半径只由场景决定，与单牌序号、方向、时刻和原始位置无关。
@@ -113,11 +132,29 @@ class QuestBoardMotion {
   static double shuffle_scale(double progress) => 1;
 
   /// 每张牌在搅动中独立轻摆，起落姿态均精确回到零。
-  static double shuffle_rotation(double progress, {int index = 0}) {
-    final phase = shuffle_turns(progress) * math.pi * 2;
+  static double shuffle_rotation_with(
+    double phase,
+    double presence, {
+    int index = 0,
+  }) {
     return math.sin(phase + index * 1.7) *
         TileQuestStyle.shuffle_rotation *
-        _shuffle_presence(progress);
+        presence;
+  }
+
+  /// Per-frame shared orbit state; computed once instead of per card.
+  static ({double phase, double presence, double radius, Offset center})
+  shuffle_frame(QuestSceneLayout layout, double progress) {
+    final time = progress.clamp(0.0, 1.0);
+    final presence = _shuffle_presence(time);
+    final phase = shuffle_turns(time) * math.pi * 2;
+    final radius = shuffle_radius(layout);
+    return (
+      phase: phase,
+      presence: presence,
+      radius: radius,
+      center: layout.board.center,
+    );
   }
 
   /// 换面窗口沿圆周轻微错开；调用方用返回值同尺寸叠加新图案，

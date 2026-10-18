@@ -2,6 +2,7 @@
 import 'dart:math';
 import 'geometry.dart';
 import 'models.dart';
+import 'tile_palette.dart';
 import 'validator.dart';
 
 /// 教学关固定为两层 3×3。只随机图案与身份，不改变教学用的空间关系。
@@ -12,25 +13,26 @@ class TileQuestTutorial {
   static const double grid_pitch = 2;
   static const double upper_offset_y = .5;
 
-  /// 图案索引沿用 QuestTileCard 的现有素材表，无需增加素材或 UI 依赖。
-  /// 每局从红、蓝、绿三组各取一种，避免教学牌只凭相近暖色区分。
-  /// 草莓和蓝宝石重复入池，优先使用最容易辨认的红色水果与蓝色切面。
-  static const List<int> _red_types = <int>[
-    4, 4, 4, // strawberry：红草莓。
-    3, // apple：红苹果。
-    6, // heart：粉红爱心。
-    21, // rose：红玫瑰。
-  ];
-  static const List<int> _blue_types = <int>[
-    9, 9, 9, // blue_gem：蓝宝石。
-    19, // snowflake：浅蓝雪花。
-  ];
-  static const List<int> _green_types = <int>[
-    7, // leaf：绿叶。
-    10, // clover：绿色四叶草。
-    18, // cactus：绿色仙人掌。
-    27, // pine_tree：绿色松树。
-  ];
+  /// 从规则与绘图共用的图案表解析类型，素材重排不会改变颜色分组。
+  /// 红、蓝、绿各取一种；草莓和蓝宝石加权以强化教学辨识度。
+  static final List<int> _red_types = <String>[
+    'strawberry',
+    'strawberry',
+    'strawberry',
+    'apple',
+    'watermelon',
+  ].map(quest_tile_assets.indexOf).toList(growable: false);
+  static final List<int> _blue_types = <String>[
+    'blue_gem',
+    'blue_gem',
+    'blue_gem',
+    'snowflake',
+    'blueberries',
+  ].map(quest_tile_assets.indexOf).toList(growable: false);
+  static final List<int> _green_types = <String>[
+    'leaf',
+    'avocado',
+  ].map(quest_tile_assets.indexOf).toList(growable: false);
 
   /// seed 决定三种图案及其顺序；两层共享这一组图案，库存仍各为六张。
   static List<int> _palette(Random random) => <int>[

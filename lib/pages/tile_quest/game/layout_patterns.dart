@@ -20,7 +20,10 @@ class TileQuestLayoutPatterns {
     DifficultyProfile profile,
     Random random,
   ) {
-    final envelope = _envelope(random, expert: profile.difficulty == 10);
+    final envelope = _envelope(
+      random,
+      expert: profile.difficulty >= TileQuestConfig.mandatory_tool_difficulty,
+    );
     final even_cells = envelope
         .map((point) => Point<double>(point.x.toDouble(), point.y.toDouble()))
         .toList();

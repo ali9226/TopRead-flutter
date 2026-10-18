@@ -14,6 +14,7 @@ import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
 import 'package:app/pages/tile_quest/widgets/slot_wells.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'scene_probe.dart';
 
 const _portrait = Size(390, 844);
 const _epsilon = .000001;
@@ -187,13 +188,13 @@ void main() {
       await tester.pumpAndSettle();
 
       final first = initial.certified_solution.first;
-      await tester.tap(_key('tile_quest_tile_$first'));
+      await tester.tapAt(quest_scene_frames(tester)[first]!.rect.center);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 80));
-      expect(_key('tile_quest_flight_$first'), findsOneWidget);
+      expect(quest_scene_frames(tester)[first]!.zone, QuestTileZone.flight);
       _expect_tutorial_controls();
       await tester.pumpAndSettle();
-      expect(_key('tray_$first'), findsOneWidget);
+      expect(quest_scene_frames(tester)[first]!.zone, QuestTileZone.tray);
       _expect_tutorial_controls();
 
       for (final id in initial.certified_solution.skip(1)) {
@@ -220,14 +221,14 @@ void main() {
     _expect_normal_controls();
     expect(find.bySemanticsLabel(RegExp(r'Remove 2/2')), findsOneWidget);
     final id = state.clickable_tiles.first.id;
-    await tester.tap(_key('tile_quest_tile_$id'));
+    await tester.tapAt(quest_scene_frames(tester)[id]!.rect.center);
     await tester.pumpAndSettle();
     await tester.tap(_key('tile_quest_tool_remove'));
     await tester.pumpAndSettle();
     expect(host.currentState!.engine.state.reserve, <int>[id]);
-    expect(_key('tile_quest_reserve_$id'), findsOneWidget);
+    expect(quest_scene_frames(tester)[id]!.zone, QuestTileZone.reserve);
     _expect_normal_controls();
-    await tester.tap(_key('tile_quest_reserve_$id'));
+    await tester.tapAt(quest_scene_frames(tester)[id]!.rect.center);
     await tester.pumpAndSettle();
     expect(host.currentState!.engine.state.reserve, isEmpty);
     expect(host.currentState!.engine.state.tray, <int>[id]);
@@ -248,18 +249,18 @@ void main() {
         final main = TileQuestGenerator.generate(level: 2, seed: 730);
         final host = await _mount_scene(tester, tutorial, animate_entry: false);
         await tester.pumpAndSettle();
-        final tutorial_card = tester.getRect(
-          _key('tile_quest_tile_${tutorial.clickable_tiles.first.id}'),
-        );
+        final tutorial_card = quest_scene_frames(
+          tester,
+        )[tutorial.clickable_tiles.first.id]!.rect;
         final tutorial_slot = tester.getRect(_key('tile_quest_slot_0'));
         final tutorial_tray = tester.getRect(find.byType(QuestSlotWell));
         _expect_tutorial_controls();
         host.currentState!.replace(main);
         await tester.pumpAndSettle();
         _expect_normal_controls();
-        final main_card = tester.getRect(
-          _key('tile_quest_tile_${main.clickable_tiles.first.id}'),
-        );
+        final main_card = quest_scene_frames(
+          tester,
+        )[main.clickable_tiles.first.id]!.rect;
         expect(main_card.width, closeTo(tutorial_card.width, _epsilon));
         expect(main_card.height, closeTo(tutorial_card.height, _epsilon));
         expect(tester.getRect(_key('tile_quest_slot_0')), tutorial_slot);
@@ -280,7 +281,10 @@ void main() {
     (tester) async {
       await tester.binding.setSurfaceSize(_portrait);
       addTearDown(() => tester.binding.setSurfaceSize(null));
-      final saves = TileQuestSaveService(store: _TutorialStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _TutorialStore(),
+      );
       final logic = TileQuestLogic(
         save_service: saves,
         work_service: _TutorialWork(),
@@ -293,11 +297,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(logic.state!.level, 1);
       _expect_tutorial_controls();
-      final first_edge = tester
-          .getRect(
-            _key('tile_quest_tile_${logic.state!.clickable_tiles.first.id}'),
-          )
-          .width;
+      final first_edge = quest_scene_frames(
+        tester,
+      )[logic.state!.clickable_tiles.first.id]!.rect.width;
       for (final id in logic.state!.certified_solution.toList()) {
         expect((await logic.tap_tile(id))!.accepted, isTrue);
       }
@@ -309,11 +311,9 @@ void main() {
       expect(logic.state!.level, 2);
       _expect_normal_controls();
       expect(
-        tester
-            .getRect(
-              _key('tile_quest_tile_${logic.state!.clickable_tiles.first.id}'),
-            )
-            .width,
+        quest_scene_frames(
+          tester,
+        )[logic.state!.clickable_tiles.first.id]!.rect.width,
         closeTo(first_edge, _epsilon),
       );
       await tester.tap(_key('tile_quest_restart'));
@@ -323,11 +323,9 @@ void main() {
       expect(logic.state!.level, 1);
       _expect_tutorial_controls();
       expect(
-        tester
-            .getRect(
-              _key('tile_quest_tile_${logic.state!.clickable_tiles.first.id}'),
-            )
-            .width,
+        quest_scene_frames(
+          tester,
+        )[logic.state!.clickable_tiles.first.id]!.rect.width,
         closeTo(first_edge, _epsilon),
       );
       await tester.pumpWidget(const SizedBox());

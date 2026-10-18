@@ -9,9 +9,10 @@ import 'package:app/pages/tile_quest/widgets/board_backing.dart';
 import 'package:app/pages/tile_quest/widgets/board_motion.dart';
 import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
 import 'package:app/pages/tile_quest/widgets/scene_layout.dart';
-import 'package:app/pages/tile_quest/widgets/tile_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'shuffle_probe.dart';
+import 'scene_probe.dart';
 
 const _scene_size = Size(390, 844);
 const _frame = Duration(milliseconds: 8);
@@ -39,6 +40,7 @@ TileQuestState _fixture({
     tray: held ? const [0, 1] : const [],
     reserve: held ? const [2] : const [],
     level: level,
+    difficulty: 4,
     unlocked_level: level,
     seed: 17,
     challenge_id: challenge_id,
@@ -150,29 +152,14 @@ Future<GlobalKey<_MotionHarnessState>> _mount(
 
 Finder _key(String key) => find.byKey(ValueKey(key));
 
-/// 一张牌只能属于入场、棋盘、飞行、主槽或备用区之一。
-Finder _visual(int id) {
-  final variants = [
-    'tile_quest_entry_$id',
-    'tile_quest_tile_$id',
-    'tile_quest_flight_$id',
-    'tray_$id',
-    'tile_quest_reserve_$id',
-  ].map(_key).where((finder) => finder.evaluate().isNotEmpty).toList();
-  expect(variants, hasLength(1), reason: 'tile $id must have one visual');
-  expect(variants.single, findsOneWidget);
-  return variants.single;
+Rect _rect(WidgetTester tester, int id) => quest_scene_frames(tester)[id]!.rect;
+
+int _type(WidgetTester tester, int id) {
+  final frame = quest_scene_frames(tester)[id]!;
+  return frame.previous_type != null && frame.face_progress <= 0
+      ? frame.previous_type!
+      : frame.type;
 }
-
-Rect _rect(WidgetTester tester, int id) => tester.getRect(_visual(id));
-
-// 换面过渡允许旧底板与新牌面重叠；最上层的新牌面代表当前显示图案。
-int _type(WidgetTester tester, int id) => tester
-    .widgetList<QuestTileCard>(
-      find.descendant(of: _visual(id), matching: find.byType(QuestTileCard)),
-    )
-    .last
-    .type;
 
 void _same_rect(Rect actual, Rect expected, {String? reason}) {
   expect(actual.left, closeTo(expected.left, .6), reason: reason);
@@ -279,7 +266,7 @@ void main() {
       final layout = QuestSceneLayout(_scene_size, state);
       expect(state.tiles.any((tile) => tile.is_blocked), isTrue);
       for (final tile in state.tiles) {
-        expect(_key('tile_quest_entry_${tile.id}'), findsOneWidget);
+        expect(quest_scene_frames(tester)[tile.id]!.zone, QuestTileZone.entry);
         expect(_rect(tester, tile.id).bottom, lessThanOrEqualTo(0));
         expect(_key('tile_quest_tile_${tile.id}'), findsNothing);
       }
@@ -292,7 +279,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       for (final tile in state.tiles) {
-        expect(_key('tile_quest_entry_${tile.id}'), findsNothing);
+        expect(quest_scene_frames(tester)[tile.id]!.zone, QuestTileZone.board);
         _same_rect(_rect(tester, tile.id), layout.board_tile(tile));
       }
       expect(host.currentState!.presentation_events, [true, false]);
@@ -332,7 +319,10 @@ void main() {
         host.currentState!.replace(next);
         await tester.pump();
         for (final tile in next.tiles) {
-          expect(_key('tile_quest_entry_${tile.id}'), findsOneWidget);
+          expect(
+            quest_scene_frames(tester)[tile.id]!.zone,
+            QuestTileZone.entry,
+          );
           expect(_rect(tester, tile.id).bottom, lessThanOrEqualTo(0));
         }
         await tester.pumpAndSettle();
@@ -340,7 +330,10 @@ void main() {
         host.currentState!.rebuild_sound();
         await tester.pump();
         for (final tile in next.tiles) {
-          expect(_key('tile_quest_entry_${tile.id}'), findsNothing);
+          expect(
+            quest_scene_frames(tester)[tile.id]!.zone,
+            QuestTileZone.board,
+          );
           _same_rect(_rect(tester, tile.id), layout.board_tile(tile));
         }
       }
@@ -463,7 +456,8 @@ void main() {
       );
       await tester.pump();
       for (final id in board_ids) {
-        expect(_key('tile_quest_flight_$id'), findsOneWidget);
+        expect(quest_shuffle_frames(tester), contains(id));
+        expect(_key('tile_quest_flight_$id'), findsNothing);
         expect(_key('tile_quest_tile_$id'), findsNothing);
         _same_rect(
           _rect(tester, id),
@@ -527,46 +521,45 @@ void main() {
     },
   );
 
-  testWidgets(
-    'rapid taps after entry retain ordered landings before a queued shuffle',
-    (tester) async {
-      final host = await _mount(
-        tester,
-        state: _fixture(level: 2),
-        settle: true,
-      );
-      host.currentState!.presentation_events.clear();
-      final first_source = _rect(tester, 9);
-      final second_source = _rect(tester, 12);
-      final first_slot = tester.getRect(_key('tile_quest_slot_0'));
-      final second_slot = tester.getRect(_key('tile_quest_slot_1'));
-      await tester.tapAt(first_source.center);
-      await tester.tapAt(second_source.center);
-      host.currentState!.tool(TileQuestTool.shuffle);
-      expect(host.currentState!.engine.state.tray, [9, 12]);
-      await tester.pump();
-      int? first_arrival;
-      int? second_arrival;
-      for (var frame = 1; frame <= 300; frame++) {
-        await tester.pump(_frame);
-        if (_at(_rect(tester, 9), first_slot)) first_arrival ??= frame;
-        if (_at(_rect(tester, 12), second_slot)) second_arrival ??= frame;
-        if (first_arrival != null) _same_rect(_rect(tester, 9), first_slot);
-        if (second_arrival != null) break;
-      }
-      expect(first_arrival, isNotNull);
-      expect(second_arrival, isNotNull);
-      expect(first_arrival!, lessThan(second_arrival!));
-      await tester.pumpAndSettle();
-      _same_rect(_rect(tester, 9), first_slot);
-      _same_rect(_rect(tester, 12), second_slot);
-      expect(host.currentState!.actions.map((action) => action.action), [
-        TileQuestAction.tap,
-        TileQuestAction.tap,
-        TileQuestAction.shuffle,
-      ]);
-      expect(host.currentState!.presentation_events, [true, false]);
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('rapid taps after entry land together before a queued shuffle', (
+    tester,
+  ) async {
+    final host = await _mount(tester, state: _fixture(level: 2), settle: true);
+    host.currentState!.presentation_events.clear();
+    final first_source = _rect(tester, 9);
+    final second_source = _rect(tester, 12);
+    final first_slot = tester.getRect(_key('tile_quest_slot_0'));
+    final second_slot = tester.getRect(_key('tile_quest_slot_1'));
+    await tester.tapAt(first_source.center);
+    await tester.tapAt(second_source.center);
+    host.currentState!.tool(TileQuestTool.shuffle);
+    expect(host.currentState!.engine.state.tray, [9, 12]);
+    await tester.pump();
+    int? first_arrival;
+    int? second_arrival;
+    for (var frame = 1; frame <= 300; frame++) {
+      await tester.pump(_frame);
+      if (_at(_rect(tester, 9), first_slot)) first_arrival ??= frame;
+      if (_at(_rect(tester, 12), second_slot)) second_arrival ??= frame;
+      if (first_arrival != null) _same_rect(_rect(tester, 9), first_slot);
+      if (second_arrival != null) break;
+    }
+    expect(first_arrival, isNotNull);
+    expect(second_arrival, isNotNull);
+    expect(first_arrival, second_arrival);
+    expect(
+      second_arrival! * _frame.inMilliseconds,
+      lessThanOrEqualTo(TileQuestStyle.flight_duration.inMilliseconds),
+    );
+    await tester.pumpAndSettle();
+    _same_rect(_rect(tester, 9), first_slot);
+    _same_rect(_rect(tester, 12), second_slot);
+    expect(host.currentState!.actions.map((action) => action.action), [
+      TileQuestAction.tap,
+      TileQuestAction.tap,
+      TileQuestAction.shuffle,
+    ]);
+    expect(host.currentState!.presentation_events, [true, false]);
+    expect(tester.takeException(), isNull);
+  });
 }

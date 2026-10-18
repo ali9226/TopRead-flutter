@@ -4,6 +4,21 @@ import 'package:app/pages/tile_quest/game/generator.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:app/pages/tile_quest/game/validator.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'certificate_replay.dart';
+
+List<int> _lead_path(TileQuestState state) {
+  final barrier = state.expert_barrier;
+  if (barrier == null) return state.certified_solution;
+  if (state.certified_solution.isEmpty) return barrier.lead_solution;
+  final core_ids = {...barrier.front_ids, ...barrier.partner_ids};
+  // Shuffle can replace the ordinary region's order. Its current certificate
+  // carries the actual continuation; the barrier retains the original full
+  // lead order for untouched-board reconstruction and its capacity witness.
+  return state.certified_solution
+      .takeWhile((id) => !core_ids.contains(id))
+      .where((id) => id >= 0)
+      .toList();
+}
 
 void main() {
   for (final difficulty in [8, 9]) {
@@ -18,7 +33,7 @@ void main() {
             ),
           );
           if (held) {
-            final opening = engine.state.certified_solution.take(6).toList();
+            final opening = _lead_path(engine.state).take(6).toList();
             for (final id in opening.take(5)) {
               expect(engine.tap_tile(id).accepted, isTrue);
             }
@@ -45,9 +60,9 @@ void main() {
           final proof = TileQuestValidator.validate_solution(engine.state);
           expect(proof.valid, isTrue, reason: proof.reason);
           expect(proof.max_tray_occupancy, 6);
-          final types = engine.state.certified_solution
-              .map((id) => engine.state.tile_by_id(id).type)
-              .toList();
+          final types = _lead_path(
+            engine.state,
+          ).map((id) => engine.state.tile_by_id(id).type).toList();
           var run = 1;
           var longest = 1;
           var plain_triples = 0;
@@ -61,20 +76,19 @@ void main() {
             }
           }
           final kept_witness =
-              before.certified_solution.length ==
-                  engine.state.certified_solution.length &&
+              _lead_path(before).length == _lead_path(engine.state).length &&
               List.generate(
-                before.certified_solution.length,
+                _lead_path(before).length,
                 (index) =>
-                    before.certified_solution[index] ==
-                    engine.state.certified_solution[index],
+                    _lead_path(before)[index] ==
+                    _lead_path(engine.state)[index],
               ).every((same) => same);
           if (kept_witness) {
             // A type bijection preserves the original challenge exactly,
             // including its deliberate warm-up; it must not add easy groups.
-            final original = before.certified_solution
-                .map((id) => before.tile_by_id(id).type)
-                .toList();
+            final original = _lead_path(
+              before,
+            ).map((id) => before.tile_by_id(id).type).toList();
             var original_triples = 0;
             for (var index = 2; index < original.length; index++) {
               if (original[index] == original[index - 1] &&
@@ -97,12 +111,11 @@ void main() {
           );
           if (seed == 0) {
             for (final id in List<int>.from(engine.state.certified_solution)) {
-              final action = engine.state.reserve.contains(id)
-                  ? engine.return_reserve(id)
-                  : engine.tap_tile(id);
+              final action = replay_certificate_step(engine, id);
               expect(action.accepted, isTrue);
             }
             expect(engine.state.status, TileQuestStatus.won);
+            expect(engine.state.tools_used, greaterThanOrEqualTo(1));
           }
         }
       }

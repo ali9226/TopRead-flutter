@@ -5,6 +5,9 @@ class TileQuestConfig {
   static const int level1Difficulty = 1;
   static const int gameDifficulty = 8;
   static const int tray_capacity = 7;
+
+  /// 从第五档难度起，静态容量门槛确保必须实际使用道具。
+  static const int mandatory_tool_difficulty = 5;
   static const int remove_uses_per_challenge = 2;
   static const int remove_batch_size = 3;
   static const int reserve_columns = 3;
@@ -19,10 +22,13 @@ class TileQuestConfig {
   static const int generation_budget_ms = 800;
   static const int shuffle_budget_ms = 250;
   static const int max_tiles = 600;
-  static const int max_tile_types = 32;
+  static const int max_tile_types = 15;
   static const double board_logical_width = 7;
   static const double board_logical_height = 9;
   static const int max_seed = 0x7fffffff;
+
+  /// 普通点击以固定短窗口合并存档，避免 GetStorage 每次点击编码整个盒子。
+  static const Duration progress_save_window = Duration(milliseconds: 240);
 
   /// One logical tile wide: neighboring tiles share an edge without a sight gap.
   static const double board_grid_pitch = 1.0;
@@ -72,10 +78,10 @@ class DifficultyProfile {
       throw ArgumentError.value(difficulty, 'difficulty', 'Must be 1–10');
     }
     const counts = [90, 126, 162, 198, 246, 294, 348, 402, 456, 528];
-    const types = [5, 6, 8, 10, 12, 16, 20, 24, 28, 32];
-    const layers = [4, 6, 8, 10, 13, 16, 20, 24, 28, 32];
+    const types = [5, 6, 8, 10, 11, 12, 13, 14, 15, 15];
+    const layers = [4, 6, 8, 10, 13, 16, 20, 24, 40, 48];
     const pressure = [3, 4, 4, 5, 5, 6, 6, 6, 6, 6];
-    const rates = [.15, .30, .45, .60, .70, .80, .90, .95, .99, .999];
+    const rates = [.15, .30, .45, .60, .70, .80, .90, .95, .99, 1.0];
     final index = difficulty - 1;
     return DifficultyProfile(
       difficulty: difficulty,
@@ -87,8 +93,18 @@ class DifficultyProfile {
       close_probability: tutorial
           ? .90
           : (.86 - difficulty * .085).clamp(.05, 1),
-      min_initial_choices: tutorial ? 9 : 30 + (difficulty == 10 ? 1 : 0),
-      max_initial_choices: tutorial ? 9 : 36 + (difficulty == 10 ? 1 : 0),
+      min_initial_choices: tutorial
+          ? 9
+          : 30 +
+                (difficulty >= TileQuestConfig.mandatory_tool_difficulty
+                    ? 1
+                    : 0),
+      max_initial_choices: tutorial
+          ? 9
+          : 36 +
+                (difficulty >= TileQuestConfig.mandatory_tool_difficulty
+                    ? 1
+                    : 0),
       match_delay: tutorial ? 0 : (difficulty - 2).clamp(0, 12),
       sealed_pair_span: tutorial
           ? 0
@@ -101,7 +117,7 @@ class DifficultyProfile {
     );
   }
 
-  /// Expert-only gate inventory uses thirteen unique types outside the lead-in.
+  /// 容量核心的图案与普通区域互不共用，防止从外区提前凑齐核心三同。
   DifficultyProfile with_inventory({
     required int tile_count,
     required int type_count,

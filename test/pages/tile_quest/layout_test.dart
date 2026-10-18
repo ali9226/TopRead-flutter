@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'scene_probe.dart';
 
 class _LocaleAssets extends AssetLoader {
   const _LocaleAssets();
@@ -153,8 +154,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
         final id = state.clickable_tiles.first.id;
-        final target = find.byKey(ValueKey('tile_quest_tile_$id'));
-        final rect = tester.getRect(target);
+        final rect = quest_scene_frames(tester)[id]!.rect;
         expect(rect.left, greaterThanOrEqualTo(0));
         expect(rect.top, greaterThanOrEqualTo(0));
         expect(rect.right, lessThanOrEqualTo(size.width));
@@ -172,7 +172,10 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       var back = false;
       final logic = TileQuestLogic(
-        save_service: TileQuestSaveService(store: _MemoryStore()),
+        save_service: TileQuestSaveService(
+          encode_snapshot: encode_tile_quest_snapshot,
+          store: _MemoryStore(),
+        ),
         work_service: _TestWork(),
         feedback_service: _QuietFeedback(),
         enable_timer: false,
@@ -200,7 +203,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(logic.state!.level, 2);
       final id = logic.state!.clickable_tiles.first.id;
-      await tester.tap(find.byKey(ValueKey('tile_quest_tile_$id')));
+      await tester.tapAt(quest_scene_frames(tester)[id]!.rect.center);
       await tester.pumpAndSettle();
       expect(logic.state!.tray.length, 1);
       await tester.tap(find.byKey(const ValueKey('tile_quest_tool_remove')));
@@ -208,7 +211,7 @@ void main() {
       expect(logic.state!.reserve.length, 1);
       expect(logic.state!.tools[TileQuestTool.remove], 1);
       final reserve_id = logic.state!.reserve.first;
-      await tester.tap(find.byKey(ValueKey('tile_quest_reserve_$reserve_id')));
+      await tester.tapAt(quest_scene_frames(tester)[reserve_id]!.rect.center);
       await tester.pumpAndSettle();
       expect(logic.state!.reserve, isEmpty);
       await tester.tap(find.byKey(const ValueKey('tile_quest_sound')));
@@ -284,7 +287,10 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(390, 844));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final logic = TileQuestLogic(
-        save_service: TileQuestSaveService(store: _MemoryStore()),
+        save_service: TileQuestSaveService(
+          encode_snapshot: encode_tile_quest_snapshot,
+          store: _MemoryStore(),
+        ),
         work_service: _TestWork(),
         feedback_service: _QuietFeedback(),
         enable_timer: false,
@@ -304,11 +310,11 @@ void main() {
       await Future.wait([first_action, second_action]);
       // Deliberately render only after both accepted actions committed.
       await tester.pump();
-      expect(find.byKey(ValueKey('tile_quest_flight_$first')), findsOneWidget);
-      expect(find.byKey(ValueKey('tile_quest_flight_$second')), findsOneWidget);
+      expect(quest_scene_frames(tester)[first]!.zone, QuestTileZone.flight);
+      expect(quest_scene_frames(tester)[second]!.zone, QuestTileZone.flight);
       await logic.undo();
       await tester.pump();
-      expect(find.byKey(ValueKey('tile_quest_flight_$second')), findsOneWidget);
+      expect(quest_scene_frames(tester)[second]!.zone, QuestTileZone.flight);
       expect(logic.state!.tile_by_id(second).is_removed, isFalse);
       // Dispose while animation controllers are live: no setState after dispose.
       await tester.pumpWidget(const SizedBox());
@@ -365,7 +371,10 @@ void main() {
   testWidgets(
     'a superseded page starts fresh when explicitly taking over the session',
     (tester) async {
-      final saves = TileQuestSaveService(store: _MemoryStore());
+      final saves = TileQuestSaveService(
+        encode_snapshot: encode_tile_quest_snapshot,
+        store: _MemoryStore(),
+      );
       TileQuestLogic controller() => TileQuestLogic(
         save_service: saves,
         work_service: _TestWork(),
@@ -424,7 +433,10 @@ void main() {
         await tester.binding.setSurfaceSize(const Size(320, 568));
         addTearDown(() => tester.binding.setSurfaceSize(null));
         final logic = TileQuestLogic(
-          save_service: TileQuestSaveService(store: _MemoryStore()),
+          save_service: TileQuestSaveService(
+            encode_snapshot: encode_tile_quest_snapshot,
+            store: _MemoryStore(),
+          ),
           work_service: _TestWork(),
           feedback_service: _QuietFeedback(),
           enable_timer: false,

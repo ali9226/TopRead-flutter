@@ -17,7 +17,7 @@ import 'services/work_service.dart';
 /// Tile Quest 的页面控制器；规则由纯 Dart 引擎负责，动画只消费结果快照。
 ///
 /// 存储、计算、时钟和反馈均可注入。所有操作在执行规则前同步加锁；
-/// 保存不阻塞点击，且每次提交独立快照交给有序写队列。
+/// 保存只捕获不可变状态，后台编码并有序写入，避免阻塞点击。
 class TileQuestLogic extends GetxController with WidgetsBindingObserver {
   TileQuestLogic({
     TileQuestSaveService? save_service,
@@ -53,6 +53,7 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
   TileQuestEngine? _engine;
   Future<void>? _initialization;
   Timer? _timer;
+  Timer? _progress_save_timer;
   int? _clock_anchor;
   int _last_saved_elapsed = 0;
   bool _foreground = true;
@@ -183,19 +184,18 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
       if (!_is_current_session(epoch)) return;
       save_recovered = loaded.recovered;
       has_save_error = _save_service.has_write_error;
-      // 完整快照只提供已校验的解锁进度和偏好；每次进入都从第一关开始。
-      final TileQuestState? previous = loaded.engine?.state;
+      // 每次进入都从教学关开始；旧图案表仅恢复经独立校验的进度与偏好。
       final TileQuestState generated = await _work_service.generate(
         level: 1,
-        seed: _challenge_seed(previous?.seed),
-        unlocked_level: previous?.unlocked_level ?? 1,
+        seed: _challenge_seed(loaded.previous_seed),
+        unlocked_level: loaded.unlocked_level,
         challenge_id: _uuid.v4(),
       );
       await audio_ready;
       if (!_is_current_session(epoch)) return;
       _engine = TileQuestEngine(generated);
       _board_revision++;
-      _engine!.update_metadata(sound_enabled: previous?.sound_enabled ?? true);
+      _engine!.update_metadata(sound_enabled: loaded.sound_enabled);
       _last_saved_elapsed = 0;
       _clock_anchor = null;
       unawaited(_persist());
@@ -315,7 +315,13 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
         if (feedback == TileQuestFeedbackEvent.tap) {
           unawaited(presentation_feedback(feedback));
         }
-        unawaited(_persist());
+        if ((result.action == TileQuestAction.tap ||
+                result.action == TileQuestAction.return_reserve) &&
+            result.after.status == TileQuestStatus.playing) {
+          _schedule_progress_save();
+        } else {
+          unawaited(_persist());
+        }
       }
       return result;
     } on Object {
@@ -340,6 +346,7 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
     }
     final int epoch = _session_epoch;
     _capture_elapsed();
+    unawaited(_persist());
     is_busy = true;
     _capture_elapsed();
     _notify();
@@ -405,6 +412,7 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
     final int epoch = _session_epoch;
     unawaited(_stop_feedback());
     _capture_elapsed();
+    unawaited(_persist());
     is_busy = true;
     _capture_elapsed();
     _notify();
@@ -511,20 +519,36 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
     }
   }
 
+  /// 固定窗口从第一次点击计时，连续输入不会无限推迟最新状态落盘。
+  /// 终局、道具和生命周期统一走 _persist，先取消本窗口再捕获状态。
+  void _schedule_progress_save() {
+    _progress_save_timer ??= Timer(TileQuestConfig.progress_save_window, () {
+      _progress_save_timer = null;
+      unawaited(_persist());
+    });
+  }
+
   Future<void> _persist() async {
+    _progress_save_timer?.cancel();
+    _progress_save_timer = null;
     final TileQuestEngine? engine = _engine;
     if (engine == null || !_owns_session) return;
     final int epoch = _session_epoch;
     _capture_elapsed();
     _last_saved_elapsed = elapsed_ms;
+    bool save_failed = false;
     try {
-      // service.save 在本次调用内同步捕获完整快照。
+      // 同步捕获状态引用；编码和磁盘写入不占用当前点击的 UI 帧。
       await _save_service.save(engine);
-      if (_is_current_session(epoch)) has_save_error = false;
     } on Object {
-      if (_is_current_session(epoch)) has_save_error = true;
+      save_failed = true;
     }
-    _notify();
+    // 在完成时比较当前错误标记，排队请求也能正确清除先前写入的错误。
+    // 正常落盘不改变画面，避免每次点击额外重建一次完整游戏页。
+    if (_is_current_session(epoch) && has_save_error != save_failed) {
+      has_save_error = save_failed;
+      _notify();
+    }
   }
 
   Future<void> retry_save() => _persist();

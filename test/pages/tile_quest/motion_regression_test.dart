@@ -8,8 +8,11 @@ import 'package:app/pages/tile_quest/services/save_service.dart';
 import 'package:app/pages/tile_quest/services/work_service.dart';
 import 'package:app/pages/tile_quest/widgets/quest_result.dart';
 import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
+import 'package:app/pages/tile_quest/style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'scene_probe.dart';
 
 const _frame = Duration(milliseconds: 8);
 
@@ -29,6 +32,7 @@ TileQuestState _fixture({List<int> tray = const []}) => TileQuestState(
   ],
   tray: tray,
   level: 2,
+  difficulty: 4,
   unlocked_level: 2,
   seed: 17,
   challenge_id: 'motion-regression',
@@ -106,6 +110,7 @@ class _FixtureWork implements TileQuestWorkService {
   }) async => TileQuestState(
     tiles: fixture.tiles,
     level: level,
+    difficulty: 4,
     seed: seed,
     unlocked_level: unlocked_level,
     challenge_id: challenge_id!,
@@ -148,23 +153,8 @@ Future<GlobalKey<_SceneHarnessState>> _mount(
 Rect _slot(WidgetTester tester, int index) =>
     tester.getRect(find.byKey(ValueKey('tile_quest_slot_$index')));
 
-Rect? _tile(WidgetTester tester, int id) {
-  Rect? result;
-  for (final key in [
-    'tile_quest_flight_$id',
-    'tray_$id',
-    'tile_quest_tile_$id',
-    'tile_quest_reserve_$id',
-  ]) {
-    final finder = find.byKey(ValueKey(key));
-    if (finder.evaluate().isNotEmpty) {
-      expect(finder, findsOneWidget, reason: 'tile $id has one visible copy');
-      expect(result, isNull, reason: 'tile $id cannot exist in two containers');
-      result = tester.getRect(finder);
-    }
-  }
-  return result;
-}
+Rect? _tile(WidgetTester tester, int id) =>
+    quest_scene_frames(tester)[id]?.rect;
 
 bool _at(Rect? rect, Rect destination) =>
     rect != null &&
@@ -180,69 +170,257 @@ void _same_rect(Rect actual, Rect expected, {String? reason}) {
 }
 
 void main() {
-  testWidgets('same-frame rapid taps arrive in order and never rewind a tile', (
+  testWidgets(
+    'same-frame rapid taps land together without rewinding or queueing',
+    (tester) async {
+      final host = await _mount(tester);
+      final first_source = _tile(tester, 0)!;
+      final second_source = _tile(tester, 3)!;
+      final first_slot = _slot(tester, 0);
+      final second_slot = _slot(tester, 1);
+      expect(
+        (second_source.center - second_slot.center).distance,
+        lessThan((first_source.center - first_slot.center).distance),
+        reason: 'the later tap starts closer to its tray slot',
+      );
+
+      // Both real on_tile callbacks run before a single widget frame is rendered.
+      await tester.tapAt(first_source.center);
+      await tester.tapAt(second_source.center);
+      expect(host.currentState!.engine.state.tray, [0, 3]);
+      await tester.pump();
+      _same_rect(_tile(tester, 0)!, first_source);
+      _same_rect(_tile(tester, 3)!, second_source);
+
+      int? first_arrival;
+      int? second_arrival;
+      var saw_first_in_transit = false;
+      var saw_second_in_transit = false;
+      for (var frame = 1; frame <= 300; frame++) {
+        await tester.pump(_frame);
+        final first = _tile(tester, 0);
+        final second = _tile(tester, 3);
+        if (first != null &&
+            !_at(first, first_source) &&
+            !_at(first, first_slot)) {
+          saw_first_in_transit = true;
+        }
+        if (second != null &&
+            !_at(second, second_source) &&
+            !_at(second, second_slot)) {
+          saw_second_in_transit = true;
+        }
+        if (_at(first, first_slot)) first_arrival ??= frame;
+        if (_at(second, second_slot)) second_arrival ??= frame;
+        if (first_arrival != null) {
+          _same_rect(
+            first!,
+            first_slot,
+            reason: 'an already landed tile must not jump back to the board',
+          );
+        }
+        if (second_arrival != null) break;
+      }
+      expect(saw_first_in_transit, isTrue);
+      expect(saw_second_in_transit, isTrue);
+      expect(first_arrival, isNotNull);
+      expect(second_arrival, isNotNull);
+      expect(
+        first_arrival!,
+        lessThanOrEqualTo(second_arrival!),
+        reason: 'independent flights preserve the tap order when tied',
+      );
+      expect(
+        second_arrival * _frame.inMilliseconds,
+        lessThanOrEqualTo(
+          TileQuestStyle.flight_duration.inMilliseconds + _frame.inMilliseconds,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('five rapid interleaved taps land within one flight duration', (
     tester,
   ) async {
     final host = await _mount(tester);
-    final first_source = _tile(tester, 0)!;
-    final second_source = _tile(tester, 3)!;
-    final first_slot = _slot(tester, 0);
-    final second_slot = _slot(tester, 1);
-    expect(
-      (second_source.center - second_slot.center).distance,
-      lessThan((first_source.center - first_slot.center).distance),
-      reason: 'the later tap starts closer to its tray slot',
-    );
-
-    // Both real on_tile callbacks run before a single widget frame is rendered.
-    await tester.tapAt(first_source.center);
-    await tester.tapAt(second_source.center);
-    expect(host.currentState!.engine.state.tray, [0, 3]);
-    await tester.pump();
-    _same_rect(_tile(tester, 0)!, first_source);
-    _same_rect(_tile(tester, 3)!, second_source);
-
-    int? first_arrival;
-    int? second_arrival;
-    var saw_first_in_transit = false;
-    var saw_second_in_transit = false;
-    for (var frame = 1; frame <= 300; frame++) {
-      await tester.pump(_frame);
-      final first = _tile(tester, 0);
-      final second = _tile(tester, 3);
-      if (first != null &&
-          !_at(first, first_source) &&
-          !_at(first, first_slot)) {
-        saw_first_in_transit = true;
-      }
-      if (second != null &&
-          !_at(second, second_source) &&
-          !_at(second, second_slot)) {
-        saw_second_in_transit = true;
-      }
-      if (_at(first, first_slot)) first_arrival ??= frame;
-      if (_at(second, second_slot)) second_arrival ??= frame;
-      if (first_arrival != null) {
-        _same_rect(
-          first!,
-          first_slot,
-          reason: 'an already landed tile must not jump back to the board',
-        );
-      }
-      if (second_arrival != null) break;
+    final sources = {
+      for (final id in [0, 3, 1, 6, 4]) id: _tile(tester, id)!,
+    };
+    for (final source in sources.values) {
+      await tester.tapAt(source.center);
     }
-    expect(saw_first_in_transit, isTrue);
-    expect(saw_second_in_transit, isTrue);
-    expect(first_arrival, isNotNull);
-    expect(second_arrival, isNotNull);
-    expect(
-      first_arrival!,
-      lessThan(second_arrival!),
-      reason: 'the closer later tile must still land after the first tap',
-    );
+    expect(host.currentState!.engine.state.tray, [0, 1, 3, 4, 6]);
+    await tester.pump();
+    for (final entry in sources.entries) {
+      _same_rect(_tile(tester, entry.key)!, entry.value);
+    }
+    await tester.pump(TileQuestStyle.flight_duration);
+    final order = host.currentState!.engine.state.tray;
+    for (var index = 0; index < order.length; index++) {
+      _same_rect(
+        _tile(tester, order[index])!,
+        _slot(tester, index),
+        reason: 'every accepted tap flies directly to its assigned slot',
+      );
+    }
     await tester.pumpAndSettle();
+    expect(host.currentState!.presentation_events, [true, false]);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('a tap during match fade keeps flying into the tray', (
+    tester,
+  ) async {
+    final host = await _mount(tester);
+    for (final id in [0, 1, 2]) {
+      host.currentState!.tap(id);
+    }
+    await tester.pump();
+    await tester.pump(
+      TileQuestStyle.flight_duration +
+          Duration(milliseconds: TileQuestStyle.match_hold_ms.toInt()),
+    );
+    host.currentState!.tap(3);
+    await tester.pump();
+    final target = _slot(tester, 0);
+    final source = _tile(tester, 3)!;
+    var previous = source;
+    for (
+      var frame = 0;
+      frame <
+          TileQuestStyle.flight_duration.inMilliseconds ~/
+              _frame.inMilliseconds;
+      frame++
+    ) {
+      await tester.pump(_frame);
+      final current = _tile(tester, 3)!;
+      if (!_at(current, target)) {
+        expect(
+          (current.center - previous.center).distance,
+          greaterThan(.001),
+          reason: 'a pending match must never freeze a new flight in the air',
+        );
+      }
+      previous = current;
+    }
+    await tester.pump(_frame);
+    _same_rect(_tile(tester, 3)!, target);
+    await tester.pumpAndSettle();
+    _same_rect(_tile(tester, 3)!, target);
+    expect(host.currentState!.engine.state.tray, [3]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'consecutive triples release slots before the previous particle tail ends',
+    (tester) async {
+      final host = await _mount(tester);
+      for (final id in [0, 1, 2, 3, 4, 5, 6]) {
+        host.currentState!.tap(id);
+      }
+      await tester.pump();
+      await tester.pump(TileQuestStyle.flight_duration);
+      for (final id in [3, 4, 5, 6]) {
+        expect(
+          _at(_tile(tester, id), _slot(tester, id < 6 ? id - 3 : 0)),
+          isFalse,
+          reason:
+              'later groups keep flying while the first triple owns the slots',
+        );
+      }
+      final second_arrival =
+          TileQuestStyle.match_hold_ms + TileQuestStyle.tray_compact_ms;
+      await tester.pump(Duration(milliseconds: second_arrival.toInt()));
+      for (final id in [3, 4, 5]) {
+        _same_rect(_tile(tester, id)!, _slot(tester, id - 3));
+      }
+      await tester.pump(
+        Duration(milliseconds: TileQuestStyle.match_hold_ms.toInt() + 1),
+      );
+      final particles = quest_scene_frames(
+        tester,
+      ).values.where((frame) => (frame.dissolve ?? 0) > 0);
+      expect(
+        particles.length,
+        6,
+        reason: 'both triples dissolve on independent clocks',
+      );
+      expect(_tile(tester, 6), isNotNull);
+      await tester.pumpAndSettle();
+      _same_rect(_tile(tester, 6)!, _slot(tester, 0));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'consecutive matches never pull a surviving tray tile back to an old snapshot',
+    (tester) async {
+      final host = await _mount(tester, state: _fixture(tray: [0, 1, 3, 4, 6]));
+      for (final id in [2, 5, 7]) {
+        host.currentState!.tap(id);
+      }
+      await tester.pump();
+      var previous = _tile(tester, 6)!;
+      var started_moving_left = false;
+      for (var frame = 0; frame < 180; frame++) {
+        await tester.pump(_frame);
+        final current = _tile(tester, 6)!;
+        final delta = current.center.dx - previous.center.dx;
+        expect(
+          (current.center - previous.center).distance,
+          lessThan(_slot(tester, 0).width),
+          reason: 'no transaction handoff can jump a visible card',
+        );
+        if (delta < -.05) started_moving_left = true;
+        if (started_moving_left) {
+          expect(
+            delta,
+            lessThanOrEqualTo(.05),
+            reason: 'old match compaction cannot move a survivor right again',
+          );
+        }
+        previous = current;
+      }
+      await tester.pumpAndSettle();
+      _same_rect(_tile(tester, 6)!, _slot(tester, 0));
+      _same_rect(_tile(tester, 7)!, _slot(tester, 1));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'staggered A B A insertion keeps every path continuous at handoff',
+    (tester) async {
+      final host = await _mount(tester);
+      for (final id in [0, 3, 1]) {
+        host.currentState!.tap(id);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 40));
+      }
+      var previous = {
+        for (final id in [0, 3, 1]) id: _tile(tester, id)!,
+      };
+      for (var frame = 0; frame < 320; frame++) {
+        await tester.pump(const Duration(milliseconds: 1));
+        for (final id in [0, 3, 1]) {
+          final current = _tile(tester, id)!;
+          expect(
+            (current.center - previous[id]!.center).distance,
+            lessThan(8),
+            reason: 'a neighbor cannot restart from a stale slot',
+          );
+          previous[id] = current;
+        }
+      }
+      await tester.pumpAndSettle();
+      for (var index = 0; index < 3; index++) {
+        _same_rect(_tile(tester, [0, 1, 3][index])!, _slot(tester, index));
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'third strawberry inserts at slot five, shifts followers, then closes gap',
@@ -326,7 +504,7 @@ void main() {
   );
 
   testWidgets(
-    'a rapid triple preserves each source until its ordered arrival',
+    'a rapid triple flies together and waits for every arrival before matching',
     (tester) async {
       final host = await _mount(tester);
       final sources = [for (var id = 0; id < 3; id++) _tile(tester, id)!];
@@ -356,8 +534,14 @@ void main() {
         if (arrivals.length == 3 && _tile(tester, 2) == null) break;
       }
       expect(arrivals.keys.toList(), [0, 1, 2]);
-      expect(arrivals[0]!, lessThan(arrivals[1]!));
-      expect(arrivals[1]!, lessThan(arrivals[2]!));
+      expect(arrivals[0]!, lessThanOrEqualTo(arrivals[1]!));
+      expect(arrivals[1]!, lessThanOrEqualTo(arrivals[2]!));
+      expect(
+        arrivals[2]! * _frame.inMilliseconds,
+        lessThanOrEqualTo(
+          TileQuestStyle.flight_duration.inMilliseconds + _frame.inMilliseconds,
+        ),
+      );
       expect(saw_match_before_last_arrival, isFalse);
       await tester.pumpAndSettle();
       for (var id = 0; id < 3; id++) {
@@ -433,22 +617,17 @@ void main() {
     expect(host.currentState!.actions.length, 4);
     await tester.pump();
 
-    var saw_cleared_pair = false;
-    var saw_undo_pair = false;
-    for (var frame = 0; frame < 300; frame++) {
-      await tester.pump(_frame);
-      final first = _tile(tester, 3);
-      final second = _tile(tester, 4);
-      if (first == null && second == null) saw_cleared_pair = true;
-      if (saw_cleared_pair && first != null && second != null) {
-        _same_rect(first, slots[2]);
-        _same_rect(second, slots[3]);
-        saw_undo_pair = true;
-        break;
-      }
-    }
-    expect(saw_cleared_pair, isTrue);
-    expect(saw_undo_pair, isTrue);
+    // 碎粒结束后撤回立即接管，无需为了串行队列再留140ms空白帧。
+    await tester.pump(
+      TileQuestStyle.flight_duration +
+          Duration(
+            milliseconds:
+                (TileQuestStyle.match_hold_ms + TileQuestStyle.match_fade_ms)
+                    .toInt(),
+          ),
+    );
+    _same_rect(_tile(tester, 3)!, slots[2]);
+    _same_rect(_tile(tester, 4)!, slots[3]);
     await tester.pumpAndSettle();
     expect(host.currentState!.engine.state.tray, [6, 7]);
     expect(tester.takeException(), isNull);
@@ -529,7 +708,10 @@ void main() {
           seed: 17,
           challenge_id: 'result-presentation-$won',
         );
-        final saves = TileQuestSaveService(store: _MemoryStore());
+        final saves = TileQuestSaveService(
+          encode_snapshot: encode_tile_quest_snapshot,
+          store: _MemoryStore(),
+        );
         final logic = TileQuestLogic(
           save_service: saves,
           work_service: _FixtureWork(state),
@@ -559,8 +741,8 @@ void main() {
           if (find.byType(QuestResult).evaluate().isNotEmpty) {
             for (var id = 0; id < (won ? 3 : 7); id++) {
               expect(
-                find.byKey(ValueKey('tile_quest_flight_$id')),
-                findsNothing,
+                quest_scene_frames(tester)[id]?.zone,
+                isNot(QuestTileZone.flight),
                 reason: 'the result opens after the whole flight queue settles',
               );
             }

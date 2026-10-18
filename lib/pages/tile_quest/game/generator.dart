@@ -31,6 +31,7 @@ class TileQuestGenerator {
     final chosen_difficulty = difficulty ?? TileQuestConfig.gameDifficulty;
     final profile = DifficultyProfile.for_difficulty(chosen_difficulty);
     final stopwatch = Stopwatch()..start();
+    StateError? last_failure;
     for (
       var attempt = 0;
       attempt < TileQuestConfig.max_generation_attempts;
@@ -38,11 +39,20 @@ class TileQuestGenerator {
     ) {
       try {
         final random = Random(seed ^ (attempt * 7919));
-        final expert = chosen_difficulty == 10;
-        final lead_profile = expert
+        final needs_barrier =
+            chosen_difficulty >= TileQuestConfig.mandatory_tool_difficulty;
+        final lead_profile = needs_barrier
             ? profile.with_inventory(
-                tile_count: profile.tile_count - 39,
-                type_count: profile.type_count - 13,
+                tile_count:
+                    profile.tile_count -
+                    TileQuestExpertBarrier.tile_count_for_difficulty(
+                      chosen_difficulty,
+                    ),
+                type_count:
+                    profile.type_count -
+                    TileQuestExpertBarrier.type_count_for_difficulty(
+                      chosen_difficulty,
+                    ),
               )
             : profile;
         final lead_tiles = TileQuestLayoutPatterns.generate(
@@ -79,8 +89,14 @@ class TileQuestGenerator {
           lead_profile,
           opening_count: opening.length,
           random: random,
-          delayed_match_groups: chosen_difficulty == 9
-              ? _delayed_groups(lead_tiles, graph, lead_order, random)
+          delayed_match_groups: chosen_difficulty >= 6 && chosen_difficulty <= 9
+              ? _delayed_groups(
+                  lead_tiles,
+                  graph,
+                  lead_order,
+                  lead_profile,
+                  random,
+                )
               : const [],
         );
         final assigned = {
@@ -92,7 +108,15 @@ class TileQuestGenerator {
             .toList();
         final front_ids = <int>[];
         final partner_ids = <int>[];
-        if (expert) _append_barrier(tiles, front_ids, partner_ids);
+        if (needs_barrier) {
+          _append_barrier(
+            tiles,
+            front_ids,
+            partner_ids,
+            type_start: lead_profile.type_count,
+            difficulty: chosen_difficulty,
+          );
+        }
 
         // Identity, storage order and sprite palette are independent of the
         // witness order. Iterating ids or walking left-to-right cannot reveal it.
@@ -132,7 +156,7 @@ class TileQuestGenerator {
                 .toList()
               ..shuffle(random);
         final final_order = lead_order.map((id) => new_id[id]!).toList();
-        final barrier = expert
+        final barrier = needs_barrier
             ? TileQuestExpertBarrier(
                 front_ids: front_ids.map((id) => new_id[id]!).toList(),
                 partner_ids: partner_ids.map((id) => new_id[id]!).toList(),
@@ -151,7 +175,7 @@ class TileQuestGenerator {
           certified_solution: barrier == null
               ? final_order
               : TileQuestConfig.remove_uses_per_challenge >=
-                    TileQuestExpertBarrier.required_remove_uses
+                    barrier.minimum_remove_uses
               ? tool_witness!
               : const [],
         );
@@ -160,13 +184,14 @@ class TileQuestGenerator {
             : TileQuestValidator.validate_tool_solution(
                 state,
                 tool_witness!,
-                remove_uses: TileQuestExpertBarrier.required_remove_uses,
+                remove_uses: barrier.minimum_remove_uses,
               );
         if (check.valid) {
           barrier?.validate(state);
           return state;
         }
-      } on StateError {
+      } on StateError catch (error) {
+        last_failure = error;
         // Retry a complete seeded construction, never force a player's result.
       }
       if (stopwatch.elapsedMilliseconds >=
@@ -175,19 +200,20 @@ class TileQuestGenerator {
       }
     }
     throw StateError(
-      'A verified phased board could not be generated within its budget',
+      'A verified phased board could not be generated within its budget '
+      '(difficulty $chosen_difficulty, seed $seed): $last_failure',
     );
   }
 
-  /// Two unique triples interleave along one real geometric corridor. The first
-  /// pair and the other type's first tile must be held before either closure.
-  /// Three persistent tiles leave room for mixed ordinary groups; two pairs
-  /// would force ordinary triples into a more easily recognized sequence. The
-  /// allocator still builds a complete legal path within the six safe slots.
+  /// Difficulties 6–8 hold one real rare pair through a mandatory corridor;
+  /// difficulty 9 holds two, leaving just two ordinary slots in its long middle
+  /// section. Every candidate is scored by actual geometric dependencies, never
+  /// by a certificate-only delay that another exposed branch could bypass.
   static List<List<int>> _delayed_groups(
     List<TileQuestTile> tiles,
     TileQuestGeometry graph,
     List<int> order,
+    DifficultyProfile profile,
     Random random,
   ) {
     final by_id = {for (final tile in tiles) tile.id: tile};
@@ -195,6 +221,10 @@ class TileQuestGenerator {
     final candidates =
         tiles.where((tile) => tile.layer <= max_layer ~/ 8).toList()
           ..shuffle(random);
+    final extreme = profile.difficulty == 9;
+    final minimum_chain = extreme ? 24 : profile.layers - 2;
+    var best_score = -1;
+    List<List<int>>? best_groups;
     for (final target in candidates) {
       final chain = <int>[target.id];
       var current = target;
@@ -206,18 +236,29 @@ class TileQuestGenerator {
         current = by_id[above[random.nextInt(above.length)]]!;
         chain.add(current.id);
       }
-      if (chain.length < 24 || current.layer != max_layer) continue;
+      if (chain.length < minimum_chain || current.layer != max_layer) continue;
       final ordered = chain.reversed.toList();
-      final groups = [
-        [ordered[1], ordered[3], ordered[ordered.length - 5]],
-        [ordered[5], ordered[ordered.length - 3], ordered.last],
-      ];
-      final before_first_close = _reachable(groups[0].last, graph.blockers);
-      final after_overlap = _reachable(groups[1].first, graph.supported);
-      if (before_first_close.intersection(after_overlap).length < 12) {
-        continue;
-      }
-      return groups.map((ids) => ids.map(order.indexOf).toList()).toList();
+      final groups = extreme
+          ? [
+              [ordered[1], ordered[2], ordered[ordered.length - 3]],
+              [ordered[3], ordered[4], ordered.last],
+            ]
+          : [
+              [
+                ordered[1],
+                ordered[profile.difficulty == 8 ? 2 : 3],
+                ordered[ordered.length - (profile.difficulty == 8 ? 2 : 3)],
+              ],
+            ];
+      final before_first_close = _reachable(groups.first.last, graph.blockers);
+      final after_overlap = _reachable(groups.last[1], graph.supported);
+      final score = before_first_close.intersection(after_overlap).length;
+      if ((extreme && score < 12) || score <= best_score) continue;
+      best_score = score;
+      best_groups = groups;
+    }
+    if (best_groups != null) {
+      return best_groups.map((ids) => ids.map(order.indexOf).toList()).toList();
     }
     throw StateError('A deep mandatory key corridor could not be constructed');
   }
@@ -286,41 +327,51 @@ class TileQuestGenerator {
     return result;
   }
 
-  /// Thirteen unmatched fronts precede all of their partners. The independent
-  /// 2×1 area needs 13 held tiles, while two Removes hold only 6+2×3=12 safely.
-  /// Two partner cards per layer compress the fully static proof to 26 layers.
+  /// Thirteen front tiles contain at most two copies of any real type.
+  /// Every closing partner is below the final front, so no front can disappear
+  /// before all thirteen have left the board. Seven sprites suffice for this
+  /// strict 6 + 2×3 < 13 capacity proof; eight stay available to the lead-in.
   static void _append_barrier(
     List<TileQuestTile> tiles,
     List<int> front_ids,
-    List<int> partner_ids,
-  ) {
-    for (var index = 0; index < TileQuestExpertBarrier.front_count; index++) {
+    List<int> partner_ids, {
+    required int type_start,
+    required int difficulty,
+  }) {
+    final fronts = TileQuestExpertBarrier.front_types_for_difficulty(
+      difficulty,
+    );
+    final partners = TileQuestExpertBarrier.partner_types_for_difficulty(
+      difficulty,
+    );
+    final core_count = TileQuestExpertBarrier.tile_count_for_difficulty(
+      difficulty,
+    );
+    for (var index = 0; index < fronts.length; index++) {
       final id = tiles.length;
       front_ids.add(id);
       tiles.add(
         TileQuestTile(
           id: id,
-          type: 19 + index,
-          layer: 25 - index,
+          type: type_start + fronts[index],
+          layer: core_count - 1 - index,
           x: 5.5,
           y: 7,
         ),
       );
     }
-    for (var pair = 0; pair < TileQuestExpertBarrier.front_count; pair++) {
-      for (var column = 0; column < 2; column++) {
-        final id = tiles.length;
-        partner_ids.add(id);
-        tiles.add(
-          TileQuestTile(
-            id: id,
-            type: 31 - pair,
-            layer: 12 - pair,
-            x: 5.0 + column,
-            y: 7,
-          ),
-        );
-      }
+    for (var index = 0; index < partners.length; index++) {
+      final id = tiles.length;
+      partner_ids.add(id);
+      tiles.add(
+        TileQuestTile(
+          id: id,
+          type: type_start + partners[index],
+          layer: (partners.length - 1 - index) ~/ 2,
+          x: 5.0 + index % 2,
+          y: 7,
+        ),
+      );
     }
   }
 }

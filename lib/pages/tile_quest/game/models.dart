@@ -61,6 +61,12 @@ class TileQuestTile {
 /// Immutable, independently serializable game snapshot used by logic and animation.
 class TileQuestState {
   final List<TileQuestTile> tiles;
+
+  /// Each immutable snapshot owns its lazy index. Animation and settlement can
+  /// resolve hundreds of identities without scanning the full board per lookup.
+  late final Map<int, TileQuestTile> _tiles_by_id = {
+    for (final tile in tiles) tile.id: tile,
+  };
   final List<int> tray;
   final List<int> reserve;
 
@@ -127,7 +133,8 @@ class TileQuestState {
   List<TileQuestTile> get clickable_tiles => List.unmodifiable(
     tiles.where((tile) => !tile.is_removed && !tile.is_blocked),
   );
-  TileQuestTile tile_by_id(int id) => tiles.firstWhere((tile) => tile.id == id);
+  TileQuestTile tile_by_id(int id) =>
+      _tiles_by_id[id] ?? (throw StateError('No element'));
 
   int reserve_column(int id) => reserve_columns[id] ?? -1;
 

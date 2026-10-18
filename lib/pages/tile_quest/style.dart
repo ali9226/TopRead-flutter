@@ -12,6 +12,11 @@ class TileQuestStyle {
   static const double tutorial_top = 114;
   static const double board_top = 148;
   static const double corner = 22;
+  static const double tile_corner_radius_fraction = .107;
+  static const int tile_cache_width = 192;
+  static const double tile_press_depth_fraction = .016;
+  static const int shuffle_atlas_columns = 8;
+  static const int shuffle_atlas_padding = 2;
   static const double title_size_cjk = 25;
   static const double title_size_alphabetic = 27;
   static const double body_size_cjk = 14;
@@ -22,10 +27,9 @@ class TileQuestStyle {
   static const double line_height_alphabetic = 1.4;
   static const double button_min_width_cjk = 92;
   static const double button_min_width_alphabetic = 112;
-  static const Duration flight_duration = Duration(milliseconds: 220);
-  static const double queued_flight_min_ms = 95;
-  static const double preflight_duration_ms = 180;
-  static const double preflight_progress = .62;
+  static const Duration flight_duration = Duration(milliseconds: 340);
+  static const double flight_lift_max = 18;
+  static const double flight_lift_distance_fraction = .06;
   static const double match_hold_ms = 28;
   static const double match_fade_ms = 480;
   static const double tray_compact_ms = 140;

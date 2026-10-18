@@ -14,18 +14,24 @@ TileQuestState expert_fixture() {
     for (var id = 0; id < 9; id++)
       TileQuestTile(
         id: id,
-        type: 13 + id ~/ 3,
+        type: 7 + id ~/ 3,
         layer: 0,
         x: (id % 6).toDouble(),
         y: (id ~/ 6).toDouble(),
       ),
     for (var index = 0; index < 13; index++)
-      TileQuestTile(id: 9 + index, type: index, layer: 25 - index, x: .5, y: 2),
-    for (var index = 0; index < 26; index++)
+      TileQuestTile(
+        id: 9 + index,
+        type: TileQuestExpertBarrier.front_types[index],
+        layer: TileQuestExpertBarrier.tile_count - 1 - index,
+        x: .5,
+        y: 2,
+      ),
+    for (var index = 0; index < TileQuestExpertBarrier.partner_count; index++)
       TileQuestTile(
         id: 22 + index,
-        type: 12 - index ~/ 2,
-        layer: 12 - index ~/ 2,
+        type: TileQuestExpertBarrier.partner_types[index],
+        layer: (TileQuestExpertBarrier.partner_count - 1 - index) ~/ 2,
         x: (index % 2).toDouble(),
         y: 2,
       ),
@@ -39,7 +45,10 @@ TileQuestState expert_fixture() {
     unlocked_level: 2,
     expert_barrier: TileQuestExpertBarrier(
       front_ids: List.generate(13, (index) => index + 9),
-      partner_ids: List.generate(26, (index) => index + 22),
+      partner_ids: List.generate(
+        TileQuestExpertBarrier.partner_count,
+        (index) => index + 22,
+      ),
       lead_solution: List.generate(9, (index) => index),
     ),
   );
@@ -70,7 +79,21 @@ void main() {
     final barrier = state.expert_barrier!;
     expect(
       barrier.front_ids.map((id) => state.tile_by_id(id).type).toSet(),
-      hasLength(13),
+      hasLength(TileQuestExpertBarrier.type_count),
+    );
+    final front_stock = <int, int>{};
+    for (final id in barrier.front_ids) {
+      final type = state.tile_by_id(id).type;
+      front_stock[type] = (front_stock[type] ?? 0) + 1;
+    }
+    expect(front_stock.values.where((count) => count == 2), hasLength(6));
+    expect(front_stock.values.where((count) => count == 1), hasLength(1));
+    expect(front_stock.values.every((count) => count < 3), isTrue);
+    expect(
+      state.tiles
+          .map((tile) => tile.type)
+          .every((type) => type >= 0 && type < TileQuestConfig.max_tile_types),
+      isTrue,
     );
     // This arithmetic invariant covers every action order, not a finite search:
     // before the last gate no gate type can match; all removed gates must be held.

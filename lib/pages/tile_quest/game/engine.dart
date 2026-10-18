@@ -12,11 +12,16 @@ import 'validator.dart';
 class TileQuestEngine {
   TileQuestState _state;
   TileQuestState? _undo_state;
-  late final TileQuestGeometry _geometry;
-  TileQuestEngine(TileQuestState state) : _state = state {
-    TileQuestValidator.validate_state(state);
-    _geometry = TileQuestGeometry(state.tiles);
-  }
+  final TileQuestGeometry _geometry;
+  TileQuestEngine(TileQuestState state)
+    : _state = state,
+      _geometry = TileQuestValidator.validate_state(state);
+
+  /// Parsing a save already performs every state and certificate invariant.
+  /// Build the retained graph without replaying the same save again.
+  TileQuestEngine._validated(TileQuestState state)
+    : _state = state,
+      _geometry = TileQuestGeometry(state.tiles);
   TileQuestState get state => _state;
   List<TileQuestTile> get clickable_tiles => _state.clickable_tiles;
   bool get can_undo =>
@@ -116,13 +121,17 @@ class TileQuestEngine {
     );
     tray.insert(previous_same < 0 ? tray.length : previous_same + 1, id);
     final settlement_tray = List<int>.from(tray);
-    final matches = tray
-        .where((held) => before.tile_by_id(held).type == type)
-        .toList();
-    if (matches.length == 3) {
-      tray.removeWhere(matches.contains);
-    } else {
-      matches.clear();
+    // Settle every complete triple of the inserted type. A strict equality
+    // check would leave four or more identical tiles stranded in the tray.
+    final matches = <int>[];
+    while (true) {
+      final group = tray
+          .where((held) => before.tile_by_id(held).type == type)
+          .toList();
+      if (group.length < 3) break;
+      final triple = group.take(3).toList();
+      matches.addAll(triple);
+      tray.removeWhere(triple.contains);
     }
     // Settlement always precedes the seventh-slot failure check.
     final won =
@@ -267,12 +276,16 @@ class TileQuestEngine {
     for (final tile in before.tiles) {
       inventory[tile.type] = (inventory[tile.type] ?? 0) + 1;
     }
-    final protected_types = before.difficulty == 9
-        ? inventory.entries
-              .where((entry) => entry.value == 3)
-              .map((entry) => entry.key)
-              .toSet()
-        : <int>{};
+    final protected_types = <int>{
+      if (before.expert_barrier != null)
+        ...before.expert_barrier!.front_ids.map(
+          (id) => before.tile_by_id(id).type,
+        ),
+      if (before.difficulty == 9)
+        ...inventory.entries
+            .where((entry) => entry.value == 3)
+            .map((entry) => entry.key),
+    };
     if (before.difficulty == 9) {
       return _shuffle_hard_board(protected_types, seed: seed);
     }
@@ -321,7 +334,7 @@ class TileQuestEngine {
       tools_used: before.tools_used + 1,
     );
     final check = TileQuestValidator.validate_solution(candidate);
-    if (!check.valid) {
+    if (!check.valid || !_barrier_is_valid(candidate)) {
       return _reject(
         TileQuestAction.shuffle,
         'Continuation verification failed',
@@ -390,12 +403,54 @@ class TileQuestEngine {
     );
   }
 
-  /// A whole-type bijection in an untouched lead area preserves every matching
-  /// schedule and the fixed 13-front capacity proof. Equal counts preserve the
-  /// exact inventory. Closed barriers after player moves safely refuse a shuffle
-  /// for which this restricted transformation has no current continuation proof.
+  /// Keep the gate's matching identities fixed while proving a continuation
+  /// through the ordinary area. Difficulty nine also keeps all ordinary
+  /// matching relations, so Shuffle cannot remove its hidden-key difficulty.
   TileQuestActionResult _shuffle_closed_barrier({int? seed}) {
     final before = _state;
+    final barrier = before.expert_barrier!;
+    final protected_types = _protected_barrier_types();
+    if (before.difficulty < 10) {
+      final core_ids = {...barrier.front_ids, ...barrier.partner_ids};
+      final untouched_core = core_ids.every(
+        (id) => !before.tile_by_id(id).is_removed,
+      );
+      // 普通区域可以真正重分配图案，核心始终固定；不能把洗牌退化为
+      // 玩家偏离证书后永久不可用，也不能把门后的配对洗到门前。
+      if (untouched_core) {
+        if (before.difficulty == 9) {
+          final current_path = before.certified_solution;
+          final path =
+              current_path.isNotEmpty &&
+                  TileQuestValidator.validate_solution(
+                    before,
+                    current_path,
+                  ).valid
+              ? current_path
+              : barrier.solution();
+          if (TileQuestValidator.validate_solution(before, path).valid) {
+            return _shuffle_preserving_types(
+              _protected_barrier_types(),
+              seed: seed,
+              certified_solution: path,
+            );
+          }
+        }
+        return _shuffle_lead_before_barrier(
+          core_ids,
+          seed: seed,
+          preserve_matching_relations: before.difficulty == 9,
+        );
+      }
+      if (before.certified_solution.isNotEmpty &&
+          TileQuestValidator.validate_solution(before).valid) {
+        return _shuffle_preserving_types(protected_types, seed: seed);
+      }
+      return _reject(
+        TileQuestAction.shuffle,
+        'No verified continuation preserving the tool barrier',
+      );
+    }
     if (before.tiles.any((tile) => tile.is_removed) ||
         before.tray.isNotEmpty ||
         before.reserve.isNotEmpty) {
@@ -404,10 +459,124 @@ class TileQuestEngine {
         'No verified barrier-preserving continuation',
       );
     }
-    final protected_types = before.expert_barrier!.front_ids
-        .map((id) => before.tile_by_id(id).type)
-        .toSet();
     return _shuffle_preserving_types(protected_types, seed: seed);
+  }
+
+  /// 先构造能清空普通区域和已有备用牌的续解，再附加真实移出门槛见证。
+  /// 全程在原有工作 isolate 中执行，仍使用统一的250ms有界搜索。
+  TileQuestActionResult _shuffle_lead_before_barrier(
+    Set<int> core_ids, {
+    int? seed,
+    bool preserve_matching_relations = false,
+  }) {
+    final before = _state;
+    final barrier = before.expert_barrier!;
+    if ((before.tools[TileQuestTool.remove] ?? 0) <
+        barrier.minimum_remove_uses) {
+      return _reject(TileQuestAction.shuffle, 'No remaining tool for the gate');
+    }
+    final random = Random(seed ?? before.seed ^ before.matched_count);
+    final stopwatch = Stopwatch()..start();
+    final fixed_types = preserve_matching_relations
+        ? {
+            for (final tile in before.tiles)
+              if (!tile.is_removed && !core_ids.contains(tile.id))
+                tile.id: tile.type,
+          }
+        : const <int, int>{};
+    _ShuffleContinuation? continuation;
+    final attempts = preserve_matching_relations ? 8 : 1;
+    for (var attempt = 0; attempt < attempts; attempt++) {
+      if (stopwatch.elapsedMilliseconds >= TileQuestConfig.shuffle_budget_ms) {
+        break;
+      }
+      final order = _geometry
+          .removal_order(before.tiles, random)
+          .where((id) => !core_ids.contains(id))
+          .toList();
+      continuation = _ShuffleContinuation(
+        before,
+        order,
+        random,
+        stopwatch,
+        fixed_types: fixed_types,
+        excluded_board_ids: core_ids,
+      ).build();
+      if (continuation != null) break;
+    }
+    if (continuation == null) {
+      return _reject(TileQuestAction.shuffle, 'No verified lead continuation');
+    }
+    final path = [...continuation.path, ...barrier.solution(const [])];
+    if (preserve_matching_relations) {
+      if (!TileQuestValidator.validate_solution(before, path).valid) {
+        return _reject(
+          TileQuestAction.shuffle,
+          'Invalid fixed lead continuation',
+        );
+      }
+      return _shuffle_preserving_types(
+        _protected_barrier_types(),
+        seed: seed,
+        certified_solution: path,
+      );
+    }
+    final candidate = before.copy_with(
+      tiles: [
+        for (final tile in before.tiles)
+          continuation.assignments.containsKey(tile.id)
+              ? tile.copy_with(type: continuation.assignments[tile.id])
+              : tile,
+      ],
+      certified_solution: path,
+      tools: _consume(TileQuestTool.shuffle),
+      tools_used: before.tools_used + 1,
+    );
+    if (!TileQuestValidator.validate_solution(candidate).valid ||
+        !_barrier_is_valid(candidate)) {
+      return _reject(
+        TileQuestAction.shuffle,
+        'Invalid tool-gated continuation',
+      );
+    }
+    _state = candidate;
+    return TileQuestActionResult(
+      accepted: true,
+      before: before,
+      after: candidate,
+      action: TileQuestAction.shuffle,
+      moved_ids: candidate.tiles
+          .where((tile) => !tile.is_removed)
+          .map((tile) => tile.id)
+          .toList(),
+    );
+  }
+
+  bool _barrier_is_valid(TileQuestState candidate) {
+    try {
+      candidate.expert_barrier?.validate(candidate, geometry: _geometry);
+      return true;
+    } on FormatException {
+      return false;
+    }
+  }
+
+  /// Core identities and the two rare-key inventories never change in a
+  /// difficulty-nine Shuffle; only unheld equal-count ordinary types swap.
+  Set<int> _protected_barrier_types() {
+    final counts = <int, int>{};
+    for (final tile in _state.tiles) {
+      counts[tile.type] = (counts[tile.type] ?? 0) + 1;
+    }
+    return {
+      ..._state.expert_barrier!.front_ids.map(
+        (id) => _state.tile_by_id(id).type,
+      ),
+      if (_state.difficulty == 9)
+        ...counts.entries
+            .where((entry) => entry.value == 3)
+            .map((entry) => entry.key),
+    };
   }
 
   /// Rename complete unheld groups while retaining a current certificate and
@@ -488,11 +657,12 @@ class TileQuestEngine {
     );
   }
 
-  Map<String, dynamic> export_json() => {
-    'version': TileQuestConfig.save_version,
-    'state': _state.to_json(),
-    'undo_state': _undo_state?.to_json(),
-  };
+  /// 只捕获不可变状态的引用；点击线程无需遍历棋盘或构造 JSON Map。
+  /// 实际编码由存档服务的工作 isolate 完成，Undo 仍属于同一事务。
+  TileQuestEngineSnapshot capture_snapshot() =>
+      TileQuestEngineSnapshot(state: _state, undo_state: _undo_state);
+
+  Map<String, dynamic> export_json() => capture_snapshot().export_json();
 
   static TileQuestEngine restore(Map<String, dynamic> json) {
     try {
@@ -505,7 +675,7 @@ class TileQuestEngine {
       final state = TileQuestState.from_json(
         Map<String, dynamic>.from(json['state'] as Map),
       );
-      final engine = TileQuestEngine(state);
+      final engine = TileQuestEngine._validated(state);
       if (json['undo_state'] != null) {
         final undo_state = TileQuestState.from_json(
           Map<String, dynamic>.from(json['undo_state'] as Map),
@@ -540,6 +710,23 @@ class TileQuestEngine {
   }
 }
 
+/// 可跨 isolate 发送的轻量存档快照，始终指向调用时的不可变状态。
+class TileQuestEngineSnapshot {
+  const TileQuestEngineSnapshot({
+    required this.state,
+    required this.undo_state,
+  });
+
+  final TileQuestState state;
+  final TileQuestState? undo_state;
+
+  Map<String, dynamic> export_json() => {
+    'version': TileQuestConfig.save_version,
+    'state': state.to_json(),
+    'undo_state': undo_state?.to_json(),
+  };
+}
+
 /// Small bounded search over held types and the three physical reserve stacks.
 /// The board removal order is already geometric; assigning a remaining type to
 /// its next position cannot change which board tile is legally exposed.
@@ -559,6 +746,7 @@ class _ShuffleContinuation {
   late final Map<int, int> tile_types;
   final Map<int, int> fixed_types;
   final Set<int> protected_types;
+  final Set<int> excluded_board_ids;
   late final int last_fixed_index;
   var nodes = 0;
 
@@ -569,13 +757,16 @@ class _ShuffleContinuation {
     this.stopwatch, {
     this.fixed_types = const {},
     this.protected_types = const {},
+    this.excluded_board_ids = const {},
   }) {
     last_fixed_index = fixed_types.keys.fold<int>(
       -1,
       (last, id) => max(last, board_order.indexOf(id)),
     );
     tile_types = {for (final tile in state.tiles) tile.id: tile.type};
-    for (final tile in state.tiles.where((tile) => !tile.is_removed)) {
+    for (final tile in state.tiles.where(
+      (tile) => !tile.is_removed && !excluded_board_ids.contains(tile.id),
+    )) {
       board_supply[tile.type]++;
     }
     for (final id in state.tray) {

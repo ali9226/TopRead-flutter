@@ -8,6 +8,7 @@ import 'package:app/pages/tile_quest/game/generator.dart';
 import 'package:app/pages/tile_quest/game/geometry.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:app/pages/tile_quest/game/validator.dart';
+import 'certificate_replay.dart';
 
 TileQuestEngine flat_board(List<int> types) {
   final tiles = List<TileQuestTile>.generate(
@@ -30,9 +31,7 @@ Map<String, dynamic> deep_json(Map<String, dynamic> value) =>
 
 void replay(TileQuestEngine engine, List<int> path) {
   for (final id in path) {
-    final result = engine.state.reserve.contains(id)
-        ? engine.return_reserve(id)
-        : engine.tap_tile(id);
+    final result = replay_certificate_step(engine, id);
     expect(result.accepted, isTrue, reason: 'id $id: ${result.reason}');
   }
 }
@@ -333,7 +332,12 @@ void main() {
               if (result.accepted) {
                 accepted_count++;
                 final barrier = engine.state.expert_barrier;
-                if (barrier != null && barrier.is_closed(engine.state)) {
+                if (barrier != null &&
+                    barrier.minimum_remove_uses >
+                        TileQuestConfig.initial_tool_uses(
+                          TileQuestTool.remove,
+                        ) &&
+                    barrier.is_closed(engine.state)) {
                   expect(engine.state.certified_solution, isEmpty);
                   expect(
                     TileQuestValidator.validate_solution(engine.state).valid,
@@ -343,10 +347,10 @@ void main() {
                     TileQuestValidator.validate_tool_solution(
                       engine.state,
                       barrier.witness,
-                      remove_uses: 3,
+                      remove_uses: barrier.minimum_remove_uses,
                     ).valid,
                     isTrue,
-                    reason: 'three-charge witness $difficulty/$seed/$prefix',
+                    reason: 'barrier witness $difficulty/$seed/$prefix',
                   );
                   expect(barrier.to_json(), before['state']['expert_barrier']);
                 } else {
@@ -481,7 +485,7 @@ void main() {
                 : TileQuestValidator.validate_tool_solution(
                     state,
                     barrier.witness,
-                    remove_uses: 3,
+                    remove_uses: barrier.minimum_remove_uses,
                   );
             expect(
               check.valid,
@@ -490,6 +494,20 @@ void main() {
             );
             expect(check.max_tray_occupancy, lessThan(7));
             TileQuestValidator.validate_state(state);
+            if (difficulty < 10) {
+              final engine = TileQuestEngine(state);
+              replay(engine, List<int>.of(state.certified_solution));
+              expect(engine.state.status, TileQuestStatus.won);
+              if (difficulty >= TileQuestConfig.mandatory_tool_difficulty) {
+                expect(engine.state.tools_used, greaterThanOrEqualTo(1));
+                expect(
+                  engine.state.tools[TileQuestTool.remove],
+                  lessThan(
+                    TileQuestConfig.initial_tool_uses(TileQuestTool.remove),
+                  ),
+                );
+              }
+            }
           }
         }
       },
