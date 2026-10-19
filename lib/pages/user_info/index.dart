@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/support/index.dart';
 import 'package:app/config/color_config.dart';
@@ -111,8 +112,7 @@ class _UserInfoState extends State<UserInfo> {
 
       /// 下拉刷新时更新随机头像。
       if (updateAvatar) {
-        final userInfoTopState =
-            _userInfoTopKey.currentState as dynamic;
+        final userInfoTopState = _userInfoTopKey.currentState as dynamic;
         if (userInfoTopState != null) {
           userInfoTopState.refreshRandomAvatar();
         }
@@ -170,33 +170,37 @@ class _UserInfoState extends State<UserInfo> {
 
                       Stack(
                         children: [
-                          SafeArea(
-                            top: false,
-                            bottom: false,
-                            child: Column(
-                              children: [
-                                /// 只有登录后才展示统计区。
-                                if (isLoggedIn) Statistics(key: _statisticsKey),
+                          WindowContentLayout(
+                            expand_height: false,
+                            child: SafeArea(
+                              top: false,
+                              bottom: false,
+                              child: Column(
+                                children: [
+                                  /// 只有登录后才展示统计区。
+                                  if (isLoggedIn)
+                                    Statistics(key: _statisticsKey),
 
-                                /// 独立离线游戏，访客与已登录用户均可进入。
-                                TileQuestEntry(is_dark: isDark),
+                                  /// 独立离线游戏，访客与已登录用户均可进入。
+                                  TileQuestEntry(is_dark: isDark),
 
-                                /// 常用操作入口列表。
-                                OperationList(),
+                                  /// 常用操作入口列表。
+                                  OperationList(),
 
-                                /// 操作区和客服区之间的间距。
-                                SizedBox(height: Style.support_spacing),
+                                  /// 操作区和客服区之间的间距。
+                                  SizedBox(height: Style.support_spacing),
 
-                                /// 客服支持区。
-                                Support(),
+                                  /// 客服支持区。
+                                  Support(),
 
-                                /// 页面底部留白，避免内容贴底。
-                                SizedBox(
-                                  height:
-                                      Style.page_bottom_spacing +
-                                      MediaQuery.paddingOf(context).bottom,
-                                ),
-                              ],
+                                  /// 页面底部留白，避免内容贴底。
+                                  SizedBox(
+                                    height:
+                                        Style.page_bottom_spacing +
+                                        MediaQuery.paddingOf(context).bottom,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           Positioned(
@@ -334,7 +338,9 @@ class _UserInfoContentDecor extends StatelessWidget {
               width: Style.decor_outline_one_size,
               height: Style.decor_outline_one_size,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(Style.decor_outline_one_radius),
+                borderRadius: BorderRadius.circular(
+                  Style.decor_outline_one_radius,
+                ),
                 border: Border.all(
                   color: (isDark ? Colors.white : ColorConstants.themeColor)
                       .withValues(

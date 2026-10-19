@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
@@ -104,56 +105,57 @@ class _ChapterEditorPageState extends State<ChapterEditorPage> {
 
       return Scaffold(
         backgroundColor: AuthorStyle.background(is_dark),
-        appBar: AppBar(
-          backgroundColor: AuthorStyle.background(is_dark),
-          surfaceTintColor: Colors.transparent,
-          foregroundColor: AuthorStyle.primary_text(is_dark),
-          elevation: 0,
-          titleSpacing: 0,
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                easy.tr('creator_center.chapter_editor_title'),
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: AuthorStyle.title_weight,
+        appBar: WindowAppBar(
+          child: AppBar(
+            backgroundColor: AuthorStyle.background(is_dark),
+            surfaceTintColor: Colors.transparent,
+            foregroundColor: AuthorStyle.primary_text(is_dark),
+            elevation: 0,
+            titleSpacing: 0,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  easy.tr('creator_center.chapter_editor_title'),
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: AuthorStyle.title_weight,
+                  ),
+                ),
+                Text(
+                  easy.tr(
+                    'creator_center.chapter_number',
+                    namedArgs: <String, String>{
+                      'number': widget.chapter_number.toString(),
+                    },
+                  ),
+                  style: TextStyle(
+                    color: AuthorStyle.secondary_text(is_dark),
+                    fontSize: 11,
+                    fontWeight: AuthorStyle.body_weight,
+                  ),
+                ),
+              ],
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: _save_chapter,
+                child: Text(
+                  easy.tr('creator_center.save_chapter'),
+                  style: TextStyle(
+                    color: is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
+                    fontWeight: AuthorStyle.emphasis_weight,
+                  ),
                 ),
               ),
-              Text(
-                easy.tr(
-                  'creator_center.chapter_number',
-                  namedArgs: <String, String>{
-                    'number': widget.chapter_number.toString(),
-                  },
-                ),
-                style: TextStyle(
-                  color: AuthorStyle.secondary_text(is_dark),
-                  fontSize: 11,
-                  fontWeight: AuthorStyle.body_weight,
-                ),
-              ),
+              const SizedBox(width: 8),
             ],
           ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: _save_chapter,
-              child: Text(
-                easy.tr('creator_center.save_chapter'),
-                style: TextStyle(
-                  color: is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
-                  fontWeight: AuthorStyle.emphasis_weight,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
         ),
-        body: SafeArea(
-          top: false,
-          child: Column(
-            children: <Widget>[
-              Expanded(
+        body: Column(
+          children: <Widget>[
+            Expanded(
+              child: WindowContentLayout(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(
                     ChapterEditorStyle.page_padding,
@@ -220,17 +222,22 @@ class _ChapterEditorPageState extends State<ChapterEditorPage> {
                   ),
                 ),
               ),
-              Container(
-                height: ChapterEditorStyle.toolbar_height,
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                decoration: BoxDecoration(
-                  color: AuthorStyle.surface(is_dark),
-                  border: Border(
-                    top: BorderSide(color: AuthorStyle.border(is_dark)),
-                  ),
+            ),
+            Container(
+              height:
+                  ChapterEditorStyle.toolbar_height +
+                  MediaQuery.paddingOf(context).bottom,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              decoration: BoxDecoration(
+                color: AuthorStyle.surface(is_dark),
+                border: Border(
+                  top: BorderSide(color: AuthorStyle.border(is_dark)),
                 ),
-                child: SafeArea(
-                  top: false,
+              ),
+              child: SafeArea(
+                top: false,
+                child: WindowContentLayout(
+                  expand_height: false,
                   child: Row(
                     children: <Widget>[
                       Icon(
@@ -268,8 +275,8 @@ class _ChapterEditorPageState extends State<ChapterEditorPage> {
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     });

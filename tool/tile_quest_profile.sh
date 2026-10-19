@@ -30,7 +30,13 @@ language = target / 'lib/util/language_util/index.dart'
 language.parent.mkdir(parents=True, exist_ok=True)
 language.write_text('class LanguageUtil { static bool is_cjk_language(String code) '
                     "=> const ['zh', 'ja', 'ko'].contains(code); }\n")
-shutil.copytree(source / 'assets/img/game', target / 'assets/img/game')
+# 与正式棋盘共用用户底板、背景和独立透明图标；不打包原始素材整图。
+tile_assets = target / 'assets/img/tile_quest'
+tile_assets.mkdir(parents=True, exist_ok=True)
+for filename in ['lattice.png', 'background.png']:
+    shutil.copy2(source / 'assets/img/tile_quest' / filename, tile_assets / filename)
+for directory in ['icons', 'powerups']:
+    shutil.copytree(source / 'assets/img/tile_quest' / directory, tile_assets / directory)
 shutil.copy2(source / '.fvmrc', target / '.fvmrc')
 shutil.copy2(source / 'tool/tile_quest_performance.dart', target / 'lib/main.dart')
 (target / 'pubspec.yaml').write_text('''name: app
@@ -49,7 +55,10 @@ dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/img/game/
+    - assets/img/tile_quest/lattice.png
+    - assets/img/tile_quest/background.png
+    - assets/img/tile_quest/icons/
+    - assets/img/tile_quest/powerups/
 ''')
 PY
 

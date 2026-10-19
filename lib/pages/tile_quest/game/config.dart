@@ -22,9 +22,17 @@ class TileQuestConfig {
   static const int generation_budget_ms = 800;
   static const int shuffle_budget_ms = 250;
   static const int max_tiles = 600;
+
+  /// A buried capacity chain occupies lower logical levels without adding
+  /// screen-space elevation. Accept both earlier 64-level and new deep saves.
+  static const int max_logical_layer = 96;
   static const int max_tile_types = 15;
   static const double board_logical_width = 7;
   static const double board_logical_height = 9;
+
+  /// 多峰牌阵允许边肩自然露出；开局数量仍为完整三同且有严格上界。
+  static const int minimum_opening_tiles = 12;
+  static const int maximum_opening_tiles = 24;
   static const int max_seed = 0x7fffffff;
 
   /// 普通点击以固定短窗口合并存档，避免 GetStorage 每次点击编码整个盒子。
@@ -44,7 +52,7 @@ class DifficultyProfile {
   final double overlap_offset;
   final double close_probability;
 
-  /// Complete opening triples, plus the independent expert gate when present.
+  /// Complete opening triples. The capacity proof is hidden under the main island.
   final int min_initial_choices;
   final int max_initial_choices;
 
@@ -93,18 +101,8 @@ class DifficultyProfile {
       close_probability: tutorial
           ? .90
           : (.86 - difficulty * .085).clamp(.05, 1),
-      min_initial_choices: tutorial
-          ? 9
-          : 30 +
-                (difficulty >= TileQuestConfig.mandatory_tool_difficulty
-                    ? 1
-                    : 0),
-      max_initial_choices: tutorial
-          ? 9
-          : 36 +
-                (difficulty >= TileQuestConfig.mandatory_tool_difficulty
-                    ? 1
-                    : 0),
+      min_initial_choices: tutorial ? 9 : TileQuestConfig.minimum_opening_tiles,
+      max_initial_choices: tutorial ? 9 : TileQuestConfig.maximum_opening_tiles,
       match_delay: tutorial ? 0 : (difficulty - 2).clamp(0, 12),
       sealed_pair_span: tutorial
           ? 0

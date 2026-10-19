@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'dart:math' as math;
 import 'package:app/config/font_config.dart';
 
@@ -136,232 +137,241 @@ class _UserInfoInputPageState extends State<UserInfoInputPage> {
                 ),
               ),
             ),
-            SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                  Style.page_horizontal_padding,
-                  Style.page_top_spacing,
-                  Style.page_horizontal_padding,
-                  Style.page_bottom_spacing,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Container(
-                      /// 页面标题区。
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(
-                        bottom: Style.title_bottom_spacing,
-                      ),
-                      padding: Style.title_wrap_padding,
-                      decoration: BoxDecoration(
-                        gradient: Style.title_wrap_gradient(is_dark: is_dark),
-                        borderRadius: BorderRadius.circular(
-                          Style.title_wrap_radius,
+            WindowContentLayout(
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                    Style.page_horizontal_padding,
+                    Style.page_top_spacing,
+                    Style.page_horizontal_padding,
+                    Style.page_bottom_spacing,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Container(
+                        /// 页面标题区。
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(
+                          bottom: Style.title_bottom_spacing,
                         ),
-                        border: Border.all(
-                          color: Style.title_wrap_border_color(
-                            is_dark: is_dark,
+                        padding: Style.title_wrap_padding,
+                        decoration: BoxDecoration(
+                          gradient: Style.title_wrap_gradient(is_dark: is_dark),
+                          borderRadius: BorderRadius.circular(
+                            Style.title_wrap_radius,
                           ),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Container(
-                            width: Style.title_accent_width,
-                            height: Style.title_accent_height,
-                            decoration: BoxDecoration(
-                              color: Style.title_chip_background_color(
-                                is_dark: is_dark,
-                              ),
-                              borderRadius: BorderRadius.circular(
-                                Style.title_accent_radius,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: Style.title_text_top_spacing),
-                          Text(
-                            config.title,
-                            style: TextStyle(
-                              fontSize: Style.page_title_font_size,
-                              fontWeight: Style.page_title_font_weight,
-                              color: Style.page_title_color(is_dark: is_dark),
-                              height: 1.08,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      /// 表单主体卡片。
-                      width: double.infinity,
-                      padding: Style.form_card_padding,
-                      decoration: BoxDecoration(
-                        color: Style.card_background_color(is_dark: is_dark),
-                        gradient: Style.card_gradient(is_dark: is_dark),
-                        borderRadius: BorderRadius.circular(
-                          Style.form_card_radius,
-                        ),
-                        border: Border.all(
-                          color: Style.card_border_color(is_dark: is_dark),
-                        ),
-                        boxShadow: Style.card_shadow(is_dark: is_dark),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          if (config.helper_text.trim().isNotEmpty) ...<Widget>[
-                            Container(
-                              /// 顶部辅助说明卡。
-                              width: double.infinity,
-                              padding: Style.helper_card_padding,
-                              decoration: BoxDecoration(
-                                gradient: Style.helper_card_gradient(
-                                  is_dark: is_dark,
-                                ),
-                                borderRadius: BorderRadius.circular(
-                                  Style.helper_card_radius,
-                                ),
-                                border: Border.all(
-                                  color: Style.helper_card_border_color(
-                                    is_dark: is_dark,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                config.helper_text,
-                                style: TextStyle(
-                                  fontSize: Style.helper_text_font_size,
-                                  fontWeight: Style.helper_text_font_weight,
-                                  color: Style.helper_text_color(
-                                    is_dark: is_dark,
-                                  ),
-                                  height: 1.45,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: Style.helper_bottom_spacing),
-                          ],
-                          for (
-                            int index = 0;
-                            index < config.field_list.length;
-                            index++
-                          ) ...<Widget>[
-                            _InputFieldCard(
+                          border: Border.all(
+                            color: Style.title_wrap_border_color(
                               is_dark: is_dark,
-                              field_config: config.field_list[index],
-                              controller:
-                                  _text_controller_map[config
-                                      .field_list[index]
-                                      .field_key]!,
-                              focus_node:
-                                  _focus_node_map[config
-                                      .field_list[index]
-                                      .field_key]!,
-                              obscure_text:
-                                  _obscure_state_map[config
-                                      .field_list[index]
-                                      .field_key] ??
-                                  config.field_list[index].obscure_text,
-                              enabled: !_submit_loading,
-                              on_clear_tap: () {
-                                /// 点击清空按钮时清空当前输入框内容。
-                                _text_controller_map[config
-                                        .field_list[index]
-                                        .field_key]
-                                    ?.clear();
-                                setState(() {});
-                              },
-                              on_visibility_tap:
-                                  config.field_list[index].obscure_text
-                                  ? () {
-                                      setState(() {
-                                        /// 切换当前密码输入框显隐状态。
-                                        _obscure_state_map[config
-                                                .field_list[index]
-                                                .field_key] =
-                                            !(_obscure_state_map[config
-                                                    .field_list[index]
-                                                    .field_key] ??
-                                                true);
-                                      });
-                                    }
-                                  : null,
-                              on_changed: (_) {
-                                if (!mounted) return;
-
-                                /// 输入变化时刷新局部状态。
-                                setState(() {});
-                              },
-                              on_submitted: (_) async {
-                                /// 键盘提交时跳到下一项或直接提交。
-                                await _handle_field_submitted(index);
-                              },
                             ),
-                            if (index != config.field_list.length - 1)
-                              const SizedBox(height: Style.input_spacing),
-                          ],
-                          const SizedBox(height: Style.submit_top_spacing),
-                          SizedBox(
-                            width: double.infinity,
-                            height: Style.submit_button_height,
-                            child: DecoratedBox(
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Container(
+                              width: Style.title_accent_width,
+                              height: Style.title_accent_height,
                               decoration: BoxDecoration(
-                                gradient: Style.submit_button_gradient(
+                                color: Style.title_chip_background_color(
                                   is_dark: is_dark,
                                 ),
                                 borderRadius: BorderRadius.circular(
-                                  Style.submit_button_radius,
-                                ),
-                                boxShadow: Style.submit_button_shadow(
-                                  is_dark: is_dark,
+                                  Style.title_accent_radius,
                                 ),
                               ),
-                              child: ElevatedButton(
-                                onPressed: _submit_loading
-                                    ? null
-                                    : _handle_submit,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  shadowColor: Colors.transparent,
-                                  disabledBackgroundColor: Colors.transparent,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      Style.submit_button_radius,
+                            ),
+                            const SizedBox(
+                              height: Style.title_text_top_spacing,
+                            ),
+                            Text(
+                              config.title,
+                              style: TextStyle(
+                                fontSize: Style.page_title_font_size,
+                                fontWeight: Style.page_title_font_weight,
+                                color: Style.page_title_color(is_dark: is_dark),
+                                height: 1.08,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        /// 表单主体卡片。
+                        width: double.infinity,
+                        padding: Style.form_card_padding,
+                        decoration: BoxDecoration(
+                          color: Style.card_background_color(is_dark: is_dark),
+                          gradient: Style.card_gradient(is_dark: is_dark),
+                          borderRadius: BorderRadius.circular(
+                            Style.form_card_radius,
+                          ),
+                          border: Border.all(
+                            color: Style.card_border_color(is_dark: is_dark),
+                          ),
+                          boxShadow: Style.card_shadow(is_dark: is_dark),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            if (config.helper_text
+                                .trim()
+                                .isNotEmpty) ...<Widget>[
+                              Container(
+                                /// 顶部辅助说明卡。
+                                width: double.infinity,
+                                padding: Style.helper_card_padding,
+                                decoration: BoxDecoration(
+                                  gradient: Style.helper_card_gradient(
+                                    is_dark: is_dark,
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    Style.helper_card_radius,
+                                  ),
+                                  border: Border.all(
+                                    color: Style.helper_card_border_color(
+                                      is_dark: is_dark,
                                     ),
                                   ),
                                 ),
-                                child: _submit_loading
-                                    ? SizedBox(
-                                        width: Style.submit_loading_size,
-                                        height: Style.submit_loading_size,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth:
-                                              Style.submit_loading_stroke_width,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                ColorConstants.lightTextColor,
-                                              ),
-                                        ),
-                                      )
-                                    : Text(
-                                        config.submit_button_text,
-                                        style: TextStyle(
-                                          fontSize:
-                                              Style.submit_button_font_size,
-                                          fontWeight:
-                                              Style.submit_button_font_weight,
-                                          color: ColorConstants.lightTextColor,
-                                        ),
+                                child: Text(
+                                  config.helper_text,
+                                  style: TextStyle(
+                                    fontSize: Style.helper_text_font_size,
+                                    fontWeight: Style.helper_text_font_weight,
+                                    color: Style.helper_text_color(
+                                      is_dark: is_dark,
+                                    ),
+                                    height: 1.45,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(
+                                height: Style.helper_bottom_spacing,
+                              ),
+                            ],
+                            for (
+                              int index = 0;
+                              index < config.field_list.length;
+                              index++
+                            ) ...<Widget>[
+                              _InputFieldCard(
+                                is_dark: is_dark,
+                                field_config: config.field_list[index],
+                                controller:
+                                    _text_controller_map[config
+                                        .field_list[index]
+                                        .field_key]!,
+                                focus_node:
+                                    _focus_node_map[config
+                                        .field_list[index]
+                                        .field_key]!,
+                                obscure_text:
+                                    _obscure_state_map[config
+                                        .field_list[index]
+                                        .field_key] ??
+                                    config.field_list[index].obscure_text,
+                                enabled: !_submit_loading,
+                                on_clear_tap: () {
+                                  /// 点击清空按钮时清空当前输入框内容。
+                                  _text_controller_map[config
+                                          .field_list[index]
+                                          .field_key]
+                                      ?.clear();
+                                  setState(() {});
+                                },
+                                on_visibility_tap:
+                                    config.field_list[index].obscure_text
+                                    ? () {
+                                        setState(() {
+                                          /// 切换当前密码输入框显隐状态。
+                                          _obscure_state_map[config
+                                                  .field_list[index]
+                                                  .field_key] =
+                                              !(_obscure_state_map[config
+                                                      .field_list[index]
+                                                      .field_key] ??
+                                                  true);
+                                        });
+                                      }
+                                    : null,
+                                on_changed: (_) {
+                                  if (!mounted) return;
+
+                                  /// 输入变化时刷新局部状态。
+                                  setState(() {});
+                                },
+                                on_submitted: (_) async {
+                                  /// 键盘提交时跳到下一项或直接提交。
+                                  await _handle_field_submitted(index);
+                                },
+                              ),
+                              if (index != config.field_list.length - 1)
+                                const SizedBox(height: Style.input_spacing),
+                            ],
+                            const SizedBox(height: Style.submit_top_spacing),
+                            SizedBox(
+                              width: double.infinity,
+                              height: Style.submit_button_height,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: Style.submit_button_gradient(
+                                    is_dark: is_dark,
+                                  ),
+                                  borderRadius: BorderRadius.circular(
+                                    Style.submit_button_radius,
+                                  ),
+                                  boxShadow: Style.submit_button_shadow(
+                                    is_dark: is_dark,
+                                  ),
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: _submit_loading
+                                      ? null
+                                      : _handle_submit,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    disabledBackgroundColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        Style.submit_button_radius,
                                       ),
+                                    ),
+                                  ),
+                                  child: _submit_loading
+                                      ? SizedBox(
+                                          width: Style.submit_loading_size,
+                                          height: Style.submit_loading_size,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: Style
+                                                .submit_loading_stroke_width,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  ColorConstants.lightTextColor,
+                                                ),
+                                          ),
+                                        )
+                                      : Text(
+                                          config.submit_button_text,
+                                          style: TextStyle(
+                                            fontSize:
+                                                Style.submit_button_font_size,
+                                            fontWeight:
+                                                Style.submit_button_font_weight,
+                                            color:
+                                                ColorConstants.lightTextColor,
+                                          ),
+                                        ),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

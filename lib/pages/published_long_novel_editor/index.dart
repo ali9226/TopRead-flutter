@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/components/image_source_sheet/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
@@ -165,8 +166,11 @@ class _PublishedLongNovelEditorPageState
           bottom: button_bottom,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: WorkEditorStyle.content_max_width,
+              constraints: BoxConstraints(
+                maxWidth: WindowLayoutScope.resolve_max_width(
+                  context,
+                  WorkEditorStyle.content_max_width,
+                ),
               ),
               child: SizedBox(
                 width: double.infinity,
@@ -251,91 +255,97 @@ class _PublishedLongNovelEditorPageState
                     : _delete,
               ),
               Expanded(
-                child: model.saved == null
-                    ? model.loading
-                          ? SkeletonContent(
-                              is_dark: dark,
-                              tab_index: tabs.index,
-                            )
-                          : Center(
-                              child: TextButton(
-                                onPressed: model.load,
+                child: WindowContentLayout(
+                  child: model.saved == null
+                      ? model.loading
+                            ? SkeletonContent(
+                                is_dark: dark,
+                                tab_index: tabs.index,
+                              )
+                            : Center(
+                                child: TextButton(
+                                  onPressed: model.load,
+                                  child: Text(
+                                    model.error ?? tr('published_editor.retry'),
+                                  ),
+                                ),
+                              )
+                      : Column(
+                          children: [
+                            if (model.saving)
+                              const LinearProgressIndicator(
+                                color: AuthorStyle.gold,
+                              ),
+                            if (model.error != null)
+                              Padding(
+                                padding: WorkspaceStyle.padding,
                                 child: Text(
-                                  model.error ?? tr('published_editor.retry'),
+                                  model.error!,
+                                  style: WorkspaceStyle.caption(dark, cjk),
                                 ),
                               ),
-                            )
-                    : Column(
-                        children: [
-                          if (model.saving)
-                            const LinearProgressIndicator(
-                              color: AuthorStyle.gold,
-                            ),
-                          if (model.error != null)
-                            Padding(
-                              padding: WorkspaceStyle.padding,
-                              child: Text(
-                                model.error!,
-                                style: WorkspaceStyle.caption(dark, cjk),
-                              ),
-                            ),
-                          Expanded(
-                            child: TabBarView(
-                              controller: tabs,
-                              children: [
-                                _section(
-                                  0,
-                                  StepBasic(
-                                    is_dark: dark,
-                                    is_editing: true,
-                                    title_controller: model.title,
-                                    introduction_controller: model.introduction,
-                                    language_code: model.language_code,
-                                    cover_local_path: model.cover_local_path,
-                                    cover_url: model.cover_url,
-                                    is_uploading_cover: model.uploading,
-                                    on_pick_cover: () => showImageSourceSheet(
-                                      context: context,
-                                      on_gallery: () =>
-                                          model.pick_cover(ImageSource.gallery),
-                                      on_camera: () =>
-                                          model.pick_cover(ImageSource.camera),
+                            Expanded(
+                              child: TabBarView(
+                                controller: tabs,
+                                children: [
+                                  _section(
+                                    0,
+                                    StepBasic(
+                                      is_dark: dark,
+                                      is_editing: true,
+                                      title_controller: model.title,
+                                      introduction_controller:
+                                          model.introduction,
+                                      language_code: model.language_code,
+                                      cover_local_path: model.cover_local_path,
+                                      cover_url: model.cover_url,
+                                      is_uploading_cover: model.uploading,
+                                      on_pick_cover: () => showImageSourceSheet(
+                                        context: context,
+                                        on_gallery: () => model.pick_cover(
+                                          ImageSource.gallery,
+                                        ),
+                                        on_camera: () => model.pick_cover(
+                                          ImageSource.camera,
+                                        ),
+                                      ),
+                                      on_language_changed: model.set_language,
+                                      extra_bottom_padding: button_reserve,
+                                      show_header: false,
                                     ),
-                                    on_language_changed: model.set_language,
-                                    extra_bottom_padding: button_reserve,
-                                    show_header: false,
+                                    dark,
+                                    cjk,
                                   ),
-                                  dark,
-                                  cjk,
-                                ),
-                                _section(
-                                  1,
-                                  StepCategory(
-                                    is_dark: dark,
-                                    selected_preference_map: model.preferences,
-                                    on_toggle_preference:
-                                        model.toggle_preference,
-                                    showLength: false,
-                                    show_header: false,
+                                  _section(
+                                    1,
+                                    StepCategory(
+                                      is_dark: dark,
+                                      selected_preference_map:
+                                          model.preferences,
+                                      on_toggle_preference:
+                                          model.toggle_preference,
+                                      showLength: false,
+                                      show_header: false,
+                                    ),
+                                    dark,
+                                    cjk,
                                   ),
-                                  dark,
-                                  cjk,
-                                ),
-                                AbsorbPointer(
-                                  absorbing: model.locked,
-                                  child: PublishedChapterDirectory(
-                                    model: model,
-                                    is_dark: dark,
-                                    is_cjk: cjk,
-                                    on_open: _chapter,
-                                    on_new_chapter: () => _chapter(),
+                                  AbsorbPointer(
+                                    absorbing: model.locked,
+                                    child: PublishedChapterDirectory(
+                                      model: model,
+                                      is_dark: dark,
+                                      is_cjk: cjk,
+                                      on_open: _chapter,
+                                      on_new_chapter: () => _chapter(),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                ),
               ),
             ],
           ),

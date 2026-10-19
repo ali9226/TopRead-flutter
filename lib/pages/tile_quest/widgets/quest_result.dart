@@ -5,6 +5,7 @@ import '../game/models.dart';
 import '../style.dart';
 import 'quest_controls.dart';
 import 'quest_text.dart';
+import 'playfield.dart';
 
 /// 结果层不改变引擎状态；恢复存档后也可重现统计和继续关卡入口。
 class QuestResult extends StatelessWidget {
@@ -47,14 +48,16 @@ class QuestResult extends StatelessWidget {
               IgnorePointer(
                 child: CustomPaint(painter: _CelebrationPainter(value)),
               ),
-            Center(
-              child: Opacity(
-                opacity: appear,
-                child: Transform.translate(
-                  offset: Offset(shake, 20 * (1 - appear)),
-                  child: Transform.scale(
-                    scale: .94 + appear * .06,
-                    child: child,
+            QuestPlayfieldOverlay(
+              child: Center(
+                child: Opacity(
+                  opacity: appear,
+                  child: Transform.translate(
+                    offset: Offset(shake, 20 * (1 - appear)),
+                    child: Transform.scale(
+                      scale: .94 + appear * .06,
+                      child: child,
+                    ),
                   ),
                 ),
               ),

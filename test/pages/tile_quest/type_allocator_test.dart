@@ -94,6 +94,28 @@ void main() {
     }
   });
 
+  test('four consecutive rare openings reserve the entire forced run', () {
+    final profile = DifficultyProfile.for_difficulty(9);
+    for (var seed = 0; seed < 80; seed++) {
+      final sequence = TileQuestTypeAllocator.initial(
+        profile,
+        opening_count: 24,
+        random: Random(seed),
+        delayed_match_groups: const [
+          [40, 41, 403],
+          [42, 43, 451],
+        ],
+      );
+      final counts = List<int>.filled(TileQuestConfig.max_tile_types, 0);
+      for (final type in sequence) {
+        counts[type] = (counts[type] + 1) % 3;
+        expect(counts.fold<int>(0, (sum, count) => sum + count), lessThan(7));
+      }
+      expect(counts.every((count) => count == 0), isTrue);
+      expect(sequence, hasLength(profile.tile_count));
+    }
+  });
+
   test(
     'deep allocation rejects partial triples rather than losing inventory',
     () {

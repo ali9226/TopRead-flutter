@@ -6,6 +6,7 @@ import '../style.dart';
 import 'tile_assets.dart';
 import 'tile_skin.dart';
 import 'tile_surface.dart';
+import 'tile_surface_style.dart';
 
 /// 当前场景持有的牌面和洗牌图集；与静态牌共用 Flutter 的解码缓存。
 ///
@@ -51,6 +52,14 @@ class QuestShuffleTextures extends ChangeNotifier {
   Rect? source_of(int type, {required bool blocked}) =>
       _sources[(type, blocked)];
 
+  /// 绘制格内的逻辑牌区域；三消粒子按这个矩形切碎，避免把外扩落影切进去。
+  Rect? content_of(int type, {required bool blocked}) {
+    final source = _sources[(type, blocked)];
+    if (source == null) return null;
+    final inset = QuestTileSurfaceStyle.bleed * QuestTileSurfaceStyle.edge;
+    return source.deflate(inset);
+  }
+
   /// 图集尚未就绪时，可借用已解码透明图标与同一立体皮肤组合绘制。
   ui.Image? image_of(int type) => _images[type]?.image;
 
@@ -60,16 +69,37 @@ class QuestShuffleTextures extends ChangeNotifier {
     Rect rect,
     int type, {
     bool blocked = false,
+    double? blocked_amount,
     double opacity = 1,
   }) {
     if (_disposed || rect.isEmpty || opacity <= 0) return;
     final image = _atlas;
-    final source = source_of(type, blocked: blocked);
+    final amount = (blocked_amount ?? (blocked ? 1.0 : 0.0)).clamp(0.0, 1.0);
+    final source = source_of(type, blocked: amount > 0);
     if (image != null && source != null) {
       _tile_paint.color = Colors.white.withValues(
         alpha: opacity.clamp(0.0, 1.0),
       );
-      canvas.drawImageRect(image, source, rect, _tile_paint);
+      canvas.drawImageRect(
+        image,
+        source,
+        QuestTileSurface.cell_rect(rect),
+        _tile_paint,
+      );
+      if (amount > 0 && amount < 1) {
+        final normal = source_of(type, blocked: false);
+        if (normal != null) {
+          _tile_paint.color = Colors.white.withValues(
+            alpha: (opacity * (1 - amount)).clamp(0.0, 1.0),
+          );
+          canvas.drawImageRect(
+            image,
+            normal,
+            QuestTileSurface.cell_rect(rect),
+            _tile_paint,
+          );
+        }
+      }
       return;
     }
     // 正常交互开始前已预烘焙；仅启动、素材缺失或重载期间走向量皮肤。
@@ -79,6 +109,7 @@ class QuestShuffleTextures extends ChangeNotifier {
       body: body_image,
       icon: image_of(type),
       blocked: blocked,
+      blocked_amount: amount,
     );
   }
 
@@ -169,7 +200,7 @@ class QuestShuffleTextures extends ChangeNotifier {
       final stream = ResizeImage.resizeIfNeeded(
         TileQuestStyle.tile_cache_width,
         null,
-        AssetImage('assets/img/game/tile_${quest_tile_assets[type]}.png'),
+        AssetImage(quest_tile_asset_path(type)),
       ).resolve(configuration);
       final listener = ImageStreamListener(
         (info, synchronous) {
@@ -237,10 +268,13 @@ class QuestShuffleTextures extends ChangeNotifier {
         snapshot[entry.key] = entry.value.clone();
       }
       final types = snapshot.keys.toList()..sort();
-      final edge = TileQuestStyle.tile_cache_width;
+      const edge = QuestTileSurfaceStyle.cell_edge;
+      const height = QuestTileSurfaceStyle.cell_height;
       final padding = TileQuestStyle.shuffle_atlas_padding;
-      final pitch = edge + padding * 2;
+      final pitch_x = edge + padding * 2;
+      final pitch_y = height + padding * 2;
       const columns = TileQuestStyle.shuffle_atlas_columns;
+      // 每种牌只保留普通和遮挡两格，不创建覆盖透明圆角的额外纹理。
       final rows = (types.length * 2 + columns - 1) ~/ columns;
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
@@ -249,25 +283,30 @@ class QuestShuffleTextures extends ChangeNotifier {
       for (final type in types) {
         final image = snapshot[type]!.image;
         for (final blocked in const [false, true]) {
-          final rect = Rect.fromLTWH(
-            (slot % columns * pitch + padding).toDouble(),
-            (slot ~/ columns * pitch + padding).toDouble(),
+          final cell = Rect.fromLTWH(
+            (slot % columns * pitch_x + padding).toDouble(),
+            (slot ~/ columns * pitch_y + padding).toDouble(),
             edge.toDouble(),
-            edge.toDouble(),
+            height.toDouble(),
           );
-          sources[(type, blocked)] = rect;
+          sources[(type, blocked)] = cell;
           QuestTileSurface.paint(
             canvas,
-            rect,
+            Rect.fromCenter(
+              center: cell.center,
+              width: QuestTileSurfaceStyle.edge.toDouble(),
+              height: QuestTileSurfaceStyle.height.toDouble(),
+            ),
             body: body_snapshot?.image,
             icon: image,
             blocked: blocked,
+            icon_shadow: true,
           );
           slot++;
         }
       }
       picture = recorder.endRecording();
-      generated = await picture.toImage(columns * pitch, rows * pitch);
+      generated = await picture.toImage(columns * pitch_x, rows * pitch_y);
       if (_disposed || generation != _generation) return;
       final previous = _atlas;
       _atlas = generated;

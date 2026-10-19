@@ -1,236 +1,368 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 import 'dart:math';
 import 'config.dart';
+import 'geometry.dart';
 import 'models.dart';
 
-/// Seeded polyomino growth replaces the former finite silhouette catalogue.
-/// All occupied coordinates stay inside one shared seven-by-nine logical board.
+/// Seeded original grid templates. A complete silhouette and several depth
+/// basins are chosen before sprites are allocated; coordinates never scatter.
 class TileQuestLayoutPatterns {
-  static const int minimum_envelope_cells = 48;
-  static const int envelope_cell_variation = 7;
-  static const int minimum_half_cells = 18;
-  static const int envelope_attempts = 16;
+  static const int template_count = 64;
+  static const int main_columns = 6;
+  static const int main_rows = 5;
+  static const double footprint_width = 6;
+  static const double main_top = 2;
+  // Adjacent logical faces meet exactly. Only the supplied PNG silhouette
+  // determines corner transparency; no artificial backing fills those corners.
+  static const double grid_gap = 0;
+  static const double tile_extent = 1 - grid_gap;
+  static const int base_capacity = 26;
+  static const int cap_capacity = 4;
+  static const int deep_core_min_layers = 40;
+  static const int deep_core_cap_capacity = 6;
+  static const int maximum_auxiliary_stacks = 9;
+  static const int minimum_auxiliary_stacks = 6;
+  static const int maximum_auxiliary_depth = 24;
+  static const int contour_search_steps = 40;
+  static const double contour_min_power = .01;
+  static const double contour_max_power = 10;
 
-  static int get columns => TileQuestConfig.board_logical_width.toInt();
-  static int get rows => TileQuestConfig.board_logical_height.toInt();
+  static int cap_count_for_layers(int layers) =>
+      layers >= deep_core_min_layers ? deep_core_cap_capacity : cap_capacity;
 
-  /// Grow several random dense seeds, then carve random recesses. No layout id,
-  /// named template, fixed auxiliary pile or small catalogue determines a board.
+  /// Main contours grow around several independently seeded peaks, with a
+  /// coherent hole/branch motif instead of shrinking toward one fixed center.
+  /// The outer helper columns receive a meaningful part of the real inventory,
+  /// so several edge stacks have depth rather than advertising a unique gate.
   static List<TileQuestTile> generate(
     DifficultyProfile profile,
     Random random,
   ) {
-    final envelope = _envelope(
-      random,
-      expert: profile.difficulty >= TileQuestConfig.mandatory_tool_difficulty,
+    for (
+      var attempt = 0;
+      attempt < TileQuestConfig.max_generation_attempts;
+      attempt++
+    ) {
+      final tiles = _template(profile, random);
+      if (tiles != null) return tiles;
+    }
+    throw StateError('The seeded multi-peak template has no balanced opening');
+  }
+
+  /// An accepted template must satisfy the opening bound as a whole. If one
+  /// silhouette does not fit this inventory, advance the seeded template stream.
+  static List<TileQuestTile>? _template(
+    DifficultyProfile profile,
+    Random random,
+  ) {
+    final template = random.nextInt(template_count);
+    final channels = _channels(random);
+    final peaks = _peaks(random, channels);
+    final cap_count = cap_count_for_layers(profile.layers);
+    final footprints = [
+      for (var layer = 0; layer < profile.layers; layer++)
+        _ordered_cells(layer, template, peaks, channels),
+    ];
+    final auxiliary_layout = _auxiliary_layout(random);
+    final preferred_depth = min(
+      min(maximum_auxiliary_depth, profile.layers),
+      max(3, (profile.layers * .45).round()),
     );
-    final even_cells = envelope
-        .map((point) => Point<double>(point.x.toDouble(), point.y.toDouble()))
-        .toList();
-    final half_cells = _half_cells(envelope);
-    final cap_count =
-        (profile.min_initial_choices ~/ 3 + random.nextInt(3)) * 3;
-    var upper = _spread(even_cells, cap_count, random);
-    var remaining = profile.tile_count;
-    final tiles = <TileQuestTile>[];
-    double weight(int depth) {
-      final capacity = depth.isEven ? even_cells.length : half_cells.length;
-      final progress = depth / max(1, profile.layers - 1);
-      return capacity * (.8 + 1.2 * pow(1 - progress, 1.5));
-    }
-
-    for (var depth = 0; depth < profile.layers; depth++) {
-      final allowed = depth.isEven ? even_cells : half_cells;
-      final shift = depth.isEven ? 0.0 : profile.overlap_offset;
-      final candidates = depth == 0
-          ? upper
-          : _lower_candidates(upper, allowed.toSet(), shift);
-      final layers_left = profile.layers - depth;
-      final future_depths = List<int>.generate(
-        layers_left - 1,
-        (index) => depth + index + 1,
-      );
-      final future_capacity = future_depths.fold<int>(
-        0,
-        (sum, next) =>
-            sum + (next.isEven ? even_cells.length : half_cells.length),
-      );
-      final minimum = max(1, remaining - future_capacity);
-      final maximum = min(candidates.length, remaining - layers_left + 1);
-      if (minimum > maximum) throw StateError('Random footprint inventory gap');
-      final weighted_share =
-          (remaining *
-                  weight(depth) /
-                  (weight(depth) +
-                      future_depths.fold<double>(
-                        0,
-                        (sum, next) => sum + weight(next),
-                      )))
-              .round();
-      final count = depth == 0
-          ? cap_count
-          : weighted_share.clamp(minimum, maximum);
-      final footprint = depth == 0
-          ? upper
-          : _cluster(candidates, count, random);
-      if (footprint.length != count || count > remaining) {
-        throw StateError('Random footprint cannot fit its inventory');
-      }
-      for (final point in footprint) {
-        tiles.add(
-          TileQuestTile(
-            id: tiles.length,
-            type: 0,
-            layer: profile.layers - depth - 1,
-            x: point.x,
-            y: point.y,
-          ),
+    // Search template stock, not random points. Every returned candidate has an
+    // independently measured opening, exact inventory and long main corridors.
+    final depths = [
+      preferred_depth,
+      for (
+        var depth = preferred_depth + 1;
+        depth <= min(maximum_auxiliary_depth, profile.layers);
+        depth++
+      )
+        depth,
+      for (var depth = preferred_depth - 1; depth >= 1; depth--) depth,
+    ];
+    for (final depth in depths) {
+      for (
+        var auxiliary_count = maximum_auxiliary_stacks;
+        auxiliary_count >= minimum_auxiliary_stacks;
+        auxiliary_count--
+      ) {
+        final auxiliary_layers = _auxiliary_layers(
+          auxiliary_layout,
+          auxiliary_count,
+          depth,
         );
-      }
-      upper = footprint;
-      remaining -= count;
-    }
-    if (remaining != 0) {
-      throw StateError('Random footprint inventory incomplete');
-    }
-    return tiles;
-  }
-
-  static bool _inside(Point<int> point, bool expert) =>
-      point.x >= 0 &&
-      point.x < columns &&
-      point.y >= 0 &&
-      point.y < rows &&
-      !(expert && point.x >= 5 && point.y == 7);
-
-  static Iterable<Point<int>> _neighbors(Point<int> point) sync* {
-    yield Point(point.x - 1, point.y);
-    yield Point(point.x + 1, point.y);
-    yield Point(point.x, point.y - 1);
-    yield Point(point.x, point.y + 1);
-  }
-
-  static List<Point<double>> _half_cells(Set<Point<int>> envelope) => [
-    for (final point in envelope)
-      if (envelope.contains(Point(point.x + 1, point.y)) &&
-          envelope.contains(Point(point.x, point.y + 1)) &&
-          envelope.contains(Point(point.x + 1, point.y + 1)))
-        Point<double>(point.x + .5, point.y + .5),
-  ];
-
-  static Set<Point<int>> _envelope(Random random, {required bool expert}) {
-    for (var attempt = 0; attempt < envelope_attempts; attempt++) {
-      final occupied = <Point<int>>{};
-      final seed_count = 2 + random.nextInt(4);
-      for (var seed = 0; seed < seed_count; seed++) {
-        final x = random.nextInt(columns - 1);
-        final y = random.nextInt(rows - 1);
-        for (var dy = 0; dy < 2; dy++) {
-          for (var dx = 0; dx < 2; dx++) {
-            final point = Point(x + dx, y + dy);
-            if (_inside(point, expert)) occupied.add(point);
+        final auxiliary_stock = auxiliary_layers.fold<int>(
+          0,
+          (sum, layer) => sum + layer.length,
+        );
+        final main_count = profile.tile_count - auxiliary_stock;
+        final counts = _layer_counts(
+          main_count,
+          footprints,
+          cap_count: cap_count,
+        );
+        if (counts == null) continue;
+        final tiles = <TileQuestTile>[];
+        for (var layer = 0; layer < footprints.length; layer++) {
+          for (final point in footprints[layer].take(counts[layer])) {
+            // Core is a logical depth basin, not necessarily the screen center.
+            final core = peaks.any(
+              (peak) =>
+                  (point.x + .5 - peak.x).abs() <= 1 &&
+                  (point.y + .5 - peak.y).abs() <= 1,
+            );
+            _add(tiles, point, layer, core ? 'core' : 'main');
           }
         }
-      }
-      final target =
-          minimum_envelope_cells + random.nextInt(envelope_cell_variation);
-      while (occupied.length < target) {
-        final frontier = occupied
-            .expand(_neighbors)
-            .where(
-              (point) => _inside(point, expert) && !occupied.contains(point),
-            )
-            .toSet()
-            .toList();
-        if (frontier.isEmpty) break;
-        final scores = {
-          for (final point in frontier)
-            point:
-                pow(_neighbors(point).where(occupied.contains).length, 2) +
-                random.nextDouble() * 5,
-        };
-        frontier.sort((left, right) => scores[right]!.compareTo(scores[left]!));
-        occupied.add(frontier.first);
-      }
-      // Internal voids and edge recesses are retained by every layer's mask.
-      final carve = occupied.toList()..shuffle(random);
-      var removed = 0;
-      for (final point in carve) {
-        if (_neighbors(point).where(occupied.contains).length < 2) continue;
-        occupied.remove(point);
-        if (_half_cells(occupied).length < minimum_half_cells ||
-            occupied.length < 40) {
-          occupied.add(point);
-        } else if (++removed >= 2 + attempt % 3) {
-          break;
+        for (var layer = 0; layer < auxiliary_layers.length; layer++) {
+          for (final slot in auxiliary_layers[layer]) {
+            _add(tiles, slot, layer, slot.y == 0 ? 'side_top' : 'side_bottom');
+          }
         }
-      }
-      if (occupied.length >= 40 &&
-          _half_cells(occupied).length >= minimum_half_cells) {
-        return occupied;
-      }
-    }
-    throw StateError('A dense random envelope could not be grown');
-  }
-
-  static List<Point<double>> _lower_candidates(
-    List<Point<double>> upper,
-    Set<Point<double>> allowed,
-    double shift,
-  ) {
-    final candidates = <Point<double>>{};
-    for (final point in upper) {
-      for (final x in [(point.x - shift).floor(), (point.x - shift).ceil()]) {
-        for (final y in [(point.y - shift).floor(), (point.y - shift).ceil()]) {
-          final candidate = Point<double>(x + shift, y + shift);
-          if (allowed.contains(candidate)) candidates.add(candidate);
+        final opening = TileQuestGeometry(
+          tiles,
+        ).refresh(tiles).where((tile) => !tile.is_blocked).length;
+        if (opening >= TileQuestConfig.minimum_opening_tiles &&
+            opening <= TileQuestConfig.maximum_opening_tiles &&
+            opening % 3 == 0) {
+          return tiles;
         }
       }
     }
-    return candidates.toList();
+    return null;
   }
 
-  /// A broad easy cap covers several branches instead of one aligned rectangle.
-  static List<Point<double>> _spread(
-    List<Point<double>> cells,
-    int count,
+  static void _add(
+    List<TileQuestTile> tiles,
+    Point<double> point,
+    int layer,
+    String region,
+  ) => tiles.add(
+    TileQuestTile(
+      id: tiles.length,
+      type: 0,
+      region_id: region,
+      layer: layer,
+      x: point.x + grid_gap / 2,
+      y: point.y + grid_gap / 2,
+      width: tile_extent,
+      height: tile_extent,
+    ),
+  );
+
+  /// Pick separated depth centers across opposing edges. The third center is
+  /// seeded from the remaining corners/shoulders, yielding forked, diagonal and
+  /// split silhouettes, not four mirrors of the same central pyramid.
+  /// A notch is empty through every ordinary layer, not merely a darkened
+  /// lower tile. Half-grid rectangles crossing that cut are removed as well.
+  static List<Rectangle<double>> _channels(Random random) {
+    final side = random.nextInt(4);
+    final inset = 1 + random.nextInt(4).toDouble();
+    final cross = main_top + 1 + random.nextInt(3).toDouble();
+    final notch = switch (side) {
+      0 => Rectangle<double>(inset, main_top, 1, 2),
+      1 => Rectangle<double>(inset, main_top + main_rows - 2, 1, 2),
+      2 => Rectangle<double>(0, cross, 2, 1),
+      _ => Rectangle<double>(main_columns - 2, cross, 2, 1),
+    };
+    return [
+      notch,
+      if (random.nextBool())
+        Rectangle<double>(2 + random.nextInt(2).toDouble(), main_top + 2, 1, 1),
+    ];
+  }
+
+  static bool _outside_channels(
+    Point<double> point,
+    List<Rectangle<double>> channels,
+  ) => !channels.any(
+    (cut) =>
+        point.x < cut.right &&
+        point.x + 1 > cut.left &&
+        point.y < cut.bottom &&
+        point.y + 1 > cut.top,
+  );
+
+  static List<Point<double>> _peaks(
     Random random,
+    List<Rectangle<double>> channels,
   ) {
-    final available = List<Point<double>>.from(cells)..shuffle(random);
-    if (count > available.length) {
-      throw StateError('Opening exceeds its envelope');
+    final candidates = <Point<double>>[
+      for (var row = 0; row < main_rows; row++)
+        for (var column = 0; column < main_columns; column++)
+          if (_outside_channels(
+            Point(column.toDouble(), main_top + row),
+            channels,
+          ))
+            Point(column + .5, main_top + row + .5),
+    ]..shuffle(random);
+    final peaks = <Point<double>>[candidates.removeLast()];
+    while (peaks.length < 3) {
+      final separated = candidates
+          .where(
+            (point) => peaks.every(
+              (peak) =>
+                  (point.x - peak.x) * (point.x - peak.x) +
+                      (point.y - peak.y) * (point.y - peak.y) >=
+                  4,
+            ),
+          )
+          .toList();
+      final pool = separated.isEmpty ? candidates : separated;
+      final chosen = pool[random.nextInt(pool.length)];
+      peaks.add(chosen);
+      candidates.remove(chosen);
     }
-    final selected = <Point<double>>[];
-    while (selected.length < count) {
-      if (selected.isNotEmpty) {
-        double nearest(Point<double> point) =>
-            selected.map((other) => point.squaredDistanceTo(other)).reduce(min);
-        available.sort(
-          (left, right) => nearest(right).compareTo(nearest(left)),
-        );
+    return peaks;
+  }
+
+  /// Whole/half phases use a stable spatial ranking around the seeded basins.
+  /// The low-amplitude motif changes which shoulders and notches survive while
+  /// keeping the deep basins connected through every adjacent logical layer.
+  static List<Point<double>> _ordered_cells(
+    int layer,
+    int template,
+    List<Point<double>> peaks,
+    List<Rectangle<double>> channels,
+  ) {
+    final phase = (layer + template) % 4;
+    final half_x = phase == 1 || phase == 2 ? .5 : 0.0;
+    final half_y = phase == 2 || phase == 3 ? .5 : 0.0;
+    final cells = <Point<double>>[
+      for (var row = 0; row < main_rows - (half_y > 0 ? 1 : 0); row++)
+        for (
+          var column = 0;
+          column < main_columns - (half_x > 0 ? 1 : 0);
+          column++
+        )
+          if (_outside_channels(
+            Point(column + half_x, main_top + row + half_y),
+            channels,
+          ))
+            Point(column + half_x, main_top + row + half_y),
+    ];
+    double score(Point<double> point) {
+      var nearest = double.infinity;
+      for (var index = 0; index < peaks.length; index++) {
+        final peak = peaks[index];
+        final dx = (point.x + .5 - peak.x).abs();
+        final dy = (point.y + .5 - peak.y).abs();
+        final distance = dx * dx + dy * dy * (template.isEven ? 1.1 : .9);
+        nearest = min(nearest, distance + ((index + layer ~/ 3) % 3) * .19);
       }
-      selected.add(available.removeAt(0));
+      final row = (point.y - main_top).floor();
+      final column = point.x.floor();
+      final motif = ((column * 3 + row * 5 + template) % 7) * .017;
+      return nearest + motif;
     }
-    return selected;
+
+    cells.sort((left, right) {
+      final difference = score(left).compareTo(score(right));
+      if (difference != 0) return difference;
+      final row = left.y.compareTo(right.y);
+      return row == 0 ? left.x.compareTo(right.x) : row;
+    });
+    return cells.take(base_capacity).toList();
   }
 
-  /// Each hidden layer grows its own small clusters within its actual blockers.
-  static List<Point<double>> _cluster(
-    List<Point<double>> cells,
+  /// Seed each independent helper island once. Anchors live on a half-grid;
+  /// no individual tile receives a random position or independent z value.
+  static ({bool top_longer, int top_anchor, int bottom_anchor})
+  _auxiliary_layout(Random random) => (
+    top_longer: random.nextBool(),
+    top_anchor: random.nextInt(main_columns * 2),
+    bottom_anchor: random.nextInt(main_columns * 2),
+  );
+
+  /// Lay actual brick bonds: an n-tile whole row alternates with an n−1-tile
+  /// half-shifted row. Each narrow-row tile therefore covers two real lower
+  /// tiles, and each internal wide-row tile covers two narrow-row tiles. The
+  /// unavoidable outer shoulders have one support only on every other layer;
+  /// they never form the old isolated vertical columns. All stock is measured
+  /// from these rows before the main contour receives the remaining tiles.
+  static List<List<Point<double>>> _auxiliary_layers(
+    ({bool top_longer, int top_anchor, int bottom_anchor}) layout,
     int count,
-    Random random,
+    int depth,
   ) {
-    final selected = _spread(cells, min(count, 2 + random.nextInt(4)), random);
-    final available = List<Point<double>>.from(cells)
-      ..removeWhere(selected.contains);
-    final noise = {for (final point in available) point: random.nextDouble()};
-    while (selected.length < count) {
-      double score(Point<double> point) =>
-          selected.map((other) => point.squaredDistanceTo(other)).reduce(min) +
-          noise[point]! * 1.6;
-      available.sort((left, right) => score(left).compareTo(score(right)));
-      selected.add(available.removeAt(0));
+    final longer = (count + 1) ~/ 2;
+    final shorter = count ~/ 2;
+    final top_width = layout.top_longer ? longer : shorter;
+    final bottom_width = layout.top_longer ? shorter : longer;
+    List<Point<double>> row(int width, int anchor, double y, int layer) {
+      final half_phase = layer.isOdd;
+      final start = (anchor % ((main_columns - width) * 2 + 1)) / 2;
+      return [
+        for (var column = 0; column < width - (half_phase ? 1 : 0); column++)
+          Point(start + column + (half_phase ? .5 : 0), y),
+      ];
     }
-    return selected;
+
+    return [
+      for (var layer = 0; layer < depth; layer++)
+        [
+          ...row(top_width, layout.top_anchor, 0, layer),
+          ...row(bottom_width, layout.bottom_anchor, 8, layer),
+        ],
+    ];
+  }
+
+  /// Fit exact inventory to the basin footprints. A shared contour curve keeps
+  /// lower stock broad, while the seed controls which several peaks persist.
+  static List<int>? _layer_counts(
+    int total,
+    List<List<Point<double>>> footprints, {
+    required int cap_count,
+  }) {
+    final layers = footprints.length;
+    List<int> curve(double power) {
+      final result = <int>[];
+      for (var layer = 0; layer < layers; layer++) {
+        final progress = 1 - layer / max(1, layers - 1);
+        final desired =
+            cap_count +
+            ((base_capacity - cap_count) * pow(progress, power)).floor();
+        final capacity = min(footprints[layer].length, desired);
+        result.add(capacity);
+      }
+      return result;
+    }
+
+    int inventory(List<int> counts) =>
+        counts.fold<int>(0, (sum, count) => sum + count);
+    if (total < inventory(curve(contour_max_power)) ||
+        total > inventory(curve(contour_min_power))) {
+      return null;
+    }
+    var low = contour_min_power;
+    var high = contour_max_power;
+    for (var step = 0; step < contour_search_steps; step++) {
+      final middle = (low + high) / 2;
+      if (inventory(curve(middle)) > total) {
+        low = middle;
+      } else {
+        high = middle;
+      }
+    }
+    final counts = curve(high);
+    for (var extra = total - inventory(counts); extra > 0; extra--) {
+      var chosen = -1;
+      var highest_score = double.negativeInfinity;
+      for (var layer = 0; layer < layers; layer++) {
+        if (counts[layer] >= footprints[layer].length ||
+            (layer == layers - 1 && counts[layer] >= cap_count)) {
+          continue;
+        }
+        final score =
+            (footprints[layer].length - counts[layer]) / pow(layer + 1, .1);
+        if (score > highest_score) {
+          chosen = layer;
+          highest_score = score;
+        }
+      }
+      if (chosen < 0) return null;
+      counts[chosen]++;
+    }
+    return counts;
   }
 }

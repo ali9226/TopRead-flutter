@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/pages/long_novel_editor/index.dart';
 import 'package:app/pages/published_long_novel_editor/index.dart';
 import 'package:app/pages/short_novel_editor/index.dart';
@@ -137,14 +139,22 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
             CreatorLogic.getMyWorks(publicStatus: 2, page: page),
       ),
       CreatorTabState(
+        loadPage: (page) => CreatorLogic.getMyWorks(
+          workType: 1,
+          unpublishedOnly: true,
+          page: page,
+        ),
+      ),
+      CreatorTabState(
+        loadPage: (page) => CreatorLogic.getMyWorks(
+          workType: 2,
+          unpublishedOnly: true,
+          page: page,
+        ),
+      ),
+      CreatorTabState(
         loadPage: (page) =>
-            CreatorLogic.getMyWorks(workType: 1, unpublishedOnly: true, page: page),
-      ),
-      CreatorTabState(
-        loadPage: (page) => CreatorLogic.getMyWorks(workType: 2, unpublishedOnly: true, page: page),
-      ),
-      CreatorTabState(
-        loadPage: (page) => CreatorLogic.getMyWorks(publicStatus: 3, page: page),
+            CreatorLogic.getMyWorks(publicStatus: 3, page: page),
       ),
     ];
     for (final tab in _tabs) {
@@ -195,7 +205,9 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
   void _on_data_changed() {
     if (!mounted) return;
     setState(() {
-      _has_draft = _tabs.skip(1).any((tab) => tab.works.any((work) => work.is_draft));
+      _has_draft = _tabs
+          .skip(1)
+          .any((tab) => tab.works.any((work) => work.is_draft));
     });
   }
 
@@ -254,7 +266,11 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       fontWeight: AuthorStyle.body_weight,
     );
     final double content_width =
-        MediaQuery.sizeOf(context).width -
+        math.min(
+          MediaQuery.sizeOf(context).width -
+              MediaQuery.paddingOf(context).horizontal,
+          WindowLayoutScope.max_width_of(context),
+        ) -
         AuthorStyle.header_content_padding * 2;
     final int title_lines = _measure_line_count(
       title_text,
@@ -337,7 +353,9 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AuthorStyle.secondary_text(is_dark).withValues(alpha: 0.3),
+                color: AuthorStyle.secondary_text(
+                  is_dark,
+                ).withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -454,8 +472,13 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
 
   void _select_result_tab(CreatorWorkDraft? result) {
     if (result == null) return;
-    _tab_controller.animateTo(result.status == CreatorWorkStatus.published
-        ? 0 : result.work_type == CreatorWorkType.long ? 1 : 2);
+    _tab_controller.animateTo(
+      result.status == CreatorWorkStatus.published
+          ? 0
+          : result.work_type == CreatorWorkType.long
+          ? 1
+          : 2,
+    );
   }
 
   Future<void> _open_work(CreatorWorkModel work) {
@@ -482,7 +505,8 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       final summary = creatorWorkDraftFromBackend(info, includeChapters: false);
       if (!mounted) return;
       Object? result;
-      if (summary.work_type == CreatorWorkType.long && summary.status == CreatorWorkStatus.published) {
+      if (summary.work_type == CreatorWorkType.long &&
+          summary.status == CreatorWorkStatus.published) {
         setState(() => _loading_draft = false);
         await Navigator.push(
           context,
@@ -493,18 +517,34 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       } else {
         // TODO 长篇整本草稿必须读取章节正文；目录摘要不能作为空章节继续保存。
         final draft = summary.work_type == CreatorWorkType.long
-            ? await loadCreatorWorkDraft(novelId) : summary;
+            ? await loadCreatorWorkDraft(novelId)
+            : summary;
         if (!mounted) return;
-        final recovery = await restoreCreatorWork(context, draft,
-          _user_information.userInfo.value?.id ?? 0);
+        final recovery = await restoreCreatorWork(
+          context,
+          draft,
+          _user_information.userInfo.value?.id ?? 0,
+        );
         if (!mounted) return;
         setState(() => _loading_draft = false);
-        result = await Navigator.push<CreatorWorkDraft>(context, MaterialPageRoute(
-          settings: RouteSettings(name: '/${draft.work_type == CreatorWorkType.long ? 'long_novel_editor' : 'short_novel_editor'}?id=$novelId'),
-          builder: (_) => draft.work_type == CreatorWorkType.long
-              ? LongNovelEditorPage(initial_work: recovery.draft, restorePending: recovery.restored)
-              : ShortNovelEditorPage(initial_work: recovery.draft, restorePending: recovery.restored),
-        ));
+        result = await Navigator.push<CreatorWorkDraft>(
+          context,
+          MaterialPageRoute(
+            settings: RouteSettings(
+              name:
+                  '/${draft.work_type == CreatorWorkType.long ? 'long_novel_editor' : 'short_novel_editor'}?id=$novelId',
+            ),
+            builder: (_) => draft.work_type == CreatorWorkType.long
+                ? LongNovelEditorPage(
+                    initial_work: recovery.draft,
+                    restorePending: recovery.restored,
+                  )
+                : ShortNovelEditorPage(
+                    initial_work: recovery.draft,
+                    restorePending: recovery.restored,
+                  ),
+          ),
+        );
         if (mounted) _select_result_tab(result as CreatorWorkDraft?);
       }
       if (mounted && result == true) await _reload_all();
@@ -542,7 +582,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     } finally {
       _opening_work = false;
     }
-    if (mounted && novelId != null) {
+    if (mounted) {
       await _open_draft(novelId);
     }
   }
@@ -619,13 +659,13 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                 if (work.is_short_novel) {
                   context.push('/short_story_read?id=${work.id}');
                 } else {
-                  context.push('/read?id=${work.id}&title=${Uri.encodeComponent(work.title.trim())}');
+                  context.push(
+                    '/read?id=${work.id}&title=${Uri.encodeComponent(work.title.trim())}',
+                  );
                 }
               }
             : null,
-        on_off_shelf: work.is_published
-            ? () => _off_shelf_work(work)
-            : null,
+        on_off_shelf: work.is_published ? () => _off_shelf_work(work) : null,
         on_delete: (!work.is_published && !work.is_pending_publish)
             ? () async {
                 final deleted = await _delete_work(work);
@@ -657,37 +697,39 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         body: Stack(
           children: <Widget>[
             Positioned.fill(
-              child: NotificationListener<ScrollNotification>(
-                onNotification: _on_tab_view_scroll_notification,
-                child: TabBarView(
-                  controller: _tab_controller,
-                  physics: const BouncingScrollPhysics(),
-                  children: List<Widget>.generate(
-                    _tab_count,
-                    (int tab_index) => CreatorWorkTab(
-                      key: ValueKey<String>('creator_work_tab_$tab_index'),
-                      tab_index: tab_index,
-                      works: _tabs[tab_index].works,
-                      is_loading: _tabs[tab_index].isLoading,
-                      is_loading_more: _tabs[tab_index].isLoadingMore,
-                      error_message: _tabs[tab_index].error,
-                      load_more_error: _tabs[tab_index].loadMoreError,
-                      has_more: _tabs[tab_index].hasMore,
-                      total_count: _tabs[tab_index].total,
-                      on_refresh: () => _refresh_tab(tab_index),
-                      on_load_more: _tabs[tab_index].loadMore,
-                      is_dark: is_dark,
-                      is_cjk: is_cjk,
-                      scroll_controller: _tab_scroll_controllers[tab_index],
-                      header_spacer_height: _header_max_extent,
-                      minimum_header_height: _header_min_extent,
-                      minimum_scroll_extent:
-                          _header_max_extent - _header_min_extent,
-                      on_create_work: _create_work,
-                      on_edit_work: (work) => _open_work(work),
-                      on_long_press_work: _show_work_action_sheet,
+              child: WindowContentLayout(
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _on_tab_view_scroll_notification,
+                  child: TabBarView(
+                    controller: _tab_controller,
+                    physics: const BouncingScrollPhysics(),
+                    children: List<Widget>.generate(
+                      _tab_count,
+                      (int tab_index) => CreatorWorkTab(
+                        key: ValueKey<String>('creator_work_tab_$tab_index'),
+                        tab_index: tab_index,
+                        works: _tabs[tab_index].works,
+                        is_loading: _tabs[tab_index].isLoading,
+                        is_loading_more: _tabs[tab_index].isLoadingMore,
+                        error_message: _tabs[tab_index].error,
+                        load_more_error: _tabs[tab_index].loadMoreError,
+                        has_more: _tabs[tab_index].hasMore,
+                        total_count: _tabs[tab_index].total,
+                        on_refresh: () => _refresh_tab(tab_index),
+                        on_load_more: _tabs[tab_index].loadMore,
+                        is_dark: is_dark,
+                        is_cjk: is_cjk,
+                        scroll_controller: _tab_scroll_controllers[tab_index],
+                        header_spacer_height: _header_max_extent,
+                        minimum_header_height: _header_min_extent,
+                        minimum_scroll_extent:
+                            _header_max_extent - _header_min_extent,
+                        on_create_work: _create_work,
+                        on_edit_work: (work) => _open_work(work),
+                        on_long_press_work: _show_work_action_sheet,
+                      ),
+                      growable: false,
                     ),
-                    growable: false,
                   ),
                 ),
               ),
@@ -1180,14 +1222,21 @@ class _WorkActionSheet extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AuthorStyle.secondary_text(is_dark).withValues(alpha: 0.3),
+                color: AuthorStyle.secondary_text(
+                  is_dark,
+                ).withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
 
             /// 标题。
             Padding(
-              padding: EdgeInsets.fromLTRB(AuthorStyle.page_padding, 16, AuthorStyle.page_padding, 12),
+              padding: EdgeInsets.fromLTRB(
+                AuthorStyle.page_padding,
+                16,
+                AuthorStyle.page_padding,
+                12,
+              ),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(

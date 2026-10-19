@@ -5,11 +5,12 @@ import 'package:app/pages/tile_quest/style.dart';
 import 'package:app/pages/tile_quest/widgets/shuffle_textures.dart';
 import 'package:app/pages/tile_quest/widgets/tile_card.dart';
 import 'package:app/pages/tile_quest/widgets/tile_skin.dart';
+import 'package:app/pages/tile_quest/widgets/tile_surface_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _asset_prefix = 'assets/img/game/tile_';
+const _asset_prefix = 'assets/img/tile_quest/icons/tile_';
 const _first_color = Color(0xffe8be90);
 const _second_color = Color(0xff63bca4);
 
@@ -30,10 +31,10 @@ Future<ByteData> _png(Color color) async {
   }
 }
 
-/// 透明画布保留完整底板范围，避免把实心测试图误认为所有像素都需填色。
+/// 透明画布保留完整绘制格范围，避免把实心测试图误认为所有像素都需填色。
 Future<ByteData> _skin_png(Color color) async {
   final recorder = ui.PictureRecorder();
-  final edge = TileQuestStyle.tile_cache_width.toDouble();
+  final edge = QuestTileSurfaceStyle.cell_edge.toDouble();
   Canvas(recorder).drawRRect(
     RRect.fromRectAndRadius(
       Rect.fromLTWH(edge * .04, edge * .02, edge * .92, edge * .91),
@@ -164,6 +165,10 @@ Future<List<int>> _center_pixel(
 }
 
 void main() {
+  test('tile skin uses the exact user supplied lattice asset', () {
+    expect(QuestTileSkin.asset, 'assets/img/tile_quest/lattice.png');
+  });
+
   testWidgets(
     'atlas bakes full raised cards, blocked skins and isolated padded cells',
     (tester) async {
@@ -186,17 +191,28 @@ void main() {
       final normal = textures.source_of(0, blocked: false)!;
       final blocked = textures.source_of(0, blocked: true)!;
       expect(textures.image_of(0)!.width, TileQuestStyle.tile_cache_width);
-      expect(textures.body_image!.width, TileQuestStyle.tile_cache_width);
+      expect(textures.body_image!.width, QuestTileSurfaceStyle.cell_edge);
       expect(
         normal.size,
-        Size.square(TileQuestStyle.tile_cache_width.toDouble()),
+        Size(
+          QuestTileSurfaceStyle.cell_edge.toDouble(),
+          QuestTileSurfaceStyle.cell_height.toDouble(),
+        ),
       );
       expect(normal.overlaps(blocked), isFalse);
       expect(
         atlas.width,
         TileQuestStyle.shuffle_atlas_columns *
-            (TileQuestStyle.tile_cache_width +
+            (QuestTileSurfaceStyle.cell_edge +
                 TileQuestStyle.shuffle_atlas_padding * 2),
+      );
+      // 每格包含192×216逻辑长牌与四侧等宽留白，粒子只读取牌体。
+      expect(
+        textures.content_of(0, blocked: false)!.size,
+        Size(
+          TileQuestStyle.tile_cache_width.toDouble(),
+          QuestTileSurfaceStyle.height.toDouble(),
+        ),
       );
       await tester.runAsync(() async {
         final data = (await atlas.toByteData(
@@ -210,10 +226,22 @@ void main() {
           _rgba(
             data,
             atlas.width,
-            normal.topLeft + Offset(normal.width * .5, normal.height * .9),
+            normal.topLeft + Offset(normal.width * .5, normal.height * .84),
           ),
-          [255, 255, 255, 255],
-          reason: 'the atlas must bake the supplied PNG skin below the icon',
+          [
+            (255 * QuestTileSurfaceStyle.body_red_scale +
+                    QuestTileSurfaceStyle.body_red_lift)
+                .round(),
+            (255 * QuestTileSurfaceStyle.body_green_scale +
+                    QuestTileSurfaceStyle.body_green_lift)
+                .round(),
+            (255 * QuestTileSurfaceStyle.body_blue_scale +
+                    QuestTileSurfaceStyle.body_blue_lift)
+                .round(),
+            255,
+          ],
+          reason:
+              'the supplied PNG skin receives only the shared body curve below the icon',
         );
         for (var channel = 0; channel < 3; channel++) {
           expect(
@@ -459,6 +487,38 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final count in [4, 15]) {
+    testWidgets('atlas contains only $count normal and blocked icon pairs', (
+      tester,
+    ) async {
+      final bundle = (await tester.runAsync(_bundle))!;
+      for (var type = 0; type < count; type++) {
+        bundle.assets[_asset(type)] = bundle.assets[_asset(0)]!;
+      }
+      final textures = QuestShuffleTextures();
+      addTearDown(textures.dispose);
+      await _pump(
+        tester,
+        MaterialApp(
+          home: _TextureHost(
+            textures: textures,
+            bundle: bundle,
+            types: List.generate(count, (type) => type),
+          ),
+        ),
+      );
+      await tester.runAsync(() => _until(() => textures.ready));
+      final pitch =
+          QuestTileSurfaceStyle.cell_height +
+          TileQuestStyle.shuffle_atlas_padding * 2;
+      final rows =
+          (count * 2 + TileQuestStyle.shuffle_atlas_columns - 1) ~/
+          TileQuestStyle.shuffle_atlas_columns;
+      expect(textures.atlas!.height, rows * pitch);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('atlas waits for the shared skin before baking icons', (
     tester,

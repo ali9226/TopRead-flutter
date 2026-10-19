@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -83,99 +84,104 @@ class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
       color: bg_color,
       child: SizedBox(
         height: ShortStoryReadStyle.appbar_height,
-        child: Row(
-          children: <Widget>[
-            /// 返回按钮（箭头朝左，使用 180° 旋转实现）。
-            IconButton(
-              icon: Transform.rotate(
-                angle: 3.14159,
-                child: SvgIcon(
-                  name: 'right',
-                  width: 20,
-                  height: 20,
-                  color: left_icon_color,
-                ),
-              ),
-              onPressed: on_back,
-              padding: const EdgeInsets.all(12),
-              constraints: const BoxConstraints(),
-            ),
-
-            const Spacer(),
-
-            /// 收藏按钮（加载时显示骨架屏，完成后显示真实图标）。
-            is_loading
-                ? Padding(
-                    padding: const EdgeInsets.only(right: 20),
-                    child: _IconSkeleton(
-                      size: 22,
-                      base_color: skeleton_base_color,
-                      highlight_color: skeleton_highlight_color,
-                    ),
-                  )
-                : GestureDetector(
-                    onTap: is_favorite_loading ? null : on_favorite_tap,
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 20),
-                      child: TweenAnimationBuilder<double>(
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.elasticOut,
-                        tween: Tween<double>(begin: 0.6, end: 1.0),
-                        builder: (context, scale, child) {
-                          return Transform.scale(scale: scale, child: child);
-                        },
-                        key: ValueKey(is_favorited),
-                        child: SvgIcon(
-                          name: is_favorited
-                              ? 'user_selected'
-                              : 'not_favorited',
-                          width: 22,
-                          height: 22,
-                          color: is_favorited
-                              ? (is_dark
-                                    ? const Color(
-                                        0xFFD0D4DB,
-                                      ).withValues(alpha: 0.82)
-                                    : null)
-                              : right_icon_color,
-                        ),
-                      ),
-                    ),
+        child: WindowContentLayout(
+          expand_height: false,
+          child: Row(
+            children: <Widget>[
+              /// 返回按钮（箭头朝左，使用 180° 旋转实现）。
+              IconButton(
+                icon: Transform.rotate(
+                  angle: 3.14159,
+                  child: SvgIcon(
+                    name: 'right',
+                    width: 20,
+                    height: 20,
+                    color: left_icon_color,
                   ),
+                ),
+                onPressed: on_back,
+                padding: const EdgeInsets.all(12),
+                constraints: const BoxConstraints(),
+              ),
 
-            /// 分享按钮随远端项目配置实时显示或隐藏。
-            Obx(() {
-              final bool is_share_enabled =
-                  Get.find<ProjectConfigStore>().current.is_share_enabled;
-              if (!is_share_enabled) return const SizedBox.shrink();
+              const Spacer(),
 
-              return is_loading
+              /// 收藏按钮（加载时显示骨架屏，完成后显示真实图标）。
+              is_loading
                   ? Padding(
-                      padding: const EdgeInsets.only(right: 16),
+                      padding: const EdgeInsets.only(right: 20),
                       child: _IconSkeleton(
-                        size: 20,
+                        size: 22,
                         base_color: skeleton_base_color,
                         highlight_color: skeleton_highlight_color,
                       ),
                     )
                   : GestureDetector(
-                      onTap: on_share,
+                      onTap: is_favorite_loading ? null : on_favorite_tap,
                       behavior: HitTestBehavior.opaque,
                       child: Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: SvgIcon(
-                          name: 'share',
-                          width: 20,
-                          height: 20,
-                          color: is_dark
-                              ? const Color(0xFFD0D4DB).withValues(alpha: 0.82)
-                              : right_icon_color,
+                        padding: const EdgeInsets.only(right: 20),
+                        child: TweenAnimationBuilder<double>(
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.elasticOut,
+                          tween: Tween<double>(begin: 0.6, end: 1.0),
+                          builder: (context, scale, child) {
+                            return Transform.scale(scale: scale, child: child);
+                          },
+                          key: ValueKey(is_favorited),
+                          child: SvgIcon(
+                            name: is_favorited
+                                ? 'user_selected'
+                                : 'not_favorited',
+                            width: 22,
+                            height: 22,
+                            color: is_favorited
+                                ? (is_dark
+                                      ? const Color(
+                                          0xFFD0D4DB,
+                                        ).withValues(alpha: 0.82)
+                                      : null)
+                                : right_icon_color,
+                          ),
                         ),
                       ),
-                    );
-            }),
-          ],
+                    ),
+
+              /// 分享按钮随远端项目配置实时显示或隐藏。
+              Obx(() {
+                final bool is_share_enabled =
+                    Get.find<ProjectConfigStore>().current.is_share_enabled;
+                if (!is_share_enabled) return const SizedBox.shrink();
+
+                return is_loading
+                    ? Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: _IconSkeleton(
+                          size: 20,
+                          base_color: skeleton_base_color,
+                          highlight_color: skeleton_highlight_color,
+                        ),
+                      )
+                    : GestureDetector(
+                        onTap: on_share,
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: SvgIcon(
+                            name: 'share',
+                            width: 20,
+                            height: 20,
+                            color: is_dark
+                                ? const Color(
+                                    0xFFD0D4DB,
+                                  ).withValues(alpha: 0.82)
+                                : right_icon_color,
+                          ),
+                        ),
+                      );
+              }),
+            ],
+          ),
         ),
       ),
     );

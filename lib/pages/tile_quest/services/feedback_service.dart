@@ -3,6 +3,12 @@
 import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
+
+import 'audio_voice.dart';
+import 'ios_audio_voice.dart';
+
+export 'audio_voice.dart';
 
 /// Events are emitted by presentation at the visible impact/settlement frame.
 enum TileQuestFeedbackEvent { tap, match, tool, won, lost, entry, shuffle }
@@ -14,14 +20,6 @@ abstract interface class TileQuestFeedbackService {
 /// Optional lifecycle: existing injected silent feedback implementations remain valid.
 abstract interface class TileQuestFeedbackLifecycle {
   Future<void> prepare();
-  Future<void> stop();
-  Future<void> dispose();
-}
-
-/// A small audio boundary permits deterministic race tests without native plugins.
-abstract interface class TileQuestAudioVoice {
-  Future<void> prepare(String asset);
-  Future<void> play(double volume);
   Future<void> stop();
   Future<void> dispose();
 }
@@ -90,6 +88,7 @@ class TileQuestAudioFeedback
   final TileQuestAudioVoice Function()? _voice_factory;
   final AudioCache _cache = AudioCache();
   final Map<TileQuestFeedbackEvent, List<_SoundVoice>> _pools = {};
+  final Map<TileQuestFeedbackEvent, Future<void>> _event_preparations = {};
   final Map<TileQuestFeedbackEvent, int> _next_voice = {};
   Future<void>? _preparation;
   Future<void>? _disposal;
@@ -110,7 +109,7 @@ class TileQuestAudioFeedback
       for (var index = 0; index < entry.value.voices; index++) {
         try {
           voices.add(
-            _SoundVoice(_voice_factory?.call() ?? _AudioplayersVoice(_cache)),
+            _SoundVoice(_voice_factory?.call() ?? _create_platform_voice()),
           );
         } on Object {
           // One unavailable platform voice cannot prevent the other cues loading.
@@ -118,8 +117,8 @@ class TileQuestAudioFeedback
       }
       _pools[entry.key] = voices;
     }
-    await Future.wait(
-      sound_specs.entries.map((entry) async {
+    for (final entry in sound_specs.entries) {
+      _event_preparations[entry.key] = () async {
         // Cache the first voice before preparing another copy of the same asset;
         // this avoids concurrent writes of identical temporary WAV files.
         for (final voice in _pools[entry.key]!) {
@@ -130,16 +129,25 @@ class TileQuestAudioFeedback
             voice.ready = true;
           });
         }
-      }),
-    );
+      }();
+    }
+    await Future.wait(_event_preparations.values);
   }
+
+  TileQuestAudioVoice _create_platform_voice() =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+      ? TileQuestIosAudioVoice()
+      : _AudioplayersVoice(_cache);
 
   @override
   Future<void> play(TileQuestFeedbackEvent event) async {
     if (_disposed) return;
     final epoch = _epoch;
     try {
-      await prepare();
+      // A slow entry/shuffle asset must not hold up an already prewarmed tap.
+      // prepare allocates all pools and registers these futures synchronously.
+      unawaited(prepare());
+      await _event_preparations[event];
       if (_disposed || epoch != _epoch) return;
       final voices = _pools[event]?.where((voice) => voice.ready).toList();
       if (voices == null || voices.isEmpty) return;
@@ -153,13 +161,23 @@ class TileQuestAudioFeedback
         bool cancelled() =>
             _disposed || epoch != _epoch || token != voice.token;
         if (cancelled()) return;
-        await voice.backend.stop();
-        if (cancelled()) return;
-        await voice.backend.play(spec.volume);
+        final backend = voice.backend;
+        if (backend is TileQuestRestartableAudioVoice) {
+          await (backend as TileQuestRestartableAudioVoice).restart(
+            spec.volume,
+          );
+        } else {
+          await backend.stop();
+          if (cancelled()) return;
+          await backend.play(spec.volume);
+        }
         if (cancelled()) {
           await voice.backend.stop();
           return;
         }
+        // The native engine consumes the finite PCM buffer and keeps its node
+        // warm. A timer stop here would reset that node's playback timeline.
+        if (backend is TileQuestRestartableAudioVoice) return;
         // Android SoundPool has no completion event. Recycle on the authored
         // duration; the token prevents an old timer stopping a reused voice.
         voice.timer = Timer(spec.duration + _release_padding, () {

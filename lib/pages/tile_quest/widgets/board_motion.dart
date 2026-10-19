@@ -4,6 +4,7 @@ import 'package:flutter/animation.dart';
 import '../game/models.dart';
 import '../style.dart';
 import 'scene_layout.dart';
+import 'tile_surface_style.dart';
 
 /// 入场与洗牌只改变绘制坐标，不修改规则坐标、遮挡或槽位库存。
 class QuestBoardMotion {
@@ -87,11 +88,22 @@ class QuestBoardMotion {
 
   /// 半径只由场景决定，与单牌序号、方向、时刻和原始位置无关。
   static double shuffle_radius(QuestSceneLayout layout) {
+    // 聚拢后的任意牌都可能到达圆周上下沿；按最大轻摆角的包围盒预留
+    // 整张加高牌与外扩落影，避免换成矩形图集后在场景边界裁掉底部。
+    final cosine = math.cos(TileQuestStyle.shuffle_rotation);
+    final sine = math.sin(TileQuestStyle.shuffle_rotation.abs());
+    final cell_width = layout.unit * QuestTileSurfaceStyle.cell_scale;
+    final cell_height =
+        layout.unit *
+        QuestTileSurfaceStyle.cell_height /
+        QuestTileSurfaceStyle.edge;
+    final rotated_width = cell_width * cosine + cell_height * sine;
+    final rotated_height = cell_height * cosine + cell_width * sine;
     final available_radius = math.max(
       0.0,
       math.min(
-            layout.board.width - layout.unit,
-            layout.board.height - layout.unit,
+            layout.board.width - rotated_width,
+            layout.board.height - rotated_height,
           ) *
           .5,
     );

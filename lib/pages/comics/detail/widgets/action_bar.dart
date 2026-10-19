@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/components/svg_icon/index.dart';
@@ -119,24 +120,19 @@ class ComicDetailActionBar extends StatelessWidget {
       color: ComicDetailStyle.card_background(is_dark),
       child: SafeArea(
         top: false,
-        child: Center(
-          heightFactor: 1,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: ComicsStyle.content_width,
+        child: WindowContentLayout(
+          expand_height: false,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: ComicDetailStyle.action_bar_padding_h,
+              vertical: ComicDetailStyle.action_bar_padding_v,
             ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: ComicDetailStyle.action_bar_padding_h,
-                vertical: ComicDetailStyle.action_bar_padding_v,
-              ),
-              child: Row(
-                children: <Widget>[
-                  Flexible(flex: 2, child: collect),
-                  const SizedBox(width: ComicDetailStyle.action_bar_spacing),
-                  Expanded(flex: 5, child: read),
-                ],
-              ),
+            child: Row(
+              children: <Widget>[
+                Flexible(flex: 2, child: collect),
+                const SizedBox(width: ComicDetailStyle.action_bar_spacing),
+                Expanded(flex: 5, child: read),
+              ],
             ),
           ),
         ),

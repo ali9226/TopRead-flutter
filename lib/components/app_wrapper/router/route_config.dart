@@ -7,7 +7,9 @@ import 'package:flutter/foundation.dart'
 import 'package:go_router/go_router.dart';
 import 'package:get/get.dart';
 import 'package:app/components/app_wrapper/utils/back_aware_page.dart';
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/components/shell_tab_host/index.dart';
+import 'package:app/config/layout_config.dart';
 import 'package:app/pages/change_nickname/index.dart';
 import 'package:app/pages/change_password/index.dart';
 import 'package:app/pages/image_text/index.dart';
@@ -24,6 +26,7 @@ import 'package:app/pages/customer_service_chat/index.dart';
 import 'package:app/pages/about_topread/index.dart';
 import 'package:app/pages/debug/index.dart';
 import 'package:app/pages/tile_quest/index.dart';
+import 'package:app/pages/tile_quest/tile_preview/index.dart';
 import 'package:app/pages/author_apply/index.dart';
 import 'package:app/pages/author_center/index.dart';
 import 'package:app/pages/author_center/editor_route.dart';
@@ -50,7 +53,20 @@ class RouteConfig {
     required GoRouterState state,
     required Widget child,
   }) {
-    final Widget wrappedChild = BackAwarePage(child: child);
+    final String path = state.uri.path;
+    // 游戏有独立的横竖屏画布。其余路由统一接收窗口边缘区域策略，
+    // 包括漫画和 WebView；背景与局部状态区以下的内容都使用完整宽度。
+    final bool immersive = path.startsWith('/tile_quest');
+    final double max_width = switch (path) {
+      '/read' || '/short_story_read' => LayoutConfig.reader_max_width,
+      '/login' || '/register' => LayoutConfig.form_max_width,
+      _ => LayoutConfig.page_max_width,
+    };
+    final Widget wrappedChild = BackAwarePage(
+      child: immersive
+          ? child
+          : WindowLayoutScope(max_width: max_width, child: child),
+    );
     final LocalKey stableKey = ValueKey(state.uri.toString());
 
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
@@ -106,6 +122,14 @@ class RouteConfig {
           pageBuilder: (context, state) =>
               buildRoutePage(state: state, child: const TileQuestPage()),
         ),
+        // 方块材质预览页，仅调试模式可用，用于验收底板视觉。
+        if (kDebugMode)
+          GoRoute(
+            path: '/tile_quest/tile_preview',
+            name: 'tile_quest_tile_preview',
+            pageBuilder: (context, state) =>
+                buildRoutePage(state: state, child: const TilePreviewPage()),
+          ),
         // 漫画具有独立作品、语种与图片阅读路由，支持分享深链接。
         GoRoute(
           path: '/comics/detail',

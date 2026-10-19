@@ -151,6 +151,24 @@ void _expect_normal_controls() {
   expect(find.byType(QuestSlotWell), findsOneWidget);
 }
 
+/// 关卡模板保留真实同层间隙，第二关的逻辑牌略小于一格。
+/// 比较每逻辑格的显示尺度，防止把明确设计的留缝误判成关卡切换缩放。
+void _expect_shared_card_scale(
+  Rect first_rect,
+  TileQuestTile first_tile,
+  Rect second_rect,
+  TileQuestTile second_tile,
+) {
+  expect(
+    second_rect.width / second_tile.width,
+    closeTo(first_rect.width / first_tile.width, _epsilon),
+  );
+  expect(
+    second_rect.height / second_tile.height,
+    closeTo(first_rect.height / first_tile.height, _epsilon),
+  );
+}
+
 Future<GlobalKey<_TutorialHarnessState>> _mount_scene(
   WidgetTester tester,
   TileQuestState state, {
@@ -261,8 +279,12 @@ void main() {
         final main_card = quest_scene_frames(
           tester,
         )[main.clickable_tiles.first.id]!.rect;
-        expect(main_card.width, closeTo(tutorial_card.width, _epsilon));
-        expect(main_card.height, closeTo(tutorial_card.height, _epsilon));
+        _expect_shared_card_scale(
+          tutorial_card,
+          tutorial.clickable_tiles.first,
+          main_card,
+          main.clickable_tiles.first,
+        );
         expect(tester.getRect(_key('tile_quest_slot_0')), tutorial_slot);
         expect(tester.getRect(find.byType(QuestSlotWell)), tutorial_tray);
         host.currentState!.replace(
@@ -297,9 +319,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(logic.state!.level, 1);
       _expect_tutorial_controls();
-      final first_edge = quest_scene_frames(
-        tester,
-      )[logic.state!.clickable_tiles.first.id]!.rect.width;
+      final first_tile = logic.state!.clickable_tiles.first;
+      final first_rect = quest_scene_frames(tester)[first_tile.id]!.rect;
       for (final id in logic.state!.certified_solution.toList()) {
         expect((await logic.tap_tile(id))!.accepted, isTrue);
       }
@@ -310,11 +331,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(logic.state!.level, 2);
       _expect_normal_controls();
-      expect(
-        quest_scene_frames(
-          tester,
-        )[logic.state!.clickable_tiles.first.id]!.rect.width,
-        closeTo(first_edge, _epsilon),
+      final main_tile = logic.state!.clickable_tiles.first;
+      _expect_shared_card_scale(
+        first_rect,
+        first_tile,
+        quest_scene_frames(tester)[main_tile.id]!.rect,
+        main_tile,
       );
       await tester.tap(_key('tile_quest_restart'));
       await tester.pumpAndSettle();
@@ -322,11 +344,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(logic.state!.level, 1);
       _expect_tutorial_controls();
-      expect(
-        quest_scene_frames(
-          tester,
-        )[logic.state!.clickable_tiles.first.id]!.rect.width,
-        closeTo(first_edge, _epsilon),
+      final restarted_tile = logic.state!.clickable_tiles.first;
+      _expect_shared_card_scale(
+        first_rect,
+        first_tile,
+        quest_scene_frames(tester)[restarted_tile.id]!.rect,
+        restarted_tile,
       );
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();

@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/components/fixed_bottom_navigation/index.dart';
 import 'package:app/components/shell_tab_host/widgets/shell_tab_pane.dart';
-import 'package:app/config/color_config.dart';
-import 'package:app/config/device_config.dart';
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/pages/bookshelf/index.dart';
 import 'package:app/pages/home/index.dart';
 import 'package:app/pages/message/index.dart';
 import 'package:app/pages/user_info/index.dart';
-import 'package:app/stores/device_info.dart';
 import 'package:app/stores/shell_tab_info.dart';
 
 /// Shell 内部首页/个人中心双 tab 宿主。
@@ -59,8 +57,6 @@ class _ShellTabHostState extends State<ShellTabHost> {
 
   @override
   Widget build(BuildContext context) {
-    final DeviceInfo deviceInfo = Get.find<DeviceInfo>();
-
     final Widget tabStack = Obx(() {
       final int activeIndex = shellTabInfo.activeIndex.value;
       return Stack(
@@ -90,29 +86,13 @@ class _ShellTabHostState extends State<ShellTabHost> {
       );
     });
 
-    Widget content = RepaintBoundary(child: tabStack);
-    if (DeviceConfig.maxWidth > 0) {
-      content = Obx(() {
-        final bool isDark = deviceInfo.dark.value;
-        return Container(
-          color: isDark
-              ? ColorConstants.nightBackgroundColor
-              : ColorConstants.whiteColor,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: DeviceConfig.maxWidth),
-              child: RepaintBoundary(child: tabStack),
-            ),
-          ),
-        );
-      });
-    }
-
-    return Column(
-      children: [
-        Expanded(child: content),
-        const FixedBottomNavigation(),
-      ],
+    return WindowLayoutScope(
+      child: Column(
+        children: [
+          Expanded(child: RepaintBoundary(child: tabStack)),
+          const FixedBottomNavigation(),
+        ],
+      ),
     );
   }
 }

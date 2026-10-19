@@ -1,0 +1,57 @@
+{
+  "source": "assets/img/tile_quest/2.png",
+  "source_sha256": "294f5d4bed3336376fc74f85b2f82e07497a2d1c2ace5c8a0adf27232e37a567",
+  "canvas_size": 256,
+  "subject_size": 224,
+  "method": "original RGB and alpha; whole-sheet connected-body extraction; two-pixel alpha support; proportional transparent canvas",
+  "icons": {
+    "undo": {
+      "source_bounds": [
+        23,
+        55,
+        697,
+        704
+      ],
+      "subject_bounds": [
+        16,
+        20,
+        240,
+        236
+      ],
+      "file": "assets/img/tile_quest/powerups/undo.png",
+      "sha256": "870eb4b77766e1e0269eeb32263ffa743becd26964b0bc5996b22383302ed1b5"
+    },
+    "shuffle": {
+      "source_bounds": [
+        721,
+        47,
+        1458,
+        704
+      ],
+      "subject_bounds": [
+        16,
+        28,
+        240,
+        228
+      ],
+      "file": "assets/img/tile_quest/powerups/shuffle.png",
+      "sha256": "402b57174a4e3de23d0d69ae903da5d3e45c59092b4a916d060d3ca9bc4f5f52"
+    },
+    "remove": {
+      "source_bounds": [
+        1492,
+        20,
+        2168,
+        706
+      ],
+      "subject_bounds": [
+        17,
+        16,
+        238,
+        240
+      ],
+      "file": "assets/img/tile_quest/powerups/remove.png",
+      "sha256": "3c63d293dfa7a4e3190d028edebb6d1a2699cd3b172b9b66edcc2496ac256de3"
+    }
+  }
+}

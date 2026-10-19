@@ -2,6 +2,7 @@
 
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
@@ -197,10 +198,13 @@ class _LanguageSelectionState extends State<LanguageSelection> {
     );
 
     if (!widget.useSafeAreaTop) {
-      return content;
+      return WindowReservedRegionPadding(child: content);
     }
 
-    return SafeArea(bottom: false, child: content);
+    return SafeArea(
+      bottom: false,
+      child: WindowReservedRegionPadding(child: content),
+    );
   }
 
   @override
@@ -283,8 +287,8 @@ class _LanguageSelectionState extends State<LanguageSelection> {
   }) {
     final String assetFallbackPath =
         LanguageUtil.has_language_asset_image(languageCode)
-            ? LanguageUtil.get_language_asset_image(languageCode)
-            : 'assets/img/en.png';
+        ? LanguageUtil.get_language_asset_image(languageCode)
+        : 'assets/img/en.png';
 
     if (languageIconUrl.trim().isNotEmpty) {
       return CachedNetworkImage(

@@ -7,12 +7,17 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:app/pages/tile_quest/game/engine.dart';
 import 'package:app/pages/tile_quest/game/generator.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:app/pages/tile_quest/services/save_service.dart';
 import 'package:app/pages/tile_quest/services/work_service.dart';
 import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
+import 'package:app/pages/tile_quest/widgets/atmosphere.dart';
+import 'package:app/pages/tile_quest/widgets/scene_assets.dart';
+import 'package:app/pages/tile_quest/widgets/scene_layout.dart';
+import 'package:app/pages/tile_quest/style.dart';
 
 /// 独立 profile 入口；只运行真实棋盘、规则和存档，不触碰正式应用会话。
 void main() {
@@ -38,6 +43,7 @@ class _PerformancePageState extends State<_PerformancePage> {
   bool _scene_busy = false;
   String? _phase;
   String _label = 'Preparing';
+  Size _scene_size = Size.zero;
 
   @override
   void initState() {
@@ -52,49 +58,72 @@ class _PerformancePageState extends State<_PerformancePage> {
 
   Future<void> _run() async {
     await Future<void>.delayed(const Duration(seconds: 2));
-    // 覆盖默认关、极限可解关与最大必败关，避免只测较浅的默认棋盘。
-    for (final difficulty in [8, 9, 10]) {
-      final state = await compute(_generate, difficulty);
-      setState(() {
-        _engine = TileQuestEngine(state);
-        _actions.clear();
-        _label = '${state.total_count} tiles: warmup';
-      });
-      await Future<void>.delayed(const Duration(seconds: 3));
-      await _measure('${state.total_count}_shuffle', () async {
-        final prepared = await _work.shuffle(
-          _engine!.export_json(),
-          seed: 54321,
-        );
-        setState(() {
-          _engine = prepared.engine;
-          _actions.add(prepared.result);
-        });
-        unawaited(_save.save(_engine!));
-        await Future<void>.delayed(const Duration(milliseconds: 2600));
-      });
-      setState(() {
-        _engine = TileQuestEngine(state);
-        _actions.clear();
-      });
-      await Future<void>.delayed(const Duration(seconds: 1));
-      await _measure('${state.total_count}_rapid_40ms', () async {
-        final snapshot = _engine!.state;
-        final path =
-            snapshot.expert_barrier?.lead_solution ??
-            snapshot.certified_solution;
-        final solution = List<int>.of(path).take(60);
-        for (final id in solution) {
-          final result = _engine!.tap_tile(id);
-          if (!result.accepted) throw StateError('Profile move rejected: $id');
-          setState(() => _actions.add(result));
-          unawaited(_save.save(_engine!));
-          await Future<void>.delayed(const Duration(milliseconds: 40));
-        }
-        await Future<void>.delayed(const Duration(milliseconds: 1800));
-      });
-      await _save.flush();
+    if (!mounted) return;
+    await precacheImage(QuestSceneAssets.background, context);
+    if (!mounted) return;
+    for (final image in QuestSceneAssets.powerups.values) {
+      await precacheImage(image, context);
+      if (!mounted) return;
     }
+    // 同一真实设备切换方向，测量安全区域和横屏独立牌岛下的完整场景。
+    for (final orientation in [
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+    ]) {
+      await SystemChrome.setPreferredOrientations([orientation]);
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      // 覆盖默认关、极限可解关与最大必败关，避免只测较浅的默认棋盘。
+      for (final difficulty in [8, 9, 10]) {
+        final state = await compute(_generate, difficulty);
+        setState(() {
+          _engine = TileQuestEngine(state);
+          _actions.clear();
+          _label = '${state.total_count} tiles: warmup';
+        });
+        await Future<void>.delayed(const Duration(seconds: 3));
+        await _measure('${state.total_count}_shuffle', () async {
+          final prepared = await _work.shuffle(
+            _engine!.export_json(),
+            seed: 54321,
+          );
+          if (!prepared.result.accepted) {
+            throw StateError(
+              'Profile Shuffle rejected: ${prepared.result.reason}',
+            );
+          }
+          setState(() {
+            _engine = prepared.engine;
+            _actions.add(prepared.result);
+          });
+          unawaited(_save.save(_engine!));
+          await Future<void>.delayed(const Duration(milliseconds: 2600));
+        });
+        setState(() {
+          _engine = TileQuestEngine(state);
+          _actions.clear();
+        });
+        await Future<void>.delayed(const Duration(seconds: 1));
+        await _measure('${state.total_count}_rapid_40ms', () async {
+          final snapshot = _engine!.state;
+          final path =
+              snapshot.expert_barrier?.lead_solution ??
+              snapshot.certified_solution;
+          final solution = List<int>.of(path).take(60);
+          for (final id in solution) {
+            final result = _engine!.tap_tile(id);
+            if (!result.accepted) {
+              throw StateError('Profile move rejected: $id');
+            }
+            setState(() => _actions.add(result));
+            unawaited(_save.save(_engine!));
+            await Future<void>.delayed(const Duration(milliseconds: 40));
+          }
+          await Future<void>.delayed(const Duration(milliseconds: 1800));
+        });
+        await _save.flush();
+      }
+    }
+    await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     setState(() => _label = 'Profile completed');
     debugPrint('TILE_QUEST_PROFILE_DONE');
   }
@@ -129,11 +158,20 @@ class _PerformancePageState extends State<_PerformancePage> {
     final result = <String, dynamic>{
       'phase': phase,
       'difficulty': _engine!.state.difficulty,
+      'orientation': MediaQuery.orientationOf(context).name,
+      'scene_size': [_scene_size.width, _scene_size.height],
+      'board_tile_width': QuestSceneLayout(
+        _scene_size,
+        _engine!.state,
+      ).board_tile(_engine!.state.tiles.first).width,
       'barrier_minimum_remove_uses':
           _engine!.state.expert_barrier?.minimum_remove_uses ?? 0,
       'profile_mode': kProfileMode,
       'single_cpu': const bool.fromEnvironment('TILE_QUEST_SINGLE_CPU'),
       'action_count': _actions.length,
+      'accepted_action_count': _actions
+          .where((action) => action.accepted)
+          .length,
       'presentation_settled': !_scene_busy,
       'refresh_hz': View.of(context).display.refreshRate,
       'frame_count': _frames.length,
@@ -161,21 +199,42 @@ class _PerformancePageState extends State<_PerformancePage> {
       body: engine == null
           ? const Center(child: CircularProgressIndicator())
           : Stack(
+              fit: StackFit.expand,
               children: [
-                TileQuestScene(
-                  state: engine.state,
-                  action: _actions.lastOrNull,
-                  recent_actions: List.of(_actions),
-                  animate_entry: false,
-                  sound_enabled: false,
-                  busy: false,
-                  on_presentation_busy_changed: (value) => _scene_busy = value,
-                  on_back: () {},
-                  on_restart: () {},
-                  on_sound: () {},
-                  on_tile: (_) {},
-                  on_reserve: (_) {},
-                  on_tool: (_) {},
+                const QuestAtmosphere(is_dark: true),
+                SafeArea(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth:
+                            MediaQuery.orientationOf(context) ==
+                                Orientation.landscape
+                            ? TileQuestStyle.landscape_max_width
+                            : TileQuestStyle.max_width,
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          _scene_size = constraints.biggest;
+                          return TileQuestScene(
+                            state: engine.state,
+                            action: _actions.lastOrNull,
+                            recent_actions: List.of(_actions),
+                            animate_entry: false,
+                            sound_enabled: false,
+                            busy: false,
+                            on_presentation_busy_changed: (value) =>
+                                _scene_busy = value,
+                            on_back: () {},
+                            on_restart: () {},
+                            on_sound: () {},
+                            on_tile: (_) {},
+                            on_reserve: (_) {},
+                            on_tool: (_) {},
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ),
                 Positioned(
                   bottom: 0,

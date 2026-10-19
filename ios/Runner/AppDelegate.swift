@@ -724,6 +724,12 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "TileQuestAudioPlugin") {
+      TileQuestAudioPlugin.register(with: registrar)
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "WindowDisplayFeaturesPlugin") {
+      WindowDisplayFeaturesPlugin.register(with: registrar)
+    }
 
     FLTGoogleMobileAdsPlugin.registerNativeAdFactory(
       engineBridge.pluginRegistry,

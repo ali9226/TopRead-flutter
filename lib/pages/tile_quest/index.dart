@@ -9,11 +9,14 @@ import 'logic.dart';
 import 'style.dart';
 import 'widgets/atmosphere.dart';
 import 'widgets/quest_controls.dart';
+import 'widgets/playfield.dart';
 import 'widgets/quest_result.dart';
 import 'widgets/quest_scene.dart';
 import 'widgets/quest_text.dart';
+import 'widgets/scene_assets.dart';
 import 'widgets/session_pause.dart';
 import 'widgets/tile_card.dart';
+import 'widgets/tile_skin.dart';
 
 /// 游戏路由页面只协调 UI、弹层与导航；所有规则和存档由控制器处理。
 class TileQuestPage extends StatefulWidget {
@@ -48,13 +51,18 @@ class _TileQuestPageState extends State<TileQuestPage> {
     super.didChangeDependencies();
     if (_preloaded) return;
     _preloaded = true;
+    unawaited(precacheImage(QuestTileSkin.provider, context));
+    unawaited(precacheImage(QuestSceneAssets.background, context));
+    for (final image in QuestSceneAssets.powerups.values) {
+      unawaited(precacheImage(image, context));
+    }
     // 高难度会用到全部图案；预热全部十五种图案的缩略图，避免落牌时
     // 后半组图案尚未解码而只显示底面。
-    for (final name in quest_tile_assets) {
+    for (var type = 0; type < quest_tile_assets.length; type++) {
       unawaited(
         precacheImage(
           ResizeImage(
-            AssetImage('assets/img/game/tile_$name.png'),
+            AssetImage(quest_tile_asset_path(type)),
             width: TileQuestStyle.tile_cache_width,
           ),
           context,
@@ -110,6 +118,7 @@ class _TileQuestPageState extends State<TileQuestPage> {
     try {
       confirmed = await showDialog<bool>(
         context: context,
+        anchorPoint: QuestPlayfield.anchor_for(MediaQuery.of(context)),
         barrierColor: const Color(0xFF07152D).withValues(alpha: .75),
         builder: (dialog_context) => Dialog(
           backgroundColor: Colors.transparent,
@@ -248,173 +257,173 @@ class _TileQuestPageState extends State<TileQuestPage> {
           fit: StackFit.expand,
           children: [
             QuestAtmosphere(is_dark: is_dark),
-            SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: TileQuestStyle.max_width,
-                  ),
-                  child: GetBuilder<TileQuestLogic>(
-                    init: _logic,
-                    global: false,
-                    builder: (logic) {
-                      final state = logic.state;
-                      final int board_revision = logic.board_revision;
-                      if (logic.session_suspended) {
-                        return QuestSessionPause(
-                          loading: logic.is_loading,
-                          on_continue: () => unawaited(logic.resume_session()),
-                          on_back: () => unawaited(_leave()),
-                        );
-                      }
-                      if (state == null) return _loading_or_error(logic);
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          TileQuestScene(
-                            state: state,
-                            action: logic.last_action,
-                            recent_actions: logic.recent_actions,
-                            can_undo: logic.can_undo,
-                            on_presentation_busy_changed: (busy) {
-                              if (mounted &&
-                                  (_presentation_busy != busy ||
-                                      (!busy &&
-                                          !identical(
-                                            _settled_action,
-                                            logic.last_action,
-                                          )))) {
-                                setState(() {
-                                  _presentation_busy = busy;
-                                  if (!busy) {
-                                    _settled_action = logic.last_action;
-                                  }
-                                });
+            GetBuilder<TileQuestLogic>(
+              init: _logic,
+              global: false,
+              builder: (logic) {
+                final state = logic.state;
+                final int board_revision = logic.board_revision;
+                if (logic.session_suspended) {
+                  return QuestSessionPause(
+                    loading: logic.is_loading,
+                    on_continue: () => unawaited(logic.resume_session()),
+                    on_back: () => unawaited(_leave()),
+                  );
+                }
+                if (state == null) {
+                  return QuestPlayfieldOverlay(child: _loading_or_error(logic));
+                }
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    QuestPlayfield(
+                      child: TileQuestScene(
+                        state: state,
+                        action: logic.last_action,
+                        recent_actions: logic.recent_actions,
+                        can_undo: logic.can_undo,
+                        on_presentation_busy_changed: (busy) {
+                          if (mounted &&
+                              (_presentation_busy != busy ||
+                                  (!busy &&
+                                      !identical(
+                                        _settled_action,
+                                        logic.last_action,
+                                      )))) {
+                            setState(() {
+                              _presentation_busy = busy;
+                              if (!busy) {
+                                _settled_action = logic.last_action;
                               }
-                            },
-                            sound_enabled: logic.sound_enabled,
-                            on_feedback: (event) => unawaited(
-                              logic.presentation_feedback(
-                                event,
-                                challenge_id: state.challenge_id,
-                                board_revision: board_revision,
-                              ),
-                            ),
-                            busy: logic.is_busy,
-                            on_back: () => unawaited(_leave()),
-                            on_restart: () => unawaited(
-                              _confirm_restart(board_revision: board_revision),
-                            ),
-                            on_sound: () {
-                              if (_accepts_board_input(board_revision)) {
-                                unawaited(logic.toggle_sound());
-                              }
-                            },
-                            on_tile: (id) {
-                              if (_accepts_board_input(board_revision)) {
-                                unawaited(logic.tap_tile(id));
-                              }
-                            },
-                            on_reserve: (id) {
-                              if (_accepts_board_input(board_revision)) {
-                                unawaited(logic.return_reserve(id));
-                              }
-                            },
-                            on_tool: (tool) => unawaited(
-                              _tool(tool, board_revision: board_revision),
+                            });
+                          }
+                        },
+                        sound_enabled: logic.sound_enabled,
+                        on_feedback: (event) => unawaited(
+                          logic.presentation_feedback(
+                            event,
+                            challenge_id: state.challenge_id,
+                            board_revision: board_revision,
+                          ),
+                        ),
+                        busy: logic.is_busy,
+                        on_back: () => unawaited(_leave()),
+                        on_restart: () => unawaited(
+                          _confirm_restart(board_revision: board_revision),
+                        ),
+                        on_sound: () {
+                          if (_accepts_board_input(board_revision)) {
+                            unawaited(logic.toggle_sound());
+                          }
+                        },
+                        on_tile: (id) {
+                          if (_accepts_board_input(board_revision)) {
+                            unawaited(logic.tap_tile(id));
+                          }
+                        },
+                        on_reserve: (id) {
+                          if (_accepts_board_input(board_revision)) {
+                            unawaited(logic.return_reserve(id));
+                          }
+                        },
+                        on_tool: (tool) => unawaited(
+                          _tool(tool, board_revision: board_revision),
+                        ),
+                      ),
+                    ),
+                    if (state.status != TileQuestStatus.playing &&
+                        !_presentation_busy &&
+                        (logic.last_action == null ||
+                            identical(logic.last_action, _settled_action)))
+                      QuestResult(
+                        state: state,
+                        coming_soon: _coming_soon,
+                        busy: logic.is_busy,
+                        on_next: () =>
+                            unawaited(_next(board_revision: board_revision)),
+                        on_restart: () => unawaited(
+                          _confirm_restart(board_revision: board_revision),
+                        ),
+                        on_back: () => unawaited(_leave()),
+                        on_undo: () => unawaited(
+                          _tool(
+                            TileQuestTool.undo,
+                            board_revision: board_revision,
+                          ),
+                        ),
+                      ),
+                    if (logic.is_busy || logic.has_save_error)
+                      Positioned.fill(
+                        child: QuestPlayfield(
+                          child: QuestPlayfieldOverlay(
+                            child: Stack(
+                              children: [
+                                if (logic.is_busy)
+                                  const Positioned(
+                                    top: 105,
+                                    left: 20,
+                                    right: 20,
+                                    child: LinearProgressIndicator(
+                                      minHeight: 2,
+                                      color: TileQuestStyle.gold,
+                                      backgroundColor: Colors.transparent,
+                                    ),
+                                  ),
+                                if (logic.has_save_error)
+                                  Positioned(
+                                    left: 16,
+                                    right: 16,
+                                    top: 108,
+                                    child: Material(
+                                      color: const Color(0xFF4A3645),
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 4,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                quest_text(
+                                                  context,
+                                                  'save_error',
+                                                  'Progress could not be saved',
+                                                ),
+                                                style: TileQuestStyle.body(
+                                                  quest_is_cjk(context),
+                                                ),
+                                              ),
+                                            ),
+                                            TextButton(
+                                              onPressed: () =>
+                                                  unawaited(logic.retry_save()),
+                                              child: Text(
+                                                quest_text(
+                                                  context,
+                                                  'retry_save',
+                                                  'Retry save',
+                                                ),
+                                                style: TileQuestStyle.body(
+                                                  quest_is_cjk(context),
+                                                  color: TileQuestStyle.gold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                          if (state.status != TileQuestStatus.playing &&
-                              !_presentation_busy &&
-                              (logic.last_action == null ||
-                                  identical(
-                                    logic.last_action,
-                                    _settled_action,
-                                  )))
-                            QuestResult(
-                              state: state,
-                              coming_soon: _coming_soon,
-                              busy: logic.is_busy,
-                              on_next: () => unawaited(
-                                _next(board_revision: board_revision),
-                              ),
-                              on_restart: () => unawaited(
-                                _confirm_restart(
-                                  board_revision: board_revision,
-                                ),
-                              ),
-                              on_back: () => unawaited(_leave()),
-                              on_undo: () => unawaited(
-                                _tool(
-                                  TileQuestTool.undo,
-                                  board_revision: board_revision,
-                                ),
-                              ),
-                            ),
-                          if (logic.is_busy)
-                            const Positioned(
-                              top: 105,
-                              left: 20,
-                              right: 20,
-                              child: LinearProgressIndicator(
-                                minHeight: 2,
-                                color: TileQuestStyle.gold,
-                                backgroundColor: Colors.transparent,
-                              ),
-                            ),
-                          if (logic.has_save_error)
-                            Positioned(
-                              left: 16,
-                              right: 16,
-                              top: 108,
-                              child: Material(
-                                color: const Color(0xFF4A3645),
-                                borderRadius: BorderRadius.circular(12),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 4,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          quest_text(
-                                            context,
-                                            'save_error',
-                                            'Progress could not be saved',
-                                          ),
-                                          style: TileQuestStyle.body(
-                                            quest_is_cjk(context),
-                                          ),
-                                        ),
-                                      ),
-                                      TextButton(
-                                        onPressed: () =>
-                                            unawaited(logic.retry_save()),
-                                        child: Text(
-                                          quest_text(
-                                            context,
-                                            'retry_save',
-                                            'Retry save',
-                                          ),
-                                          style: TileQuestStyle.body(
-                                            quest_is_cjk(context),
-                                            color: TileQuestStyle.gold,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ],
         ),

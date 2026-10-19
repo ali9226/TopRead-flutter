@@ -1,0 +1,386 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-19",
+  "device": "iPhone 16 Pro Max",
+  "os": "iOS 27.0.1",
+  "mode": "profile",
+  "backend": "AVAudioEngine, predecoded PCM, fixed AVAudioPlayerNode pool",
+  "measurement": "Dart MethodChannel call round-trip; NOT acoustic speaker latency",
+  "scenario": {
+    "voices": 7,
+    "tap_count": 20,
+    "tap_interval_ms": 40,
+    "overlapping_matches": 2,
+    "tool_count": 1
+  },
+  "summary": {
+    "calls": 44,
+    "successful_calls": 44,
+    "restart_calls": 23,
+    "restart_p50_ms": 0.489,
+    "restart_p95_ms": 0.75,
+    "restart_max_ms": 0.956
+  },
+  "previous_backend_summary": {
+    "success_calls": 44,
+    "restart_calls": 23,
+    "restart_p50_ms": 42.044,
+    "restart_p95_ms": 89.372,
+    "restart_max_ms": 107.651
+  },
+  "calls": [
+    {
+      "kind": "call",
+      "operation": "prepare",
+      "voice": "tap_0",
+      "elapsed_us": "138477",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "prepare",
+      "voice": "tap_1",
+      "elapsed_us": "21110",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "prepare",
+      "voice": "tap_2",
+      "elapsed_us": "21188",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "prepare",
+      "voice": "tap_3",
+      "elapsed_us": "21265",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "prepare",
+      "voice": "match_0",
+      "elapsed_us": "21574",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "prepare",
+      "voice": "match_1",
+      "elapsed_us": "21208",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "prepare",
+      "voice": "tool_0",
+      "elapsed_us": "21115",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_0",
+      "elapsed_us": "190",
+      "ok": "true",
+      "scheduled_us": "0",
+      "dispatch_lateness_us": "1"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_1",
+      "elapsed_us": "160",
+      "ok": "true",
+      "scheduled_us": "40000",
+      "dispatch_lateness_us": "1344"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_2",
+      "elapsed_us": "391",
+      "ok": "true",
+      "scheduled_us": "80000",
+      "dispatch_lateness_us": "1738"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_3",
+      "elapsed_us": "633",
+      "ok": "true",
+      "scheduled_us": "120000",
+      "dispatch_lateness_us": "3460"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_0",
+      "elapsed_us": "690",
+      "ok": "true",
+      "scheduled_us": "160000",
+      "dispatch_lateness_us": "857"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "match_0",
+      "elapsed_us": "463",
+      "ok": "true",
+      "scheduled_us": "200000",
+      "dispatch_lateness_us": "2142"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_1",
+      "elapsed_us": "652",
+      "ok": "true",
+      "scheduled_us": "200000",
+      "dispatch_lateness_us": "2207"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_2",
+      "elapsed_us": "368",
+      "ok": "true",
+      "scheduled_us": "240000",
+      "dispatch_lateness_us": "2085"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_3",
+      "elapsed_us": "533",
+      "ok": "true",
+      "scheduled_us": "280000",
+      "dispatch_lateness_us": "2102"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_0",
+      "elapsed_us": "489",
+      "ok": "true",
+      "scheduled_us": "320000",
+      "dispatch_lateness_us": "2156"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_1",
+      "elapsed_us": "470",
+      "ok": "true",
+      "scheduled_us": "360000",
+      "dispatch_lateness_us": "2126"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_2",
+      "elapsed_us": "534",
+      "ok": "true",
+      "scheduled_us": "400000",
+      "dispatch_lateness_us": "2089"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_3",
+      "elapsed_us": "394",
+      "ok": "true",
+      "scheduled_us": "440000",
+      "dispatch_lateness_us": "2287"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_0",
+      "elapsed_us": "500",
+      "ok": "true",
+      "scheduled_us": "480000",
+      "dispatch_lateness_us": "2169"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "match_1",
+      "elapsed_us": "750",
+      "ok": "true",
+      "scheduled_us": "520000",
+      "dispatch_lateness_us": "2173"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_1",
+      "elapsed_us": "956",
+      "ok": "true",
+      "scheduled_us": "520000",
+      "dispatch_lateness_us": "2303"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_2",
+      "elapsed_us": "561",
+      "ok": "true",
+      "scheduled_us": "560000",
+      "dispatch_lateness_us": "656"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_3",
+      "elapsed_us": "489",
+      "ok": "true",
+      "scheduled_us": "600000",
+      "dispatch_lateness_us": "1737"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_0",
+      "elapsed_us": "432",
+      "ok": "true",
+      "scheduled_us": "640000",
+      "dispatch_lateness_us": "1804"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_1",
+      "elapsed_us": "584",
+      "ok": "true",
+      "scheduled_us": "680000",
+      "dispatch_lateness_us": "1712"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_2",
+      "elapsed_us": "586",
+      "ok": "true",
+      "scheduled_us": "720000",
+      "dispatch_lateness_us": "1912"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tap_3",
+      "elapsed_us": "443",
+      "ok": "true",
+      "scheduled_us": "760000",
+      "dispatch_lateness_us": "2003"
+    },
+    {
+      "kind": "call",
+      "operation": "restart",
+      "voice": "tool_0",
+      "elapsed_us": "346",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "stop",
+      "voice": "voice_0",
+      "elapsed_us": "3492",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "stop",
+      "voice": "voice_1",
+      "elapsed_us": "4510",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "stop",
+      "voice": "voice_2",
+      "elapsed_us": "5415",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "stop",
+      "voice": "voice_3",
+      "elapsed_us": "6410",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "stop",
+      "voice": "voice_4",
+      "elapsed_us": "7999",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "stop",
+      "voice": "voice_5",
+      "elapsed_us": "8834",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "stop",
+      "voice": "voice_6",
+      "elapsed_us": "32490",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "dispose",
+      "voice": "voice_0",
+      "elapsed_us": "1574",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "dispose",
+      "voice": "voice_1",
+      "elapsed_us": "2396",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "dispose",
+      "voice": "voice_2",
+      "elapsed_us": "3243",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "dispose",
+      "voice": "voice_3",
+      "elapsed_us": "4072",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "dispose",
+      "voice": "voice_4",
+      "elapsed_us": "4812",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "dispose",
+      "voice": "voice_5",
+      "elapsed_us": "5642",
+      "ok": "true"
+    },
+    {
+      "kind": "call",
+      "operation": "dispose",
+      "voice": "voice_6",
+      "elapsed_us": "10387",
+      "ok": "true"
+    }
+  ],
+  "reference": "https://developer.apple.com/documentation/avfaudio/avaudioplayernode"
+}

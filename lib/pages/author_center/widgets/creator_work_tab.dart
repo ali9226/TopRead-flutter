@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/components/floating_back_to_top/index.dart';
@@ -214,7 +215,12 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
     try {
       await widget.on_refresh!();
     } catch (_) {
-      if (mounted) setState(() => _local_refresh_error = easy.tr('creator_center.works_load_failed'));
+      if (mounted)
+        setState(
+          () => _local_refresh_error = easy.tr(
+            'creator_center.works_load_failed',
+          ),
+        );
     }
   }
 
@@ -254,7 +260,8 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
     try {
       await widget.on_load_more!();
     } catch (_) {
-      if (mounted) _local_load_more_error = easy.tr('creator_center.load_more_failed');
+      if (mounted)
+        _local_load_more_error = easy.tr('creator_center.load_more_failed');
     } finally {
       if (mounted) setState(() => _load_more_in_flight = false);
     }
@@ -496,8 +503,11 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
       padding: const EdgeInsets.symmetric(horizontal: AuthorStyle.page_padding),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: AuthorStyle.content_max_width,
+          constraints: BoxConstraints(
+            maxWidth: WindowLayoutScope.resolve_max_width(
+              context,
+              AuthorStyle.content_max_width,
+            ),
           ),
           child: child,
         ),
@@ -568,7 +578,9 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
         const SizedBox(width: 12),
         Builder(
           builder: (context) {
-            final Color tag_color = ColorConstants.tagColorList[widget.tab_index % ColorConstants.tagColorList.length];
+            final Color tag_color =
+                ColorConstants.tagColorList[widget.tab_index %
+                    ColorConstants.tagColorList.length];
             final Color tag_bg = tag_color.withValues(alpha: 0.12);
             return Container(
               constraints: const BoxConstraints(minWidth: 34),
@@ -691,11 +703,13 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Text(
-        easy.tr(is_off_shelf_tab
-            ? 'creator_center.status_off_shelf'
-            : is_published_tab
-                ? 'creator_center.all_works_shown'
-                : 'creator_center.all_unpublished_shown'),
+        easy.tr(
+          is_off_shelf_tab
+              ? 'creator_center.status_off_shelf'
+              : is_published_tab
+              ? 'creator_center.all_works_shown'
+              : 'creator_center.all_unpublished_shown',
+        ),
         textAlign: TextAlign.center,
         style: TextStyle(
           color: AuthorStyle.secondary_text(widget.is_dark),
@@ -743,14 +757,18 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
           foregroundColor: ColorConstants.themeColor,
           side: BorderSide(color: AuthorStyle.border(widget.is_dark)),
           minimumSize: const Size(120, 44),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         )
       : ElevatedButton.styleFrom(
           backgroundColor: ColorConstants.themeColor,
           foregroundColor: Colors.black,
           elevation: 0,
           minimumSize: const Size(120, 44),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         );
 
   Widget _build_progress() {
@@ -828,10 +846,13 @@ class _AnimatedWorkListState extends State<_AnimatedWorkList>
   @override
   Widget build(BuildContext context) {
     final List<CreatorWorkModel> visible = widget.works
-        .where((w) => !_removing.containsKey(w.id) || _removing[w.id]!.isAnimating)
+        .where(
+          (w) => !_removing.containsKey(w.id) || _removing[w.id]!.isAnimating,
+        )
         .toList();
 
-    if (visible.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    if (visible.isEmpty)
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
 
     return SliverList.builder(
       itemCount: visible.length,
@@ -841,8 +862,11 @@ class _AnimatedWorkListState extends State<_AnimatedWorkList>
 
         Widget card = Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: AuthorStyle.content_max_width,
+            constraints: BoxConstraints(
+              maxWidth: WindowLayoutScope.resolve_max_width(
+                context,
+                AuthorStyle.content_max_width,
+              ),
             ),
             child: BackendWorkCard(
               key: ValueKey<int>(work.id),
@@ -864,15 +888,16 @@ class _AnimatedWorkListState extends State<_AnimatedWorkList>
               curve: const Interval(0, 0.4, curve: Curves.easeOut),
             ),
           );
-          final slide = Tween<Offset>(
-            begin: Offset.zero,
-            end: const Offset(0, -0.15),
-          ).animate(
-            CurvedAnimation(
-              parent: controller,
-              curve: const Interval(0, 0.4, curve: Curves.easeOut),
-            ),
-          );
+          final slide =
+              Tween<Offset>(
+                begin: Offset.zero,
+                end: const Offset(0, -0.15),
+              ).animate(
+                CurvedAnimation(
+                  parent: controller,
+                  curve: const Interval(0, 0.4, curve: Curves.easeOut),
+                ),
+              );
           final size = CurvedAnimation(
             parent: controller,
             curve: const Interval(0.3, 1.0, curve: Curves.easeOutCubic),
@@ -882,10 +907,7 @@ class _AnimatedWorkListState extends State<_AnimatedWorkList>
             sizeFactor: size,
             child: FadeTransition(
               opacity: fade,
-              child: SlideTransition(
-                position: slide,
-                child: card,
-              ),
+              child: SlideTransition(position: slide, child: card),
             ),
           );
         }
@@ -978,11 +1000,7 @@ class _ListSkeletonState extends State<_ListSkeleton>
         final Gradient gradient = LinearGradient(
           begin: const Alignment(-1.0, 0.0),
           end: const Alignment(1.0, 0.0),
-          colors: <Color>[
-            base,
-            Color.lerp(base, highlight, t)!,
-            base,
-          ],
+          colors: <Color>[base, Color.lerp(base, highlight, t)!, base],
           stops: const <double>[0.0, 0.5, 1.0],
         );
 
@@ -1004,9 +1022,7 @@ class _ListSkeletonState extends State<_ListSkeleton>
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: widget.is_dark
-            ? const Color(0xFF1E1E1E)
-            : Colors.white,
+        color: widget.is_dark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(

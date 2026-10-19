@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -21,8 +22,7 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home>
-    with TickerProviderStateMixin {
+class _HomeState extends State<Home> with TickerProviderStateMixin {
   final DeviceInfo deviceInfo = Get.find<DeviceInfo>();
   TabController? _tab_controller;
   late Worker _classification_worker;
@@ -41,10 +41,7 @@ class _HomeState extends State<Home>
       Get.find<HomeBannerStore>().is_loading,
       (_) => _on_data_changed(),
     );
-    _theme_worker = ever(
-      deviceInfo.theme,
-      (_) => setState(() {}),
-    );
+    _theme_worker = ever(deviceInfo.theme, (_) => setState(() {}));
   }
 
   @override
@@ -64,7 +61,8 @@ class _HomeState extends State<Home>
     /// 优先从全局仓库恢复上次的 tab 索引，
     /// 这样即使 Widget 被整个销毁重建（比如 BackAwarePage 切换 PopScope 包裹），
     /// 也能回到用户上次所在的 tab。
-    final int previous_index = _tab_controller?.index ?? home_store.home_tab_index;
+    final int previous_index =
+        _tab_controller?.index ?? home_store.home_tab_index;
     _tab_controller?.removeListener(_on_tab_index_changed);
     _tab_controller?.dispose();
 
@@ -76,6 +74,7 @@ class _HomeState extends State<Home>
         initialIndex: safe_index,
       );
       _tab_controller!.addListener(_on_tab_index_changed);
+
       /// 同步一次初始索引到全局仓库。
       home_store.home_tab_index = safe_index;
     } else {
@@ -139,39 +138,38 @@ class _HomeState extends State<Home>
               right: 0,
               child: TopDecoration(is_dark: is_dark),
             ),
-            Column(
-              children: <Widget>[
-                if (has_status_bar_spacing)
-                  SizedBox(height: status_bar_height),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: HomeHeaderBar(
-                    is_dark: is_dark,
-                    on_search_tap: _open_search_page,
-                    on_language_tap: _open_language_page,
-                  ),
-                ),
-                Transform.translate(
-                  offset: const Offset(0, -5),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 41,
-                    child: HomeTabBar(
-                      tab_controller: _tab_controller!,
+            WindowContentLayout(
+              child: Column(
+                children: <Widget>[
+                  if (has_status_bar_spacing)
+                    SizedBox(height: status_bar_height),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: HomeHeaderBar(
                       is_dark: is_dark,
-                      language_code: context.locale.languageCode,
+                      on_search_tap: _open_search_page,
+                      on_language_tap: _open_language_page,
                     ),
                   ),
-                ),
-                Expanded(
-                  child: HomeTabs(tab_controller: _tab_controller!),
-                ),
-              ],
+                  Transform.translate(
+                    offset: const Offset(0, -5),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 41,
+                      child: HomeTabBar(
+                        tab_controller: _tab_controller!,
+                        is_dark: is_dark,
+                        language_code: context.locale.languageCode,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: HomeTabs(tab_controller: _tab_controller!)),
+                ],
+              ),
             ),
           ],
         ),
       ),
     );
   }
-
 }

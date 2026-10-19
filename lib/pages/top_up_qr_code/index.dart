@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -155,7 +156,6 @@ class _TopUpQrCodeState extends State<TopUpQrCode> {
 
       /// 媒体信息与安全区。
       final MediaQueryData mediaQuery = MediaQuery.of(context);
-      final EdgeInsets safePadding = mediaQuery.padding;
 
       /// 主内容顶部起始位置。
       final double contentTopPadding = resolvePageHeaderContentTopPadding(
@@ -193,67 +193,59 @@ class _TopUpQrCodeState extends State<TopUpQrCode> {
               ),
               // 主内容滚动层。
               // 依次展示金额摘要、二维码主体和注意事项卡片。
-              SafeArea(
-                top: false,
-                bottom: false,
-                child: ListView(
-                  padding: EdgeInsets.fromLTRB(0, contentTopPadding, 0, 0),
-                  children: <Widget>[
-                    Padding(
-                      padding:
-                          EdgeInsets.symmetric(
-                            horizontal:
-                                Style.pageHorizontalPadding + safePadding.left,
-                          ).copyWith(
-                            right:
-                                Style.pageHorizontalPadding + safePadding.right,
-                          ),
-                      child: TopUpQrHeroCard(
-                        isDark: isDark,
-                        detail: detail,
+              WindowContentLayout(
+                child: SafeArea(
+                  top: false,
+                  bottom: false,
+                  child: ListView(
+                    padding: EdgeInsets.fromLTRB(0, contentTopPadding, 0, 0),
+                    children: <Widget>[
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: Style.pageHorizontalPadding,
+                        ).copyWith(right: Style.pageHorizontalPadding),
+                        child: TopUpQrHeroCard(
+                          isDark: isDark,
+                          detail: detail,
 
-                        /// 详情还没回来时先显示占位。
-                        amountText: detail == null
-                            ? '--'
-                            : displayAmount(detail!.payPayable),
-                        onTapRecords: () {
-                          routerUtil(path: '/top_up_record');
-                        },
+                          /// 详情还没回来时先显示占位。
+                          amountText: detail == null
+                              ? '--'
+                              : displayAmount(detail!.payPayable),
+                          onTapRecords: () {
+                            routerUtil(path: '/top_up_record');
+                          },
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: Style.sectionSpacing),
-                    Padding(
-                      padding:
-                          EdgeInsets.symmetric(
-                            horizontal:
-                                Style.pageHorizontalPadding + safePadding.left,
-                          ).copyWith(
-                            right:
-                                Style.pageHorizontalPadding + safePadding.right,
-                          ),
-                      child: TopUpQrContentCard(
+                      const SizedBox(height: Style.sectionSpacing),
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: Style.pageHorizontalPadding,
+                        ).copyWith(right: Style.pageHorizontalPadding),
+                        child: TopUpQrContentCard(
+                          isDark: isDark,
+                          detail: detail,
+                          hintColor: hintColor,
+                          qrBackgroundColor: qrBackgroundColor,
+
+                          /// 点击复制地址按钮时执行复制逻辑。
+                          onCopyAddress: copyAddress,
+                          onTapDone: () {
+                            /// 用户确认完成后回到个人中心。
+                            routerUtil(path: '/user_info', type: 'replace');
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: Style.bottomNoticeTopSpacing),
+                      TopUpQrNoticeCard(
                         isDark: isDark,
-                        detail: detail,
                         hintColor: hintColor,
-                        qrBackgroundColor: qrBackgroundColor,
-
-                        /// 点击复制地址按钮时执行复制逻辑。
-                        onCopyAddress: copyAddress,
-                        onTapDone: () {
-                          /// 用户确认完成后回到个人中心。
-                          routerUtil(path: '/user_info', type: 'replace');
-                        },
+                        detail: detail,
+                        isBottomDocked: true,
+                        safeBottomPadding: 0,
                       ),
-                    ),
-                    const SizedBox(height: Style.bottomNoticeTopSpacing),
-                    TopUpQrNoticeCard(
-                      isDark: isDark,
-                      hintColor: hintColor,
-                      detail: detail,
-                      isBottomDocked: true,
-                      safeBottomPadding: 0,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               // 顶部固定标题栏。
@@ -275,9 +267,12 @@ class _TopUpQrCodeState extends State<TopUpQrCode> {
                         ],
                       ),
                     ),
-                    child: LanguageSelection(
-                      darkBackground: isDark,
-                      title: easy.tr('top_up_qr_code_page.title'),
+                    child: WindowContentLayout(
+                      expand_height: false,
+                      child: LanguageSelection(
+                        darkBackground: isDark,
+                        title: easy.tr('top_up_qr_code_page.title'),
+                      ),
                     ),
                   ),
                 ),

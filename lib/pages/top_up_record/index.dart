@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -342,72 +343,78 @@ class _TopUpRecordState extends State<TopUpRecord> {
               // 第四层：真正的页面滚动内容。
               // 顶部不再额外套 SafeArea，否则列表内容会被限制在安全区内，
               // 用户上滑时看不到内容继续进入状态栏区域的层叠效果。
-              RefreshIndicator(
-                onRefresh: _handlePullRefresh,
-                child: ListView(
-                  // 滚动控制器由逻辑层持有。
-                  // 这样滚动监听和“返回顶部”动画都能集中在 logic.dart 内处理。
-                  controller: logic.scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(
-                    TopUpRecordStyle.pageHorizontalPadding + safePadding.left,
-                    contentTopPadding,
-                    TopUpRecordStyle.pageHorizontalPadding + safePadding.right,
-                    TopUpRecordStyle.pageBottomPadding + safePadding.bottom,
-                  ),
-                  children: [
-                    // 顶部 hero 卡片负责建立页面第一视觉焦点。
-                    TopUpRecordHeroCard(isDark: isDark),
-                    const SizedBox(height: TopUpRecordStyle.heroBottomSpacing),
-
-                    // 列表为空且不在首次 loading 时，展示空状态。
-                    // 这样可以避免“空态和 loading 遮罩同时出现”的视觉冲突。
-                    if (logic.records.isEmpty && !logic.loading)
-                      TopUpRecordEmptyState(isDark: isDark),
-
-                    // 只有真正有记录时，才渲染记录卡片和底部状态区域。
-                    if (logic.records.isNotEmpty) ...[
-                      ...logic.records.map(
-                        (item) => TopUpRecordCard(
-                          isDark: isDark,
-                          item: item,
-                          amountText: logic.displayAmount(item.amountPayable),
-                          payableText: logic.displayAmount(item.payPayable),
-                          serialNumberText: logic.displayText(
-                            item.serialNumber,
-                          ),
-                          createTimeText: logic.displayUtcTime(item.createTime),
-                          payTimeText: logic.displayUtcTime(item.payTime),
-                          payQrCodeText: logic.displayText(item.payQrCode),
-                          showPayQrCode: logic.shouldShowPayQrCode(item),
-                          showCountdown: logic.shouldShowCountdown(item),
-                          countdownText: logic.countdownText(item),
-                          statusText: logic.statusText(item),
-                          statusColor: logic.statusColor(isDark, item),
-                          onCopySerialNumber: () {
-                            _handleCopySerialNumber(item.serialNumber);
-                          },
-                          onCopyPayQrCode: () {
-                            _handleCopyPayQrCode(item.payQrCode);
-                          },
-                          onShowQrCode: () {
-                            _showQrDialog(
-                              isDark: isDark,
-                              value: item.payQrCode,
-                            );
-                          },
-                        ),
-                      ),
+              WindowContentLayout(
+                child: RefreshIndicator(
+                  onRefresh: _handlePullRefresh,
+                  child: ListView(
+                    // 滚动控制器由逻辑层持有。
+                    // 这样滚动监听和“返回顶部”动画都能集中在 logic.dart 内处理。
+                    controller: logic.scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      TopUpRecordStyle.pageHorizontalPadding,
+                      contentTopPadding,
+                      TopUpRecordStyle.pageHorizontalPadding,
+                      TopUpRecordStyle.pageBottomPadding + safePadding.bottom,
+                    ),
+                    children: [
+                      // 顶部 hero 卡片负责建立页面第一视觉焦点。
+                      TopUpRecordHeroCard(isDark: isDark),
                       const SizedBox(
-                        height: TopUpRecordStyle.listBottomSpacing,
+                        height: TopUpRecordStyle.heroBottomSpacing,
                       ),
-                      TopUpRecordBottomAction(
-                        isDark: isDark,
-                        loadingMore: logic.loadingMore,
-                        hasMore: logic.hasMore,
-                      ),
+
+                      // 列表为空且不在首次 loading 时，展示空状态。
+                      // 这样可以避免“空态和 loading 遮罩同时出现”的视觉冲突。
+                      if (logic.records.isEmpty && !logic.loading)
+                        TopUpRecordEmptyState(isDark: isDark),
+
+                      // 只有真正有记录时，才渲染记录卡片和底部状态区域。
+                      if (logic.records.isNotEmpty) ...[
+                        ...logic.records.map(
+                          (item) => TopUpRecordCard(
+                            isDark: isDark,
+                            item: item,
+                            amountText: logic.displayAmount(item.amountPayable),
+                            payableText: logic.displayAmount(item.payPayable),
+                            serialNumberText: logic.displayText(
+                              item.serialNumber,
+                            ),
+                            createTimeText: logic.displayUtcTime(
+                              item.createTime,
+                            ),
+                            payTimeText: logic.displayUtcTime(item.payTime),
+                            payQrCodeText: logic.displayText(item.payQrCode),
+                            showPayQrCode: logic.shouldShowPayQrCode(item),
+                            showCountdown: logic.shouldShowCountdown(item),
+                            countdownText: logic.countdownText(item),
+                            statusText: logic.statusText(item),
+                            statusColor: logic.statusColor(isDark, item),
+                            onCopySerialNumber: () {
+                              _handleCopySerialNumber(item.serialNumber);
+                            },
+                            onCopyPayQrCode: () {
+                              _handleCopyPayQrCode(item.payQrCode);
+                            },
+                            onShowQrCode: () {
+                              _showQrDialog(
+                                isDark: isDark,
+                                value: item.payQrCode,
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(
+                          height: TopUpRecordStyle.listBottomSpacing,
+                        ),
+                        TopUpRecordBottomAction(
+                          isDark: isDark,
+                          loadingMore: logic.loadingMore,
+                          hasMore: logic.hasMore,
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
               // 顶部固定标题栏。
@@ -437,9 +444,12 @@ class _TopUpRecordState extends State<TopUpRecord> {
                         ],
                       ),
                     ),
-                    child: LanguageSelection(
-                      darkBackground: isDark,
-                      title: easy.tr('top_up_record_page.title'),
+                    child: WindowContentLayout(
+                      expand_height: false,
+                      child: LanguageSelection(
+                        darkBackground: isDark,
+                        title: easy.tr('top_up_record_page.title'),
+                      ),
                     ),
                   ),
                 ),

@@ -10,28 +10,28 @@ class TileQuestTutorial {
   const TileQuestTutorial._();
   static const int columns = 3;
   static const int rows = 3;
-  static const double grid_pitch = 2;
+
+  /// 牌宽1、两张错位牌组高1.5；把旧间隙1/.5分别减半为.5/.25。
+  static const double column_pitch = 1.5;
+  static const double row_pitch = 1.75;
   static const double upper_offset_y = .5;
 
   /// 从规则与绘图共用的图案表解析类型，素材重排不会改变颜色分组。
-  /// 红、蓝、绿各取一种；草莓和蓝宝石加权以强化教学辨识度。
+  /// 红、蓝、绿各取一种；草莓和手套加权以强化教学辨识度。
   static final List<int> _red_types = <String>[
     'strawberry',
     'strawberry',
     'strawberry',
-    'apple',
     'watermelon',
   ].map(quest_tile_assets.indexOf).toList(growable: false);
   static final List<int> _blue_types = <String>[
-    'blue_gem',
-    'blue_gem',
-    'blue_gem',
+    'glove',
+    'glove',
+    'glove',
     'snowflake',
-    'blueberries',
   ].map(quest_tile_assets.indexOf).toList(growable: false);
   static final List<int> _green_types = <String>[
     'leaf',
-    'avocado',
   ].map(quest_tile_assets.indexOf).toList(growable: false);
 
   /// seed 决定三种图案及其顺序；两层共享这一组图案，库存仍各为六张。
@@ -61,9 +61,9 @@ class TileQuestTutorial {
             id: identities[layer * rows * columns + cell],
             type: types[cell],
             layer: layer,
-            x: (cell % columns) * grid_pitch,
+            x: (cell % columns) * column_pitch,
             y:
-                (cell ~/ columns) * grid_pitch +
+                (cell ~/ columns) * row_pitch +
                 (layer == 1 ? upper_offset_y : 0),
           ),
         );

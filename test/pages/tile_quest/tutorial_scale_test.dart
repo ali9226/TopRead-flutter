@@ -10,6 +10,7 @@ import 'package:app/pages/tile_quest/game/validator.dart';
 import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
 import 'package:app/pages/tile_quest/widgets/scene_layout.dart';
 import 'package:app/pages/tile_quest/widgets/tile_card.dart';
+import 'package:app/pages/tile_quest/widgets/tile_surface_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'scene_probe.dart';
@@ -48,9 +49,9 @@ void _expect_tutorial(TileQuestState state) {
       }
     }
     for (var index = 1; index < 3; index++) {
-      // 每组两张的整体高度为1.5，横/纵都保留清楚的整组间隔。
-      expect(xs[index] - xs[index - 1] - 1, greaterThanOrEqualTo(.5));
-      expect(ys[index] - ys[index - 1] - 1.5, greaterThanOrEqualTo(.25));
+      // 以实际牌组外边界计算，旧横向1格/纵向.5格的空隙精确减半。
+      expect(xs[index] - xs[index - 1] - 1, closeTo(.5, _epsilon));
+      expect(ys[index] - ys[index - 1] - 1.5, closeTo(.25, _epsilon));
     }
   }
   for (final lower in state.tiles.where((tile) => tile.layer == 0)) {
@@ -90,9 +91,9 @@ void main() {
   test(
     'tutorial selects reproducible red, blue and green shapes across seeds',
     () {
-      const red_shapes = <String>{'strawberry', 'apple', 'watermelon'};
-      const blue_shapes = <String>{'blue_gem', 'snowflake', 'blueberries'};
-      const green_shapes = <String>{'leaf', 'avocado'};
+      const red_shapes = <String>{'strawberry', 'watermelon'};
+      const blue_shapes = <String>{'glove', 'snowflake'};
+      const green_shapes = <String>{'leaf'};
       final palettes = <String>{};
       for (var seed = 0; seed < 128; seed++) {
         final state = TileQuestGenerator.generate(level: 1, seed: seed);
@@ -120,7 +121,7 @@ void main() {
       }
       expect(
         palettes.length,
-        greaterThanOrEqualTo(8),
+        greaterThanOrEqualTo(4),
         reason: 'new seeds vary the picture set as well as the tile positions',
       );
     },
@@ -152,7 +153,7 @@ void main() {
     const Size(844, 300),
   ]) {
     test(
-      'all levels, shapes and difficulties retain the same tile edge at $size',
+      'all levels and shapes retain one grid scale with their template gaps at $size',
       () {
         final tutorial = TileQuestGenerator.generate(level: 1, seed: 730);
         final reference_layout = QuestSceneLayout(size, tutorial);
@@ -171,8 +172,16 @@ void main() {
           );
           for (final tile in state.tiles) {
             final rect = layout.board_tile(tile);
-            expect(rect.width, closeTo(expected_edge, _epsilon));
-            expect(rect.height, closeTo(expected_edge, _epsilon));
+            expect(rect.width, closeTo(expected_edge * tile.width, _epsilon));
+            expect(
+              rect.height,
+              closeTo(
+                expected_edge *
+                    tile.height *
+                    QuestTileSurfaceStyle.tile_aspect_ratio,
+                _epsilon,
+              ),
+            );
             expect(
               rect.left,
               greaterThanOrEqualTo(layout.board.left - _epsilon),

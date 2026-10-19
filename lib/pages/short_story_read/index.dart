@@ -1,10 +1,11 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
+import 'package:app/components/window_content_layout/index.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:easy_localization/easy_localization.dart' as easy;
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -42,6 +43,7 @@ import 'package:app/pages/short_story_read/widgets/catalog/catalog_sheet.dart';
 import 'package:app/pages/short_story_read/widgets/reading_settings_sheet.dart';
 import 'package:app/pages/short_story_read/widgets/auto_read_settings_sheet.dart';
 import 'package:app/components/no_internet/index.dart';
+import 'package:app/components/viewport_resize_observer/index.dart';
 import 'package:app/components/share_sheet/index.dart';
 import 'package:app/components/share_sheet/widgets/text_selection_preview_sheet.dart';
 import 'package:app/components/inline_native_ad/index.dart';
@@ -297,6 +299,10 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 正文字号连续变化时只执行最后一次重新排版定位。
   int _font_relayout_generation = 0;
+
+  /// 折叠/展开前当前篇内的位置；布局尚未稳定时不把旧像素偏移写成新进度。
+  double? _viewport_resize_progress;
+  int _viewport_resize_logic_generation = 0;
 
   // ==================== 生命周期 ====================
 
@@ -915,6 +921,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       return;
     }
     _reading_progress_max_extent = extent;
+    if (_viewport_resize_progress != null) return;
     _logic.update_reading_progress(
       _scroll_controller.offset,
       extent,
@@ -970,6 +977,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// - 检测自动阅读期间的手动滑动
   /// - 检测上下篇加载触发
   void _on_scroll() {
+    if (_viewport_resize_progress != null) return;
     final bool is_ad_compensation =
         _scroll_controller.hasClients &&
         is_native_ad_scroll_compensating(_scroll_controller.position);
@@ -977,6 +985,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     // 广告尺寸补偿属于程序滚动，不能误判为手动操作而停止自动阅读。
     if (_logic.is_auto_reading.value &&
         !_is_auto_read_ticking &&
+        !_is_restoring_position &&
         !is_ad_compensation) {
       _stop_auto_read();
     }
@@ -1581,6 +1590,52 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     _is_restoring_position = false;
   }
 
+  /// 在旧正文还未换行时记录当前篇的进度，不能使用窗口物理像素推算。
+  void _on_viewport_resize_start() {
+    if (!_scroll_controller.hasClients ||
+        !_is_initialization_complete ||
+        _is_restoring_position) {
+      return;
+    }
+    final old_extent =
+        _reading_progress_max_extent ?? _calculate_current_story_extent();
+    _viewport_resize_progress = old_extent <= 0
+        ? 0
+        : (_scroll_controller.offset / old_extent).clamp(0.0, 1.0);
+    _viewport_resize_logic_generation = _logic_generation;
+  }
+
+  /// 收起和展开都按新的正文范围恢复同一进度，不停止自动阅读、不切换篇目。
+  void _on_viewport_resize_end() {
+    final progress = _viewport_resize_progress;
+    _viewport_resize_progress = null;
+    if (progress == null ||
+        !mounted ||
+        _viewport_resize_logic_generation != _logic_generation ||
+        !_scroll_controller.hasClients) {
+      return;
+    }
+    final extent = _calculate_current_story_extent();
+    _reading_progress_max_extent = extent;
+    final target = (extent * progress).clamp(
+      _scroll_controller.position.minScrollExtent,
+      _scroll_controller.position.maxScrollExtent,
+    );
+    _is_restoring_position = true;
+    try {
+      _scroll_controller.jumpTo(target);
+      _logic.sync_scroll_offset(target);
+      _logic.update_reading_progress(
+        target,
+        extent,
+        max_progress: _visible_story_progress_limit,
+      );
+    } finally {
+      _is_restoring_position = false;
+    }
+    _update_next_story_overlay_opacity();
+  }
+
   /// 开始自动阅读。
   ///
   /// 关闭弹窗后隐藏导航栏和底部栏，正文内容缓慢滚动到最底部。
@@ -1608,6 +1663,10 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     _auto_read_ticker = createTicker((Duration elapsed) {
       if (!_scroll_controller.hasClients || !_logic.is_auto_reading.value) {
         _auto_read_ticker?.stop();
+        return;
+      }
+      if (_viewport_resize_progress != null) {
+        _auto_read_last_tick = elapsed;
         return;
       }
 
@@ -1863,8 +1922,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   bool get _can_pull_previous_story {
     if (_is_transitioning ||
         _is_previous_pull_rebounding ||
-        _is_next_pull_rebounding)
+        _is_next_pull_rebounding) {
       return false;
+    }
     if (_logic.is_loading.value || _logic.is_error.value) return false;
     if (_logic.is_auto_reading.value) return false;
     return _logic.has_previous_story;
@@ -2499,208 +2559,234 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       children: <Widget>[
         /// 背景装饰（底层）。
         StarfieldDecoration(is_dark: is_dark),
+        WindowContentLayout(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              /// 顶部下拉查看上一篇提示（露出在当前页面背后）。
+              _buildPreviousPullHeader(
+                is_dark: is_dark,
+                status_bar_height: status_bar_height,
+              ),
 
-        /// 顶部下拉查看上一篇提示（露出在当前页面背后）。
-        _buildPreviousPullHeader(
-          is_dark: is_dark,
-          status_bar_height: status_bar_height,
-        ),
+              /// 正文内容（可滚动，点击切换导航栏显隐，翻页时滑动消失）。
+              AnimatedBuilder(
+                animation: _page_transition_controller,
+                builder: (BuildContext context, Widget? child) {
+                  /// 翻页动画进度（0.0 = 原位，1.0 = 完全滑出屏幕）。
+                  final double progress = _page_transition_controller.value;
 
-        /// 正文内容（可滚动，点击切换导航栏显隐，翻页时滑动消失）。
-        AnimatedBuilder(
-          animation: _page_transition_controller,
-          builder: (BuildContext context, Widget? child) {
-            /// 翻页动画进度（0.0 = 原位，1.0 = 完全滑出屏幕）。
-            final double progress = _page_transition_controller.value;
+                  /// 根据方向决定偏移量（向上或向下滑出屏幕）。
+                  final double transition_offset_y = _is_slide_up
+                      ? -progress * MediaQuery.sizeOf(context).height
+                      : progress * MediaQuery.sizeOf(context).height;
+                  // 注意：底部上拉时不能再把整个 SingleChildScrollView 视口整体上移。
+                  //
+                  // 旧写法是：transition_offset_y + _previous_pull_offset - _next_pull_offset。
+                  // 这会移动“已经被视口裁剪后的画面”，而不是移动滚动内容本身；
+                  // 结果就是下一篇正文预览看起来永远只露出最初那几行。
+                  //
+                  // 底部下一篇的露出改由 `_sync_next_preview_scroll_position()`
+                  // 在预览高度变化后把内部滚动位置同步到新的 maxScrollExtent，
+                  // 这样真正移动的是滚动内容，下一篇正文能按上拉距离持续露出。
+                  final double offset_y =
+                      transition_offset_y + _previous_pull_offset;
 
-            /// 根据方向决定偏移量（向上或向下滑出屏幕）。
-            final double transition_offset_y = _is_slide_up
-                ? -progress * MediaQuery.sizeOf(context).height
-                : progress * MediaQuery.sizeOf(context).height;
-            // 注意：底部上拉时不能再把整个 SingleChildScrollView 视口整体上移。
-            //
-            // 旧写法是：transition_offset_y + _previous_pull_offset - _next_pull_offset。
-            // 这会移动“已经被视口裁剪后的画面”，而不是移动滚动内容本身；
-            // 结果就是下一篇正文预览看起来永远只露出最初那几行。
-            //
-            // 底部下一篇的露出改由 `_sync_next_preview_scroll_position()`
-            // 在预览高度变化后把内部滚动位置同步到新的 maxScrollExtent，
-            // 这样真正移动的是滚动内容，下一篇正文能按上拉距离持续露出。
-            final double offset_y = transition_offset_y + _previous_pull_offset;
-
-            return Transform.translate(
-              offset: Offset(0, offset_y),
-              child: child,
-            );
-          },
-          child: Listener(
-            behavior: HitTestBehavior.translucent,
-            onPointerDown: (_) {
-              _tap_started_with_selection = _is_paragraph_selection_active;
-            },
-            onPointerMove: _on_reader_pointer_move,
-            onPointerUp: _on_reader_pointer_end,
-            onPointerCancel: _on_reader_pointer_end,
-            child: GestureDetector(
-              onTap: _on_content_tap,
-              behavior: HitTestBehavior.translucent,
-              child: StoryScrollMetricsObserver(
-                scroll_controller: _scroll_controller,
-                story_end_key: _current_story_end_key,
-                on_layout_pending: () {
-                  if (generation == _logic_generation) {
-                    _reading_progress_max_extent = null;
-                  }
+                  return Transform.translate(
+                    offset: Offset(0, offset_y),
+                    child: child,
+                  );
                 },
-                on_extent_changed: (extent) =>
-                    _on_current_story_extent_changed(extent, generation),
-                child: SingleChildScrollView(
-                  controller: _scroll_controller,
-                  physics: _reader_scroll_physics,
-                  padding: EdgeInsets.fromLTRB(
-                    ShortStoryReadStyle.page_horizontal_padding,
-                    status_bar_height + ShortStoryReadStyle.appbar_height + 16,
-                    ShortStoryReadStyle.page_horizontal_padding,
-                    scroll_bottom_padding,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      /// 标题（有封面时左侧显示封面缩略图）。
-                      if (_logic.story_data.value?.cover_url.isNotEmpty == true)
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            NovelCover(
-                              image_url: _logic.story_data.value!.cover_url,
-                              width: 48,
-                              height: 64,
-                              border_radius: 6,
-                              is_dark: is_dark,
+                child: Listener(
+                  behavior: HitTestBehavior.translucent,
+                  onPointerDown: (_) {
+                    _tap_started_with_selection =
+                        _is_paragraph_selection_active;
+                  },
+                  onPointerMove: _on_reader_pointer_move,
+                  onPointerUp: _on_reader_pointer_end,
+                  onPointerCancel: _on_reader_pointer_end,
+                  child: GestureDetector(
+                    onTap: _on_content_tap,
+                    behavior: HitTestBehavior.translucent,
+                    child: ViewportResizeObserver(
+                      on_resize_start: _on_viewport_resize_start,
+                      on_resize_end: _on_viewport_resize_end,
+                      child: StoryScrollMetricsObserver(
+                        scroll_controller: _scroll_controller,
+                        story_end_key: _current_story_end_key,
+                        on_layout_pending: () {
+                          if (generation == _logic_generation) {
+                            _reading_progress_max_extent = null;
+                          }
+                        },
+                        on_extent_changed: (extent) =>
+                            _on_current_story_extent_changed(
+                              extent,
+                              generation,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TitleWithStoryId(
-                                title: _logic.title,
-                                story_id: _logic.story_id,
-                                on_cover_replaced: _on_cover_replaced,
-                                title_style: TextStyle(
-                                  fontSize: title_font_size,
-                                  fontWeight: FontConfig.adjustedWeight(
-                                    FontWeight.w500,
+                        child: SingleChildScrollView(
+                          controller: _scroll_controller,
+                          physics: _reader_scroll_physics,
+                          padding: EdgeInsets.fromLTRB(
+                            ShortStoryReadStyle.page_horizontal_padding,
+                            status_bar_height +
+                                ShortStoryReadStyle.appbar_height +
+                                16,
+                            ShortStoryReadStyle.page_horizontal_padding,
+                            scroll_bottom_padding,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              /// 标题（有封面时左侧显示封面缩略图）。
+                              if (_logic
+                                      .story_data
+                                      .value
+                                      ?.cover_url
+                                      .isNotEmpty ==
+                                  true)
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    NovelCover(
+                                      image_url:
+                                          _logic.story_data.value!.cover_url,
+                                      width: 48,
+                                      height: 64,
+                                      border_radius: 6,
+                                      is_dark: is_dark,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: TitleWithStoryId(
+                                        title: _logic.title,
+                                        story_id: _logic.story_id,
+                                        on_cover_replaced: _on_cover_replaced,
+                                        title_style: TextStyle(
+                                          fontSize: title_font_size,
+                                          fontWeight: FontConfig.adjustedWeight(
+                                            FontWeight.w500,
+                                          ),
+                                          color: title_color,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else
+                                TitleWithStoryId(
+                                  title: _logic.title,
+                                  story_id: _logic.story_id,
+                                  on_cover_replaced: _on_cover_replaced,
+                                  title_style: TextStyle(
+                                    fontSize: title_font_size,
+                                    fontWeight: FontConfig.adjustedWeight(
+                                      FontWeight.w500,
+                                    ),
+                                    color: title_color,
+                                    height: 1.4,
                                   ),
-                                  color: title_color,
-                                  height: 1.4,
                                 ),
+                              const SizedBox(height: 12),
+
+                              /// 标签列表。
+                              if (tags.isNotEmpty) ...[
+                                TagList(
+                                  tags: tags,
+                                  is_dark: is_dark,
+                                  story_id: _logic.story_id,
+                                  is_cjk: is_cjk,
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+
+                              /// 正文内容。
+                              StoryUnlockGate(
+                                key: ValueKey(_logic.story_id),
+                                content: _logic.content.value,
+                                is_dark: is_dark,
+                                is_loading: _logic.is_content_loading.value,
+                                is_unlocked:
+                                    _logic.is_story_unlocked.value ||
+                                    !_is_video_ad_gate_required,
+                                is_unlocking: _is_rewarded_ad_loading,
+                                font_size: _logic.body_font_size.value,
+                                on_unlock: _on_unlock_story_tap,
+                                native_ad_widget: native_ad_slot,
+                                native_ad_insert_index: _native_ad_insert_index,
+                                paragraph_anchors: _logic.paragraph_anchors
+                                    .toList(),
+                                on_paragraph_comment:
+                                    Get.find<ProjectConfigStore>()
+                                        .current
+                                        .is_comment_enabled
+                                    ? _on_paragraph_comment
+                                    : null,
+                                on_paragraph_share:
+                                    Get.find<ProjectConfigStore>()
+                                        .current
+                                        .is_share_enabled
+                                    ? _on_paragraph_share
+                                    : null,
+                                on_selection_changed:
+                                    _on_paragraph_selection_changed,
+                                on_content_tap: _on_content_tap,
+                                on_comment_count_tap: _on_comment_count_tap,
                               ),
-                            ),
-                          ],
-                        )
-                      else
-                        TitleWithStoryId(
-                          title: _logic.title,
-                          story_id: _logic.story_id,
-                          on_cover_replaced: _on_cover_replaced,
-                          title_style: TextStyle(
-                            fontSize: title_font_size,
-                            fontWeight: FontConfig.adjustedWeight(
-                              FontWeight.w500,
-                            ),
-                            color: title_color,
-                            height: 1.4,
+
+                              /// 当前篇正文结束位置，用于准确计算进度和恢复位置。
+                              SizedBox(key: _current_story_end_key, height: 0),
+
+                              /// 下一篇小说预览（固定显示在正文下方）。
+                              if (has_next_preview)
+                                NextStoryPreview(
+                                  next_story: _logic.next_story_item!,
+                                  body_font_size: _logic.body_font_size.value,
+                                  is_dark: is_dark,
+                                  is_cjk: is_cjk,
+                                  title_font_size: title_font_size,
+                                  title_color: title_color,
+                                  body_color: is_dark
+                                      ? ShortStoryReadStyle.body_dark_color
+                                      : ShortStoryReadStyle.body_light_color,
+                                  secondary_color: is_dark
+                                      ? ShortStoryReadStyle.secondary_dark_color
+                                      : ShortStoryReadStyle
+                                            .secondary_light_color,
+                                  preview_body_height: next_preview_body_height,
+                                  preview_max_lines: next_preview_max_lines,
+                                  preview_line_height: next_preview_line_height,
+                                  preview_content: next_story_preview_content,
+                                  title_key: _next_story_title_key,
+                                  reader_text: _readerText,
+                                ),
+                            ],
                           ),
                         ),
-                      const SizedBox(height: 12),
-
-                      /// 标签列表。
-                      if (tags.isNotEmpty) ...[
-                        TagList(
-                          tags: tags,
-                          is_dark: is_dark,
-                          story_id: _logic.story_id,
-                          is_cjk: is_cjk,
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-
-                      /// 正文内容。
-                      StoryUnlockGate(
-                        key: ValueKey(_logic.story_id),
-                        content: _logic.content.value,
-                        is_dark: is_dark,
-                        is_loading: _logic.is_content_loading.value,
-                        is_unlocked:
-                            _logic.is_story_unlocked.value ||
-                            !_is_video_ad_gate_required,
-                        is_unlocking: _is_rewarded_ad_loading,
-                        font_size: _logic.body_font_size.value,
-                        on_unlock: _on_unlock_story_tap,
-                        native_ad_widget: native_ad_slot,
-                        native_ad_insert_index: _native_ad_insert_index,
-                        paragraph_anchors: _logic.paragraph_anchors.toList(),
-                        on_paragraph_comment:
-                            Get.find<ProjectConfigStore>()
-                                .current
-                                .is_comment_enabled
-                            ? _on_paragraph_comment
-                            : null,
-                        on_paragraph_share:
-                            Get.find<ProjectConfigStore>()
-                                .current
-                                .is_share_enabled
-                            ? _on_paragraph_share
-                            : null,
-                        on_selection_changed: _on_paragraph_selection_changed,
-                        on_content_tap: _on_content_tap,
-                        on_comment_count_tap: _on_comment_count_tap,
                       ),
-
-                      /// 当前篇正文结束位置，用于准确计算进度和恢复位置。
-                      SizedBox(key: _current_story_end_key, height: 0),
-
-                      /// 下一篇小说预览（固定显示在正文下方）。
-                      if (has_next_preview)
-                        NextStoryPreview(
-                          next_story: _logic.next_story_item!,
-                          body_font_size: _logic.body_font_size.value,
-                          is_dark: is_dark,
-                          is_cjk: is_cjk,
-                          title_font_size: title_font_size,
-                          title_color: title_color,
-                          body_color: is_dark
-                              ? ShortStoryReadStyle.body_dark_color
-                              : ShortStoryReadStyle.body_light_color,
-                          secondary_color: is_dark
-                              ? ShortStoryReadStyle.secondary_dark_color
-                              : ShortStoryReadStyle.secondary_light_color,
-                          preview_body_height: next_preview_body_height,
-                          preview_max_lines: next_preview_max_lines,
-                          preview_line_height: next_preview_line_height,
-                          preview_content: next_story_preview_content,
-                          title_key: _next_story_title_key,
-                          reader_text: _readerText,
-                        ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
+
+              /// 底部下一篇渐变遮罩。
+              ///
+              /// 放在 Stack 层级里，而不是正文安全区域内部，保证渐变可以贯穿到屏幕底部；
+              /// 文案和箭头固定在安全区域内的底部。
+              if (show_next_bottom_overlay)
+                _buildNextStoryBottomOverlay(
+                  is_dark: is_dark,
+                  bg_color: bg_color,
+                  bottom_padding: bottom_padding,
+                  overlay_opacity: _next_story_overlay_opacity,
+                  next_pull_hint_opacity: next_pull_hint_opacity,
+                  next_pull_ready: next_pull_ready,
+                ),
+            ],
           ),
         ),
-
-        /// 底部下一篇渐变遮罩。
-        ///
-        /// 放在 Stack 层级里，而不是正文安全区域内部，保证渐变可以贯穿到屏幕底部；
-        /// 文案和箭头固定在安全区域内的底部。
-        if (show_next_bottom_overlay)
-          _buildNextStoryBottomOverlay(
-            is_dark: is_dark,
-            bg_color: bg_color,
-            bottom_padding: bottom_padding,
-            overlay_opacity: _next_story_overlay_opacity,
-            next_pull_hint_opacity: next_pull_hint_opacity,
-            next_pull_ready: next_pull_ready,
-          ),
 
         /// 覆盖层（导航栏+评论栏+浮动按钮+渐变遮罩）。
         ReaderOverlayLayer(
@@ -2756,13 +2842,19 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       children: <Widget>[
         /// 背景装饰。
         StarfieldDecoration(is_dark: is_dark),
-
-        /// 骨架屏内容（位于导航栏下方）。
-        Padding(
-          padding: EdgeInsets.only(
-            top: status_bar_height + ShortStoryReadStyle.appbar_height,
+        WindowContentLayout(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              /// 骨架屏内容（位于导航栏下方）。
+              Padding(
+                padding: EdgeInsets.only(
+                  top: status_bar_height + ShortStoryReadStyle.appbar_height,
+                ),
+                child: SkeletonScreen(is_dark: is_dark),
+              ),
+            ],
           ),
-          child: SkeletonScreen(is_dark: is_dark),
         ),
 
         /// 顶部导航栏（加载中右侧显示骨架屏）。
@@ -2795,13 +2887,19 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       children: <Widget>[
         /// 背景装饰。
         StarfieldDecoration(is_dark: is_dark),
-
-        /// 无网络状态（居中显示图标、标题和描述，点击触发重试）。
-        NoInternet(
-          is_dark: is_dark,
-          title: easy.tr('no_internet.title'),
-          description: easy.tr('no_internet.description'),
-          on_reload: _retry_current_story,
+        WindowContentLayout(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              /// 无网络状态（居中显示图标、标题和描述，点击触发重试）。
+              NoInternet(
+                is_dark: is_dark,
+                title: easy.tr('no_internet.title'),
+                description: easy.tr('no_internet.description'),
+                on_reload: _retry_current_story,
+              ),
+            ],
+          ),
         ),
 
         /// 顶部导航栏。

@@ -34,6 +34,7 @@ Map<int, QuestTileFrame> quest_scene_frames(WidgetTester tester) {
         rect: frame.rect.shift(origin),
         zone: frame.zone,
         blocked: frame.blocked,
+        blocked_amount: frame.blocked_amount,
         rotation: frame.rotation,
         dissolve: frame.dissolve,
         previous_type: frame.previous_type,

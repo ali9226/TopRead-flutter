@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 
 import 'package:app/pages/short_story_read/style.dart';
@@ -86,7 +87,8 @@ class ReaderOverlayLayer extends StatelessWidget {
   final VoidCallback on_previous_tap;
   final VoidCallback on_next_tap;
   final void Function(double progress) on_progress_changed;
-  final void Function(double progress, VoidCallback on_complete) on_progress_change_end;
+  final void Function(double progress, VoidCallback on_complete)
+  on_progress_change_end;
   final VoidCallback on_scroll_to_bottom;
   final VoidCallback on_auto_read_settings_tap;
 
@@ -184,43 +186,50 @@ class ReaderOverlayLayer extends StatelessWidget {
             ),
           ),
         ),
-
-        /// 右下角浮动按钮。
-        if (show_floating_button)
-          Positioned(
-            right: 16,
-            bottom: (show_progress_bar
-                    ? ShortStoryReadStyle.bottom_bar_height +
-                        ShortStoryReadStyle.progress_bar_height
-                    : ShortStoryReadStyle.bottom_bar_height) +
-                bottom_padding +
-                16,
-            child: FadeTransition(
-              opacity: floating_button_fade_animation,
-              child: IgnorePointer(
-                ignoring: !is_bottom_bar_visible,
-                child: ScrollToBottomButton(
-                  is_dark: is_dark,
-                  opacity: 1.0,
-                  on_tap: on_scroll_to_bottom,
+        WindowContentLayout(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              /// 右下角浮动按钮。
+              if (show_floating_button)
+                Positioned(
+                  right: 16,
+                  bottom:
+                      (show_progress_bar
+                          ? ShortStoryReadStyle.bottom_bar_height +
+                                ShortStoryReadStyle.progress_bar_height
+                          : ShortStoryReadStyle.bottom_bar_height) +
+                      bottom_padding +
+                      16,
+                  child: FadeTransition(
+                    opacity: floating_button_fade_animation,
+                    child: IgnorePointer(
+                      ignoring: !is_bottom_bar_visible,
+                      child: ScrollToBottomButton(
+                        is_dark: is_dark,
+                        opacity: 1.0,
+                        on_tap: on_scroll_to_bottom,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
 
-        /// 自动阅读设置按钮。
-        if (is_auto_reading)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: bottom_padding + 16,
-            child: Center(
-              child: AutoReadSettingsButton(
-                is_dark: is_dark,
-                on_tap: on_auto_read_settings_tap,
-              ),
-            ),
+              /// 自动阅读设置按钮。
+              if (is_auto_reading)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: bottom_padding + 16,
+                  child: Center(
+                    child: AutoReadSettingsButton(
+                      is_dark: is_dark,
+                      on_tap: on_auto_read_settings_tap,
+                    ),
+                  ),
+                ),
+            ],
           ),
+        ),
       ],
     );
   }

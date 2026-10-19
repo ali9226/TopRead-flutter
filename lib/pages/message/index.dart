@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'dart:async';
 import 'package:app/config/font_config.dart';
 
@@ -318,184 +319,206 @@ class _MessagePageState extends State<MessagePage> {
         body: Stack(
           children: <Widget>[
             PageBackgroundDecor(is_dark: is_dark),
-            if (is_logged_in)
-              RefreshIndicator(
-                color: ColorConstants.themeColor,
-                onRefresh: _on_refresh,
-                child: ListView(
-                  controller: _scroll_controller,
-                  physics: const AlwaysScrollableScrollPhysics(
-                    parent: BouncingScrollPhysics(),
-                  ),
-                  padding: MessageStyle.page_padding.copyWith(
-                    top: status_bar_height + MessageStyle.page_top_padding,
-                  ),
-                  children: <Widget>[
-                    Text(
-                      easy.tr('message.title'),
-                      style: TextStyle(
-                        color: primary_text_color,
-                        fontSize: MessageStyle.title_size,
-                        fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: quick_stat_list.asMap().entries.map((entry) {
-                        final int index = entry.key;
-                        final _quick_stat_item item = entry.value;
-                        final bool is_selected = selected_type == item.type;
-                        return Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              right: index == quick_stat_list.length - 1
-                                  ? 0
-                                  : MessageStyle.quick_stat_item_gap,
-                            ),
-                            child: GestureDetector(
-                              onTap: () => _on_stat_tap(item.type),
-                              child: _quick_stat_card(
-                                is_dark: is_dark,
-                                title: item.title,
-                                total: item.total,
-                                unread: item.unread,
-                                accent_color: item.color,
-                                title_color: primary_text_color,
-                                subtitle_color: secondary_text_color,
-                                is_selected: is_selected,
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        Text(
-                          selected_type == null
-                              ? easy.tr('message.all_messages')
-                              : quick_stat_list
-                                    .firstWhere(
-                                      (s) => s.type == selected_type,
-                                      orElse: () => quick_stat_list.first,
-                                    )
-                                    .title,
-                          style: TextStyle(
-                            color: secondary_text_color,
-                            fontSize: 13,
-                            fontWeight: FontConfig.adjustedWeight(
-                              FontWeight.w500,
-                            ),
-                          ),
+            WindowContentLayout(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (is_logged_in)
+                    RefreshIndicator(
+                      color: ColorConstants.themeColor,
+                      onRefresh: _on_refresh,
+                      child: ListView(
+                        controller: _scroll_controller,
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
                         ),
-                        if (message_store.unread_total.value > 0)
-                          GestureDetector(
-                            onTap: () => message_store.mark_all_as_read(),
-                            child: Text(
-                              easy.tr('message.mark_all_read'),
-                              style: TextStyle(
-                                color: ColorConstants.dangerColor,
-                                fontSize: 12,
-                                fontWeight: FontConfig.adjustedWeight(
-                                  FontWeight.w500,
-                                ),
+                        padding: MessageStyle.page_padding.copyWith(
+                          top:
+                              status_bar_height + MessageStyle.page_top_padding,
+                        ),
+                        children: <Widget>[
+                          Text(
+                            easy.tr('message.title'),
+                            style: TextStyle(
+                              color: primary_text_color,
+                              fontSize: MessageStyle.title_size,
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
                               ),
                             ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    if (messages.isEmpty && !message_store.has_loaded)
-                      MessageSkeleton(is_dark: is_dark)
-                    else if (messages.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 60),
-                        child: Center(
-                          child: Column(
-                            children: <Widget>[
-                              Icon(
-                                Icons.inbox_rounded,
-                                size: 48,
-                                color: secondary_text_color.withValues(
-                                  alpha: 0.4,
+                          const SizedBox(height: 12),
+                          Row(
+                            children: quick_stat_list.asMap().entries.map((
+                              entry,
+                            ) {
+                              final int index = entry.key;
+                              final _quick_stat_item item = entry.value;
+                              final bool is_selected =
+                                  selected_type == item.type;
+                              return Expanded(
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                    right: index == quick_stat_list.length - 1
+                                        ? 0
+                                        : MessageStyle.quick_stat_item_gap,
+                                  ),
+                                  child: GestureDetector(
+                                    onTap: () => _on_stat_tap(item.type),
+                                    child: _quick_stat_card(
+                                      is_dark: is_dark,
+                                      title: item.title,
+                                      total: item.total,
+                                      unread: item.unread,
+                                      accent_color: item.color,
+                                      title_color: primary_text_color,
+                                      subtitle_color: secondary_text_color,
+                                      is_selected: is_selected,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 12),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: <Widget>[
                               Text(
-                                easy.tr('message.empty'),
+                                selected_type == null
+                                    ? easy.tr('message.all_messages')
+                                    : quick_stat_list
+                                          .firstWhere(
+                                            (s) => s.type == selected_type,
+                                            orElse: () => quick_stat_list.first,
+                                          )
+                                          .title,
                                 style: TextStyle(
                                   color: secondary_text_color,
                                   fontSize: 13,
                                   fontWeight: FontConfig.adjustedWeight(
-                                    FontWeight.w400,
+                                    FontWeight.w500,
                                   ),
                                 ),
                               ),
+                              if (message_store.unread_total.value > 0)
+                                GestureDetector(
+                                  onTap: () => message_store.mark_all_as_read(),
+                                  child: Text(
+                                    easy.tr('message.mark_all_read'),
+                                    style: TextStyle(
+                                      color: ColorConstants.dangerColor,
+                                      fontSize: 12,
+                                      fontWeight: FontConfig.adjustedWeight(
+                                        FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
-                        ),
-                      )
-                    else
-                      ...messages.asMap().entries.map((entry) {
-                        final MessageData message = entry.value;
-                        final Color accent_color = _get_color_by_type(
-                          message.type,
-                        );
-                        // 客服消息使用 store 中的未读数
-                        final int unread_count =
-                            message.type == MessageType.chat_reply
-                            ? message_store.chat_unread.value
-                            : 0;
-                        return _AnimatedMessageItem(
-                          key: ValueKey(message.identity_key),
-                          message: message,
-                          accent_color: accent_color,
-                          on_tap: () => _on_message_tap(message),
-                          on_delete: () => _delete_message(message),
-                          get_icon_name: _get_icon_name_by_type,
-                          format_time: _format_time,
-                          unread_count: unread_count,
-                        );
-                      }),
-                    if (messages.isNotEmpty)
-                      LoadMoreFooter(
-                        is_dark: is_dark,
-                        is_loading: message_store.is_loading,
-                        has_more: has_more,
-                        on_load_more: message_store.load_more,
+                          const SizedBox(height: 10),
+                          if (messages.isEmpty && !message_store.has_loaded)
+                            MessageSkeleton(is_dark: is_dark)
+                          else if (messages.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 60),
+                              child: Center(
+                                child: Column(
+                                  children: <Widget>[
+                                    Icon(
+                                      Icons.inbox_rounded,
+                                      size: 48,
+                                      color: secondary_text_color.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      easy.tr('message.empty'),
+                                      style: TextStyle(
+                                        color: secondary_text_color,
+                                        fontSize: 13,
+                                        fontWeight: FontConfig.adjustedWeight(
+                                          FontWeight.w400,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else
+                            ...messages.asMap().entries.map((entry) {
+                              final MessageData message = entry.value;
+                              final Color accent_color = _get_color_by_type(
+                                message.type,
+                              );
+                              // 客服消息使用 store 中的未读数
+                              final int unread_count =
+                                  message.type == MessageType.chat_reply
+                                  ? message_store.chat_unread.value
+                                  : 0;
+                              return _AnimatedMessageItem(
+                                key: ValueKey(message.identity_key),
+                                message: message,
+                                accent_color: accent_color,
+                                on_tap: () => _on_message_tap(message),
+                                on_delete: () => _delete_message(message),
+                                get_icon_name: _get_icon_name_by_type,
+                                format_time: _format_time,
+                                unread_count: unread_count,
+                              );
+                            }),
+                          if (messages.isNotEmpty)
+                            LoadMoreFooter(
+                              is_dark: is_dark,
+                              is_loading: message_store.is_loading,
+                              has_more: has_more,
+                              on_load_more: message_store.load_more,
+                            ),
+                        ],
                       ),
-                  ],
-                ),
-              )
-            else
-              NoLoginEntry(
-                is_dark: is_dark,
-                status_bar_height: status_bar_height,
-                primary_text_color: primary_text_color,
-                secondary_text_color: secondary_text_color,
+                    )
+                  else
+                    NoLoginEntry(
+                      is_dark: is_dark,
+                      status_bar_height: status_bar_height,
+                      primary_text_color: primary_text_color,
+                      secondary_text_color: secondary_text_color,
+                    ),
+                ],
               ),
+            ),
             PageTopGradientOverlay(background_color: background_color),
-            if (is_logged_in)
-              FloatingBackToTop(
-                show: _show_back_to_top,
-                isDark: is_dark,
-                onTap: _scroll_to_top,
-                right: floating_back_to_top_style.FloatingBackToTopStyle.right,
-                visibleBottom:
-                    fixed_nav_style.Style.bar_height +
-                    floating_back_to_top_style
-                        .FloatingBackToTopStyle
-                        .offset_from_bottom_nav +
-                    MediaQuery.paddingOf(context).bottom,
-                hiddenBottom:
-                    fixed_nav_style.Style.bar_height +
-                    floating_back_to_top_style
-                        .FloatingBackToTopStyle
-                        .hidden_offset +
-                    MediaQuery.paddingOf(context).bottom,
+            WindowContentLayout(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (is_logged_in)
+                    FloatingBackToTop(
+                      show: _show_back_to_top,
+                      isDark: is_dark,
+                      onTap: _scroll_to_top,
+                      right: floating_back_to_top_style
+                          .FloatingBackToTopStyle
+                          .right,
+                      visibleBottom:
+                          fixed_nav_style.Style.bar_height +
+                          floating_back_to_top_style
+                              .FloatingBackToTopStyle
+                              .offset_from_bottom_nav +
+                          MediaQuery.paddingOf(context).bottom,
+                      hiddenBottom:
+                          fixed_nav_style.Style.bar_height +
+                          floating_back_to_top_style
+                              .FloatingBackToTopStyle
+                              .hidden_offset +
+                          MediaQuery.paddingOf(context).bottom,
+                    ),
+                ],
               ),
+            ),
           ],
         ),
       );

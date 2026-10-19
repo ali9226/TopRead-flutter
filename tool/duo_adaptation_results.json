@@ -1,0 +1,405 @@
+{
+  "schema_version": 2,
+  "version": "1.2.2+23",
+  "completed_at": "2026-10-20T00:51:09.870827+08:00",
+  "verification_at": "2026-10-20T00:47:38.295759+08:00",
+  "changes": {
+    "non_game": "Full-width content and bottom bars for local corner occlusions; intersecting top controls avoid actual reserved regions. Includes AppBars, author surfaces, writing editors, comics and WebView. Ordinary full-height safe regions remain respected.",
+    "game": "Half-open: board in left pane, tray/reserve/tools in right pane. Open: seven horizontal adaptive wells enlarged. Fold transitions preserve engine state and animation coordinates."
+  },
+  "tests": {
+    "command": "fvm flutter test --no-pub",
+    "passed": 1147,
+    "optional_skipped": 5,
+    "failed": 0,
+    "log": "/tmp/topread_v23_final_tests.log",
+    "analyzer_command": "fvm dart analyze",
+    "analyzer_errors": 0,
+    "existing_warnings": 13,
+    "new_errors_or_warnings": 0,
+    "analyzer_note": "Warnings match the preceding version. Existing naming/style info diagnostics remain.",
+    "analyzer_log": "/tmp/topread_v23_final_analyze.log",
+    "independent_review": "28 targeted tests passed; no unresolved P1/P2 findings"
+  },
+  "layouts": {
+    "native_pose_samples": {
+      "closed": {
+        "engine": {
+          "displayId": "0",
+          "viewConstraints": {
+            "minWidth": "1398.0",
+            "maxWidth": "1398.0",
+            "minHeight": "2034.0",
+            "maxHeight": "2034.0"
+          },
+          "devicePixelRatio": "3.0",
+          "size": {
+            "_dx": "1398.0",
+            "_dy": "2034.0"
+          },
+          "viewInsets": {
+            "left": "0.0",
+            "top": "0.0",
+            "right": "0.0",
+            "bottom": "0.0"
+          },
+          "viewPadding": {
+            "left": "0.0",
+            "top": "0.0",
+            "right": "252.0",
+            "bottom": "102.0"
+          },
+          "systemGestureInsets": {
+            "left": "0.0",
+            "top": "0.0",
+            "right": "0.0",
+            "bottom": "0.0"
+          },
+          "padding": {
+            "left": "0.0",
+            "top": "0.0",
+            "right": "252.0",
+            "bottom": "102.0"
+          },
+          "gestureSettings": {
+            "physicalTouchSlop": "null",
+            "physicalDoubleTapSlop": "null"
+          },
+          "displayFeatures": [],
+          "displayCornerRadii": "null"
+        },
+        "native_regions": {
+          "view_size": {
+            "_dx": "466.0",
+            "_dy": "678.0"
+          },
+          "features": [
+            {
+              "bounds": {
+                "left": "382.0",
+                "top": "0.0",
+                "right": "466.0",
+                "bottom": "174.0"
+              },
+              "type": {
+                "index": "3",
+                "_name": "cutout"
+              },
+              "state": {
+                "index": "0",
+                "_name": "unknown"
+              }
+            },
+            {
+              "bounds": {
+                "left": "399.6666666666667",
+                "top": "29.333333333333332",
+                "right": "436.6666666666667",
+                "bottom": "66.33333333333333"
+              },
+              "type": {
+                "index": "3",
+                "_name": "cutout"
+              },
+              "state": {
+                "index": "0",
+                "_name": "unknown"
+              }
+            }
+          ]
+        }
+      },
+      "half_open": {
+        "engine": {
+          "displayId": "0",
+          "viewConstraints": {
+            "minWidth": "2853.0",
+            "maxWidth": "2853.0",
+            "minHeight": "2007.0",
+            "maxHeight": "2007.0"
+          },
+          "devicePixelRatio": "3.0",
+          "size": {
+            "_dx": "2853.0",
+            "_dy": "2007.0"
+          },
+          "viewInsets": {
+            "left": "0.0",
+            "top": "0.0",
+            "right": "0.0",
+            "bottom": "0.0"
+          },
+          "viewPadding": {
+            "left": "0.0",
+            "top": "0.0",
+            "right": "252.0",
+            "bottom": "102.0"
+          },
+          "systemGestureInsets": {
+            "left": "0.0",
+            "top": "0.0",
+            "right": "0.0",
+            "bottom": "0.0"
+          },
+          "padding": {
+            "left": "0.0",
+            "top": "0.0",
+            "right": "252.0",
+            "bottom": "102.0"
+          },
+          "gestureSettings": {
+            "physicalTouchSlop": "null",
+            "physicalDoubleTapSlop": "null"
+          },
+          "displayFeatures": [],
+          "displayCornerRadii": "null"
+        },
+        "native_regions": {
+          "view_size": {
+            "_dx": "951.0",
+            "_dy": "669.0"
+          },
+          "features": [
+            {
+              "bounds": {
+                "left": "455.5",
+                "top": "0.0",
+                "right": "495.5",
+                "bottom": "669.0"
+              },
+              "type": {
+                "index": "2",
+                "_name": "hinge"
+              },
+              "state": {
+                "index": "2",
+                "_name": "postureHalfOpened"
+              }
+            },
+            {
+              "bounds": {
+                "left": "867.0",
+                "top": "0.0",
+                "right": "951.0",
+                "bottom": "124.0"
+              },
+              "type": {
+                "index": "3",
+                "_name": "cutout"
+              },
+              "state": {
+                "index": "0",
+                "_name": "unknown"
+              }
+            }
+          ]
+        }
+      },
+      "open": {
+        "engine": {
+          "displayId": "0",
+          "viewConstraints": {
+            "minWidth": "2853.0",
+            "maxWidth": "2853.0",
+            "minHeight": "2007.0",
+            "maxHeight": "2007.0"
+          },
+          "devicePixelRatio": "3.0",
+          "size": {
+            "_dx": "2853.0",
+            "_dy": "2007.0"
+          },
+          "viewInsets": {
+            "left": "0.0",
+            "top": "0.0",
+            "right": "0.0",
+            "bottom": "0.0"
+          },
+          "viewPadding": {
+            "left": "0.0",
+            "top": "0.0",
+            "right": "252.0",
+            "bottom": "102.0"
+          },
+          "systemGestureInsets": {
+            "left": "0.0",
+            "top": "0.0",
+            "right": "0.0",
+            "bottom": "0.0"
+          },
+          "padding": {
+            "left": "0.0",
+            "top": "0.0",
+            "right": "252.0",
+            "bottom": "102.0"
+          },
+          "gestureSettings": {
+            "physicalTouchSlop": "null",
+            "physicalDoubleTapSlop": "null"
+          },
+          "displayFeatures": [],
+          "displayCornerRadii": "null"
+        },
+        "native_regions": {
+          "view_size": {
+            "_dx": "951.0",
+            "_dy": "669.0"
+          },
+          "features": [
+            {
+              "bounds": {
+                "left": "867.0",
+                "top": "0.0",
+                "right": "951.0",
+                "bottom": "124.0"
+              },
+              "type": {
+                "index": "3",
+                "_name": "cutout"
+              },
+              "state": {
+                "index": "0",
+                "_name": "unknown"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "computed_from_observed_constraints": {
+      "closed": {
+        "window": [
+          466.0,
+          678.0
+        ],
+        "scene": [
+          382.0,
+          644.0
+        ],
+        "board_tile_width": 57.19461697722566,
+        "tray_tile_width": 45.71428571428572,
+        "folded": false,
+        "landscape": false
+      },
+      "half_open": {
+        "window": [
+          951.0,
+          669.0
+        ],
+        "scene": [
+          867.0,
+          635.0
+        ],
+        "board_tile_width": 71.33152173913042,
+        "tray_tile_width": 44.214285714285666,
+        "folded": true,
+        "landscape": false
+      },
+      "open": {
+        "window": [
+          951.0,
+          669.0
+        ],
+        "scene": [
+          867.0,
+          635.0
+        ],
+        "board_tile_width": 51.38947368421053,
+        "tray_tile_width": 45.25714285714287,
+        "folded": false,
+        "landscape": true
+      }
+    },
+    "units": "Native reserved-region and layout values are logical pixels; engine values in the raw samples are physical pixels at DPR 3."
+  },
+  "verification": {
+    "window_regressions": [
+      "test/components/duo_edge_content_test.dart",
+      "test/components/window_content_layout_test.dart",
+      "test/components/fullbleed_surfaces_test.dart",
+      "test/pages/author_center/header_window_layout_test.dart",
+      "test/pages/work_editor/window_editor_width_test.dart"
+    ],
+    "game_regressions": [
+      "test/pages/tile_quest/compact_window_layout_test.dart",
+      "test/pages/tile_quest/board_corner_transparency_test.dart"
+    ],
+    "render_profile": "tile_quest_profile_results.json",
+    "ios_audio_previous_unchanged_implementation": "tile_quest/ios_audio_probe_results.json",
+    "installed_versions": "../build/tile_quest/install_receipt_v23.json",
+    "simulator_runtime_exceptions_or_layout_overflows": 0
+  },
+  "screenshots": [
+    "../build/tile_quest/duo_v23_home_closed.png",
+    "../build/tile_quest/duo_v23_profile_closed.png",
+    "../build/tile_quest/duo_v23_profile_open.png",
+    "../build/tile_quest/duo_v23_game_closed.png",
+    "../build/tile_quest/duo_v23_game_half_open.png",
+    "../build/tile_quest/duo_v23_game_open.png"
+  ],
+  "apple_references": [
+    "https://developer.apple.com/iphone-duo/prepare/",
+    "https://developer.apple.com/videos/play/tech-talks/111461/",
+    "https://developer.apple.com/videos/play/tech-talks/111463/",
+    "https://developer.apple.com/design/human-interface-guidelines/layout"
+  ],
+  "deployment": {
+    "version": "1.2.2+23",
+    "timestamp": "2026-10-20T00:47:38.295759+08:00",
+    "package": "com.topread.novel",
+    "ios": {
+      "device": "iPhone 16 Pro Max",
+      "mode": "profile",
+      "installed": true,
+      "launched": true,
+      "installed_version": "1.2.2",
+      "installed_bundle_version": "23",
+      "data_preserved": true,
+      "sdk": "iphoneos27.1",
+      "formal_main_entry_verified": true,
+      "bundle_copy": "/tmp/topread_formal_v23.app"
+    },
+    "duo": {
+      "device": "iPhone Duo",
+      "os": "iOS 27.1",
+      "mode": "debug",
+      "installed": true,
+      "launched": true,
+      "installed_bundle_version": "23",
+      "sdk": "iphonesimulator27.1",
+      "poses_verified": [
+        "closed",
+        "partially_open",
+        "open"
+      ]
+    },
+    "android": {
+      "device": "Xiaomi 17",
+      "mode": "release",
+      "installed": true,
+      "launched": true,
+      "installed_version": "1.2.2",
+      "installed_version_code": 23,
+      "data_preserved": true,
+      "release_apk": "build/tile_quest/topread-1.2.2+23-arm64.apk",
+      "release_sha256": "47662dcfd957cd0b6614fa01f71ad4f46958572f67d295241d121eadaf8efbfe",
+      "installed_apk": "build/tile_quest/topread-1.2.2+23-xiaomi-local.apk",
+      "installed_sha256": "bcb685fa1f90e91b696fbd44a37edacadddad6b9b5df655739094f5e84764151",
+      "installed_bytes_verified": true,
+      "signing_note": "The device had a debug-certificate installation. A release-mode APK copy was signed with the same existing local certificate to update without uninstalling or losing data; the distribution release APK retains the project release certificate."
+    }
+  },
+  "historical_v22": "tile_quest/evaluation_history/duo_v22_adaptation_results.json",
+  "performance_v23": {
+    "scenes": 24,
+    "frames": 4428,
+    "thread_samples_over_16_67ms": 0,
+    "all_actions_accepted": true,
+    "all_presentations_settled": true,
+    "normal_max_build_ms": 7.611,
+    "normal_max_raster_ms": 10.807,
+    "single_cpu_max_build_ms": 7.496,
+    "single_cpu_max_raster_ms": 8.15,
+    "scope": "Xiaomi 17 standalone game profile, difficulties 8/9/10, portrait/landscape, shuffle and 40ms rapid taps; system-reported 60/120Hz. This is not a guarantee of every 120Hz display deadline or performance on an untested Transsion device."
+  }
+}

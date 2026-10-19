@@ -113,7 +113,7 @@ Future<GlobalKey<_VisualHarnessState>> _mount(
           ResizeImage.resizeIfNeeded(
             192,
             null,
-            AssetImage('assets/img/game/tile_${quest_tile_assets[type]}.png'),
+            AssetImage(quest_tile_asset_path(type)),
           ),
           boundary.currentContext!,
         ),

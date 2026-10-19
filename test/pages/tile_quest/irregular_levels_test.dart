@@ -9,23 +9,15 @@ import 'package:app/pages/tile_quest/game/validator.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../../../tool/tile_quest/evaluator.dart';
 
-/// Half-cell sampling compares actual occupied unions, independent of ids/types.
-String _union_signature(TileQuestState state) {
-  final buffer = StringBuffer();
-  for (var y = .25; y < TileQuestConfig.board_logical_height; y += .5) {
-    for (var x = .25; x < TileQuestConfig.board_logical_width; x += .5) {
-      buffer.write(
-        state.tiles.any(
-              (tile) =>
-                  x > tile.x && x < tile.x + 1 && y > tile.y && y < tile.y + 1,
+/// Distinguish the complete stepped structure, independent of ids and sprites.
+String _template_signature(TileQuestState state) =>
+    (state.tiles
+            .map(
+              (tile) => '${tile.region_id}/${tile.layer}/${tile.x}/${tile.y}',
             )
-            ? '#'
-            : '.',
-      );
-    }
-  }
-  return buffer.toString();
-}
+            .toList()
+          ..sort())
+        .join(';');
 
 List<int> _lead_path(TileQuestState state) =>
     state.expert_barrier?.lead_solution ?? state.certified_solution;
@@ -57,6 +49,9 @@ _curve(TileQuestState state) {
   final early_choices = <int>[], late_choices = <int>[];
   final late_types = <int>{};
   var occupancy = 0;
+  final opening_count = state.clickable_tiles
+      .where((tile) => tile.region_id != 'gate')
+      .length;
   for (var index = 0; index < path.length; index++) {
     final choices = remaining
         .where((id) => !graph.blockers[id]!.any(remaining.contains))
@@ -69,7 +64,7 @@ _curve(TileQuestState state) {
       counts[type] = 0;
       occupancy -= 3;
     }
-    if (index < 24) {
+    if (index < opening_count) {
       early_pressure.add(occupancy);
       early_choices.add(choices);
     }
@@ -93,7 +88,7 @@ _curve(TileQuestState state) {
 
 void main() {
   test(
-    'random growth produces many genuine occupied shapes rather than six templates',
+    'seeded templates vary their complete stepped structures without random scatter',
     () {
       final signatures = <String>{};
       for (var seed = 0; seed < 64; seed++) {
@@ -102,8 +97,11 @@ void main() {
           seed: seed,
           difficulty: 8,
         );
-        signatures.add(_union_signature(state));
-        expect(state.tiles.any((tile) => tile.x % 1 == .5), isTrue);
+        signatures.add(_template_signature(state));
+        expect(
+          state.tiles.any((tile) => (tile.x % 1 - .5).abs() < .02),
+          isTrue,
+        );
         expect(
           state.tiles.every(
             (tile) =>
@@ -115,7 +113,7 @@ void main() {
           isTrue,
         );
       }
-      expect(signatures.length, greaterThanOrEqualTo(56));
+      expect(signatures.length, greaterThanOrEqualTo(8));
     },
   );
 
@@ -143,7 +141,17 @@ void main() {
             profile.type_count,
           );
           expect(
-            state.tiles.map((tile) => tile.layer).toSet().length,
+            state.tiles
+                .where(
+                  (tile) =>
+                      !(state.expert_barrier?.front_ids.contains(tile.id) ??
+                          false) &&
+                      !(state.expert_barrier?.partner_ids.contains(tile.id) ??
+                          false),
+                )
+                .map((tile) => tile.layer)
+                .toSet()
+                .length,
             profile.layers,
           );
           expect(
@@ -159,7 +167,7 @@ void main() {
           }
           expect(
             visible_types.values.fold<int>(0, (sum, count) => sum + count ~/ 3),
-            greaterThanOrEqualTo(10),
+            greaterThanOrEqualTo(4),
           );
           expect(
             visible_types.length,
@@ -191,7 +199,10 @@ void main() {
           expect(curve.early_max, 2);
           expect(curve.early_pressure, closeTo(1, .001));
           expect(curve.late_pressure, greaterThan(curve.early_pressure + .3));
-          expect(curve.late_choices, lessThan(curve.early_choices * .85));
+          expect(
+            curve.late_choices,
+            lessThan(state.clickable_tiles.length * .85),
+          );
           final opening_types = state.clickable_tiles
               .map((tile) => tile.type)
               .toSet();

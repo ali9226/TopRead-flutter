@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
@@ -98,28 +99,30 @@ class _CustomerServiceChatPageState extends State<CustomerServiceChatPage>
       backgroundColor: widget.is_dark
           ? CustomerServiceChatStyle.page_bg_color_dark
           : CustomerServiceChatStyle.page_bg_color_light,
-      appBar: AppBar(
-        toolbarHeight: CustomerServiceChatStyle.nav_bar_height,
-        backgroundColor: nav_bg,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        surfaceTintColor: Colors.transparent,
-        centerTitle: true,
-        leading: IconButton(
-          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          onPressed: () => Navigator.maybePop(context),
-          icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            size: 20,
-            color: title_color,
+      appBar: WindowAppBar(
+        child: AppBar(
+          toolbarHeight: CustomerServiceChatStyle.nav_bar_height,
+          backgroundColor: nav_bg,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+          centerTitle: true,
+          leading: IconButton(
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            onPressed: () => Navigator.maybePop(context),
+            icon: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 20,
+              color: title_color,
+            ),
           ),
-        ),
-        title: Text(
-          easy.tr('customer_service_sheet.title'),
-          style: TextStyle(
-            fontSize: title_font_size,
-            fontWeight: CustomerServiceChatStyle.nav_title_font_weight,
-            color: title_color,
+          title: Text(
+            easy.tr('customer_service_sheet.title'),
+            style: TextStyle(
+              fontSize: title_font_size,
+              fontWeight: CustomerServiceChatStyle.nav_title_font_weight,
+              color: title_color,
+            ),
           ),
         ),
       ),
@@ -129,8 +132,10 @@ class _CustomerServiceChatPageState extends State<CustomerServiceChatPage>
         child: Column(
           children: <Widget>[
             Expanded(
-              child: GetBuilder<CustomerServiceChatHistoryStore>(
-                builder: (_) => _build_message_list(),
+              child: WindowContentLayout(
+                child: GetBuilder<CustomerServiceChatHistoryStore>(
+                  builder: (_) => _build_message_list(),
+                ),
               ),
             ),
             Divider(

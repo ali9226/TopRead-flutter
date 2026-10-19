@@ -26,6 +26,9 @@ class WorkEditorStyle {
   /// TODO 内容最大宽度。
   static const double content_max_width = 720;
 
+  /// 独立章节正文的普通大屏可读宽度；局部边缘状态区窗口按可用宽度铺开。
+  static const double chapter_max_width = 800;
+
   /// TODO 页面水平留白。
   static const double page_padding = 12;
 

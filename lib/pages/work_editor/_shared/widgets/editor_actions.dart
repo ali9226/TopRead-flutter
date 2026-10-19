@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/work_editor/_shared/style.dart';
@@ -90,7 +91,7 @@ class EditorBottomBar extends StatelessWidget {
       ),
     );
     return Container(
-      constraints: const BoxConstraints(
+      constraints: BoxConstraints(
         minHeight: WorkEditorStyle.bottom_bar_min_height,
       ),
       padding: EdgeInsets.fromLTRB(
@@ -104,71 +105,77 @@ class EditorBottomBar extends StatelessWidget {
         color: AuthorStyle.surface(is_dark),
         border: Border(top: BorderSide(color: AuthorStyle.border(is_dark))),
       ),
-      child: Center(
-        heightFactor: 1,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: WorkEditorStyle.content_max_width,
-          ),
-          child: Row(
-            children: [
-              if (current_step == 0 && on_save_draft != null)
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: on_save_draft,
-                    style: outline_style,
-                    child: Text(
-                      tr('creator_center.save_draft'),
-                      style: TextStyle(
-                        fontSize: font_size,
-                        fontWeight: AuthorStyle.emphasis_weight,
-                      ),
-                    ),
-                  ),
-                )
-              else if (current_step > 0)
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: on_previous,
-                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                    label: Text(tr('creator_center.previous')),
-                    style: outline_style,
-                  ),
-                ),
-              if (show_secondary)
-                const SizedBox(width: WorkEditorStyle.action_spacing),
-              Expanded(
-                flex: 2,
-                child: FilledButton.icon(
-                  onPressed: on_primary,
-                  icon: Icon(
-                    primary_icon ??
-                        (is_last_step
-                            ? Icons.send_rounded
-                            : Icons.arrow_forward_rounded),
-                    size: 19,
-                  ),
-                  label: Text(primary_title),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(
-                      WorkEditorStyle.action_height,
-                    ),
-                    backgroundColor: AuthorStyle.gold,
-                    foregroundColor: WorkEditorStyle.action_foreground,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        WorkEditorStyle.action_radius,
-                      ),
-                    ),
-                    textStyle: TextStyle(
-                      fontSize: font_size,
-                      fontWeight: AuthorStyle.title_weight,
-                    ),
-                    iconAlignment: IconAlignment.end,
-                  ),
-                ),
+      child: WindowContentLayout(
+        expand_height: false,
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: WindowLayoutScope.resolve_max_width(
+                context,
+                WorkEditorStyle.content_max_width,
               ),
-            ],
+            ),
+            child: Row(
+              children: [
+                if (current_step == 0 && on_save_draft != null)
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: on_save_draft,
+                      style: outline_style,
+                      child: Text(
+                        tr('creator_center.save_draft'),
+                        style: TextStyle(
+                          fontSize: font_size,
+                          fontWeight: AuthorStyle.emphasis_weight,
+                        ),
+                      ),
+                    ),
+                  )
+                else if (current_step > 0)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: on_previous,
+                      icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                      label: Text(tr('creator_center.previous')),
+                      style: outline_style,
+                    ),
+                  ),
+                if (show_secondary)
+                  const SizedBox(width: WorkEditorStyle.action_spacing),
+                Expanded(
+                  flex: 2,
+                  child: FilledButton.icon(
+                    onPressed: on_primary,
+                    icon: Icon(
+                      primary_icon ??
+                          (is_last_step
+                              ? Icons.send_rounded
+                              : Icons.arrow_forward_rounded),
+                      size: 19,
+                    ),
+                    label: Text(primary_title),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(
+                        WorkEditorStyle.action_height,
+                      ),
+                      backgroundColor: AuthorStyle.gold,
+                      foregroundColor: WorkEditorStyle.action_foreground,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          WorkEditorStyle.action_radius,
+                        ),
+                      ),
+                      textStyle: TextStyle(
+                        fontSize: font_size,
+                        fontWeight: AuthorStyle.title_weight,
+                      ),
+                      iconAlignment: IconAlignment.end,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

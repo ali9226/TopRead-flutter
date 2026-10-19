@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/stores/device_info.dart';
@@ -98,7 +99,7 @@ class _FixedBottomNavigationState extends State<FixedBottomNavigation>
       final bool is_dark = device_info.theme.value == ThemeMode.dark;
       final EdgeInsets view_padding = MediaQuery.viewPaddingOf(context);
       final double bottom_inset = view_padding.bottom;
-      final double horizontal_inset = Style.horizontal_inset(view_padding);
+      final double horizontal_inset = Style.horizontal_inset(EdgeInsets.zero);
       final Color shadow_color = is_dark
           ? Style.dark_shadow_color()
           : Style.light_shadow_color();
@@ -141,71 +142,73 @@ class _FixedBottomNavigationState extends State<FixedBottomNavigation>
                     },
                   ),
                 ),
-                Padding(
-                  padding: EdgeInsets.only(
-                    left: horizontal_inset,
-                    right: horizontal_inset,
-                    bottom: bottom_inset,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: NavigationItem(
-                          tab_path: '/',
-                          icon_name: active_path == '/'
-                              ? 'home_selected'
-                              : 'home_selected_no',
-                          is_active: active_path == '/',
-                          is_dark: is_dark,
-                          on_tap_down: (details) =>
-                              _trigger_ripple(details.globalPosition),
-                          on_tap: () => logic.go_to('/'),
+                WindowContentLayout(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: horizontal_inset,
+                      right: horizontal_inset,
+                      bottom: bottom_inset,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: NavigationItem(
+                            tab_path: '/',
+                            icon_name: active_path == '/'
+                                ? 'home_selected'
+                                : 'home_selected_no',
+                            is_active: active_path == '/',
+                            is_dark: is_dark,
+                            on_tap_down: (details) =>
+                                _trigger_ripple(details.globalPosition),
+                            on_tap: () => logic.go_to('/'),
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: NavigationItem(
-                          tab_path: '/bookshelf',
-                          icon_name: active_path == '/bookshelf'
-                              ? 'bookshelf_selected'
-                              : 'bookshelf_selected_no',
-                          is_active: active_path == '/bookshelf',
-                          is_dark: is_dark,
-                          on_tap_down: (details) =>
-                              _trigger_ripple(details.globalPosition),
-                          on_tap: () => logic.go_to('/bookshelf'),
+                        Expanded(
+                          child: NavigationItem(
+                            tab_path: '/bookshelf',
+                            icon_name: active_path == '/bookshelf'
+                                ? 'bookshelf_selected'
+                                : 'bookshelf_selected_no',
+                            is_active: active_path == '/bookshelf',
+                            is_dark: is_dark,
+                            on_tap_down: (details) =>
+                                _trigger_ripple(details.globalPosition),
+                            on_tap: () => logic.go_to('/bookshelf'),
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: NavigationItem(
-                          tab_path: '/message',
-                          icon_name: active_path == '/message'
-                              ? 'message_selected'
-                              : 'message_selected_no',
-                          is_active: active_path == '/message',
-                          is_dark: is_dark,
-                          on_tap_down: (details) =>
-                              _trigger_ripple(details.globalPosition),
-                          on_tap: () => logic.go_to('/message'),
-                          // 未登录时不显示角标。
-                          badge_count: user_info.isLoggedIn.value
-                              ? message_store.unread_total.value
-                              : 0,
+                        Expanded(
+                          child: NavigationItem(
+                            tab_path: '/message',
+                            icon_name: active_path == '/message'
+                                ? 'message_selected'
+                                : 'message_selected_no',
+                            is_active: active_path == '/message',
+                            is_dark: is_dark,
+                            on_tap_down: (details) =>
+                                _trigger_ripple(details.globalPosition),
+                            on_tap: () => logic.go_to('/message'),
+                            // 未登录时不显示角标。
+                            badge_count: user_info.isLoggedIn.value
+                                ? message_store.unread_total.value
+                                : 0,
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: NavigationItem(
-                          tab_path: '/user_info',
-                          icon_name: active_path == '/user_info'
-                              ? 'user_selected'
-                              : 'user_selected_no',
-                          is_active: active_path == '/user_info',
-                          is_dark: is_dark,
-                          on_tap_down: (details) =>
-                              _trigger_ripple(details.globalPosition),
-                          on_tap: () => logic.go_to('/user_info'),
+                        Expanded(
+                          child: NavigationItem(
+                            tab_path: '/user_info',
+                            icon_name: active_path == '/user_info'
+                                ? 'user_selected'
+                                : 'user_selected_no',
+                            is_active: active_path == '/user_info',
+                            is_dark: is_dark,
+                            on_tap_down: (details) =>
+                                _trigger_ripple(details.globalPosition),
+                            on_tap: () => logic.go_to('/user_info'),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],

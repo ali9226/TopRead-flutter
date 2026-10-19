@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
@@ -174,9 +175,6 @@ class _UserInfoTopState extends State<UserInfoTop>
   Widget build(BuildContext context) {
     final mediaPadding = MediaQuery.of(context).padding;
     final double statusBarHeight = mediaPadding.top;
-    final double safeLeft = mediaPadding.left;
-    final double safeRight = mediaPadding.right;
-    final double safeHorizontal = mediaPadding.horizontal;
 
     return SizedBox(
       width: double.infinity,
@@ -188,9 +186,9 @@ class _UserInfoTopState extends State<UserInfoTop>
               Positioned(
                 top: 0,
                 bottom: 0,
-                left: -safeLeft,
+                left: 0,
                 child: SizedBox(
-                  width: constraints.maxWidth + safeLeft + safeRight,
+                  width: constraints.maxWidth,
                   child: Obx(() {
                     /// 读取当前主题，决定是否给背景图增加夜间遮罩。
                     final bool isDark = deviceInfo.dark.value;
@@ -216,9 +214,8 @@ class _UserInfoTopState extends State<UserInfoTop>
                             decoration: BoxDecoration(
                               color: Style.top_background_dark_overlay_color
                                   .withValues(
-                                    alpha:
-                                        Style
-                                            .top_background_dark_overlay_opacity,
+                                    alpha: Style
+                                        .top_background_dark_overlay_opacity,
                                   ),
                             ),
                           ),
@@ -230,287 +227,321 @@ class _UserInfoTopState extends State<UserInfoTop>
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SafeArea(
-                    top: false,
-                    left: true,
-                    right: true,
-                    bottom: false,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        top: statusBarHeight + 20,
-                        bottom: Style.bottomPadding,
-                      ),
-                      child: Obx(() {
-                        final isDark = deviceInfo.dark.value;
-                        final userInfo = userInformation.userInfo.value;
-                        final bool isLoggedIn =
-                            userInfo != null && userInfo.id != 0;
+                  WindowContentLayout(
+                    expand_height: false,
+                    child: SafeArea(
+                      top: false,
+                      left: true,
+                      right: true,
+                      bottom: false,
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          top: statusBarHeight + 20,
+                          bottom: Style.bottomPadding,
+                        ),
+                        child: Obx(() {
+                          final isDark = deviceInfo.dark.value;
+                          final userInfo = userInformation.userInfo.value;
+                          final bool isLoggedIn =
+                              userInfo != null && userInfo.id != 0;
 
-                        Widget avatarWidget;
+                          Widget avatarWidget;
 
-                        /// 已登录但无头像时，使用固定的随机头像索引。
-                        final String randomAvatarName =
-                            "avatar_${_randomAvatarIndex.toString().padLeft(2, '0')}";
+                          /// 已登录但无头像时，使用固定的随机头像索引。
+                          final String randomAvatarName =
+                              "avatar_${_randomAvatarIndex.toString().padLeft(2, '0')}";
 
-                        /// 未登录时显示的默认 logo 头像。
-                        final Widget defaultLogoWidget = Container(
-                          width: Style.avatarSize,
-                          height: Style.avatarSize,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isDark
-                                ? const Color(0xFF8DB7FF).withValues(alpha: 0.22)
-                                : Colors.white.withValues(alpha: 0.18),
-                            border: Border.all(
-                              color: isDark
-                                  ? const Color(0xFF8DB7FF).withValues(alpha: 0.16)
-                                  : Colors.white.withValues(alpha: 0.34),
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Padding(
-                            padding: const EdgeInsets.all(5),
-                            child: isDark
-                                ? Container(
-                                    width: Style.avatarSize,
-                                    height: Style.avatarSize,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: ColorConstants.nightBackgroundColor,
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: SvgIcon(
-                                      key: ValueKey("default_avatar_dark_theme"),
-                                      name: "logo",
-                                      width: Style.logoSize,
-                                      height: Style.logoSize,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Container(
-                                    width: Style.avatarSize,
-                                    height: Style.avatarSize,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white.withValues(alpha: 0.92),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: SvgIcon(
-                                      key: ValueKey("logo"),
-                                      name: "logo",
-                                      width: Style.logoSize,
-                                      height: Style.logoSize,
-                                    ),
-                                  ),
-                          ),
-                        );
-
-                        /// 已登录但无头像时显示的随机默认头像。
-                        final Widget defaultAvatarWidget = Container(
-                          width: Style.avatarSize,
-                          height: Style.avatarSize,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isDark
-                                ? const Color(0xFF8DB7FF).withValues(alpha: 0.22)
-                                : Colors.white.withValues(alpha: 0.18),
-                            border: Border.all(
-                              color: isDark
-                                  ? const Color(0xFF8DB7FF).withValues(alpha: 0.16)
-                                  : Colors.white.withValues(alpha: 0.34),
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: SvgIcon(
-                            key: ValueKey(randomAvatarName),
-                            name: randomAvatarName,
-                            width: Style.avatarSize - 10,
-                            height: Style.avatarSize - 10,
-                          ),
-                        );
-
-                        // TODO 上传中：显示本地图片 + 遮罩进度
-                        if (_localAvatarPath.isNotEmpty) {
-                          avatarWidget = Container(
-                            width: Style.avatarSize + 6,
-                            height: Style.avatarSize + 6,
+                          /// 未登录时显示的默认 logo 头像。
+                          final Widget defaultLogoWidget = Container(
+                            width: Style.avatarSize,
+                            height: Style.avatarSize,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
+                              color: isDark
+                                  ? const Color(
+                                      0xFF8DB7FF,
+                                    ).withValues(alpha: 0.22)
+                                  : Colors.white.withValues(alpha: 0.18),
                               border: Border.all(
                                 color: isDark
-                                    ? const Color(0xFF8DB7FF).withValues(alpha: 0.25)
-                                    : Colors.white.withValues(alpha: 0.45),
-                                width: 2,
+                                    ? const Color(
+                                        0xFF8DB7FF,
+                                      ).withValues(alpha: 0.16)
+                                    : Colors.white.withValues(alpha: 0.34),
                               ),
                             ),
-                            child: ClipOval(
-                              child: Stack(
-                                children: <Widget>[
-                                  Image.file(
-                                    File(_localAvatarPath),
-                                    width: Style.avatarSize + 6,
-                                    height: Style.avatarSize + 6,
-                                    fit: BoxFit.cover,
-                                  ),
-                                  if (_isAvatarUploading)
-                                    Positioned.fill(
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.black.withOpacity(0.4),
+                            alignment: Alignment.center,
+                            child: Padding(
+                              padding: const EdgeInsets.all(5),
+                              child: isDark
+                                  ? Container(
+                                      width: Style.avatarSize,
+                                      height: Style.avatarSize,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color:
+                                            ColorConstants.nightBackgroundColor,
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: SvgIcon(
+                                        key: ValueKey(
+                                          "default_avatar_dark_theme",
                                         ),
-                                        child: Center(
-                                          child: SizedBox(
-                                            width: 28,
-                                            height: 28,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 3,
-                                              color: Colors.white,
-                                              backgroundColor: Colors.white.withOpacity(0.3),
+                                        name: "logo",
+                                        width: Style.logoSize,
+                                        height: Style.logoSize,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Container(
+                                      width: Style.avatarSize,
+                                      height: Style.avatarSize,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.white.withValues(
+                                          alpha: 0.92,
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: SvgIcon(
+                                        key: ValueKey("logo"),
+                                        name: "logo",
+                                        width: Style.logoSize,
+                                        height: Style.logoSize,
+                                      ),
+                                    ),
+                            ),
+                          );
+
+                          /// 已登录但无头像时显示的随机默认头像。
+                          final Widget defaultAvatarWidget = Container(
+                            width: Style.avatarSize,
+                            height: Style.avatarSize,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isDark
+                                  ? const Color(
+                                      0xFF8DB7FF,
+                                    ).withValues(alpha: 0.22)
+                                  : Colors.white.withValues(alpha: 0.18),
+                              border: Border.all(
+                                color: isDark
+                                    ? const Color(
+                                        0xFF8DB7FF,
+                                      ).withValues(alpha: 0.16)
+                                    : Colors.white.withValues(alpha: 0.34),
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: SvgIcon(
+                              key: ValueKey(randomAvatarName),
+                              name: randomAvatarName,
+                              width: Style.avatarSize - 10,
+                              height: Style.avatarSize - 10,
+                            ),
+                          );
+
+                          // TODO 上传中：显示本地图片 + 遮罩进度
+                          if (_localAvatarPath.isNotEmpty) {
+                            avatarWidget = Container(
+                              width: Style.avatarSize + 6,
+                              height: Style.avatarSize + 6,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isDark
+                                      ? const Color(
+                                          0xFF8DB7FF,
+                                        ).withValues(alpha: 0.25)
+                                      : Colors.white.withValues(alpha: 0.45),
+                                  width: 2,
+                                ),
+                              ),
+                              child: ClipOval(
+                                child: Stack(
+                                  children: <Widget>[
+                                    Image.file(
+                                      File(_localAvatarPath),
+                                      width: Style.avatarSize + 6,
+                                      height: Style.avatarSize + 6,
+                                      fit: BoxFit.cover,
+                                    ),
+                                    if (_isAvatarUploading)
+                                      Positioned.fill(
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: Colors.black.withOpacity(
+                                              0.4,
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: SizedBox(
+                                              width: 28,
+                                              height: 28,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 3,
+                                                color: Colors.white,
+                                                backgroundColor: Colors.white
+                                                    .withOpacity(0.3),
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        } else if (userInfo != null && userInfo.avatarUrl.isNotEmpty) {
-                          avatarWidget = Container(
-                            width: Style.avatarSize + 6,
-                            height: Style.avatarSize + 6,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isDark
-                                  ? const Color(0xFF8DB7FF).withValues(alpha: 0.22)
-                                  : Colors.white.withValues(alpha: 0.18),
-                              border: Border.all(
+                            );
+                          } else if (userInfo != null &&
+                              userInfo.avatarUrl.isNotEmpty) {
+                            avatarWidget = Container(
+                              width: Style.avatarSize + 6,
+                              height: Style.avatarSize + 6,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
                                 color: isDark
-                                    ? const Color(0xFF8DB7FF).withValues(alpha: 0.25)
-                                    : Colors.white.withValues(alpha: 0.45),
-                                width: 2,
+                                    ? const Color(
+                                        0xFF8DB7FF,
+                                      ).withValues(alpha: 0.22)
+                                    : Colors.white.withValues(alpha: 0.18),
+                                border: Border.all(
+                                  color: isDark
+                                      ? const Color(
+                                          0xFF8DB7FF,
+                                        ).withValues(alpha: 0.25)
+                                      : Colors.white.withValues(alpha: 0.45),
+                                  width: 2,
+                                ),
                               ),
-                            ),
-                            alignment: Alignment.center,
-                            child: ClipOval(
+                              alignment: Alignment.center,
+                              child: ClipOval(
                                 child: CachedNetworkImage(
-                                imageUrl: userInfo.avatarUrl,
-                                width: Style.avatarSize - 4,
-                                height: Style.avatarSize - 4,
-                                fit: BoxFit.cover,
-                                fadeInDuration: const Duration(milliseconds: 180),
-                                fadeOutDuration: const Duration(milliseconds: 120),
-                                memCacheWidth: ((Style.avatarSize - 4) * MediaQuery.of(context).devicePixelRatio).toInt(),
-                                placeholder: (context, url) => const SizedBox.shrink(),
-                                errorWidget: (context, url, error) {
-                                  return isLoggedIn
-                                      ? defaultAvatarWidget
-                                      : defaultLogoWidget;
-                                },
+                                  imageUrl: userInfo.avatarUrl,
+                                  width: Style.avatarSize - 4,
+                                  height: Style.avatarSize - 4,
+                                  fit: BoxFit.cover,
+                                  fadeInDuration: const Duration(
+                                    milliseconds: 180,
+                                  ),
+                                  fadeOutDuration: const Duration(
+                                    milliseconds: 120,
+                                  ),
+                                  memCacheWidth:
+                                      ((Style.avatarSize - 4) *
+                                              MediaQuery.of(
+                                                context,
+                                              ).devicePixelRatio)
+                                          .toInt(),
+                                  placeholder: (context, url) =>
+                                      const SizedBox.shrink(),
+                                  errorWidget: (context, url, error) {
+                                    return isLoggedIn
+                                        ? defaultAvatarWidget
+                                        : defaultLogoWidget;
+                                  },
+                                ),
                               ),
-                            ),
-                          );
-                        } else if (isLoggedIn) {
-                          /// 已登录但无头像，显示随机默认头像。
-                          avatarWidget = defaultAvatarWidget;
-                        } else {
-                          /// 未登录，显示 logo。
-                          avatarWidget = defaultLogoWidget;
-                        }
+                            );
+                          } else if (isLoggedIn) {
+                            /// 已登录但无头像，显示随机默认头像。
+                            avatarWidget = defaultAvatarWidget;
+                          } else {
+                            /// 未登录，显示 logo。
+                            avatarWidget = defaultLogoWidget;
+                          }
 
-                        return Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            GestureDetector(
-                              onTap: () async {
-                                if (!userInformation.isLoggedIn.value) {
-                                  routerUtil(path: '/login');
-                                  return;
-                                }
-                                final ImagePicker picker = ImagePicker();
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GestureDetector(
+                                onTap: () async {
+                                  if (!userInformation.isLoggedIn.value) {
+                                    routerUtil(path: '/login');
+                                    return;
+                                  }
+                                  final ImagePicker picker = ImagePicker();
 
-                                // TODO 弹出图片来源选择弹窗（公共组件）
-                                showImageSourceSheet(
-                                  context: context,
-                                  on_gallery: () => _pickAvatarImage(
-                                    bottomSheetContext: context,
-                                    picker: picker,
-                                    source: ImageSource.gallery,
-                                  ),
-                                  on_camera: () => _pickAvatarImage(
-                                    bottomSheetContext: context,
-                                    picker: picker,
-                                    source: ImageSource.camera,
-                                  ),
-                                );
-                              },
-                              child: AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 200),
-                                switchInCurve: Curves.easeOutCubic,
-                                switchOutCurve: Curves.easeInCubic,
-                                transitionBuilder: (child, animation) {
-                                  return FadeTransition(
-                                    opacity: animation,
-                                    child: ScaleTransition(
-                                      scale: Tween<double>(
-                                        begin: 0.98,
-                                        end: 1,
-                                      ).animate(animation),
-                                      child: child,
+                                  // TODO 弹出图片来源选择弹窗（公共组件）
+                                  showImageSourceSheet(
+                                    context: context,
+                                    on_gallery: () => _pickAvatarImage(
+                                      bottomSheetContext: context,
+                                      picker: picker,
+                                      source: ImageSource.gallery,
+                                    ),
+                                    on_camera: () => _pickAvatarImage(
+                                      bottomSheetContext: context,
+                                      picker: picker,
+                                      source: ImageSource.camera,
                                     ),
                                   );
                                 },
-                                child: KeyedSubtree(
-                                  key: ValueKey<String>(
-                                    userInfo?.avatarUrl.isNotEmpty == true
-                                        ? userInfo!.avatarUrl
-                                        : 'logo',
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  switchInCurve: Curves.easeOutCubic,
+                                  switchOutCurve: Curves.easeInCubic,
+                                  transitionBuilder: (child, animation) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: ScaleTransition(
+                                        scale: Tween<double>(
+                                          begin: 0.98,
+                                          end: 1,
+                                        ).animate(animation),
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: KeyedSubtree(
+                                    key: ValueKey<String>(
+                                      userInfo?.avatarUrl.isNotEmpty == true
+                                          ? userInfo!.avatarUrl
+                                          : 'logo',
+                                    ),
+                                    child: avatarWidget,
                                   ),
-                                  child: avatarWidget,
                                 ),
                               ),
-                            ),
-                            SizedBox(
-                              height: isLoggedIn
-                                  ? Style.nicknameSpacingFromAvatar
-                                  : Style.loginButtonSpacingFromAvatar,
-                            ),
-                            AnimatedOpacity(
-                              duration: const Duration(milliseconds: 220),
-                              curve: Curves.easeOutCubic,
-                              opacity: _profileVisible ? 1 : 0,
-                              child: isLoggedIn
-                                  ? TopUserInfo(
-                                      balanceTrailing: _buildLuckyBagEntry(),
-                                    )
-                                  : Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const LoginRegisterButton(),
-                                        const SizedBox(
-                                          height: Style
-                                              .guestLuckyBagSpacingFromLoginButton,
-                                        ),
-                                        Row(
-                                          children: [
-                                            const Spacer(),
-                                            Padding(
-                                              padding: EdgeInsets.only(
-                                                right:
-                                                    safeHorizontal / 2 +
-                                                    Style.luckyBagRight,
+                              SizedBox(
+                                height: isLoggedIn
+                                    ? Style.nicknameSpacingFromAvatar
+                                    : Style.loginButtonSpacingFromAvatar,
+                              ),
+                              AnimatedOpacity(
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeOutCubic,
+                                opacity: _profileVisible ? 1 : 0,
+                                child: isLoggedIn
+                                    ? TopUserInfo(
+                                        balanceTrailing: _buildLuckyBagEntry(),
+                                      )
+                                    : Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const LoginRegisterButton(),
+                                          const SizedBox(
+                                            height: Style
+                                                .guestLuckyBagSpacingFromLoginButton,
+                                          ),
+                                          Row(
+                                            children: [
+                                              const Spacer(),
+                                              Padding(
+                                                padding: EdgeInsets.only(
+                                                  right: Style.luckyBagRight,
+                                                ),
+                                                child: _buildLuckyBagEntry(),
                                               ),
-                                              child: _buildLuckyBagEntry(),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ],
-                        );
-                      }),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ],
+                          );
+                        }),
+                      ),
                     ),
                   ),
                 ],
@@ -552,4 +583,3 @@ class _UserInfoTopState extends State<UserInfoTop>
     );
   }
 }
-

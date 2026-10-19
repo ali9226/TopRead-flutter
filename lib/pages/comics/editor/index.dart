@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/components/image_source_sheet/index.dart';
@@ -155,8 +156,10 @@ class _ComicEditorPageState extends State<ComicEditorPage> {
   Future<void> _pick_chapter_images(int chapter_index) async {
     await showImageSourceSheet(
       context: context,
-      on_gallery: () => _upload_chapter_images(chapter_index, ImageSource.gallery),
-      on_camera: () => _upload_chapter_images(chapter_index, ImageSource.camera),
+      on_gallery: () =>
+          _upload_chapter_images(chapter_index, ImageSource.gallery),
+      on_camera: () =>
+          _upload_chapter_images(chapter_index, ImageSource.camera),
     );
   }
 
@@ -243,6 +246,7 @@ class _ComicEditorPageState extends State<ComicEditorPage> {
   @override
   Widget build(BuildContext context) {
     final bool is_cjk = ComicsStyle.is_cjk(context);
+
     /// 审核中锁定编辑，避免后端 lock_work 直接报错。
     final bool enabled = !_logic.data.is_locked && !_logic.busy;
 
@@ -253,28 +257,30 @@ class _ComicEditorPageState extends State<ComicEditorPage> {
       },
       child: Scaffold(
         backgroundColor: ComicsStyle.background(context),
-        appBar: AppBar(
-          backgroundColor: ComicsStyle.background(context),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: _on_back,
+        appBar: WindowAppBar(
+          child: AppBar(
+            backgroundColor: ComicsStyle.background(context),
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: _on_back,
+            ),
+            title: Text(
+              _logic.data.is_new
+                  ? tr('comics.new_comic')
+                  : tr('comics.edit_comic'),
+              style: ComicsStyle.heading(context),
+            ),
+            actions: <Widget>[
+              /// 分享入口（已创建后可分享详情链接）。
+              if (!_logic.data.is_new)
+                IconButton(
+                  tooltip: tr('comics.share'),
+                  icon: const Icon(Icons.ios_share_rounded),
+                  onPressed: () => _share(),
+                ),
+            ],
           ),
-          title: Text(
-            _logic.data.is_new
-                ? tr('comics.new_comic')
-                : tr('comics.edit_comic'),
-            style: ComicsStyle.heading(context),
-          ),
-          actions: <Widget>[
-            /// 分享入口（已创建后可分享详情链接）。
-            if (!_logic.data.is_new)
-              IconButton(
-                tooltip: tr('comics.share'),
-                icon: const Icon(Icons.ios_share_rounded),
-                onPressed: () => _share(),
-              ),
-          ],
         ),
         bottomNavigationBar: ComicEditorActionBar(
           logic: _logic,
@@ -283,76 +289,78 @@ class _ComicEditorPageState extends State<ComicEditorPage> {
           on_submit: _on_submit,
           on_hide: _logic.data.is_new ? null : _on_hide,
         ),
-        body: AnimatedBuilder(
-          animation: _logic,
-          builder: (BuildContext context, Widget? child) {
-            if (_logic.loading) {
-              return Center(
-                child: ComicsEmptyState(
-                  loading: true,
-                  message: tr('comics.loading'),
+        body: WindowContentLayout(
+          child: AnimatedBuilder(
+            animation: _logic,
+            builder: (BuildContext context, Widget? child) {
+              if (_logic.loading) {
+                return Center(
+                  child: ComicsEmptyState(
+                    loading: true,
+                    message: tr('comics.loading'),
+                  ),
+                );
+              }
+              if (_logic.error != null && _logic.data.is_new) {
+                return Center(
+                  child: ComicsEmptyState(
+                    error: _logic.error,
+                    message: tr('comics.unavailable'),
+                    on_retry: _logic.load,
+                  ),
+                );
+              }
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  ComicEditorStyle.page_padding,
+                  ComicEditorStyle.section_spacing,
+                  ComicEditorStyle.page_padding,
+                  ComicEditorStyle.section_spacing,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    /// 本地草稿恢复横幅。
+                    if (_logic.restored_draft)
+                      _DraftBanner(on_discard: _discard_draft),
+
+                    /// 审核锁定提示。
+                    if (_logic.data.is_locked)
+                      _LockedBanner(status: _logic.data.status),
+
+                    /// 基本信息卡片。
+                    _SectionCard(
+                      child: BasicInfoForm(
+                        logic: _logic,
+                        enabled: enabled,
+                        on_pick_cover: _pick_cover,
+                      ),
+                    ),
+
+                    /// 语种 + 章节卡片。
+                    const SizedBox(height: ComicEditorStyle.section_spacing),
+                    _SectionCard(
+                      child: LanguageSection(
+                        logic: _logic,
+                        enabled: enabled,
+                        on_add_images: _pick_chapter_images,
+                        on_remove_chapter: _remove_chapter,
+                        on_remove_language: _remove_language,
+                        on_pick_language_cover: _pick_cover,
+                      ),
+                    ),
+
+                    /// 底部安全区留白。
+                    const SizedBox(height: ComicEditorStyle.section_spacing),
+                    if (is_cjk)
+                      const SizedBox(height: 4)
+                    else
+                      const SizedBox(height: 8),
+                  ],
                 ),
               );
-            }
-            if (_logic.error != null && _logic.data.is_new) {
-              return Center(
-                child: ComicsEmptyState(
-                  error: _logic.error,
-                  message: tr('comics.unavailable'),
-                  on_retry: _logic.load,
-                ),
-              );
-            }
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
-                ComicEditorStyle.page_padding,
-                ComicEditorStyle.section_spacing,
-                ComicEditorStyle.page_padding,
-                ComicEditorStyle.section_spacing,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  /// 本地草稿恢复横幅。
-                  if (_logic.restored_draft)
-                    _DraftBanner(on_discard: _discard_draft),
-
-                  /// 审核锁定提示。
-                  if (_logic.data.is_locked)
-                    _LockedBanner(status: _logic.data.status),
-
-                  /// 基本信息卡片。
-                  _SectionCard(
-                    child: BasicInfoForm(
-                      logic: _logic,
-                      enabled: enabled,
-                      on_pick_cover: _pick_cover,
-                    ),
-                  ),
-
-                  /// 语种 + 章节卡片。
-                  const SizedBox(height: ComicEditorStyle.section_spacing),
-                  _SectionCard(
-                    child: LanguageSection(
-                      logic: _logic,
-                      enabled: enabled,
-                      on_add_images: _pick_chapter_images,
-                      on_remove_chapter: _remove_chapter,
-                      on_remove_language: _remove_language,
-                      on_pick_language_cover: _pick_cover,
-                    ),
-                  ),
-
-                  /// 底部安全区留白。
-                  const SizedBox(height: ComicEditorStyle.section_spacing),
-                  if (is_cjk)
-                    const SizedBox(height: 4)
-                  else
-                    const SizedBox(height: 8),
-                ],
-              ),
-            );
-          },
+            },
+          ),
         ),
       ),
     );
@@ -450,9 +458,9 @@ class _LockedBanner extends StatelessWidget {
       ),
       padding: ComicEditorStyle.banner_padding,
       decoration: BoxDecoration(
-        color: ColorConstants.resolveTagColor(status.length).withValues(
-          alpha: 0.14,
-        ),
+        color: ColorConstants.resolveTagColor(
+          status.length,
+        ).withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(ComicEditorStyle.banner_radius),
       ),
       child: Row(

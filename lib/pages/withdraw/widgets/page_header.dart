@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/components/language_selection/index.dart';
@@ -46,9 +47,12 @@ class WithdrawPageHeader extends StatelessWidget {
             ],
           ),
         ),
-        child: LanguageSelection(
-          darkBackground: isDark,
-          title: easy.tr('withdraw_page.title'),
+        child: WindowContentLayout(
+          expand_height: false,
+          child: LanguageSelection(
+            darkBackground: isDark,
+            title: easy.tr('withdraw_page.title'),
+          ),
         ),
       ),
     );

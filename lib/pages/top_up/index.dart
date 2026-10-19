@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -315,93 +316,99 @@ class _TopUpState extends State<TopUp> {
               ),
               // 主内容滚动层。
               // 这里承载骨架屏、Hero 卡片、类型选择、金额选择以及非横屏时底部预留空间。
-              ListView(
-                padding: EdgeInsets.fromLTRB(
-                  Style.pageHorizontalPadding + safePadding.left,
-                  contentTopPadding,
-                  Style.pageHorizontalPadding + safePadding.right,
-                  Style.pageBottomPadding +
-                      (isPortrait ? Style.bottomActionReserveHeight : 0) +
-                      safePadding.bottom,
-                ),
-                children: <Widget>[
-                  // 内容区根据是否首次加载在“骨架屏”和“真实内容”之间切换。
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 240),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    transitionBuilder:
-                        (Widget child, Animation<double> animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: child,
-                          );
-                        },
-                    child: isInitialLoading
-                        ? TopUpLoadingSkeleton(isDark: isDark)
-                        : AnimatedOpacity(
-                            key: const ValueKey<String>('top_up_content'),
-                            duration: const Duration(milliseconds: 220),
-                            curve: Curves.easeOutCubic,
-                            opacity: 1,
-                            child: Column(
-                              children: <Widget>[
-                                TopUpHeroCard(
-                                  isDark: isDark,
-                                  onTapRecords: () {
-                                    routerUtil(path: '/top_up_record');
-                                  },
-                                ),
-                                const SizedBox(height: Style.heroBottomSpacing),
-                                TopUpTypeSection(
-                                  isDark: isDark,
-                                  selectedType: selectedType,
-                                  // 当前没有默认支付方式时，显示提示文案而不是空白。
-                                  selectedTitleText: selectedType == null
-                                      ? easy.tr('top_up_page.type_hint')
-                                      : getTopUpTypeDisplayText(selectedType!),
-                                  onTap: () => showTypePicker(dataList),
-                                ),
-                                const SizedBox(height: Style.sectionSpacing),
-                                TopUpAmountSection(
-                                  isDark: isDark,
-                                  amountList: amountList,
-                                  selectedAmount: selectedAmount,
-                                  amountTextBuilder: formatTopUpAmountText,
-                                  onTapAmount: (double amount) {
-                                    setState(() {
-                                      // 点击金额卡片后，立即更新当前金额选择。
-                                      selectedAmount = amount;
-                                    });
-                                  },
-                                ),
-                                if (!isPortrait) ...<Widget>[
-                                  const SizedBox(
-                                    height: Style.bottomActionTopSpacing,
-                                  ),
-                                  TopUpBottomActionBar(
+              WindowContentLayout(
+                child: ListView(
+                  padding: EdgeInsets.fromLTRB(
+                    Style.pageHorizontalPadding,
+                    contentTopPadding,
+                    Style.pageHorizontalPadding,
+                    Style.pageBottomPadding +
+                        (isPortrait ? Style.bottomActionReserveHeight : 0) +
+                        safePadding.bottom,
+                  ),
+                  children: <Widget>[
+                    // 内容区根据是否首次加载在“骨架屏”和“真实内容”之间切换。
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 240),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder:
+                          (Widget child, Animation<double> animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            );
+                          },
+                      child: isInitialLoading
+                          ? TopUpLoadingSkeleton(isDark: isDark)
+                          : AnimatedOpacity(
+                              key: const ValueKey<String>('top_up_content'),
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                              opacity: 1,
+                              child: Column(
+                                children: <Widget>[
+                                  TopUpHeroCard(
                                     isDark: isDark,
-                                    floating: false,
-                                    typeValue: selectedType == null
-                                        ? '--'
+                                    onTapRecords: () {
+                                      routerUtil(path: '/top_up_record');
+                                    },
+                                  ),
+                                  const SizedBox(
+                                    height: Style.heroBottomSpacing,
+                                  ),
+                                  TopUpTypeSection(
+                                    isDark: isDark,
+                                    selectedType: selectedType,
+                                    // 当前没有默认支付方式时，显示提示文案而不是空白。
+                                    selectedTitleText: selectedType == null
+                                        ? easy.tr('top_up_page.type_hint')
                                         : getTopUpTypeDisplayText(
                                             selectedType!,
                                           ),
-                                    amountValue: selectedAmount == null
-                                        ? '--'
-                                        : formatTopUpAmountText(
-                                            selectedAmount!,
-                                          ),
-                                    enabled: canSubmit,
-                                    loading: loading,
-                                    onSubmit: submitRecharge,
+                                    onTap: () => showTypePicker(dataList),
                                   ),
+                                  const SizedBox(height: Style.sectionSpacing),
+                                  TopUpAmountSection(
+                                    isDark: isDark,
+                                    amountList: amountList,
+                                    selectedAmount: selectedAmount,
+                                    amountTextBuilder: formatTopUpAmountText,
+                                    onTapAmount: (double amount) {
+                                      setState(() {
+                                        // 点击金额卡片后，立即更新当前金额选择。
+                                        selectedAmount = amount;
+                                      });
+                                    },
+                                  ),
+                                  if (!isPortrait) ...<Widget>[
+                                    const SizedBox(
+                                      height: Style.bottomActionTopSpacing,
+                                    ),
+                                    TopUpBottomActionBar(
+                                      isDark: isDark,
+                                      floating: false,
+                                      typeValue: selectedType == null
+                                          ? '--'
+                                          : getTopUpTypeDisplayText(
+                                              selectedType!,
+                                            ),
+                                      amountValue: selectedAmount == null
+                                          ? '--'
+                                          : formatTopUpAmountText(
+                                              selectedAmount!,
+                                            ),
+                                      enabled: canSubmit,
+                                      loading: loading,
+                                      onSubmit: submitRecharge,
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
               // 顶部固定标题层。
               // 用一层从实到虚的渐变把 LanguageSelection 和滚动内容柔和衔接起来。
@@ -423,9 +430,12 @@ class _TopUpState extends State<TopUp> {
                         ],
                       ),
                     ),
-                    child: LanguageSelection(
-                      darkBackground: isDark,
-                      title: easy.tr('top_up_page.title'),
+                    child: WindowContentLayout(
+                      expand_height: false,
+                      child: LanguageSelection(
+                        darkBackground: isDark,
+                        title: easy.tr('top_up_page.title'),
+                      ),
                     ),
                   ),
                 ),
@@ -459,21 +469,29 @@ class _TopUpState extends State<TopUp> {
               // 横屏下改为插入内容流中，竖屏下则单独悬浮，保证按钮始终易触达。
               if (isPortrait && !isInitialLoading)
                 Positioned(
-                  left: Style.bottomActionHorizontal + safePadding.left,
-                  right: Style.bottomActionHorizontal + safePadding.right,
+                  left: 0,
+                  right: 0,
                   bottom: Style.bottomActionBottom + safePadding.bottom,
-                  child: TopUpBottomActionBar(
-                    isDark: isDark,
-                    floating: true,
-                    typeValue: selectedType == null
-                        ? '--'
-                        : getTopUpTypeDisplayText(selectedType!),
-                    amountValue: selectedAmount == null
-                        ? '--'
-                        : formatTopUpAmountText(selectedAmount!),
-                    enabled: canSubmit,
-                    loading: loading,
-                    onSubmit: submitRecharge,
+                  child: WindowContentLayout(
+                    expand_height: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Style.bottomActionHorizontal,
+                      ),
+                      child: TopUpBottomActionBar(
+                        isDark: isDark,
+                        floating: true,
+                        typeValue: selectedType == null
+                            ? '--'
+                            : getTopUpTypeDisplayText(selectedType!),
+                        amountValue: selectedAmount == null
+                            ? '--'
+                            : formatTopUpAmountText(selectedAmount!),
+                        enabled: canSubmit,
+                        loading: loading,
+                        onSubmit: submitRecharge,
+                      ),
+                    ),
                   ),
                 ),
             ],

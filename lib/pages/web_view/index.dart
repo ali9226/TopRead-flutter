@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:webview_flutter/webview_flutter.dart';
@@ -11,7 +12,7 @@ import 'package:app/config/font_config.dart';
 
 /// WebView 全屏页面组件。
 ///
-/// 用于展示外部网址，页面严格遵守 SafeArea 限制，
+/// 用于展示外部网址，网页画布铺满窗口，关闭控件独立避让系统安全区，
 /// 顶部不超出状态栏。左上角有关闭按钮，可以返回上一页。
 /// 页面包含加载中、加载进度条、加载失败等状态展示，
 /// 并适配日间和夜间主题。
@@ -26,10 +27,7 @@ class WebViewPage extends StatefulWidget {
   ///
   /// 参数 [url]:
   /// 要加载的网址。
-  const WebViewPage({
-    super.key,
-    required this.url,
-  });
+  const WebViewPage({super.key, required this.url});
 
   @override
   State<WebViewPage> createState() => _WebViewPageState();
@@ -111,30 +109,31 @@ class _WebViewPageState extends State<WebViewPage> {
     final bool is_dark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      body: SafeArea(
-        top: true,
-        bottom: false,
-        child: Stack(
-          children: <Widget>[
-            /// WebView 内容区域。
-            WebViewWidget(controller: _controller),
+      backgroundColor: is_dark
+          ? Style.loading_overlay_dark_color
+          : Style.loading_overlay_light_color,
+      body: Stack(
+        children: <Widget>[
+          /// WebView 内容区域。
+          Positioned.fill(child: WebViewWidget(controller: _controller)),
 
-            /// 加载进度条，仅在加载进行中且未完成时显示。
-            if (_is_loading && _loading_progress > 0 && _loading_progress < 1)
-              _build_progress_bar(),
+          /// 加载进度条，仅在加载进行中且未完成时显示。
+          if (_is_loading && _loading_progress > 0 && _loading_progress < 1)
+            _build_progress_bar(),
 
-            /// 加载中遮罩层，包含转圈图标和“正在加载中”文案。
-            if (_is_loading)
-              _build_loading_overlay(is_dark: is_dark),
+          /// 加载中遮罩层，包含转圈图标和“正在加载中”文案。
+          if (_is_loading) _build_loading_overlay(is_dark: is_dark),
 
-            /// 加载失败提示层，包含错误图标、提示文字和重试按钮。
-            if (_has_error)
-              _build_error_overlay(is_dark: is_dark),
+          /// 加载失败提示层，包含错误图标、提示文字和重试按钮。
+          if (_has_error) _build_error_overlay(is_dark: is_dark),
 
-            /// 左上角关闭按钮。
-            _build_close_button(is_dark: is_dark),
-          ],
-        ),
+          /// 左上角关闭按钮。
+          WindowContentLayout(
+            child: SafeArea(
+              child: Stack(children: [_build_close_button(is_dark: is_dark)]),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -151,9 +150,7 @@ class _WebViewPageState extends State<WebViewPage> {
         value: _loading_progress,
         minHeight: Style.progress_bar_height,
         backgroundColor: Colors.transparent,
-        valueColor: AlwaysStoppedAnimation<Color>(
-          ColorConstants.themeColor,
-        ),
+        valueColor: AlwaysStoppedAnimation<Color>(ColorConstants.themeColor),
       ),
     );
   }
@@ -184,6 +181,7 @@ class _WebViewPageState extends State<WebViewPage> {
                 ),
               ),
               const SizedBox(height: Style.loading_text_spacing),
+
               /// 加载中提示文字，使用多语种。
               Text(
                 easy.tr('web_view.loading_text'),
@@ -227,6 +225,7 @@ class _WebViewPageState extends State<WebViewPage> {
                     : Style.error_icon_light_color,
               ),
               const SizedBox(height: Style.error_title_spacing),
+
               /// 错误标题，使用多语种。
               Text(
                 easy.tr('web_view.error_title'),
@@ -239,6 +238,7 @@ class _WebViewPageState extends State<WebViewPage> {
                 ),
               ),
               const SizedBox(height: Style.error_description_spacing),
+
               /// 错误描述，使用多语种。
               Text(
                 easy.tr('web_view.error_description'),
@@ -250,6 +250,7 @@ class _WebViewPageState extends State<WebViewPage> {
                 ),
               ),
               const SizedBox(height: Style.retry_button_spacing),
+
               /// 重试按钮，点击后重新加载网址。
               ElevatedButton.icon(
                 onPressed: _on_retry_tap,
@@ -282,7 +283,9 @@ class _WebViewPageState extends State<WebViewPage> {
       top: Style.close_button_top_margin,
       left: Style.close_button_left_margin,
       child: Material(
-        color: Colors.black.withValues(alpha: Style.close_button_background_alpha),
+        color: Colors.black.withValues(
+          alpha: Style.close_button_background_alpha,
+        ),
         borderRadius: BorderRadius.circular(Style.close_button_radius),
         child: InkWell(
           onTap: _on_close_tap,

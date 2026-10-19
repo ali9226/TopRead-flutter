@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import '../style.dart';
 
@@ -30,42 +31,44 @@ class EmojiPanel extends StatelessWidget {
     return RepaintBoundary(
       child: Material(
         color: panel_color,
-        child: GridView.builder(
-          primary: false,
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
-          physics: const BouncingScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            CustomerServiceChatStyle.emoji_panel_padding_h,
-            CustomerServiceChatStyle.emoji_panel_padding_top,
-            CustomerServiceChatStyle.emoji_panel_padding_h,
-            bottom_safe + CustomerServiceChatStyle.emoji_panel_padding_top,
-          ),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: CustomerServiceChatStyle.emoji_columns,
-            mainAxisExtent: CustomerServiceChatStyle.emoji_item_size,
-          ),
-          itemCount: CustomerServiceChatStyle.emoji_list.length,
-          itemBuilder: (BuildContext context, int index) {
-            final String emoji = CustomerServiceChatStyle.emoji_list[index];
-            return Semantics(
-              button: true,
-              label: emoji,
-              child: InkResponse(
-                radius: CustomerServiceChatStyle.emoji_item_size / 2,
-                containedInkWell: true,
-                highlightShape: BoxShape.circle,
-                onTap: () => on_emoji_selected(emoji),
-                child: Center(
-                  child: Text(
-                    emoji,
-                    style: const TextStyle(
-                      fontSize: CustomerServiceChatStyle.emoji_font_size,
+        child: WindowContentLayout(
+          child: GridView.builder(
+            primary: false,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              CustomerServiceChatStyle.emoji_panel_padding_h,
+              CustomerServiceChatStyle.emoji_panel_padding_top,
+              CustomerServiceChatStyle.emoji_panel_padding_h,
+              bottom_safe + CustomerServiceChatStyle.emoji_panel_padding_top,
+            ),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: CustomerServiceChatStyle.emoji_columns,
+              mainAxisExtent: CustomerServiceChatStyle.emoji_item_size,
+            ),
+            itemCount: CustomerServiceChatStyle.emoji_list.length,
+            itemBuilder: (BuildContext context, int index) {
+              final String emoji = CustomerServiceChatStyle.emoji_list[index];
+              return Semantics(
+                button: true,
+                label: emoji,
+                child: InkResponse(
+                  radius: CustomerServiceChatStyle.emoji_item_size / 2,
+                  containedInkWell: true,
+                  highlightShape: BoxShape.circle,
+                  onTap: () => on_emoji_selected(emoji),
+                  child: Center(
+                    child: Text(
+                      emoji,
+                      style: const TextStyle(
+                        fontSize: CustomerServiceChatStyle.emoji_font_size,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

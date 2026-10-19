@@ -6,6 +6,10 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:app/pages/tile_quest/services/feedback_service.dart';
+import 'package:app/pages/tile_quest/services/ios_audio_voice.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugDefaultTargetPlatformOverride;
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _Voice implements TileQuestAudioVoice {
@@ -49,6 +53,18 @@ class _Voice implements TileQuestAudioVoice {
     calls.add('dispose');
     playing = false;
     dispose_count++;
+  }
+}
+
+/// 模拟单个入场文件迟迟无法就绪，点击音效文件已经预载完成的情况。
+class _SlowEntryVoice extends _Voice {
+  _SlowEntryVoice(this.entry_gate);
+  final Completer<void> entry_gate;
+
+  @override
+  Future<void> prepare(String value) async {
+    if (value.endsWith('/entry.wav')) await entry_gate.future;
+    await super.prepare(value);
   }
 }
 
@@ -152,6 +168,98 @@ void main() {
       await Future.wait([playing, stopping]);
       expect(voices.expand((voice) => voice.calls), isNot(contains('play')));
       await service.dispose();
+    },
+  );
+
+  test('an unrelated stalled cue cannot delay a prewarmed tap', () async {
+    final entry_gate = Completer<void>();
+    final voices = <_SlowEntryVoice>[];
+    final service = TileQuestAudioFeedback(
+      voice_factory: () {
+        final voice = _SlowEntryVoice(entry_gate);
+        voices.add(voice);
+        return voice;
+      },
+    );
+    var all_prepared = false;
+    final preparation = service.prepare().then((_) => all_prepared = true);
+    await service.play(TileQuestFeedbackEvent.tap);
+    expect(all_prepared, isFalse);
+    expect(
+      voices.where((voice) => voice.playing).single.asset,
+      'audio/tile_quest/tap.wav',
+    );
+    entry_gate.complete();
+    await preparation;
+    await service.dispose();
+  });
+
+  testWidgets(
+    'iOS rapid cues restart prewarmed PCM in one call without seek or timer stop',
+    (tester) async {
+      final calls = <MethodCall>[];
+      final channel = TileQuestIosAudioVoice.platform_channel;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        calls.add(call);
+        return null;
+      });
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() {
+        debugDefaultTargetPlatformOverride = null;
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        );
+      });
+      final service = TileQuestAudioFeedback();
+      await service.prepare();
+      final prepared = calls.where((call) => call.method == 'prepare').toList();
+      expect(prepared, hasLength(11));
+      final ids = prepared.map((call) => (call.arguments as Map)['voice_id']);
+      expect(ids.toSet(), hasLength(11));
+      final tap_ids = prepared
+          .where(
+            (call) =>
+                (call.arguments as Map)['asset'] ==
+                'assets/audio/tile_quest/tap.wav',
+          )
+          .map((call) => (call.arguments as Map)['voice_id'])
+          .toSet();
+      expect(tap_ids, hasLength(4));
+      calls.clear();
+
+      for (var index = 0; index < 20; index++) {
+        await service.play(TileQuestFeedbackEvent.tap);
+        await tester.pump(const Duration(milliseconds: 40));
+      }
+      expect(calls, hasLength(20));
+      expect(calls.every((call) => call.method == 'restart'), isTrue);
+      expect(
+        calls.map((call) => (call.arguments as Map)['voice_id']).toSet(),
+        tap_ids,
+      );
+      expect(
+        calls.every((call) => (call.arguments as Map)['volume'] == .72),
+        isTrue,
+      );
+      await tester.pump(const Duration(seconds: 3));
+      expect(calls, hasLength(20));
+
+      await service.play(TileQuestFeedbackEvent.match);
+      expect(calls.last.method, 'restart');
+      expect((calls.last.arguments as Map)['volume'], .78);
+      await service.stop();
+      expect(calls.where((call) => call.method == 'stop'), hasLength(11));
+      await service.dispose();
+      expect(calls.where((call) => call.method == 'dispose'), hasLength(11));
+      final final_count = calls.length;
+      await service.play(TileQuestFeedbackEvent.tap);
+      await service.prepare();
+      await service.dispose();
+      expect(calls, hasLength(final_count));
+      debugDefaultTargetPlatformOverride = null;
     },
   );
 

@@ -5,11 +5,13 @@ import 'package:app/pages/tile_quest/style.dart';
 import 'package:app/pages/tile_quest/widgets/insertion_timeline.dart';
 import 'package:app/pages/tile_quest/widgets/scene_layout.dart';
 import 'package:app/pages/tile_quest/widgets/scene_motion.dart';
+import 'package:app/pages/tile_quest/widgets/tile_surface_style.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _derivative_step = .001;
 const _size = Size(390, 844);
+const _tile_ratio = QuestTileSurfaceStyle.tile_aspect_ratio;
 
 /// 每种图案均为完整三张，布局不覆盖，保证所有测试都通过真实规则引擎。
 TileQuestState _fixture({List<int> tray = const []}) => TileQuestState(
@@ -58,6 +60,85 @@ void _same_rect(Rect actual, Rect expected) {
 }
 
 void main() {
+  test(
+    'board cards shrink into the tray without changing their tall aspect',
+    () {
+      final before = _fixture();
+      final engine = TileQuestEngine(before);
+      final layout = QuestSceneLayout(_size, before);
+      final timeline = QuestInsertionTimeline(before, 0);
+      final source = layout.board_tile(before.tile_by_id(0));
+      final target = layout.tray_tile(0);
+      expect(source.width, greaterThan(target.width * 1.10));
+      expect(source.height / source.width, closeTo(_tile_ratio, .000001));
+      timeline.add(QuestSceneMotion(engine.tap_tile(0), 0), 0);
+      final track = timeline.tracks[0]!;
+      final duration = TileQuestStyle.flight_duration.inMilliseconds.toDouble();
+      _same_rect(track.rect(layout, 0), source);
+      var previous_width = source.width;
+      for (var now = 1.0; now < duration; now += 3) {
+        final rect = track.rect(layout, now);
+        expect(rect.height / rect.width, closeTo(_tile_ratio, .000001));
+        expect(rect.width, lessThanOrEqualTo(previous_width));
+        expect(rect.width, greaterThan(target.width));
+        previous_width = rect.width;
+      }
+      _same_rect(track.rect(layout, duration), target);
+      final initial = _velocity(track, layout, 0, _derivative_step);
+      final final_velocity = _velocity(
+        track,
+        layout,
+        duration - _derivative_step,
+        duration,
+      );
+      for (final velocity in [initial, final_velocity]) {
+        expect(velocity.width.abs(), lessThan(.00001));
+        expect(velocity.height.abs(), lessThan(.00001));
+      }
+    },
+  );
+
+  test('rapid retargeting preserves shrinking size velocity and aspect', () {
+    final before = _fixture();
+    final engine = TileQuestEngine(before);
+    final layout = QuestSceneLayout(_size, before);
+    final timeline = QuestInsertionTimeline(before, 0);
+    void tap(int id, double time) => timeline.add(
+      QuestSceneMotion(engine.tap_tile(id), time, preflight: true),
+      time,
+    );
+    tap(0, 0);
+    tap(3, 28);
+    final neighbor = timeline.tracks[3]!;
+    const redirect_at = 76.0;
+    final original = neighbor.rect(layout, redirect_at);
+    final incoming = _velocity(
+      neighbor,
+      layout,
+      redirect_at - _derivative_step,
+      redirect_at,
+    );
+    expect(incoming.width, lessThan(-.01));
+    tap(1, redirect_at);
+    _same_rect(neighbor.rect(layout, redirect_at), original);
+    final outgoing = _velocity(
+      neighbor,
+      layout,
+      redirect_at,
+      redirect_at + _derivative_step,
+    );
+    expect(outgoing.width, closeTo(incoming.width, .00001));
+    expect(outgoing.height, closeTo(incoming.height, .00001));
+    expect((outgoing.center - incoming.center).distance, lessThan(.0001));
+    final arrival = 28 + TileQuestStyle.flight_duration.inMilliseconds;
+    for (var now = redirect_at; now < arrival; now += 4) {
+      final rect = neighbor.rect(layout, now);
+      expect(rect.height / rect.width, closeTo(_tile_ratio, .000001));
+      expect(rect.width, greaterThanOrEqualTo(layout.tray_tile(2).width));
+    }
+    _same_rect(neighbor.rect(layout, arrival.toDouble()), layout.tray_tile(2));
+  });
+
   test('A B A redirect preserves position size and instantaneous velocity', () {
     final before = _fixture();
     final engine = TileQuestEngine(before);

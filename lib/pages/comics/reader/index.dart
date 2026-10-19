@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:async';
@@ -186,7 +187,10 @@ class _ComicReaderPageState extends State<ComicReaderPage>
       builder: (context, constraints) {
         final width = constraints.maxWidth.clamp(
           0.0,
-          ComicReaderStyle.canvas_max_width,
+          WindowLayoutScope.resolve_max_width(
+            context,
+            ComicReaderStyle.canvas_max_width,
+          ),
         );
         _logic.set_width(width);
         return GestureDetector(

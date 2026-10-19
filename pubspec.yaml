@@ -3,7 +3,7 @@ description: "TopRead"
 
 
 # + 符号后面的数字，每一次打包只增不减，保持递增状态
-version: 1.2.2+13
+version: 1.2.2+23
 
 environment:
     sdk: ^3.11.5
@@ -204,5 +204,9 @@ flutter:
     - assets/i18n/en.json
     - assets/svg/
     - assets/img/
-    - assets/img/game/
+    - assets/img/tile_quest/lattice.png
+    - assets/img/tile_quest/background.png
+    - assets/img/tile_quest/app_icon.png
+    - assets/img/tile_quest/icons/
+    - assets/img/tile_quest/powerups/
     - assets/img/splash_screen/

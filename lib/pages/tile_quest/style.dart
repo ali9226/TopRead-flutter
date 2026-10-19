@@ -7,13 +7,79 @@ class TileQuestStyle {
   const TileQuestStyle._();
 
   static const double max_width = 680;
+
+  /// 横屏使用真实的安全区域宽度；竖屏上限会把手机横屏强制挤回窄画布。
+  static const double landscape_max_width = 1280;
+  static const double landscape_ratio = 1.3;
+  static const double landscape_header_height = 44;
+  static const double landscape_controls_fraction = .26;
+  static const double landscape_controls_min_width = 204;
+  static const double landscape_controls_max_width = 280;
+
+  /// 可用空间足够时，七格保留完整触摸尺度；不能把七张牌压入窄工具栏。
+  static const double wide_controls_fraction = .40;
+  static const double readable_tray_tile_width = 44;
+  static const double fold_pane_min_width = 300;
+  static const double fold_pane_min_height = 400;
+  static const double landscape_controls_gap = 12;
+  static const double landscape_board_gap = 8;
+  static const double landscape_bottom_spacing = 8;
+  static const double landscape_tools_height = 80;
+
+  /// 主阵和辅助岛横向排列，区域之间保留四分之三格的明确间隔。
+  static const double landscape_main_columns = 6;
+  static const double landscape_island_gap = .75;
+  static const double landscape_auxiliary_rows_gap = 1;
+  static const double landscape_reference_rows = 6;
+
+  /// 按安全区域内的实际窗口高度启用短高布局，与设备型号无关。
+  static const double compact_window_height = 720;
+  static const double compact_header_height = 44;
+  static const double compact_board_top = 60;
+  static const double compact_island_gap = .18;
+  static const double compact_bottom_gap = 8;
+  static const double compact_reserve_fraction = .37;
+  static const double compact_reserve_min_width = 112;
+  static const double compact_reserve_max_width = 160;
+  static const double compact_reserve_max_edge = 36;
+  static const double narrow_tool_width = 80;
+  static const double narrow_tool_icon_size = 24;
+  static const double narrow_tool_content_inset = 4;
   static const double page_inset = 16;
-  static const double header_height = 104;
-  static const double tutorial_top = 114;
-  static const double board_top = 148;
+  static const double board_side_margin = 4;
+
+  /// 七格槽按父容器宽度均分，宽屏/平板达到此宽度后停止长大并整体居中。
+  static const double tray_tile_max_width = 60;
+
+  /// 备用牌保持紧凑而独立的尺度，避免放宽七格槽后挤小主牌阵。
+  static const double reserve_tile_width_scale = .86;
+  static const double reserve_tile_max_width = 52;
+  static const double portrait_tools_height = 56;
+  static const int tool_icon_cache_width = 128;
+  static const double tool_icon_compact_size = 34;
+  static const double tool_icon_size = 36;
+  static const double tool_tall_threshold = 78;
+  static const double tool_content_inset = 6;
+  static const double tool_content_gap = 4;
+  static const double compact_title_size_cjk = 18;
+  static const double compact_title_size_alphabetic = 18;
+  static const double portrait_bottom_spacing = 6;
+  static const double portrait_controls_gap = 4;
+  static const double board_bottom_spacing = 2;
+  static const double toolbar_height = 44;
+  static const double header_height = 96;
+  static const double tutorial_top = 106;
+  static const double board_top = 108;
   static const double corner = 22;
   static const double tile_corner_radius_fraction = .107;
-  static const int tile_cache_width = 192;
+
+  /// 在48逻辑像素的参考牌宽上加宽2px；修改此值可同步调整牌体与网格。
+  /// 高度不变，位图图集与所有静态/飞行矩形始终读取同一个宽高比。
+  static const int board_tile_width_extra = 2;
+  static const int tile_reference_width = 48;
+  static const int tile_texture_scale = 4;
+  static const int tile_cache_width =
+      (tile_reference_width + board_tile_width_extra) * tile_texture_scale;
   static const double tile_press_depth_fraction = .016;
   static const int shuffle_atlas_columns = 8;
   static const int shuffle_atlas_padding = 2;
@@ -78,6 +144,10 @@ class TileQuestStyle {
           const Color(0xFF355B88),
           const Color(0xFF477C83),
         ];
+
+  static List<Color> background_scrim(bool dark) => dark
+      ? const [Color(0x2907142D), Color(0x0D07142D), Color(0x4207142D)]
+      : const [Color(0x1A07142D), Color(0x0007142D), Color(0x2907142D)];
 
   static TextStyle title(bool cjk) => TextStyle(
     color: cream,

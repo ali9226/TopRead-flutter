@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -167,19 +168,21 @@ class _WithdrawState extends State<Withdraw> {
                 // 页面背景层单独封装，避免路由页里堆很多纯视觉 Positioned。
                 WithdrawPageBackground(isDark: isDark),
                 // 主内容层只关心正文顺序，不再让路由页直接拼网络、金额和摘要卡。
-                WithdrawPageContent(
-                  isDark: isDark,
-                  isLandscape: isLandscape,
-                  logic: logic,
-                  leftInset: safePadding.left,
-                  rightInset: safePadding.right,
-                  bottomInset: safePadding.bottom,
-                  contentTopPadding: contentTopPadding,
-                  onTapRecords: () {
-                    routerUtil(path: '/withdraw_record');
-                  },
-                  onSubmit: handleSubmit,
-                  onPullRefresh: _handlePullRefresh,
+                WindowContentLayout(
+                  child: WithdrawPageContent(
+                    isDark: isDark,
+                    isLandscape: isLandscape,
+                    logic: logic,
+                    leftInset: 0,
+                    rightInset: 0,
+                    bottomInset: safePadding.bottom,
+                    contentTopPadding: contentTopPadding,
+                    onTapRecords: () {
+                      routerUtil(path: '/withdraw_record');
+                    },
+                    onSubmit: handleSubmit,
+                    onPullRefresh: _handlePullRefresh,
+                  ),
                 ),
                 Positioned(
                   top: 0,
@@ -193,8 +196,8 @@ class _WithdrawState extends State<Withdraw> {
                 ),
                 if (isLandscape)
                   WithdrawPageBottomAction(
-                    leftInset: safePadding.left,
-                    rightInset: safePadding.right,
+                    leftInset: 0,
+                    rightInset: 0,
                     bottomInset: safePadding.bottom,
                     loading: logic.loading,
                     title: logic.submitTitle,

@@ -11,7 +11,12 @@ class TileQuestTypeAllocator {
     List<List<int>> delayed_match_groups = const [],
   }) {
     final supply = List<int>.filled(profile.type_count, 0);
-    final warmup_types = min(3, profile.type_count - 1);
+    // Isolated hard openings need at least two full triples per warmup sprite;
+    // a twelve-tile cap must not accidentally create extra one-triple keys.
+    final warmup_types = min(
+      profile.type_count - 1,
+      profile.difficulty >= 9 ? min(3, opening_count ~/ 6) : 3,
+    );
     final groups = List<int>.generate(
       opening_count ~/ 3,
       (index) => index % warmup_types,
@@ -267,7 +272,12 @@ class TileQuestTypeAllocator {
           : opening.isNotEmpty
           ? opening
           : available;
-      final type = pool[random.nextInt(pool.length)];
+      // Shuffle stock can be uneven after real held tiles are fixed. Sampling
+      // every remaining sprite equally exhausts small inventories too early
+      // and can leave a long one-sprite tail despite a mixed legal supply.
+      final type = hard
+          ? _stock_weighted_type(pool, supply, random)
+          : pool[random.nextInt(pool.length)];
       sequence.add(type);
       last_tap[type] = sequence.length;
       supply[type]--;
@@ -279,6 +289,23 @@ class TileQuestTypeAllocator {
       }
     }
     return sequence;
+  }
+
+  /// Preserve the existing safe/pressure decision, then balance only its legal
+  /// alternatives according to actual remaining stock instead of type count.
+  static int _stock_weighted_type(
+    List<int> pool,
+    List<int> supply,
+    Random random,
+  ) {
+    var ticket = random.nextInt(
+      pool.fold<int>(0, (total, type) => total + supply[type]),
+    );
+    for (final type in pool) {
+      ticket -= supply[type];
+      if (ticket < 0) return type;
+    }
+    return pool.last;
   }
 
   /// An opening two steps away can strand five unrelated singles even though
@@ -294,7 +321,7 @@ class TileQuestTypeAllocator {
     Map<int, int> delayed_positions,
     Set<int> delayed_types,
   ) {
-    const lookahead = 3;
+    const lookahead = 6;
     var last_forced = position;
     for (var offset = 1; offset <= lookahead; offset++) {
       if (delayed_positions.containsKey(position + offset)) {
@@ -302,6 +329,13 @@ class TileQuestTypeAllocator {
       }
     }
     if (last_forced == position) return true;
+    // A branched contour can expose both rare pairs consecutively in the
+    // witness. Include that complete forced run even when its last opening
+    // falls just outside the bounded lookahead window; otherwise an earlier
+    // harmless-looking single can strand the fourth mandatory opening.
+    while (delayed_positions.containsKey(last_forced + 1)) {
+      last_forced++;
+    }
     final chosen_count = counts[chosen_type];
     counts[chosen_type] = (chosen_count + 1) % 3;
     supply[chosen_type]--;
@@ -317,12 +351,23 @@ class TileQuestTypeAllocator {
         );
       }
       final forced = delayed_positions[step];
+      // Ordinary sprites with equal held count and enough stock for the whole
+      // short window are interchangeable here. Search one representative so
+      // the longer complete-key check stays bounded by three count classes.
+      final equivalent = <int>{};
       for (var type = 0; type < supply.length; type++) {
         if (supply[type] == 0 ||
             (forced != null ? type != forced : delayed_types.contains(type))) {
           continue;
         }
         final old_count = counts[type];
+        if (forced == null &&
+            !equivalent.add(
+              old_count * (last_forced - step + 2) +
+                  min(supply[type], last_forced - step + 1),
+            )) {
+          continue;
+        }
         final occupancy_after = occupancy + (old_count == 2 ? -2 : 1);
         if (occupancy_after >= TileQuestConfig.tray_capacity) continue;
         counts[type] = (old_count + 1) % 3;

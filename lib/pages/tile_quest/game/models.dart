@@ -14,6 +14,9 @@ class TileQuestTile {
   final int id;
   final int type;
   final int layer;
+
+  /// Stable template region; it never changes when a tile enters the tray.
+  final String region_id;
   final double x;
   final double y;
   final double width;
@@ -26,29 +29,44 @@ class TileQuestTile {
     required this.layer,
     required this.x,
     required this.y,
+    this.region_id = 'main',
     this.width = 1,
     this.height = 1,
     this.is_removed = false,
     this.is_blocked = false,
   });
 
-  TileQuestTile copy_with({int? type, bool? is_removed, bool? is_blocked}) =>
-      TileQuestTile(
-        id: id,
-        type: type ?? this.type,
-        layer: layer,
-        x: x,
-        y: y,
-        width: width,
-        height: height,
-        is_removed: is_removed ?? this.is_removed,
-        is_blocked: is_blocked ?? this.is_blocked,
-      );
+  /// Grid coordinates and template offsets derive from the authoritative x/y.
+  /// Half-cell staggering therefore needs no second, potentially stale position.
+  int get grid_row => y.floor();
+  int get grid_column => x.floor();
+  double get offset_x => x - grid_column;
+  double get offset_y => y - grid_row;
+
+  TileQuestTile copy_with({
+    int? type,
+    int? layer,
+    String? region_id,
+    bool? is_removed,
+    bool? is_blocked,
+  }) => TileQuestTile(
+    id: id,
+    type: type ?? this.type,
+    layer: layer ?? this.layer,
+    region_id: region_id ?? this.region_id,
+    x: x,
+    y: y,
+    width: width,
+    height: height,
+    is_removed: is_removed ?? this.is_removed,
+    is_blocked: is_blocked ?? this.is_blocked,
+  );
 
   Map<String, dynamic> to_json() => {
     'id': id,
     'type': type,
     'layer': layer,
+    'region_id': region_id,
     'x': x,
     'y': y,
     'width': width,
@@ -264,10 +282,16 @@ class TileQuestState {
       }
       final tiles = (json['tiles'] as List).map((raw) {
         if (raw is! Map) throw const FormatException('Invalid tile');
+        // Older saves predate template regions and retain their original shape.
+        // An explicitly malformed new field must not silently become "main".
+        if (raw.containsKey('region_id') && raw['region_id'] is! String) {
+          throw const FormatException('Invalid tile region');
+        }
         return TileQuestTile(
           id: read_int(raw['id']),
           type: read_int(raw['type']),
           layer: read_int(raw['layer']),
+          region_id: raw['region_id'] as String? ?? 'main',
           x: read_double(raw['x']),
           y: read_double(raw['y']),
           width: read_double(raw['width']),

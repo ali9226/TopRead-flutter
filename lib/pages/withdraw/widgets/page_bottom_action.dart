@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/submit_button/index.dart';
 
@@ -39,10 +40,18 @@ class WithdrawPageBottomAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      left: WithdrawStyle.pageHorizontalPadding + leftInset,
-      right: WithdrawStyle.pageHorizontalPadding + rightInset,
+      left: 0,
+      right: 0,
       bottom: WithdrawStyle.bottomButtonBottom + bottomInset,
-      child: SubmitButton(loading: loading, title: title, onTap: onTap),
+      child: WindowContentLayout(
+        expand_height: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: WithdrawStyle.pageHorizontalPadding,
+          ),
+          child: SubmitButton(loading: loading, title: title, onTap: onTap),
+        ),
+      ),
     );
   }
 }

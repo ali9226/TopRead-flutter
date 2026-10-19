@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -84,8 +85,12 @@ class _CreateWorkspacePageState extends State<CreateWorkspacePage> {
         : null;
     if (store == null) {
       return Scaffold(
-        appBar: AppBar(title: Text(tr('creator_workspace.create'))),
-        body: const Center(child: Text('语种配置尚未加载，请稍后重试')),
+        appBar: WindowAppBar(
+          child: AppBar(title: Text(tr('creator_workspace.create'))),
+        ),
+        body: const WindowContentLayout(
+          child: Center(child: Text('语种配置尚未加载，请稍后重试')),
+        ),
       );
     }
     return Obx(() {
@@ -109,77 +114,82 @@ class _CreateWorkspacePageState extends State<CreateWorkspacePage> {
             : languages.first.id;
       }
       return Scaffold(
-        appBar: AppBar(title: Text(tr('creator_workspace.create'))),
-        body: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Text(tr('creator_workspace.create_hint')),
-            const SizedBox(height: 20),
-            TextField(
-              controller: title,
-              enabled: !locked,
-              maxLength: 255,
-              decoration: InputDecoration(
-                labelText: tr('creator_workspace.work_title'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SegmentedButton<int>(
-              segments: [
-                ButtonSegment(
-                  value: 1,
-                  label: Text(tr('creator_workspace.long')),
-                ),
-                ButtonSegment(
-                  value: 2,
-                  label: Text(tr('creator_workspace.short')),
-                ),
-              ],
-              selected: {type},
-              onSelectionChanged: locked
-                  ? null
-                  : (v) => setState(() {
-                      type = v.first;
-                    }),
-            ),
-            const SizedBox(height: 20),
-            DropdownButtonFormField<int>(
-              // 重建状态并关闭旧菜单，避免已展开的下拉保留被撤销的中文选项。
-              key: ValueKey<String>(
-                '$language:${languages.map((item) => item.id).join(',')}',
-              ),
-              initialValue: language,
-              decoration: InputDecoration(
-                labelText: tr('creator_workspace.language'),
-              ),
-              items: languages
-                  .map(
-                    (l) => DropdownMenuItem(value: l.id, child: Text(l.title)),
-                  )
-                  .toList(),
-              onChanged: locked
-                  ? null
-                  : (value) => setState(() {
-                      language = value;
-                    }),
-            ),
-            if (error != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(error!),
-              ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: busy || language == null ? null : create,
-              child: Text(
-                tr(
-                  busy
-                      ? 'creator_workspace.saving'
-                      : 'creator_workspace.create',
+        appBar: WindowAppBar(
+          child: AppBar(title: Text(tr('creator_workspace.create'))),
+        ),
+        body: WindowContentLayout(
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Text(tr('creator_workspace.create_hint')),
+              const SizedBox(height: 20),
+              TextField(
+                controller: title,
+                enabled: !locked,
+                maxLength: 255,
+                decoration: InputDecoration(
+                  labelText: tr('creator_workspace.work_title'),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              SegmentedButton<int>(
+                segments: [
+                  ButtonSegment(
+                    value: 1,
+                    label: Text(tr('creator_workspace.long')),
+                  ),
+                  ButtonSegment(
+                    value: 2,
+                    label: Text(tr('creator_workspace.short')),
+                  ),
+                ],
+                selected: {type},
+                onSelectionChanged: locked
+                    ? null
+                    : (v) => setState(() {
+                        type = v.first;
+                      }),
+              ),
+              const SizedBox(height: 20),
+              DropdownButtonFormField<int>(
+                // 重建状态并关闭旧菜单，避免已展开的下拉保留被撤销的中文选项。
+                key: ValueKey<String>(
+                  '$language:${languages.map((item) => item.id).join(',')}',
+                ),
+                initialValue: language,
+                decoration: InputDecoration(
+                  labelText: tr('creator_workspace.language'),
+                ),
+                items: languages
+                    .map(
+                      (l) =>
+                          DropdownMenuItem(value: l.id, child: Text(l.title)),
+                    )
+                    .toList(),
+                onChanged: locked
+                    ? null
+                    : (value) => setState(() {
+                        language = value;
+                      }),
+              ),
+              if (error != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text(error!),
+                ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: busy || language == null ? null : create,
+                child: Text(
+                  tr(
+                    busy
+                        ? 'creator_workspace.saving'
+                        : 'creator_workspace.create',
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     });

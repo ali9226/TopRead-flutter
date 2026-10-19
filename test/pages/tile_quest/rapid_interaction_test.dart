@@ -2,6 +2,7 @@
 import 'package:app/pages/tile_quest/game/engine.dart';
 import 'package:app/pages/tile_quest/game/config.dart';
 import 'package:app/pages/tile_quest/game/geometry.dart';
+import 'package:app/pages/tile_quest/game/generator.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:app/pages/tile_quest/logic.dart';
 import 'package:app/pages/tile_quest/services/feedback_service.dart';
@@ -9,6 +10,7 @@ import 'package:app/pages/tile_quest/services/save_service.dart';
 import 'package:app/pages/tile_quest/services/work_service.dart';
 import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
 import 'package:app/pages/tile_quest/widgets/scene_layout.dart';
+import 'package:app/pages/tile_quest/widgets/tile_surface_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'scene_probe.dart';
@@ -409,7 +411,7 @@ void main() {
   );
 
   testWidgets(
-    'resize midway through queued motions preserves inventory and final square coordinates',
+    'resize midway through queued motions preserves inventory and final tall coordinates',
     (tester) async {
       final host = await _mount(tester);
       final controller = host.currentState!;
@@ -434,8 +436,48 @@ void main() {
       await tester.pumpAndSettle();
       _settled(tester, controller.current, const Size(768, 1024));
       for (final rect in _visuals(tester).values) {
-        expect(rect.width, closeTo(rect.height, .001));
+        expect(
+          rect.height,
+          closeTo(rect.width * QuestTileSurfaceStyle.tile_aspect_ratio, .001),
+        );
       }
+      expect(controller.busy_events, [true, false]);
+    },
+  );
+
+  testWidgets(
+    'structured islands rotate during queued tap remove and return without losing identities',
+    (tester) async {
+      final initial = TileQuestGenerator.generate(
+        level: 2,
+        difficulty: 4,
+        seed: 730,
+      );
+      final host = await _mount(tester, state: initial);
+      final controller = host.currentState!;
+      final id = initial.clickable_tiles.first.id;
+      controller.tap(id);
+      controller.tool(TileQuestTool.remove);
+      controller.reserve(id);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 112));
+      for (final size in const [
+        Size(844, 390),
+        Size(750, 343),
+        Size(390, 844),
+      ]) {
+        await tester.binding.setSurfaceSize(size);
+        await tester.pump();
+        expect(
+          _visuals(tester).keys.toSet(),
+          initial.tiles.map((tile) => tile.id).toSet(),
+        );
+        await tester.pump(const Duration(milliseconds: 112));
+      }
+      await tester.pumpAndSettle();
+      _settled(tester, controller.current, _portrait);
+      expect(controller.current.tray, [id]);
+      expect(controller.current.reserve, isEmpty);
       expect(controller.busy_events, [true, false]);
     },
   );

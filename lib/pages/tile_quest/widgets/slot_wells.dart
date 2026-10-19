@@ -6,23 +6,12 @@ import 'scene_layout.dart';
 
 /// 槽背景只绘制统一坐标表，不再通过 Row/Expanded 单独推算尺寸。
 class QuestSlotWell extends StatelessWidget {
-  const QuestSlotWell({
-    super.key,
-    required this.layout,
-    required this.caption,
-    required this.cjk,
-  });
+  const QuestSlotWell({super.key, required this.layout});
 
   final QuestSceneLayout layout;
-  final String caption;
-  final bool cjk;
   static const double _radius = 19;
   static const double _border_width = 1.5;
   static const double _slot_radius = 9;
-  static const double _caption_size_cjk = 8;
-  static const double _caption_size_alphabetic = 7;
-  static const double _caption_line_height = 1.1;
-  static const double _caption_letter_spacing = 1.5;
 
   @override
   Widget build(BuildContext context) => Stack(
@@ -53,22 +42,6 @@ class QuestSlotWell extends StatelessWidget {
             ),
           ),
         ),
-      Positioned.fromRect(
-        rect: layout.tray_caption.shift(-layout.tray.topLeft),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            caption,
-            style: TileQuestStyle.caption(cjk).copyWith(
-              fontSize: cjk ? _caption_size_cjk : _caption_size_alphabetic,
-              height: _caption_line_height,
-              letterSpacing: _caption_letter_spacing,
-            ),
-            maxLines: 1,
-            softWrap: false,
-          ),
-        ),
-      ),
     ],
   );
 }
@@ -90,53 +63,72 @@ class QuestReserveWell extends StatelessWidget {
   static const double _hint_size_alphabetic = 9;
 
   @override
-  Widget build(BuildContext context) => Stack(
-    fit: StackFit.expand,
-    children: [
-      Positioned.fromRect(
-        rect: layout.reserve_label.shift(-layout.reserve.topLeft),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              quest_text(context, 'reserve', 'RESERVE'),
-              style: TileQuestStyle.caption(cjk),
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.fade,
-            ),
-            if (layout.reserve.height >= _hint_minimum_height)
-              Text(
-                quest_text(context, 'reserve_hint', 'Tap the top tile to return'),
-                style: TileQuestStyle.caption(cjk).copyWith(
-                  fontSize: cjk ? _hint_size_cjk : _hint_size_alphabetic,
-                  letterSpacing: 0,
-                  color: TileQuestStyle.pale.withValues(alpha: .65),
+  Widget build(BuildContext context) => Semantics(
+    label: quest_text(context, 'reserve', 'RESERVE'),
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        if (layout.reserve_label.width > 0)
+          Positioned.fromRect(
+            rect: layout.reserve_label.shift(-layout.reserve.topLeft),
+            // 短屏大字体下两行说明按真实标签矩形缩放，不能挤入牌格。
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: SizedBox(
+                width: layout.reserve_label.width,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      quest_text(context, 'reserve', 'RESERVE'),
+                      style: TileQuestStyle.caption(cjk),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.fade,
+                    ),
+                    if (layout.reserve.height >= _hint_minimum_height)
+                      Text(
+                        quest_text(
+                          context,
+                          'reserve_hint',
+                          'Tap the top tile to return',
+                        ),
+                        style: TileQuestStyle.caption(cjk).copyWith(
+                          fontSize: cjk
+                              ? _hint_size_cjk
+                              : _hint_size_alphabetic,
+                          letterSpacing: 0,
+                          color: TileQuestStyle.pale.withValues(alpha: .65),
+                        ),
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.fade,
+                      ),
+                  ],
                 ),
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.fade,
-              ),
-          ],
-        ),
-      ),
-      for (var index = 0; index < QuestSceneLayout.reserve_count; index++)
-        Positioned.fromRect(
-          key: ValueKey('tile_quest_reserve_slot_$index'),
-          rect: layout.reserve_tile(index).shift(-layout.reserve.topLeft),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: const Color(
-                0xFF142544,
-              ).withValues(alpha: occupied ? .7 : .3),
-              borderRadius: BorderRadius.circular(_slot_radius),
-              border: Border.all(
-                color: TileQuestStyle.pale.withValues(alpha: .25),
               ),
             ),
           ),
-        ),
-    ],
+        for (var index = 0; index < QuestSceneLayout.reserve_count; index++)
+          Positioned.fromRect(
+            key: ValueKey('tile_quest_reserve_slot_$index'),
+            rect: layout.reserve_tile(index).shift(-layout.reserve.topLeft),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(
+                  0xFF142544,
+                ).withValues(alpha: occupied ? .7 : .3),
+                borderRadius: BorderRadius.circular(_slot_radius),
+                border: Border.all(
+                  color: TileQuestStyle.pale.withValues(alpha: .25),
+                ),
+              ),
+            ),
+          ),
+      ],
+    ),
   );
 }

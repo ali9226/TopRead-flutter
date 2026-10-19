@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app/api/creator_workspace.dart';
@@ -228,27 +229,29 @@ class _CreatorWorkspacePageState extends State<CreatorWorkspacePage> {
     final chapters_selected = model.isLong && _section == 1;
     return Scaffold(
       backgroundColor: AuthorStyle.background(is_dark),
-      appBar: AppBar(
-        backgroundColor: AuthorStyle.surface(is_dark),
-        surfaceTintColor: Colors.transparent,
-        foregroundColor: AuthorStyle.primary_text(is_dark),
-        elevation: 0,
-        title: Text(
-          tr('creator_center.edit_work_title'),
-          style: WorkspaceStyle.body(
-            is_dark,
-            is_cjk,
-          ).copyWith(fontWeight: AuthorStyle.title_weight),
-        ),
-        actions: [
-          IconButton(
-            onPressed: locked ? null : model.refresh,
-            tooltip: MaterialLocalizations.of(
-              context,
-            ).refreshIndicatorSemanticLabel,
-            icon: const Icon(Icons.refresh_rounded),
+      appBar: WindowAppBar(
+        child: AppBar(
+          backgroundColor: AuthorStyle.surface(is_dark),
+          surfaceTintColor: Colors.transparent,
+          foregroundColor: AuthorStyle.primary_text(is_dark),
+          elevation: 0,
+          title: Text(
+            tr('creator_center.edit_work_title'),
+            style: WorkspaceStyle.body(
+              is_dark,
+              is_cjk,
+            ).copyWith(fontWeight: AuthorStyle.title_weight),
           ),
-        ],
+          actions: [
+            IconButton(
+              onPressed: locked ? null : model.refresh,
+              tooltip: MaterialLocalizations.of(
+                context,
+              ).refreshIndicatorSemanticLabel,
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: !has_data
           ? null
@@ -300,22 +303,25 @@ class _CreatorWorkspacePageState extends State<CreatorWorkspacePage> {
                       child: DefaultTabController(
                         length: 2,
                         initialIndex: _section,
-                        child: TabBar(
-                          onTap: (index) => setState(() => _section = index),
-                          indicatorColor: AuthorStyle.gold,
-                          dividerColor: AuthorStyle.border(is_dark),
-                          labelColor: AuthorStyle.primary_text(is_dark),
-                          unselectedLabelColor: AuthorStyle.secondary_text(
-                            is_dark,
+                        child: WindowContentLayout(
+                          expand_height: false,
+                          child: TabBar(
+                            onTap: (index) => setState(() => _section = index),
+                            indicatorColor: AuthorStyle.gold,
+                            dividerColor: AuthorStyle.border(is_dark),
+                            labelColor: AuthorStyle.primary_text(is_dark),
+                            unselectedLabelColor: AuthorStyle.secondary_text(
+                              is_dark,
+                            ),
+                            labelStyle: WorkspaceStyle.body(
+                              is_dark,
+                              is_cjk,
+                            ).copyWith(fontWeight: AuthorStyle.emphasis_weight),
+                            tabs: [
+                              Tab(text: tr('creator_workspace.details')),
+                              Tab(text: tr('creator_workspace.chapters')),
+                            ],
                           ),
-                          labelStyle: WorkspaceStyle.body(
-                            is_dark,
-                            is_cjk,
-                          ).copyWith(fontWeight: AuthorStyle.emphasis_weight),
-                          tabs: [
-                            Tab(text: tr('creator_workspace.details')),
-                            Tab(text: tr('creator_workspace.chapters')),
-                          ],
                         ),
                       ),
                     ),
@@ -339,44 +345,49 @@ class _CreatorWorkspacePageState extends State<CreatorWorkspacePage> {
                       width: double.infinity,
                       padding: WorkspaceStyle.padding,
                       color: AuthorStyle.selected_tab_surface(is_dark),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            tr('creator_center.scheduled_edit_hint'),
-                            style: WorkspaceStyle.caption(is_dark, is_cjk),
-                          ),
-                          if (model.pending['scheduled_publish_time'] != null)
+                      child: WindowContentLayout(
+                        expand_height: false,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              _scheduleTime(
-                                model.pending['scheduled_publish_time'],
-                              ),
+                              tr('creator_center.scheduled_edit_hint'),
                               style: WorkspaceStyle.caption(is_dark, is_cjk),
                             ),
-                          TextButton(
-                            onPressed: locked ? null : _cancelSchedule,
-                            child: Text(
-                              tr('creator_workspace.cancel_schedule'),
+                            if (model.pending['scheduled_publish_time'] != null)
+                              Text(
+                                _scheduleTime(
+                                  model.pending['scheduled_publish_time'],
+                                ),
+                                style: WorkspaceStyle.caption(is_dark, is_cjk),
+                              ),
+                            TextButton(
+                              onPressed: locked ? null : _cancelSchedule,
+                              child: Text(
+                                tr('creator_workspace.cancel_schedule'),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   Expanded(
-                    child: IndexedStack(
-                      index: chapters_selected ? 1 : 0,
-                      children: [
-                        _details(is_dark, is_cjk),
-                        if (model.isLong)
-                          WorkspaceDirectory(
-                            model: model,
-                            is_dark: is_dark,
-                            is_cjk: is_cjk,
-                            working: working,
-                            on_open: _editChapter,
-                            on_action: _chapterAction,
-                          ),
-                      ],
+                    child: WindowContentLayout(
+                      child: IndexedStack(
+                        index: chapters_selected ? 1 : 0,
+                        children: [
+                          _details(is_dark, is_cjk),
+                          if (model.isLong)
+                            WorkspaceDirectory(
+                              model: model,
+                              is_dark: is_dark,
+                              is_cjk: is_cjk,
+                              working: working,
+                              on_open: _editChapter,
+                              on_action: _chapterAction,
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ],

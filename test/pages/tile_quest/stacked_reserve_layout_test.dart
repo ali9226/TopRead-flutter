@@ -4,6 +4,7 @@ import 'package:app/pages/tile_quest/game/config.dart';
 import 'package:app/pages/tile_quest/game/engine.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:app/pages/tile_quest/game/validator.dart';
+import 'package:app/pages/tile_quest/style.dart';
 import 'package:app/pages/tile_quest/widgets/quest_controls.dart';
 import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
 import 'package:app/pages/tile_quest/widgets/motion_canvas.dart';
@@ -206,23 +207,55 @@ void main() {
     const Size(844, 390),
     const Size(844, 300),
   ]) {
-    test('reserve stacks sit above equal-sized tray tiles at $size', () {
-      final layout = QuestSceneLayout(size, _fixture());
-      final tray_tile = layout.tray_tile(0);
-      expect(layout.reserve.bottom, lessThanOrEqualTo(layout.tray.top));
-      expect(layout.tray.bottom, lessThanOrEqualTo(layout.tools.top));
-      for (var column = 0; column < TileQuestConfig.reserve_columns; column++) {
-        for (var depth = 0; depth < 2; depth++) {
-          final tile = layout.reserve_tile(column, depth: depth);
-          expect(tile.width, closeTo(tray_tile.width, _tolerance));
-          expect(tile.height, closeTo(tray_tile.height, _tolerance));
-          expect(tile.left, greaterThanOrEqualTo(layout.reserve.left));
-          expect(tile.right, lessThanOrEqualTo(layout.reserve.right));
-          expect(tile.top, greaterThanOrEqualTo(layout.reserve.top));
-          expect(tile.bottom, lessThanOrEqualTo(layout.reserve.bottom));
+    test(
+      'compact reserve stacks stay separate from responsive tray tiles at $size',
+      () {
+        final layout = QuestSceneLayout(size, _fixture());
+        final tray_tile = layout.tray_tile(0);
+        if (layout.compact_portrait) {
+          expect(layout.tray.bottom, lessThanOrEqualTo(layout.reserve.top));
+          expect(layout.reserve.overlaps(layout.tools), isFalse);
+        } else {
+          expect(layout.reserve.bottom, lessThanOrEqualTo(layout.tray.top));
         }
-      }
-    });
+        expect(layout.tray.bottom, lessThanOrEqualTo(layout.tools.top));
+        for (
+          var column = 0;
+          column < TileQuestConfig.reserve_columns;
+          column++
+        ) {
+          for (var depth = 0; depth < 2; depth++) {
+            final tile = layout.reserve_tile(column, depth: depth);
+            if (!layout.compact_portrait) {
+              expect(
+                tile.width,
+                closeTo(
+                  tray_tile.width * TileQuestStyle.reserve_tile_width_scale,
+                  _tolerance,
+                ),
+              );
+              expect(
+                tile.height,
+                closeTo(
+                  tray_tile.height * TileQuestStyle.reserve_tile_width_scale,
+                  _tolerance,
+                ),
+              );
+            } else {
+              expect(tile.width, greaterThan(24));
+              expect(
+                tile.width,
+                lessThanOrEqualTo(TileQuestStyle.compact_reserve_max_edge),
+              );
+            }
+            expect(tile.left, greaterThanOrEqualTo(layout.reserve.left));
+            expect(tile.right, lessThanOrEqualTo(layout.reserve.right));
+            expect(tile.top, greaterThanOrEqualTo(layout.reserve.top));
+            expect(tile.bottom, lessThanOrEqualTo(layout.reserve.bottom));
+          }
+        }
+      },
+    );
   }
 
   testWidgets(

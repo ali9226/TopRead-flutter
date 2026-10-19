@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
@@ -578,291 +579,319 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                 ),
               ),
-              ListView(
-                controller: _scroll_controller,
-                padding: Style.page_padding.copyWith(
-                  top:
-                      status_bar_height +
-                      Style.top_bar_height +
-                      Style.page_top_padding,
-                ),
-                children: <Widget>[
-                  /// 页面主标题。
-                  Text(
-                    easy.tr('search.header_title'),
-                    style: TextStyle(
-                      color: primary_text_color,
-                      fontSize: title_size,
-                      fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                    ),
-                  ),
-                  const SizedBox(height: Style.search_header_gap),
-                  Container(
-                    height: Style.search_bar_height,
-                    decoration: BoxDecoration(
-                      color: card_color,
-                      borderRadius: BorderRadius.circular(Style.card_radius),
-                    ),
-                    padding: Style.search_bar_padding.copyWith(right: 7),
-                    child: Row(
+              WindowContentLayout(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ListView(
+                      controller: _scroll_controller,
+                      padding: Style.page_padding.copyWith(
+                        top:
+                            status_bar_height +
+                            Style.top_bar_height +
+                            Style.page_top_padding,
+                      ),
                       children: <Widget>[
-                        Icon(
-                          Icons.search_rounded,
-                          size: Style.search_icon_size,
-                          color: secondary_text_color,
+                        /// 页面主标题。
+                        Text(
+                          easy.tr('search.header_title'),
+                          style: TextStyle(
+                            color: primary_text_color,
+                            fontSize: title_size,
+                            fontWeight: FontConfig.adjustedWeight(
+                              FontWeight.w500,
+                            ),
+                          ),
                         ),
-                        const SizedBox(width: Style.search_bar_inner_gap),
-                        Expanded(
-                          child: ClipRect(
-                            child: Stack(
-                              clipBehavior: Clip.hardEdge,
-                              children: <Widget>[
-                                TextField(
-                                  controller: search_controller,
-                                  focusNode: search_focus_node,
-                                  onTapOutside: (_) => on_background_tap(),
-                                  onChanged: (String value) {
-                                    setState(() {
-                                      keyword = value;
-                                    });
-                                    if (value.trim().isEmpty &&
-                                        _has_submitted) {
-                                      _reset_search();
-                                    }
-                                  },
-                                  onSubmitted: (String value) {
-                                    _perform_search(_get_submit_keyword());
-                                  },
-                                  decoration: InputDecoration(
-                                    border: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    disabledBorder: InputBorder.none,
-                                    errorBorder: InputBorder.none,
-                                    focusedErrorBorder: InputBorder.none,
-                                    hintText: '',
-                                    suffixIcon: AnimatedOpacity(
-                                      duration: const Duration(
-                                        milliseconds:
-                                            Style.search_clear_fade_duration_ms,
-                                      ),
-                                      curve: Curves.easeOutCubic,
-                                      opacity: keyword.trim().isNotEmpty
-                                          ? Style.one
-                                          : Style.zero,
-                                      child: IgnorePointer(
-                                        ignoring: keyword.trim().isEmpty,
-                                        child: GestureDetector(
-                                          behavior: HitTestBehavior.translucent,
-                                          onTap: () {
-                                            setState(() {
-                                              keyword = '';
-                                              search_controller.clear();
-                                            });
-                                            search_controller.selection =
-                                                const TextSelection.collapsed(
-                                                  offset: 0,
-                                                );
-                                            if (_has_submitted) _reset_search();
-                                          },
-                                          child: Icon(
-                                            Icons.close_rounded,
-                                            size: Style.search_clear_icon_size,
-                                            color: secondary_text_color,
+                        const SizedBox(height: Style.search_header_gap),
+                        Container(
+                          height: Style.search_bar_height,
+                          decoration: BoxDecoration(
+                            color: card_color,
+                            borderRadius: BorderRadius.circular(
+                              Style.card_radius,
+                            ),
+                          ),
+                          padding: Style.search_bar_padding.copyWith(right: 7),
+                          child: Row(
+                            children: <Widget>[
+                              Icon(
+                                Icons.search_rounded,
+                                size: Style.search_icon_size,
+                                color: secondary_text_color,
+                              ),
+                              const SizedBox(width: Style.search_bar_inner_gap),
+                              Expanded(
+                                child: ClipRect(
+                                  child: Stack(
+                                    clipBehavior: Clip.hardEdge,
+                                    children: <Widget>[
+                                      TextField(
+                                        controller: search_controller,
+                                        focusNode: search_focus_node,
+                                        onTapOutside: (_) =>
+                                            on_background_tap(),
+                                        onChanged: (String value) {
+                                          setState(() {
+                                            keyword = value;
+                                          });
+                                          if (value.trim().isEmpty &&
+                                              _has_submitted) {
+                                            _reset_search();
+                                          }
+                                        },
+                                        onSubmitted: (String value) {
+                                          _perform_search(
+                                            _get_submit_keyword(),
+                                          );
+                                        },
+                                        decoration: InputDecoration(
+                                          border: InputBorder.none,
+                                          enabledBorder: InputBorder.none,
+                                          focusedBorder: InputBorder.none,
+                                          disabledBorder: InputBorder.none,
+                                          errorBorder: InputBorder.none,
+                                          focusedErrorBorder: InputBorder.none,
+                                          hintText: '',
+                                          suffixIcon: AnimatedOpacity(
+                                            duration: const Duration(
+                                              milliseconds: Style
+                                                  .search_clear_fade_duration_ms,
+                                            ),
+                                            curve: Curves.easeOutCubic,
+                                            opacity: keyword.trim().isNotEmpty
+                                                ? Style.one
+                                                : Style.zero,
+                                            child: IgnorePointer(
+                                              ignoring: keyword.trim().isEmpty,
+                                              child: GestureDetector(
+                                                behavior:
+                                                    HitTestBehavior.translucent,
+                                                onTap: () {
+                                                  setState(() {
+                                                    keyword = '';
+                                                    search_controller.clear();
+                                                  });
+                                                  search_controller.selection =
+                                                      const TextSelection.collapsed(
+                                                        offset: 0,
+                                                      );
+                                                  if (_has_submitted)
+                                                    _reset_search();
+                                                },
+                                                child: Icon(
+                                                  Icons.close_rounded,
+                                                  size: Style
+                                                      .search_clear_icon_size,
+                                                  color: secondary_text_color,
+                                                ),
+                                              ),
+                                            ),
                                           ),
+                                          suffixIconConstraints:
+                                              const BoxConstraints(
+                                                minWidth: Style
+                                                    .search_clear_button_size,
+                                                minHeight: Style
+                                                    .search_clear_button_size,
+                                              ),
                                         ),
-                                      ),
-                                    ),
-                                    suffixIconConstraints: const BoxConstraints(
-                                      minWidth: Style.search_clear_button_size,
-                                      minHeight: Style.search_clear_button_size,
-                                    ),
-                                  ),
-                                  style: TextStyle(
-                                    color: primary_text_color,
-                                    fontSize: Style.search_input_font_size,
-                                    fontWeight: FontConfig.adjustedWeight(
-                                      FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                IgnorePointer(
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    child: AnimatedOpacity(
-                                      duration: const Duration(
-                                        milliseconds: 250,
-                                      ),
-                                      curve: Curves.easeOutCubic,
-                                      opacity: keyword.trim().isEmpty
-                                          ? 1.0
-                                          : 0.0,
-                                      child: CyclingHintOverlay(
-                                        hint_text: _get_hint_text(),
-                                        text_style: TextStyle(
-                                          color: secondary_text_color,
+                                        style: TextStyle(
+                                          color: primary_text_color,
                                           fontSize:
-                                              Style.search_input_hint_font_size,
+                                              Style.search_input_font_size,
                                           fontWeight: FontConfig.adjustedWeight(
-                                            FontWeight.w400,
+                                            FontWeight.w500,
                                           ),
                                         ),
+                                      ),
+                                      IgnorePointer(
+                                        child: SizedBox(
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          child: AnimatedOpacity(
+                                            duration: const Duration(
+                                              milliseconds: 250,
+                                            ),
+                                            curve: Curves.easeOutCubic,
+                                            opacity: keyword.trim().isEmpty
+                                                ? 1.0
+                                                : 0.0,
+                                            child: CyclingHintOverlay(
+                                              hint_text: _get_hint_text(),
+                                              text_style: TextStyle(
+                                                color: secondary_text_color,
+                                                fontSize: Style
+                                                    .search_input_hint_font_size,
+                                                fontWeight:
+                                                    FontConfig.adjustedWeight(
+                                                      FontWeight.w400,
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: Style.search_bar_inner_gap),
+                              SizedBox(
+                                height: Style.search_submit_button_height,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: Style
+                                          .search_submit_button_horizontal_padding,
+                                    ),
+                                    backgroundColor: ColorConstants.themeColor,
+                                    foregroundColor: Colors.black,
+                                    elevation: Style.zero,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        Style.chip_radius,
+                                      ),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    on_background_tap();
+                                    final String submit_keyword =
+                                        _get_submit_keyword();
+                                    search_controller.text = submit_keyword;
+                                    setState(() {
+                                      keyword = submit_keyword;
+                                    });
+                                    _perform_search(submit_keyword);
+                                  },
+                                  child: Text(
+                                    easy.tr('search.submit'),
+                                    style: TextStyle(
+                                      fontSize: search_submit_button_text_size,
+                                      fontWeight: FontConfig.adjustedWeight(
+                                        FontWeight.w500,
                                       ),
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: Style.search_bar_inner_gap),
-                        SizedBox(
-                          height: Style.search_submit_button_height,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: Style
-                                    .search_submit_button_horizontal_padding,
-                              ),
-                              backgroundColor: ColorConstants.themeColor,
-                              foregroundColor: Colors.black,
-                              elevation: Style.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  Style.chip_radius,
-                                ),
-                              ),
-                            ),
-                            onPressed: () {
-                              on_background_tap();
-                              final String submit_keyword =
-                                  _get_submit_keyword();
-                              search_controller.text = submit_keyword;
-                              setState(() {
-                                keyword = submit_keyword;
-                              });
-                              _perform_search(submit_keyword);
-                            },
-                            child: Text(
-                              easy.tr('search.submit'),
-                              style: TextStyle(
-                                fontSize: search_submit_button_text_size,
-                                fontWeight: FontConfig.adjustedWeight(
-                                  FontWeight.w500,
-                                ),
+                        const SizedBox(height: Style.section_spacing),
+                        if (!_has_submitted) ...[
+                          /// 热门搜索标题。
+                          Text(
+                            easy.tr('search.hot_title'),
+                            style: TextStyle(
+                              color: primary_text_color,
+                              fontSize: section_title_size,
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
                               ),
                             ),
                           ),
-                        ),
+                          const SizedBox(height: Style.section_title_top_gap),
+
+                          /// 热门搜索标签（从 store 获取）。
+                          if (popular_searches.isNotEmpty)
+                            Wrap(
+                              spacing: hot_keyword_spacing,
+                              runSpacing: hot_keyword_run_spacing,
+                              children: popular_searches.map((
+                                PopularSearchItem item,
+                              ) {
+                                return InkWell(
+                                  borderRadius: BorderRadius.circular(
+                                    Style.chip_radius,
+                                  ),
+                                  onTap: () => _on_popular_search_tap(item),
+                                  child: Container(
+                                    padding: chip_padding,
+                                    decoration: BoxDecoration(
+                                      color: is_dark
+                                          ? Colors.white.withValues(
+                                              alpha: Style
+                                                  .hot_keyword_dark_background_alpha,
+                                            )
+                                          : Style.hot_keyword_light_background,
+                                      borderRadius: BorderRadius.circular(
+                                        Style.chip_radius,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      item.title,
+                                      style: TextStyle(
+                                        color: primary_text_color,
+                                        fontSize: hot_keyword_text_size,
+                                        fontWeight: FontConfig.adjustedWeight(
+                                          FontWeight.w400,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          const SizedBox(height: Style.section_spacing),
+
+                          /// 热门推荐标题。
+                          Text(
+                            easy.tr('search.recommend_title'),
+                            style: TextStyle(
+                              color: primary_text_color,
+                              fontSize: section_title_size,
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: Style.section_title_top_gap),
+
+                          /// 推荐瀑布流区域。
+                          AnimatedRecommendWaterfall(
+                            key: _recommend_waterfall_key,
+                            waterfall_id: 'search_recommend',
+                            is_dark: is_dark,
+                            scroll_controller: _scroll_controller,
+                          ),
+                        ] else ...[
+                          /// 搜索结果标题。
+                          Text(
+                            easy.tr(
+                              'search.search_result_title',
+                              namedArgs: <String, String>{
+                                'keyword': _current_search_keyword,
+                              },
+                            ),
+                            style: TextStyle(
+                              color: primary_text_color,
+                              fontSize: section_title_size,
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: Style.section_title_top_gap),
+                          if (_is_search_loading)
+                            // 搜索与热门推荐复用完整卡片骨架，包含封面、文字及分类占位。
+                            RecommendWaterfallSkeleton(is_dark: is_dark)
+                          else if (_search_results.isEmpty)
+                            _build_empty_result(secondary_text_color)
+                          else ...[
+                            SearchResultWaterfall(
+                              items: _search_results,
+                              is_dark: is_dark,
+                            ),
+
+                            /// 加载更多 / 没有了 底部组件。
+                            _build_load_more_footer(is_dark),
+                          ],
+                        ],
                       ],
                     ),
-                  ),
-                  const SizedBox(height: Style.section_spacing),
-                  if (!_has_submitted) ...[
-                    /// 热门搜索标题。
-                    Text(
-                      easy.tr('search.hot_title'),
-                      style: TextStyle(
-                        color: primary_text_color,
-                        fontSize: section_title_size,
-                        fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                      ),
-                    ),
-                    const SizedBox(height: Style.section_title_top_gap),
-
-                    /// 热门搜索标签（从 store 获取）。
-                    if (popular_searches.isNotEmpty)
-                      Wrap(
-                        spacing: hot_keyword_spacing,
-                        runSpacing: hot_keyword_run_spacing,
-                        children: popular_searches.map((
-                          PopularSearchItem item,
-                        ) {
-                          return InkWell(
-                            borderRadius: BorderRadius.circular(
-                              Style.chip_radius,
-                            ),
-                            onTap: () => _on_popular_search_tap(item),
-                            child: Container(
-                              padding: chip_padding,
-                              decoration: BoxDecoration(
-                                color: is_dark
-                                    ? Colors.white.withValues(
-                                        alpha: Style
-                                            .hot_keyword_dark_background_alpha,
-                                      )
-                                    : Style.hot_keyword_light_background,
-                                borderRadius: BorderRadius.circular(
-                                  Style.chip_radius,
-                                ),
-                              ),
-                              child: Text(
-                                item.title,
-                                style: TextStyle(
-                                  color: primary_text_color,
-                                  fontSize: hot_keyword_text_size,
-                                  fontWeight: FontConfig.adjustedWeight(
-                                    FontWeight.w400,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    const SizedBox(height: Style.section_spacing),
-
-                    /// 热门推荐标题。
-                    Text(
-                      easy.tr('search.recommend_title'),
-                      style: TextStyle(
-                        color: primary_text_color,
-                        fontSize: section_title_size,
-                        fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                      ),
-                    ),
-                    const SizedBox(height: Style.section_title_top_gap),
-
-                    /// 推荐瀑布流区域。
-                    AnimatedRecommendWaterfall(
-                      key: _recommend_waterfall_key,
-                      waterfall_id: 'search_recommend',
-                      is_dark: is_dark,
-                      scroll_controller: _scroll_controller,
-                    ),
-                  ] else ...[
-                    /// 搜索结果标题。
-                    Text(
-                      easy.tr(
-                        'search.search_result_title',
-                        namedArgs: <String, String>{
-                          'keyword': _current_search_keyword,
-                        },
-                      ),
-                      style: TextStyle(
-                        color: primary_text_color,
-                        fontSize: section_title_size,
-                        fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                      ),
-                    ),
-                    const SizedBox(height: Style.section_title_top_gap),
-                    if (_is_search_loading)
-                      // 搜索与热门推荐复用完整卡片骨架，包含封面、文字及分类占位。
-                      RecommendWaterfallSkeleton(is_dark: is_dark)
-                    else if (_search_results.isEmpty)
-                      _build_empty_result(secondary_text_color)
-                    else ...[
-                      SearchResultWaterfall(
-                        items: _search_results,
-                        is_dark: is_dark,
-                      ),
-
-                      /// 加载更多 / 没有了 底部组件。
-                      _build_load_more_footer(is_dark),
-                    ],
                   ],
-                ],
+                ),
               ),
               Positioned(
                 top: 0,
@@ -877,37 +906,46 @@ class _SearchPageState extends State<SearchPage> {
                   middle_opacity: Style.header_gradient_middle_opacity,
                 ),
               ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: LanguageSelection(
-                  onLeftTapOverride: () => routerBack(context),
-                  userInfoContrastText: false,
-                  horizontalPadding: Style.page_padding.left,
-                  useSafeAreaTop: false,
-                  topOffset: status_bar_height,
-                  darkBackground: is_dark,
+              WindowContentLayout(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: LanguageSelection(
+                        onLeftTapOverride: () => routerBack(context),
+                        userInfoContrastText: false,
+                        horizontalPadding: Style.page_padding.left,
+                        useSafeAreaTop: false,
+                        topOffset: status_bar_height,
+                        darkBackground: is_dark,
+                      ),
+                    ),
+                    // 返回顶部按钮
+                    FloatingBackToTop(
+                      show: _is_back_to_top_visible,
+                      isDark: is_dark,
+                      onTap: _scroll_to_top,
+                      right: floating_back_to_top_style
+                          .FloatingBackToTopStyle
+                          .right,
+                      visibleBottom:
+                          fixed_nav_style.Style.bar_height +
+                          floating_back_to_top_style
+                              .FloatingBackToTopStyle
+                              .offset_from_bottom_nav +
+                          MediaQuery.paddingOf(context).bottom,
+                      hiddenBottom:
+                          fixed_nav_style.Style.bar_height +
+                          floating_back_to_top_style
+                              .FloatingBackToTopStyle
+                              .hidden_offset +
+                          MediaQuery.paddingOf(context).bottom,
+                    ),
+                  ],
                 ),
-              ),
-              // 返回顶部按钮
-              FloatingBackToTop(
-                show: _is_back_to_top_visible,
-                isDark: is_dark,
-                onTap: _scroll_to_top,
-                right: floating_back_to_top_style.FloatingBackToTopStyle.right,
-                visibleBottom:
-                    fixed_nav_style.Style.bar_height +
-                    floating_back_to_top_style
-                        .FloatingBackToTopStyle
-                        .offset_from_bottom_nav +
-                    MediaQuery.paddingOf(context).bottom,
-                hiddenBottom:
-                    fixed_nav_style.Style.bar_height +
-                    floating_back_to_top_style
-                        .FloatingBackToTopStyle
-                        .hidden_offset +
-                    MediaQuery.paddingOf(context).bottom,
               ),
             ],
           ),

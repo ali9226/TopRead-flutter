@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/components/auth_page/style.dart';
@@ -27,20 +28,21 @@ class AuthTopBar extends StatelessWidget {
 
       return Stack(
         children: [
-          PageTopGradientOverlay(
-            background_color: backgroundColors.first,
-          ),
+          PageTopGradientOverlay(background_color: backgroundColors.first),
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            child: LanguageSelection(
-              showLeftIcon: true,
-              showRightLanguageEntry: false,
-              darkBackground: isDark,
-              useSafeAreaTop: true,
-              topOffset: 10,
-              horizontalPadding: AuthPageStyle.fieldHorizontalPadding,
+            child: WindowContentLayout(
+              expand_height: false,
+              child: LanguageSelection(
+                showLeftIcon: true,
+                showRightLanguageEntry: false,
+                darkBackground: isDark,
+                useSafeAreaTop: true,
+                topOffset: 10,
+                horizontalPadding: AuthPageStyle.fieldHorizontalPadding,
+              ),
             ),
           ),
         ],

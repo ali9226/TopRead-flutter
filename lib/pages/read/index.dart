@@ -1,3 +1,6 @@
+// ignore_for_file: non_constant_identifier_names, constant_identifier_names
+
+import 'package:app/components/window_content_layout/index.dart';
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -15,6 +18,7 @@ import 'package:app/models/paragraph_text_selection.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/rewarded_ad_util.dart';
 import 'package:app/components/page_top_gradient_overlay/index.dart';
+import 'package:app/components/viewport_resize_observer/index.dart';
 import 'package:app/pages/read/utils/scroll_utils.dart';
 import 'package:app/pages/ranking_full_list/widgets/starfield_decoration.dart';
 import 'package:app/pages/read/widgets/main_list/index.dart';
@@ -69,11 +73,15 @@ class ReadPage extends StatefulWidget {
   /// 从消息页跳转时传入的评论ID（用于自动打开评论区并定位）。
   final int initial_comment_id;
 
+  /// 可复用页面逻辑实例；默认仍由当前路由创建，便于验证真实阅读与重排生命周期。
+  final Logic? controller;
+
   const ReadPage({
     super.key,
     required this.story_id,
     required this.story_title,
     this.initial_comment_id = 0,
+    this.controller,
   });
 
   @override
@@ -151,7 +159,7 @@ class _ReadPageState extends State<ReadPage>
   /// 当前滚动进度百分比，用于展示底部阅读进度文字。
   double reading_progress_percent = 0;
 
-  /// 最近一次记录的视口高度，用于判断是否发生横竖屏切换。
+  /// 最近一次记录的视口高度，用于预取和滚动范围计算。
   double last_viewport_dimension = 0;
 
   /// 布局变化前记录的章节索引。
@@ -162,9 +170,6 @@ class _ReadPageState extends State<ReadPage>
 
   /// 是否需要在下一帧恢复滚动位置。
   bool needs_restore_scroll_position = false;
-
-  /// 是否已经安排视口尺寸变化后的检查。
-  bool _metrics_dimension_check_scheduled = false;
 
   /// 正文区块是否已经贴近顶部，用于控制翻页点击区域是否生效。
   bool is_reading_section_at_top = false;
@@ -269,7 +274,9 @@ class _ReadPageState extends State<ReadPage>
     WidgetsBinding.instance.addObserver(this);
     // Logic 与当前阅读路由一一对应，避免不同小说共享章节窗口和滚动控制器。
     // 普通主题重建不会销毁 State，因此无需把页面级控制器常驻到 GetX 容器。
-    logic = Logic(story_id: widget.story_id, story_title: widget.story_title);
+    logic =
+        widget.controller ??
+        Logic(story_id: widget.story_id, story_title: widget.story_title);
     // 确保进入页面时导航栏处于关闭状态。
     logic.show_navigation.value = false;
     logic.wait_until_chapter_mutation_allowed = _wait_until_scroll_idle;
@@ -1115,43 +1122,26 @@ class _ReadPageState extends State<ReadPage>
     super.dispose();
   }
 
-  @override
-  void didChangeMetrics() {
-    super.didChangeMetrics();
-    if (!scroll_controller.hasClients) {
+  /// 真实阅读视口改变前保留章内进度。只改变宽度也会导致正文重新换行。
+  void _on_viewport_resize_start() {
+    if (!scroll_controller.hasClients ||
+        !has_started_reading ||
+        logic.is_loading.value ||
+        _is_restoring_progress ||
+        !_has_stable_progress) {
       return;
     }
 
     pending_restore_chapter_index = logic.current_chapter_index.value;
     pending_restore_chapter_progress = _cached_chapter_progress;
-    if (_metrics_dimension_check_scheduled) {
-      return;
-    }
-    _metrics_dimension_check_scheduled = true;
-    final double previous_dimension =
-        last_viewport_dimension > Style.scroll_offset_epsilon
-        ? last_viewport_dimension
-        : scroll_controller.position.viewportDimension;
+    needs_restore_scroll_position = true;
+  }
 
-    // didChangeMetrics 触发时 ScrollPosition 可能仍持有旧视口尺寸，必须等布局
-    // 完成后再比较；键盘弹出不会改变本页 ListView 高度，因此不会误触发恢复。
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _metrics_dimension_check_scheduled = false;
-      if (!mounted || !scroll_controller.hasClients) {
-        return;
-      }
-
-      final double current_dimension =
-          scroll_controller.position.viewportDimension;
-      last_viewport_dimension = current_dimension;
-      if ((current_dimension - previous_dimension).abs() <
-          Style.scroll_offset_epsilon) {
-        return;
-      }
-
-      needs_restore_scroll_position = true;
-      _try_restore_pending_viewport_change();
-    });
+  /// 新布局完成后沿用章节事务恢复，避免与切章或服务器续读同时写滚动位置。
+  void _on_viewport_resize_end() {
+    if (!mounted || !scroll_controller.hasClients) return;
+    last_viewport_dimension = scroll_controller.position.viewportDimension;
+    _try_restore_pending_viewport_change();
   }
 
   /// 当前没有章节事务时，恢复视口变化前的章节位置。
@@ -2056,6 +2046,12 @@ class _ReadPageState extends State<ReadPage>
         _auto_read_ticker?.stop();
         return;
       }
+      // 折叠/展开、切章和字号重排期间的maxScrollExtent仍在变化。
+      // 等锚点恢复后继续，不能把暂时夹到新边界的旧offset当成真正读到章末。
+      if (needs_restore_scroll_position || _is_chapter_transaction_active) {
+        _auto_read_last_tick = elapsed;
+        return;
+      }
 
       final double delta_seconds;
       if (_auto_read_last_tick == null) {
@@ -2190,7 +2186,7 @@ class _ReadPageState extends State<ReadPage>
         return Scaffold(
           resizeToAvoidBottomInset: false,
           backgroundColor: background_color,
-          body: ReadSkeleton(is_dark: is_dark),
+          body: WindowContentLayout(child: ReadSkeleton(is_dark: is_dark)),
         );
       }
 
@@ -2203,113 +2199,146 @@ class _ReadPageState extends State<ReadPage>
           body: Stack(
             children: <Widget>[
               StarfieldDecoration(is_dark: is_dark),
-              // 主内容滚动组件。
-              NotificationListener<ScrollNotification>(
-                onNotification: _handle_main_scroll_notification,
-                child: RefreshIndicator(
-                  color: ColorConstants.themeColor,
-                  displacement: Style.refresh_indicator_displacement,
-                  notificationPredicate: (ScrollNotification notification) {
-                    return notification.depth == 0 &&
-                        logic.should_show_introduction &&
-                        !has_started_reading &&
-                        !logic.show_navigation.value;
-                  },
-                  onRefresh: _refresh_novel_content,
-                  child: ReadMainList(
-                    logic: logic,
-                    scroll_controller: scroll_controller,
-                    status_bar_height: status_bar_height,
-                    is_dark: is_dark,
-                    detail: detail,
-                    reading_items: reading_items,
-                    reading_section_key: reading_section_key,
-                    on_reading_tap_down: _handle_reading_tap_down,
-                    on_paragraph_comment: _on_paragraph_comment,
-                    on_paragraph_comments: _on_paragraph_comments,
-                    on_paragraph_share: _on_paragraph_share,
-                    on_paragraph_selection_changed:
-                        _on_paragraph_selection_changed,
-                    // 关闭广告保留已提交插位的身份，由插位安全回收上方高度。
-                    native_ad_config: _native_ad_config,
-                    is_native_ad_config_loading: _is_native_ad_config_loading,
-                    native_ads_enabled:
-                        !suppress_read_ads && AdDisplayPolicy.can_show_ads(),
-                    on_native_ad_impression: () {
-                      unawaited(_record_native_ad_impression());
-                    },
-                    ads_read_video_ad_probability: suppress_read_ads
-                        ? 0
-                        : Get.find<ProjectConfigStore>()
-                              .current
-                              .ads_read_video_ad_probability,
-                    ad_free_expire_time_listenable:
-                        _ad_free_expire_time_notifier,
-                    on_video_ad_hint_tap: _on_video_ad_hint_tap,
-                  ),
+              WindowContentLayout(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // 主内容滚动组件。
+                    NotificationListener<ScrollNotification>(
+                      onNotification: _handle_main_scroll_notification,
+                      child: RefreshIndicator(
+                        color: ColorConstants.themeColor,
+                        displacement: Style.refresh_indicator_displacement,
+                        notificationPredicate:
+                            (ScrollNotification notification) {
+                              return notification.depth == 0 &&
+                                  logic.should_show_introduction &&
+                                  !has_started_reading &&
+                                  !logic.show_navigation.value;
+                            },
+                        onRefresh: _refresh_novel_content,
+                        child: ViewportResizeObserver(
+                          on_resize_start: _on_viewport_resize_start,
+                          on_resize_end: _on_viewport_resize_end,
+                          child: ReadMainList(
+                            logic: logic,
+                            scroll_controller: scroll_controller,
+                            status_bar_height: status_bar_height,
+                            is_dark: is_dark,
+                            detail: detail,
+                            reading_items: reading_items,
+                            reading_section_key: reading_section_key,
+                            on_reading_tap_down: _handle_reading_tap_down,
+                            on_paragraph_comment: _on_paragraph_comment,
+                            on_paragraph_comments: _on_paragraph_comments,
+                            on_paragraph_share: _on_paragraph_share,
+                            on_paragraph_selection_changed:
+                                _on_paragraph_selection_changed,
+                            // 关闭广告保留已提交插位的身份，由插位安全回收上方高度。
+                            native_ad_config: _native_ad_config,
+                            is_native_ad_config_loading:
+                                _is_native_ad_config_loading,
+                            native_ads_enabled:
+                                !suppress_read_ads &&
+                                AdDisplayPolicy.can_show_ads(),
+                            on_native_ad_impression: () {
+                              unawaited(_record_native_ad_impression());
+                            },
+                            ads_read_video_ad_probability: suppress_read_ads
+                                ? 0
+                                : Get.find<ProjectConfigStore>()
+                                      .current
+                                      .ads_read_video_ad_probability,
+                            ad_free_expire_time_listenable:
+                                _ad_free_expire_time_notifier,
+                            on_video_ad_hint_tap: _on_video_ad_hint_tap,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               // 顶部渐变遮罩：提供顶部状态栏区域的视觉过渡。
               PageTopGradientOverlay(background_color: background_color),
-              // 滚动过程中仅重建这些轻量阅读辅助层，不触发正文树重建。
-              ValueListenableBuilder<bool>(
-                valueListenable: _has_started_reading_notifier,
-                builder:
-                    (BuildContext context, bool has_started, Widget? child) {
-                      return Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: IgnorePointer(
-                          child: AnimatedOpacity(
-                            duration: Duration(
-                              milliseconds:
-                                  Style.progress_mask_animation_duration_ms,
-                            ),
-                            opacity: has_started ? 1 : 0,
-                            child: child,
-                          ),
-                        ),
-                      );
-                    },
-                child: ReadingProgressMask(is_dark: is_dark),
-              ),
-              ValueListenableBuilder<bool>(
-                valueListenable: _has_started_reading_notifier,
-                builder:
-                    (BuildContext context, bool has_started, Widget? child) {
-                      return ValueListenableBuilder<double>(
-                        valueListenable: _reading_progress_notifier,
-                        builder:
-                            (
-                              BuildContext context,
-                              double progress,
-                              Widget? child,
-                            ) {
-                              return ReadingProgressText(
-                                is_dark: is_dark,
-                                reading_progress_percent: progress,
-                                has_started_reading: has_started,
-                              );
-                            },
-                      );
-                    },
-              ),
-              ValueListenableBuilder<bool>(
-                valueListenable: _has_started_reading_notifier,
-                builder:
-                    (BuildContext context, bool has_started, Widget? child) {
-                      return ReadStartReadingPill(
-                        is_dark: is_dark,
-                        show_start_reading_pill: !has_started,
-                        bottom_pill_background_color:
-                            bottom_pill_background_color,
-                        bottom_safe_area: MediaQuery.viewPaddingOf(
-                          context,
-                        ).bottom,
-                        on_tap: _scroll_to_reading_section,
-                      );
-                    },
+              WindowContentLayout(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // 滚动过程中仅重建这些轻量阅读辅助层，不触发正文树重建。
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _has_started_reading_notifier,
+                      builder:
+                          (
+                            BuildContext context,
+                            bool has_started,
+                            Widget? child,
+                          ) {
+                            return Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: IgnorePointer(
+                                child: AnimatedOpacity(
+                                  duration: Duration(
+                                    milliseconds: Style
+                                        .progress_mask_animation_duration_ms,
+                                  ),
+                                  opacity: has_started ? 1 : 0,
+                                  child: child,
+                                ),
+                              ),
+                            );
+                          },
+                      child: ReadingProgressMask(is_dark: is_dark),
+                    ),
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _has_started_reading_notifier,
+                      builder:
+                          (
+                            BuildContext context,
+                            bool has_started,
+                            Widget? child,
+                          ) {
+                            return ValueListenableBuilder<double>(
+                              valueListenable: _reading_progress_notifier,
+                              builder:
+                                  (
+                                    BuildContext context,
+                                    double progress,
+                                    Widget? child,
+                                  ) {
+                                    return ReadingProgressText(
+                                      is_dark: is_dark,
+                                      reading_progress_percent: progress,
+                                      has_started_reading: has_started,
+                                    );
+                                  },
+                            );
+                          },
+                    ),
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _has_started_reading_notifier,
+                      builder:
+                          (
+                            BuildContext context,
+                            bool has_started,
+                            Widget? child,
+                          ) {
+                            return ReadStartReadingPill(
+                              is_dark: is_dark,
+                              show_start_reading_pill: !has_started,
+                              bottom_pill_background_color:
+                                  bottom_pill_background_color,
+                              bottom_safe_area: MediaQuery.viewPaddingOf(
+                                context,
+                              ).bottom,
+                              on_tap: _scroll_to_reading_section,
+                            );
+                          },
+                    ),
+                  ],
+                ),
               ),
               // 顶部导航栏
               ReadTopBar(
@@ -2422,33 +2451,41 @@ class _ReadPageState extends State<ReadPage>
                       );
                     },
               ),
-              // 自动阅读设置浮动按钮（自动阅读时显示在底部居中）。
-              if (logic.is_auto_reading.value)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: MediaQuery.viewPaddingOf(context).bottom + 16,
-                  child: Center(
-                    child: AutoReadSettingsButton(
-                      is_dark: is_dark,
-                      on_tap: _on_auto_read_settings_tap,
-                    ),
-                  ),
+              WindowContentLayout(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // 自动阅读设置浮动按钮（自动阅读时显示在底部居中）。
+                    if (logic.is_auto_reading.value)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: MediaQuery.viewPaddingOf(context).bottom + 16,
+                        child: Center(
+                          child: AutoReadSettingsButton(
+                            is_dark: is_dark,
+                            on_tap: _on_auto_read_settings_tap,
+                          ),
+                        ),
+                      ),
+                    // 初始进度恢复或目录跳转时，用骨架覆盖已经参与布局的正文及
+                    // 所有交互层；目标位置稳定后一次性显现，避免进度和导航穿透。
+                    if (_is_restoring_progress ||
+                        logic.is_jumping_chapter.value)
+                      Positioned.fill(
+                        child: Container(
+                          color: background_color,
+                          child: ReadContentSkeleton(is_dark: is_dark),
+                        ),
+                      ),
+                    // 激励视频准备期间显示转圈并吸收点击，防止重复触发。
+                    if (_is_rewarded_ad_loading)
+                      Positioned.fill(
+                        child: RewardedAdLoadingOverlay(is_dark: is_dark),
+                      ),
+                  ],
                 ),
-              // 初始进度恢复或目录跳转时，用骨架覆盖已经参与布局的正文及
-              // 所有交互层；目标位置稳定后一次性显现，避免进度和导航穿透。
-              if (_is_restoring_progress || logic.is_jumping_chapter.value)
-                Positioned.fill(
-                  child: Container(
-                    color: background_color,
-                    child: ReadContentSkeleton(is_dark: is_dark),
-                  ),
-                ),
-              // 激励视频准备期间显示转圈并吸收点击，防止重复触发。
-              if (_is_rewarded_ad_loading)
-                Positioned.fill(
-                  child: RewardedAdLoadingOverlay(is_dark: is_dark),
-                ),
+              ),
             ],
           ),
         ),

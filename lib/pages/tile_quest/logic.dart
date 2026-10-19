@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 
@@ -104,11 +105,20 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
           TileQuestConfig.reserve_capacity &&
       (state!.tools[TileQuestTool.remove] ?? 0) > 0;
 
-  static int _random_seed() => _random.nextInt(TileQuestConfig.max_seed);
+  /// 显式开发种子只在debug构建生效，profile/release仍使用安全随机种子。
+  static const int _debug_seed = int.fromEnvironment(
+    'TILE_QUEST_SEED',
+    defaultValue: -1,
+  );
+  static const bool _has_debug_seed =
+      kDebugMode && _debug_seed >= 0 && _debug_seed <= TileQuestConfig.max_seed;
+  static int _random_seed() =>
+      _has_debug_seed ? _debug_seed : _random.nextInt(TileQuestConfig.max_seed);
 
   /// 即使测试种子源固定，重进和重新挑战也不能复用刚结束的牌局种子。
   /// 到达合法上界时回到 0，避免产生无法保存的越界状态。
   int _challenge_seed(int? previous_seed) {
+    if (_has_debug_seed) return _debug_seed;
     final int candidate = _next_seed();
     return candidate == previous_seed
         ? (candidate + 1) % (TileQuestConfig.max_seed + 1)

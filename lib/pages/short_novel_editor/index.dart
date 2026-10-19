@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/api/creator_work.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
@@ -295,7 +296,9 @@ class _ShortNovelEditorPageState extends State<ShortNovelEditorPage>
       if (result.status) {
         _leave_editor();
       } else {
-        showBottomTip(result.message ?? easy.tr('creator_center.delete_failed'));
+        showBottomTip(
+          result.message ?? easy.tr('creator_center.delete_failed'),
+        );
       }
     } catch (e) {
       if (mounted) showBottomTip(easy.tr('creator_center.delete_failed'));
@@ -489,58 +492,60 @@ class _ShortNovelEditorPageState extends State<ShortNovelEditorPage>
         child: Scaffold(
           resizeToAvoidBottomInset: _current_step != 2,
           backgroundColor: AuthorStyle.background(is_dark),
-          appBar: AppBar(
-            backgroundColor: AuthorStyle.surface(is_dark),
-            surfaceTintColor: Colors.transparent,
-            foregroundColor: AuthorStyle.primary_text(is_dark),
-            elevation: 0,
-            title: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _is_editing
-                      ? easy.tr('creator_center.edit_work_title')
-                      : easy.tr('creator_center.short_novel_editor_title'),
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: AuthorStyle.title_weight,
-                  ),
-                ),
-                if (_policy.is_published || _policy.is_scheduled)
+          appBar: WindowAppBar(
+            child: AppBar(
+              backgroundColor: AuthorStyle.surface(is_dark),
+              surfaceTintColor: Colors.transparent,
+              foregroundColor: AuthorStyle.primary_text(is_dark),
+              elevation: 0,
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    easy.tr(
-                      _policy.is_scheduled
-                          ? 'creator_center.scheduled_edit_hint'
-                          : 'creator_center.editing_published_hint',
-                    ),
+                    _is_editing
+                        ? easy.tr('creator_center.edit_work_title')
+                        : easy.tr('creator_center.short_novel_editor_title'),
                     style: TextStyle(
-                      fontSize: 11,
-                      height: 1.3,
-                      fontWeight: AuthorStyle.body_weight,
-                      color: AuthorStyle.secondary_text(is_dark),
+                      fontSize: 18,
+                      fontWeight: AuthorStyle.title_weight,
                     ),
+                  ),
+                  if (_policy.is_published || _policy.is_scheduled)
+                    Text(
+                      easy.tr(
+                        _policy.is_scheduled
+                            ? 'creator_center.scheduled_edit_hint'
+                            : 'creator_center.editing_published_hint',
+                      ),
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 1.3,
+                        fontWeight: AuthorStyle.body_weight,
+                        color: AuthorStyle.secondary_text(is_dark),
+                      ),
+                    ),
+                ],
+              ),
+              actions: <Widget>[
+                if (_policy.can_save_draft)
+                  EditorSaveDraftButton(
+                    is_saving: _is_saving,
+                    on_save: _save_draft,
+                  ),
+                if (_is_editing && widget.initial_work?.novel_id != null)
+                  IconButton(
+                    icon: SvgIcon(
+                      name: 'delete',
+                      width: 22,
+                      height: 22,
+                      color: ColorConstants.dangerColor,
+                    ),
+                    tooltip: easy.tr('creator_center.delete_work'),
+                    onPressed: _delete_work,
                   ),
               ],
             ),
-            actions: <Widget>[
-              if (_policy.can_save_draft)
-                EditorSaveDraftButton(
-                  is_saving: _is_saving,
-                  on_save: _save_draft,
-              ),
-              if (_is_editing && widget.initial_work?.novel_id != null)
-                IconButton(
-                  icon: SvgIcon(
-                    name: 'delete',
-                    width: 22,
-                    height: 22,
-                    color: ColorConstants.dangerColor,
-                  ),
-                  tooltip: easy.tr('creator_center.delete_work'),
-                  onPressed: _delete_work,
-                ),
-            ],
           ),
           bottomNavigationBar: _current_step == 2
               ? null
@@ -573,90 +578,92 @@ class _ShortNovelEditorPageState extends State<ShortNovelEditorPage>
                     ),
                   ],
                 ),
-                content: AbsorbPointer(
-                  absorbing: _is_saving,
-                  child: PageView(
-                    key: const PageStorageKey<String>(
-                      'short_novel_editor_page_view',
-                    ),
-                    controller: _page_controller,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: <Widget>[
-                      StepBasic(
-                        key: const ValueKey('step_basic'),
-                        is_dark: is_dark,
-                        is_editing: _is_editing,
-                        title_controller: _title_controller,
-                        introduction_controller: _introduction_controller,
-                        language_code: _language_code,
-                        cover_local_path: _cover_local_path,
-                        cover_url: _cover_url,
-                        is_uploading_cover: _is_uploading_cover,
-                        on_pick_cover: open_cover_picker,
-                        on_language_changed: (String code) => setState(() {
-                          _language_code = code;
-                          _has_changes = true;
-                        }),
+                content: WindowContentLayout(
+                  child: AbsorbPointer(
+                    absorbing: _is_saving,
+                    child: PageView(
+                      key: const PageStorageKey<String>(
+                        'short_novel_editor_page_view',
                       ),
-                      StepCategory(
-                        key: const ValueKey('step_category'),
-                        is_dark: is_dark,
-                        selected_preference_map: _selected_preference_map,
-                        on_toggle_preference: toggle_preference,
-                        showLength: false,
-                      ),
-                      if (!widget.metadataOnly)
-                        StepContent(
-                          key: const ValueKey('step_content'),
+                      controller: _page_controller,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: <Widget>[
+                        StepBasic(
+                          key: const ValueKey('step_basic'),
                           is_dark: is_dark,
-                          work_type: CreatorWorkType.short,
                           is_editing: _is_editing,
-                          chapters: _chapters,
-                          short_content_controller: _short_content_controller,
-                          chapter_title_controller: _chapter_title_controller,
-                          chapter_content_controller:
-                              _chapter_content_controller,
-                          short_word_count: _short_word_count,
-                          current_chapter_word_count: 0,
-                          on_save_current_chapter: () {},
-                          active_chapter_index: -1,
-                          on_edit_chapter: (_) {},
-                          on_delete_chapter: (_) {},
-                          on_reorder_chapters: (_, __) {},
-                          on_short_content_changed: () => setState(() {}),
-                          on_chapter_content_changed: () => setState(() {}),
-                          on_short_file_upload: upload_short_file,
-                          on_long_file_upload: upload_long_file,
+                          title_controller: _title_controller,
+                          introduction_controller: _introduction_controller,
+                          language_code: _language_code,
+                          cover_local_path: _cover_local_path,
+                          cover_url: _cover_url,
+                          is_uploading_cover: _is_uploading_cover,
+                          on_pick_cover: open_cover_picker,
+                          on_language_changed: (String code) => setState(() {
+                            _language_code = code;
+                            _has_changes = true;
+                          }),
                         ),
-                      if (_show_publish_step)
-                        StepPublish(
-                          key: const ValueKey('step_publish'),
+                        StepCategory(
+                          key: const ValueKey('step_category'),
                           is_dark: is_dark,
-                          is_editing: _is_editing,
-                          release_mode: _release_mode,
-                          scheduled_publish_time: _scheduled_publish_time,
-                          rights_confirmed: _rights_confirmed,
-                          on_release_mode_changed: (CreatorReleaseMode mode) =>
-                              setState(() {
-                                _release_mode = mode;
-                                _has_changes = true;
-                              }),
-                          on_select_schedule_time: () => select_schedule_time(
-                            scheduled_publish_time: _scheduled_publish_time,
-                            on_time_selected: (DateTime? time) {
-                              setState(() {
-                                _scheduled_publish_time = time;
-                                _has_changes = true;
-                              });
-                            },
+                          selected_preference_map: _selected_preference_map,
+                          on_toggle_preference: toggle_preference,
+                          showLength: false,
+                        ),
+                        if (!widget.metadataOnly)
+                          StepContent(
+                            key: const ValueKey('step_content'),
+                            is_dark: is_dark,
+                            work_type: CreatorWorkType.short,
+                            is_editing: _is_editing,
+                            chapters: _chapters,
+                            short_content_controller: _short_content_controller,
+                            chapter_title_controller: _chapter_title_controller,
+                            chapter_content_controller:
+                                _chapter_content_controller,
+                            short_word_count: _short_word_count,
+                            current_chapter_word_count: 0,
+                            on_save_current_chapter: () {},
+                            active_chapter_index: -1,
+                            on_edit_chapter: (_) {},
+                            on_delete_chapter: (_) {},
+                            on_reorder_chapters: (_, __) {},
+                            on_short_content_changed: () => setState(() {}),
+                            on_chapter_content_changed: () => setState(() {}),
+                            on_short_file_upload: upload_short_file,
+                            on_long_file_upload: upload_long_file,
                           ),
-                          on_rights_confirmed_changed: (bool value) =>
-                              setState(() {
-                                _rights_confirmed = value;
-                                _has_changes = true;
-                              }),
-                        ),
-                    ],
+                        if (_show_publish_step)
+                          StepPublish(
+                            key: const ValueKey('step_publish'),
+                            is_dark: is_dark,
+                            is_editing: _is_editing,
+                            release_mode: _release_mode,
+                            scheduled_publish_time: _scheduled_publish_time,
+                            rights_confirmed: _rights_confirmed,
+                            on_release_mode_changed:
+                                (CreatorReleaseMode mode) => setState(() {
+                                  _release_mode = mode;
+                                  _has_changes = true;
+                                }),
+                            on_select_schedule_time: () => select_schedule_time(
+                              scheduled_publish_time: _scheduled_publish_time,
+                              on_time_selected: (DateTime? time) {
+                                setState(() {
+                                  _scheduled_publish_time = time;
+                                  _has_changes = true;
+                                });
+                              },
+                            ),
+                            on_rights_confirmed_changed: (bool value) =>
+                                setState(() {
+                                  _rights_confirmed = value;
+                                  _has_changes = true;
+                                }),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 footer: _current_step == 2

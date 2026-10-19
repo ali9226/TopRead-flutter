@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/components/svg_icon/index.dart';
@@ -116,102 +117,106 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
     return ColoredBox(
       color: bar_bg,
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: CustomerServiceChatStyle.input_bar_padding_h,
-          right: CustomerServiceChatStyle.input_bar_padding_h,
-          top: CustomerServiceChatStyle.input_bar_padding_v,
-          bottom: CustomerServiceChatStyle.input_bar_padding_v + bottom_safe,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: <Widget>[
-            _ChatToolButton(
-              semantic_label: easy.tr('comment.emoji'),
-              on_tap: widget.on_toggle_emoji,
-              child: SvgIcon(
-                name: widget.show_emoji_panel ? 'keyboard' : 'meme',
-                width: CustomerServiceChatStyle.tool_icon_size,
-                height: CustomerServiceChatStyle.tool_icon_size,
-                color: widget.show_emoji_panel
-                    ? CustomerServiceChatStyle.tool_icon_active_color
-                    : icon_color,
-              ),
-            ),
-            _ChatToolButton(
-              semantic_label: easy.tr('comment.image'),
-              on_tap: widget.on_pick_image,
-              child: SvgIcon(
-                name: 'image',
-                width: CustomerServiceChatStyle.tool_icon_size,
-                height: CustomerServiceChatStyle.tool_icon_size,
-                color: icon_color,
-              ),
-            ),
-            const SizedBox(
-              width: CustomerServiceChatStyle.input_action_spacing,
-            ),
-            Expanded(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minHeight: CustomerServiceChatStyle.input_field_height,
-                  maxHeight: CustomerServiceChatStyle.input_field_max_height,
+      child: WindowContentLayout(
+        expand_height: false,
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: CustomerServiceChatStyle.input_bar_padding_h,
+            right: CustomerServiceChatStyle.input_bar_padding_h,
+            top: CustomerServiceChatStyle.input_bar_padding_v,
+            bottom: CustomerServiceChatStyle.input_bar_padding_v + bottom_safe,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              _ChatToolButton(
+                semantic_label: easy.tr('comment.emoji'),
+                on_tap: widget.on_toggle_emoji,
+                child: SvgIcon(
+                  name: widget.show_emoji_panel ? 'keyboard' : 'meme',
+                  width: CustomerServiceChatStyle.tool_icon_size,
+                  height: CustomerServiceChatStyle.tool_icon_size,
+                  color: widget.show_emoji_panel
+                      ? CustomerServiceChatStyle.tool_icon_active_color
+                      : icon_color,
                 ),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: field_bg,
-                    borderRadius: BorderRadius.circular(
-                      CustomerServiceChatStyle.input_radius,
-                    ),
+              ),
+              _ChatToolButton(
+                semantic_label: easy.tr('comment.image'),
+                on_tap: widget.on_pick_image,
+                child: SvgIcon(
+                  name: 'image',
+                  width: CustomerServiceChatStyle.tool_icon_size,
+                  height: CustomerServiceChatStyle.tool_icon_size,
+                  color: icon_color,
+                ),
+              ),
+              const SizedBox(
+                width: CustomerServiceChatStyle.input_action_spacing,
+              ),
+              Expanded(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: CustomerServiceChatStyle.input_field_height,
+                    maxHeight: CustomerServiceChatStyle.input_field_max_height,
                   ),
-                  child: TextField(
-                    controller: widget.text_controller,
-                    focusNode: widget.focus_node,
-                    minLines: 1,
-                    maxLines: null,
-                    keyboardAppearance: widget.is_dark
-                        ? Brightness.dark
-                        : Brightness.light,
-                    textInputAction: TextInputAction.newline,
-                    textCapitalization: TextCapitalization.sentences,
-                    cursorColor: CustomerServiceChatStyle.send_button_color,
-                    cursorWidth: 2,
-                    scrollPadding: const EdgeInsets.only(bottom: 24),
-                    style: TextStyle(
-                      fontSize: input_font_size,
-                      fontWeight: CustomerServiceChatStyle.message_font_weight,
-                      color: text_color,
-                      height: CustomerServiceChatStyle.input_line_height,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: field_bg,
+                      borderRadius: BorderRadius.circular(
+                        CustomerServiceChatStyle.input_radius,
+                      ),
                     ),
-                    decoration: InputDecoration(
-                      hintText: easy.tr('customer_service_sheet.input_hint'),
-                      hintStyle: TextStyle(
+                    child: TextField(
+                      controller: widget.text_controller,
+                      focusNode: widget.focus_node,
+                      minLines: 1,
+                      maxLines: null,
+                      keyboardAppearance: widget.is_dark
+                          ? Brightness.dark
+                          : Brightness.light,
+                      textInputAction: TextInputAction.newline,
+                      textCapitalization: TextCapitalization.sentences,
+                      cursorColor: CustomerServiceChatStyle.send_button_color,
+                      cursorWidth: 2,
+                      scrollPadding: const EdgeInsets.only(bottom: 24),
+                      style: TextStyle(
                         fontSize: input_font_size,
                         fontWeight:
                             CustomerServiceChatStyle.message_font_weight,
-                        color: CustomerServiceChatStyle.input_hint_color,
+                        color: text_color,
                         height: CustomerServiceChatStyle.input_line_height,
                       ),
-                      isDense: true,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal:
-                            CustomerServiceChatStyle.input_inner_padding,
-                        vertical:
-                            CustomerServiceChatStyle.input_content_padding_v,
+                      decoration: InputDecoration(
+                        hintText: easy.tr('customer_service_sheet.input_hint'),
+                        hintStyle: TextStyle(
+                          fontSize: input_font_size,
+                          fontWeight:
+                              CustomerServiceChatStyle.message_font_weight,
+                          color: CustomerServiceChatStyle.input_hint_color,
+                          height: CustomerServiceChatStyle.input_line_height,
+                        ),
+                        isDense: true,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal:
+                              CustomerServiceChatStyle.input_inner_padding,
+                          vertical:
+                              CustomerServiceChatStyle.input_content_padding_v,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(
-              width: CustomerServiceChatStyle.input_action_spacing,
-            ),
-            _build_send_button(is_cjk),
-          ],
+              const SizedBox(
+                width: CustomerServiceChatStyle.input_action_spacing,
+              ),
+              _build_send_button(is_cjk),
+            ],
+          ),
         ),
       ),
     );

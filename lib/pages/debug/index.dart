@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
@@ -29,47 +30,51 @@ class DebugPage extends StatelessWidget {
         backgroundColor: isDark
             ? ColorConstants.nightBackgroundColor
             : ColorConstants.whiteColor,
-        appBar: AppBar(
-          backgroundColor: isDark
-              ? ColorConstants.nightBackgroundColor
-              : ColorConstants.whiteColor,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios_rounded,
-              color: isDark ? Colors.white : ColorConstants.lightTextColor,
-              size: 20,
+        appBar: WindowAppBar(
+          child: AppBar(
+            backgroundColor: isDark
+                ? ColorConstants.nightBackgroundColor
+                : ColorConstants.whiteColor,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_rounded,
+                color: isDark ? Colors.white : ColorConstants.lightTextColor,
+                size: 20,
+              ),
+              onPressed: () => AppRouter.pop(),
             ),
-            onPressed: () => AppRouter.pop(),
-          ),
-          title: Text(
-            easy.tr('debug.title'),
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
-              color: isDark ? Colors.white : ColorConstants.lightTextColor,
+            title: Text(
+              easy.tr('debug.title'),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
+                color: isDark ? Colors.white : ColorConstants.lightTextColor,
+              ),
             ),
+            centerTitle: true,
           ),
-          centerTitle: true,
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            Style.pageHorizontalPadding,
-            Style.pageTopPadding,
-            Style.pageHorizontalPadding,
-            MediaQuery.paddingOf(context).bottom + Style.pageBottomPadding,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FcmTokenDebugItem(isDark: isDark),
-              const SizedBox(height: Style.itemSpacing),
-              AdvertisingIdDebugItem(isDark: isDark),
-              const SizedBox(height: Style.itemSpacing),
-              LimitAdTrackingDebugItem(isDark: isDark),
-              const SizedBox(height: Style.itemSpacing),
-              RewardedAdDebugItem(isDark: isDark),
-            ],
+        body: WindowContentLayout(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              Style.pageHorizontalPadding,
+              Style.pageTopPadding,
+              Style.pageHorizontalPadding,
+              MediaQuery.paddingOf(context).bottom + Style.pageBottomPadding,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FcmTokenDebugItem(isDark: isDark),
+                const SizedBox(height: Style.itemSpacing),
+                AdvertisingIdDebugItem(isDark: isDark),
+                const SizedBox(height: Style.itemSpacing),
+                LimitAdTrackingDebugItem(isDark: isDark),
+                const SizedBox(height: Style.itemSpacing),
+                RewardedAdDebugItem(isDark: isDark),
+              ],
+            ),
           ),
         ),
       );

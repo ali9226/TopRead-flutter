@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 import 'config.dart';
 import 'geometry.dart';
+import 'geometry_style.dart';
 import 'expert_barrier.dart';
 import 'models.dart';
 
@@ -181,7 +182,10 @@ class TileQuestValidator {
           tile.type < 0 ||
           tile.type >= TileQuestConfig.max_tile_types ||
           tile.layer < 0 ||
-          tile.layer > 64 ||
+          tile.layer > TileQuestConfig.max_logical_layer ||
+          tile.region_id.length >
+              TileQuestGeometryStyle.maximum_region_id_length ||
+          !TileQuestGeometryStyle.region_id_pattern.hasMatch(tile.region_id) ||
           !tile.x.isFinite ||
           !tile.y.isFinite ||
           !tile.width.isFinite ||

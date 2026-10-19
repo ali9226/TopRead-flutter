@@ -25,6 +25,28 @@ class QuestTileBatch {
 
   void begin() => _count = 0;
 
+  /// 遮罩过渡仍在同一个有序图集提交中完成；仅过渡中的牌多一个精灵。
+  ///
+  /// 底牌始终完整绘制，正常牌面以连续透明度覆盖，避免中点透出背景。
+  /// 两个端点各只保留一个精灵，静态数百张牌的成本保持不变。
+  void add_reveal(
+    Rect normal,
+    Rect blocked,
+    Rect destination,
+    double blocked_amount, {
+    double rotation = 0,
+  }) {
+    final amount = blocked_amount.clamp(0.0, 1.0);
+    if (amount <= 0) {
+      add(normal, destination, rotation: rotation);
+      return;
+    }
+    add(blocked, destination, rotation: rotation);
+    if (amount < 1) {
+      add(normal, destination, rotation: rotation, opacity: 1 - amount);
+    }
+  }
+
   /// 图集内每格是同尺寸完整立体牌；不添加逐牌渐变、裁剪或合成层。
   void add(
     Rect source,
@@ -41,16 +63,20 @@ class QuestTileBatch {
       _sources.setRange(0, old_sources.length, old_sources);
       _colors.setRange(0, old_colors.length, old_colors);
     }
-    final scale = destination.shortestSide / TileQuestStyle.tile_cache_width;
+    final scale = destination.width / TileQuestStyle.tile_cache_width;
     final scos = math.cos(rotation) * scale;
     final ssin = math.sin(rotation) * scale;
     final offset = _count * 4;
     _transforms[offset] = scos;
     _transforms[offset + 1] = ssin;
     _transforms[offset + 2] =
-        destination.center.dx - (scos - ssin) * source.width / 2;
+        destination.center.dx -
+        scos * source.width / 2 +
+        ssin * source.height / 2;
     _transforms[offset + 3] =
-        destination.center.dy - (scos + ssin) * source.height / 2;
+        destination.center.dy -
+        ssin * source.width / 2 -
+        scos * source.height / 2;
     _sources[offset] = source.left;
     _sources[offset + 1] = source.top;
     _sources[offset + 2] = source.right;

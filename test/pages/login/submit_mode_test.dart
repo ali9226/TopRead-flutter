@@ -51,7 +51,8 @@ void main() {
     Get.testMode = true;
     Get.put<AuthorizedLoginStore>(_RecordingAuthenticationStore());
     Get.put<DeviceInfo>(_TestDeviceInfo());
-    Get.put(LanguageStore(asset_language_code_list: <String>['zh']));
+    // 认证流程测试使用正式允许的英语，避免旧中文fixture触发离线语种回退。
+    Get.put(LanguageStore(asset_language_code_list: <String>['en']));
     Get.put(ProjectConfigStore());
   });
 
@@ -100,11 +101,12 @@ void main() {
 }
 
 Widget _build_test_app() => EasyLocalization(
-  supportedLocales: const <Locale>[Locale('zh')],
+  supportedLocales: const <Locale>[Locale('en')],
   path: 'assets/i18n',
   assetLoader: const _SubmitModeAssetLoader(),
-  startLocale: const Locale('zh'),
-  fallbackLocale: const Locale('zh'),
+  startLocale: const Locale('en'),
+  fallbackLocale: const Locale('en'),
+  saveLocale: false,
   child: Builder(
     builder: (BuildContext context) => MaterialApp(
       locale: context.locale,

@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -55,18 +56,25 @@ class AuthPageScaffold extends StatelessWidget {
                 (AuthBackgroundBubble bubble) =>
                     _AuthBackgroundBubble(bubble: bubble, isDark: isDark),
               ),
-              SingleChildScrollView(
-                padding: AuthPageStyle.contentPadding.add(
-                  EdgeInsets.only(
-                    top:
-                        safeTop +
-                        AuthPageStyle.topHeaderHeight +
-                        AuthPageStyle.brandTranslateY,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: children,
+              WindowContentLayout(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    SingleChildScrollView(
+                      padding: AuthPageStyle.contentPadding.add(
+                        EdgeInsets.only(
+                          top:
+                              safeTop +
+                              AuthPageStyle.topHeaderHeight +
+                              AuthPageStyle.brandTranslateY,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: children,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const AuthTopBar(),

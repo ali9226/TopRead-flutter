@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../game/models.dart';
 import '../style.dart';
 import 'board_motion.dart';
+import 'board_reveal.dart';
 import 'scene_layout.dart';
 import 'scene_motion.dart';
 import 'shuffle_textures.dart';
@@ -20,11 +21,13 @@ class QuestShuffleFrame {
     required this.rotation,
     required this.face_progress,
     required this.blocked,
+    this.blocked_amount,
   });
   final int id, type, previous_type;
   final Rect rect;
   final double rotation, face_progress;
   final bool blocked;
+  final double? blocked_amount;
 }
 
 /// 洗牌只有一个绘制节点。时钟直接触发 repaint，牌数不再影响组件树大小。
@@ -37,6 +40,7 @@ class QuestShuffleMotion extends StatefulWidget {
     required this.textures,
     this.waiting = false,
     this.excluded_ids = const {},
+    this.reveal,
   });
   final QuestSceneMotion motion;
   final QuestSceneLayout layout;
@@ -44,6 +48,7 @@ class QuestShuffleMotion extends StatefulWidget {
   final QuestShuffleTextures textures;
   final bool waiting;
   final Set<int> excluded_ids;
+  final QuestBoardReveal? reveal;
 
   @override
   State<QuestShuffleMotion> createState() => _QuestShuffleMotionState();
@@ -68,6 +73,7 @@ class _QuestShuffleMotionState extends State<QuestShuffleMotion> {
         oldWidget.clock != widget.clock ||
         oldWidget.waiting != widget.waiting ||
         !setEquals(oldWidget.excluded_ids, widget.excluded_ids) ||
+        oldWidget.reveal != widget.reveal ||
         oldWidget.textures != widget.textures) {
       _create_surface();
     }
@@ -84,6 +90,7 @@ class _QuestShuffleMotionState extends State<QuestShuffleMotion> {
             textures: widget.textures,
             waiting: widget.waiting,
             excluded_ids: widget.excluded_ids,
+            reveal: widget.reveal,
           ),
           size: widget.layout.size,
         ),
@@ -127,7 +134,8 @@ class QuestShufflePainter extends CustomPainter {
     required this.textures,
     this.waiting = false,
     this.excluded_ids = const {},
-  }) : super(repaint: Listenable.merge([clock, textures])) {
+    this.reveal,
+  }) : super(repaint: Listenable.merge([clock, textures, reveal])) {
     final result = motion.result;
     final before = {for (final tile in result.before.tiles) tile.id: tile};
     final after = {for (final tile in result.after.tiles) tile.id: tile};
@@ -147,10 +155,10 @@ class QuestShufflePainter extends CustomPainter {
           return layer == 0 ? a.tile.id.compareTo(b.tile.id) : layer;
         });
     _by_id = {for (final card in _cards) card.tile.id: card};
-    // 最多两张纹理组成一张换面牌；缓冲区随本次洗牌复用。
-    _transforms = Float32List(_cards.length * 8);
-    _sources = Float32List(_cards.length * 8);
-    _colors = Int32List(_cards.length * 2);
+    // 极短的揭牌和换面窗口可以重叠；每牌最多四个精灵，仍只提交一次。
+    _transforms = Float32List(_cards.length * 16);
+    _sources = Float32List(_cards.length * 16);
+    _colors = Int32List(_cards.length * 4);
   }
 
   final QuestSceneMotion motion;
@@ -159,6 +167,7 @@ class QuestShufflePainter extends CustomPainter {
   final QuestShuffleTextures textures;
   final bool waiting;
   final Set<int> excluded_ids;
+  final QuestBoardReveal? reveal;
   int get _count => motion.result.moved_ids.length;
   late final List<_ShuffleCard> _cards;
   late final Map<int, _ShuffleCard> _by_id;
@@ -199,6 +208,7 @@ class QuestShufflePainter extends CustomPainter {
         count: _count,
       ),
       blocked: card.tile.is_blocked,
+      blocked_amount: reveal?.amount_of(id, blocked: card.tile.is_blocked),
     );
   }
 
@@ -237,30 +247,56 @@ class QuestShufflePainter extends CustomPainter {
         index: card.index,
         count: _count,
       );
-      final old_source = textures.source_of(
-        card.previous_type,
-        blocked: card.tile.is_blocked,
-      );
-      final new_source = textures.source_of(
-        card.tile.type,
-        blocked: card.tile.is_blocked,
-      );
-      if (atlas == null || old_source == null || new_source == null) {
+      final old_normal = textures.source_of(card.previous_type, blocked: false);
+      final old_blocked = textures.source_of(card.previous_type, blocked: true);
+      final new_normal = textures.source_of(card.tile.type, blocked: false);
+      final new_blocked = textures.source_of(card.tile.type, blocked: true);
+      if (atlas == null ||
+          old_normal == null ||
+          old_blocked == null ||
+          new_normal == null ||
+          new_blocked == null) {
         // 预热未完成仍绘制已解码的原图，不因首帧异步加载而清空棋盘。
         _paint_fallback(canvas, card, center_x, center_y, rotation, face);
         continue;
       }
       final blended =
           card.previous_type != card.tile.type && face > 0 && face < 1;
-      final first = face >= 1 ? new_source : old_source;
-      final scale = source.shortestSide / TileQuestStyle.tile_cache_width;
+      final amount =
+          reveal?.amount_of(card.tile.id, blocked: card.tile.is_blocked) ??
+          (card.tile.is_blocked ? 1.0 : 0.0);
+      final first = face >= 1 ? new_normal : old_normal;
+      final scale = source.width / TileQuestStyle.tile_cache_width;
       final scos = math.cos(rotation) * scale;
       final ssin = math.sin(rotation) * scale;
-      final tx = center_x - (scos - ssin) * TileQuestStyle.tile_cache_width / 2;
-      final ty = center_y - (scos + ssin) * TileQuestStyle.tile_cache_width / 2;
-      _write_sprite(sprite++, first, scos, ssin, tx, ty, 1);
+      // 图集每格包含外扩落影，绕中心铺满整格而不是只铺逻辑牌。
+      final half_width = first.width / 2;
+      final half_height = first.height / 2;
+      final tx = center_x - scos * half_width + ssin * half_height;
+      final ty = center_y - ssin * half_width - scos * half_height;
+      sprite = _write_reveal(
+        sprite,
+        first,
+        face >= 1 ? new_blocked : old_blocked,
+        amount,
+        scos,
+        ssin,
+        tx,
+        ty,
+        1,
+      );
       if (blended) {
-        _write_sprite(sprite++, new_source, scos, ssin, tx, ty, face);
+        sprite = _write_reveal(
+          sprite,
+          new_normal,
+          new_blocked,
+          amount,
+          scos,
+          ssin,
+          tx,
+          ty,
+          face,
+        );
       }
     }
     if (atlas != null && sprite > 0) {
@@ -274,6 +310,37 @@ class QuestShufflePainter extends CustomPainter {
         _paint,
       );
     }
+  }
+
+  /// 已在变亮的牌进入洗牌等待/运动时，沿用同一连续遮罩权重。
+  int _write_reveal(
+    int index,
+    Rect normal,
+    Rect blocked,
+    double amount,
+    double scos,
+    double ssin,
+    double tx,
+    double ty,
+    double opacity,
+  ) {
+    if (amount <= 0) {
+      _write_sprite(index++, normal, scos, ssin, tx, ty, opacity);
+    } else {
+      _write_sprite(index++, blocked, scos, ssin, tx, ty, opacity);
+      if (amount < 1) {
+        _write_sprite(
+          index++,
+          normal,
+          scos,
+          ssin,
+          tx,
+          ty,
+          opacity * (1 - amount),
+        );
+      }
+    }
+    return index;
   }
 
   void _write_sprite(
@@ -317,6 +384,10 @@ class QuestShufflePainter extends CustomPainter {
       ),
       face >= 1 ? card.tile.type : card.previous_type,
       blocked: card.tile.is_blocked,
+      blocked_amount: reveal?.amount_of(
+        card.tile.id,
+        blocked: card.tile.is_blocked,
+      ),
     );
     canvas.restore();
   }
@@ -328,5 +399,6 @@ class QuestShufflePainter extends CustomPainter {
       textures != oldDelegate.textures ||
       waiting != oldDelegate.waiting ||
       !setEquals(excluded_ids, oldDelegate.excluded_ids) ||
+      reveal != oldDelegate.reveal ||
       clock != oldDelegate.clock;
 }

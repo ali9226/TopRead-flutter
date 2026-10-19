@@ -2,6 +2,7 @@
 
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get.dart';
 import 'package:app/config/font_config.dart';
@@ -12,6 +13,7 @@ import 'package:app/models/language_info.dart';
 import 'package:app/components/home_top_search_entry/index.dart';
 import 'package:app/stores/language_store.dart';
 import 'package:app/util/language_util/index.dart';
+import 'style.dart';
 
 /// 首页头部栏。
 class HomeHeaderBar extends StatelessWidget {
@@ -58,51 +60,81 @@ class HomeHeaderBar extends StatelessWidget {
         ? Colors.white
         : ColorConstants.lightTextColor;
 
-    return SizedBox(
-      height: 58,
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            /// 左侧放置搜索入口，点击后跳转搜索页。
-            child: HomeTopSearchEntry(on_tap: on_search_tap, is_dark: is_dark),
-          ),
-          const SizedBox(width: 12),
-          /// 右侧语种区域支持点击进入语言选择页。
-          GestureDetector(
-            onTap: on_language_tap,
-            behavior: HitTestBehavior.translucent,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                ClipOval(
-                  child: _buildLanguageIcon(
-                    languageIconUrl: languageIconUrl,
-                    languageCode: languageCode,
+    return WindowReservedRegionPadding(
+      child: SizedBox(
+        height: HomeHeaderBarStyle.height,
+        child: LayoutBuilder(
+          builder: (context, constraints) => Row(
+            children: <Widget>[
+              Expanded(
+                /// 左侧放置搜索入口，点击后跳转搜索页。
+                child: HomeTopSearchEntry(
+                  on_tap: on_search_tap,
+                  is_dark: is_dark,
+                ),
+              ),
+              const SizedBox(width: HomeHeaderBarStyle.entry_gap),
+
+              /// 右侧语种区域支持点击进入语言选择页。
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth:
+                      constraints.maxWidth *
+                      HomeHeaderBarStyle.language_max_width_fraction,
+                  minHeight: HomeHeaderBarStyle.language_target_height,
+                ),
+                child: GestureDetector(
+                  onTap: on_language_tap,
+                  behavior: HitTestBehavior.translucent,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      ClipOval(
+                        child: _buildLanguageIcon(
+                          languageIconUrl: languageIconUrl,
+                          languageCode: languageCode,
+                        ),
+                      ),
+                      const SizedBox(
+                        width: HomeHeaderBarStyle.language_icon_gap,
+                      ),
+
+                      /// 展示当前语言名称。
+                      Flexible(
+                        child: Text(
+                          languageName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: languageTextColor,
+                            fontSize: LanguageUtil.is_cjk_language(languageCode)
+                                ? HomeHeaderBarStyle.language_font_size_cjk
+                                : HomeHeaderBarStyle
+                                      .language_font_size_alphabetic,
+                            fontWeight: FontConfig.adjustedWeight(
+                              FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(
+                        width: HomeHeaderBarStyle.translate_icon_gap,
+                      ),
+
+                      /// 语言切换图标。
+                      SvgIcon(
+                        name: 'translate',
+                        color: languageTextColor,
+                        width: HomeHeaderBarStyle.translate_icon_size,
+                        height: HomeHeaderBarStyle.translate_icon_size,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 4),
-                /// 展示当前语言名称。
-                Text(
-                  languageName,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: languageTextColor,
-                    fontSize: 15,
-                    fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                /// 语言切换图标。
-                SvgIcon(
-                  name: 'translate',
-                  color: languageTextColor,
-                  width: 18,
-                  height: 18,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -116,11 +148,11 @@ class HomeHeaderBar extends StatelessWidget {
     if (languageIconUrl.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: languageIconUrl,
-        width: 22,
-        height: 22,
+        width: HomeHeaderBarStyle.language_icon_size,
+        height: HomeHeaderBarStyle.language_icon_size,
         fit: BoxFit.cover,
         // 如果网络图加载失败，回退到本地兜底逻辑
-        errorWidget: (_, __, ___) => _buildLocalIcon(languageCode),
+        errorWidget: (_, _, _) => _buildLocalIcon(languageCode),
       );
     }
     // 没有网络图时直接走本地兜底
@@ -136,12 +168,15 @@ class HomeHeaderBar extends StatelessWidget {
 
     return Image.asset(
       assetPath,
-      width: 22,
-      height: 22,
+      width: HomeHeaderBarStyle.language_icon_size,
+      height: HomeHeaderBarStyle.language_icon_size,
       fit: BoxFit.cover,
       // 最后一层物理兜底，防止资源彻底丢失
-      errorBuilder: (_, __, ___) =>
-          Container(width: 22, height: 22, color: Colors.grey),
+      errorBuilder: (_, _, _) => Container(
+        width: HomeHeaderBarStyle.language_icon_size,
+        height: HomeHeaderBarStyle.language_icon_size,
+        color: Colors.grey,
+      ),
     );
   }
 }

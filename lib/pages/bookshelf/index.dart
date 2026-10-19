@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:app/config/font_config.dart';
@@ -117,146 +118,164 @@ class _BookshelfPageState extends State<BookshelfPage>
         body: Stack(
           children: <Widget>[
             PageBackgroundDecor(is_dark: is_dark),
-            SafeArea(
-              bottom: false,
-              left: !(is_logged_in && is_landscape),
-              right: !(is_logged_in && is_landscape),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  if (!is_logged_in)
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(
-                          Style.page_horizontal_padding,
-                          0,
-                          Style.page_horizontal_padding,
-                          0,
-                        ).copyWith(top: page_top_padding),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              easy.tr('bookshelf.title'),
-                              style: TextStyle(
-                                color: title_color,
-                                fontSize: Style.title_font_size,
-                                fontWeight: FontConfig.adjustedWeight(
-                                  FontWeight.w500,
+            WindowContentLayout(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  SafeArea(
+                    bottom: false,
+                    left: !(is_logged_in && is_landscape),
+                    right: !(is_logged_in && is_landscape),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        if (!is_logged_in)
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(
+                                Style.page_horizontal_padding,
+                                0,
+                                Style.page_horizontal_padding,
+                                0,
+                              ).copyWith(top: page_top_padding),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    easy.tr('bookshelf.title'),
+                                    style: TextStyle(
+                                      color: title_color,
+                                      fontSize: Style.title_font_size,
+                                      fontWeight: FontConfig.adjustedWeight(
+                                        FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(
+                                    height: Style.no_login_top_spacing,
+                                  ),
+                                  LoginRequiredContent(
+                                    title: easy.tr('bookshelf.no_login.title'),
+                                    subtitle: easy.tr(
+                                      'bookshelf.no_login.desc',
+                                    ),
+                                    primary_text_color: title_color,
+                                    secondary_text_color: subtitle_color,
+                                    action_key: 'bookshelf_no_login_to_login',
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else ...<Widget>[
+                          SizedBox(
+                            height:
+                                page_top_padding + Style.logged_in_top_spacing,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: Style.page_horizontal_padding,
+                            ),
+                            child: SizedBox(
+                              height: Style.tab_bar_height,
+                              child: TabBar(
+                                controller: _tab_controller,
+                                isScrollable: true,
+                                tabAlignment: TabAlignment.start,
+                                dividerColor: Colors.transparent,
+                                indicatorSize: TabBarIndicatorSize.label,
+                                labelPadding: Style.tab_label_padding,
+                                indicator: UnderlineTabIndicator(
+                                  borderRadius: BorderRadius.circular(
+                                    Style.tab_indicator_height / 2,
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: ColorConstants.themeColor,
+                                    width: Style.tab_indicator_height,
+                                  ),
+                                  insets: const EdgeInsets.only(
+                                    bottom: Style.tab_indicator_bottom_offset,
+                                  ),
                                 ),
+                                tabs: <Widget>[
+                                  _BookshelfTab(
+                                    index: 0,
+                                    title: easy.tr('bookshelf.tabs.history'),
+                                    tab_controller: _tab_controller,
+                                    selected_color: title_color,
+                                    unselected_color: subtitle_color,
+                                    tab_width: _measure_tab_width(
+                                      context: context,
+                                      title: easy.tr('bookshelf.tabs.history'),
+                                    ),
+                                  ),
+                                  _BookshelfTab(
+                                    index: 1,
+                                    title: easy.tr('bookshelf.tabs.favorite'),
+                                    tab_controller: _tab_controller,
+                                    selected_color: title_color,
+                                    unselected_color: subtitle_color,
+                                    tab_width: _measure_tab_width(
+                                      context: context,
+                                      title: easy.tr('bookshelf.tabs.favorite'),
+                                    ),
+                                  ),
+                                  _BookshelfTab(
+                                    index: 2,
+                                    title: easy.tr('bookshelf.tabs.focus'),
+                                    tab_controller: _tab_controller,
+                                    selected_color: title_color,
+                                    unselected_color: subtitle_color,
+                                    tab_width: _measure_tab_width(
+                                      context: context,
+                                      title: easy.tr('bookshelf.tabs.focus'),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: Style.no_login_top_spacing),
-                            LoginRequiredContent(
-                              title: easy.tr('bookshelf.no_login.title'),
-                              subtitle: easy.tr('bookshelf.no_login.desc'),
-                              primary_text_color: title_color,
-                              secondary_text_color: subtitle_color,
-                              action_key: 'bookshelf_no_login_to_login',
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else ...<Widget>[
-                    SizedBox(
-                      height: page_top_padding + Style.logged_in_top_spacing,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: Style.page_horizontal_padding,
-                      ),
-                      child: SizedBox(
-                        height: Style.tab_bar_height,
-                        child: TabBar(
-                          controller: _tab_controller,
-                          isScrollable: true,
-                          tabAlignment: TabAlignment.start,
-                          dividerColor: Colors.transparent,
-                          indicatorSize: TabBarIndicatorSize.label,
-                          labelPadding: Style.tab_label_padding,
-                          indicator: UnderlineTabIndicator(
-                            borderRadius: BorderRadius.circular(
-                              Style.tab_indicator_height / 2,
-                            ),
-                            borderSide: BorderSide(
-                              color: ColorConstants.themeColor,
-                              width: Style.tab_indicator_height,
-                            ),
-                            insets: const EdgeInsets.only(
-                              bottom: Style.tab_indicator_bottom_offset,
                             ),
                           ),
-                          tabs: <Widget>[
-                            _BookshelfTab(
-                              index: 0,
-                              title: easy.tr('bookshelf.tabs.history'),
-                              tab_controller: _tab_controller,
-                              selected_color: title_color,
-                              unselected_color: subtitle_color,
-                              tab_width: _measure_tab_width(
-                                context: context,
-                                title: easy.tr('bookshelf.tabs.history'),
+                          Expanded(
+                            child: TabBarView(
+                              key: ValueKey<String>(
+                                'bookshelf_tab_bar_view_$is_landscape',
                               ),
-                            ),
-                            _BookshelfTab(
-                              index: 1,
-                              title: easy.tr('bookshelf.tabs.favorite'),
-                              tab_controller: _tab_controller,
-                              selected_color: title_color,
-                              unselected_color: subtitle_color,
-                              tab_width: _measure_tab_width(
-                                context: context,
-                                title: easy.tr('bookshelf.tabs.favorite'),
-                              ),
-                            ),
-                            _BookshelfTab(
-                              index: 2,
-                              title: easy.tr('bookshelf.tabs.focus'),
-                              tab_controller: _tab_controller,
-                              selected_color: title_color,
-                              unselected_color: subtitle_color,
-                              tab_width: _measure_tab_width(
-                                context: context,
-                                title: easy.tr('bookshelf.tabs.focus'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: TabBarView(
-                        key: ValueKey<String>(
-                          'bookshelf_tab_bar_view_$is_landscape',
-                        ),
-                        controller: _tab_controller,
-                        children: <Widget>[
-                          _BookshelfTabPage(
-                            child: HistoryTabContent(
-                              accent_color:
-                                  BookshelfLogic.resolve_tab_accent_color(0),
-                              is_dark: is_dark,
-                            ),
-                          ),
-                          _BookshelfTabPage(
-                            child: FavoriteTabContent(
-                              accent_color:
-                                  BookshelfLogic.resolve_tab_accent_color(1),
-                              is_dark: is_dark,
-                            ),
-                          ),
-                          _BookshelfTabPage(
-                            child: FocusTabContent(
-                              accent_color:
-                                  BookshelfLogic.resolve_tab_accent_color(2),
-                              is_dark: is_dark,
+                              controller: _tab_controller,
+                              children: <Widget>[
+                                _BookshelfTabPage(
+                                  child: HistoryTabContent(
+                                    accent_color:
+                                        BookshelfLogic.resolve_tab_accent_color(
+                                          0,
+                                        ),
+                                    is_dark: is_dark,
+                                  ),
+                                ),
+                                _BookshelfTabPage(
+                                  child: FavoriteTabContent(
+                                    accent_color:
+                                        BookshelfLogic.resolve_tab_accent_color(
+                                          1,
+                                        ),
+                                    is_dark: is_dark,
+                                  ),
+                                ),
+                                _BookshelfTabPage(
+                                  child: FocusTabContent(
+                                    accent_color:
+                                        BookshelfLogic.resolve_tab_accent_color(
+                                          2,
+                                        ),
+                                    is_dark: is_dark,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),

@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names, non_constant_identifier_names
+
 import 'package:flutter/material.dart';
 
 /// 页面级通用布局配置。
@@ -5,6 +7,14 @@ class LayoutConfig {
   /// 全局页面左右基础边距。
   static const double page_horizontal_padding = 12;
 
+  /// 普通内容页的可读宽度；展开窗口增加内容列数，文字和触控目标保持原尺寸。
+  static const double page_max_width = 900;
+
+  /// 小说正文的最大行宽，避免展开后每行过长、收起后文字被整体缩小。
+  static const double reader_max_width = 760;
+
+  /// 登录和注册表单的最大宽度。
+  static const double form_max_width = 560;
 
   /*
     内容卡片圆角，用到的位置：

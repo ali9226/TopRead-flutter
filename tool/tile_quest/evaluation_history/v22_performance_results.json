@@ -1,0 +1,920 @@
+{
+  "schema_version": 11,
+  "date": "2026-10-19",
+  "runtime": {
+    "flutter": "3.44.2",
+    "mode": "profile",
+    "platform": "Android",
+    "architecture": "arm64"
+  },
+  "device": {
+    "manufacturer": "Xiaomi",
+    "model": "Xiaomi 17",
+    "refresh_rate_hz": 120
+  },
+  "scope": "Current source sampled on Xiaomi 17 using isolated package. Sound is disabled for rendering samples. iOS audio is verified separately; no acoustic-latency measurement or Transsion hardware coverage is claimed.",
+  "conditions": {
+    "generation_seed": 12345,
+    "shuffle_seed": 54321,
+    "rapid_input_interval_ms": 40,
+    "rapid_input_per_scene": 60,
+    "single_cpu": false,
+    "orientations": [
+      "portrait",
+      "landscape"
+    ],
+    "difficulties": [
+      8,
+      9,
+      10
+    ],
+    "timing_source": "Flutter SchedulerBinding FrameTiming; maxima of CPU build and GPU raster are distinct from end-to-end presentation deadlines.",
+    "note": "120 Hz display samples; jank_60hz uses 16.667ms thread threshold and does not prove zero missed 120 Hz frames.",
+    "sound_enabled": false
+  },
+  "summary": {
+    "scenes": 12,
+    "recorded_frames": 4397,
+    "maximum_build_ms": 7.401,
+    "maximum_raster_ms": 16.841,
+    "frames_above_16_667_ms": 1,
+    "frames_above_33_333_ms": 0,
+    "all_presentations_settled": true,
+    "all_actions_accepted": true
+  },
+  "scenes": [
+    {
+      "phase": "402_shuffle",
+      "difficulty": 8,
+      "orientation": "portrait",
+      "scene_size": [
+        375.38461538461536,
+        755.0769230769231
+      ],
+      "board_tile_width": 47.648610319721456,
+      "barrier_minimum_remove_uses": 1,
+      "profile_mode": true,
+      "single_cpu": false,
+      "action_count": 1,
+      "accepted_action_count": 1,
+      "presentation_settled": true,
+      "refresh_hz": 120.00000762939453,
+      "frame_count": 276,
+      "build_ms": {
+        "p50": 0.844,
+        "p95": 1.074,
+        "max": 3.938
+      },
+      "raster_ms": {
+        "p50": 1.516,
+        "p95": 1.757,
+        "max": 5.785
+      },
+      "slowest_thread_ms": {
+        "p50": 1.516,
+        "p95": 1.829,
+        "max": 5.785
+      },
+      "jank_60hz": 0,
+      "jank_30hz": 0
+    },
+    {
+      "phase": "402_rapid_40ms",
+      "difficulty": 8,
+      "orientation": "portrait",
+      "scene_size": [
+        375.38461538461536,
+        755.0769230769231
+      ],
+      "board_tile_width": 47.648610319721456,
+      "barrier_minimum_remove_uses": 1,
+      "profile_mode": true,
+      "single_cpu": false,
+      "action_count": 60,
+      "accepted_action_count": 60,
+      "presentation_settled": true,
+      "refresh_hz": 120.00000762939453,
+      "frame_count": 457,
+      "build_ms": {
+        "p50": 0.828,
+        "p95": 3.875,
+        "max": 5.595
+      },
+      "raster_ms": {
+        "p50": 1.353,
+        "p95": 2.961,
+        "max": 10.455
+      },
+      "slowest_thread_ms": {
+        "p50": 1.356,
+        "p95": 4.125,
+        "max": 10.455
+      },
+      "jank_60hz": 0,
+      "jank_30hz": 0
+    },
+    {
+      "phase": "456_shuffle",
+      "difficulty": 9,
+      "orientation": "portrait",
+      "scene_size": [
+        375.38461538461536,
+        755.0769230769231
+      ],
+      "board_tile_width": 47.64861031972144,
+      "barrier_minimum_remove_uses": 1,
+      "profile_mode": true,
+      "single_cpu": false,
+      "action_count": 1,
+      "accepted_action_count": 1,
+      "presentation_settled": true,
+      "refresh_hz": 120.00000762939453,
+      "frame_count": 277,
+      "build_ms": {
+        "p50": 0.955,
+        "p95": 1.201,
+        "max": 3.994
+      },
+      "raster_ms": {
+        "p50": 1.537,
+        "p95": 1.646,
+        "max": 2.213
+      },
+      "slowest_thread_ms": {
+        "p50": 1.538,
+        "p95": 1.657,
+        "max": 3.994
+      },
+      "jank_60hz": 0,
+      "jank_30hz": 0
+    },
+    {
+      "phase": "456_rapid_40ms",
+      "difficulty": 9,
+      "orientation": "portrait",
+      "scene_size": [
+        375.38461538461536,
+        755.0769230769231
+      ],
+      "board_tile_width": 47.64861031972144,
+      "barrier_minimum_remove_uses": 1,
+      "profile_mode": true,
+      "single_cpu": false,
+      "action_count": 60,
+      "accepted_action_count": 60,
+      "presentation_settled": true,
+      "refresh_hz": 120.00000762939453,
+      "frame_count": 456,
+      "build_ms": {
+        "p50": 0.77,
+        "p95": 4.09,
+        "max": 5.758
+      },
+      "raster_ms": {
+        "p50": 1.359,
+        "p95": 3.267,
+        "max": 12.783
+      },
+      "slowest_thread_ms": {
+        "p50": 1.369,
+        "p95": 4.334,
+        "max": 12.783
+      },
+      "jank_60hz": 0,
+      "jank_30hz": 0
+    },
+    {
+      "phase": "528_shuffle",
+      "difficulty": 10,
+      "orientation": "portrait",
+      "scene_size": [
+        375.38461538461536,
+        755.0769230769231
+      ],
+      "board_tile_width": 47.648610319721456,
+      "barrier_minimum_remove_uses": 3,
+      "profile_mode": true,
+      "single_cpu": false,
+      "action_count": 1,
+      "accepted_action_count": 1,
+      "presentation_settled": true,
+      "refresh_hz": 120.00000762939453,
+      "frame_count": 277,
+      "build_ms": {
+        "p50": 1.1,
+        "p95": 1.386,
+        "max": 4.64
+      },
+      "raster_ms": {
+        "p50": 1.557,
+        "p95": 1.676,
+        "max": 3.612
+      },
+      "slowest_thread_ms": {
+        "p50": 1.557,
+        "p95": 1.691,
+        "max": 4.64
+      },
+      "jank_60hz": 0,
+      "jank_30hz": 0
+    },
+    {
+      "phase": "528_rapid_40ms",
+      "difficulty": 10,
+      "orientation": "portrait",
+      "scene_size": [
+        375.38461538461536,
+        755.0769230769231
+      ],
+      "board_tile_width": 47.648610319721456,
+      "barrier_minimum_remove_uses": 3,
+      "profile_mode": true,
+      "single_cpu": false,
+      "action_count": 60,
+      "accepted_action_count": 60,
+      "presentation_settled": true,
+      "refresh_hz": 120.00000762939453,
+      "frame_count": 457,
+      "build_ms": {
+        "p50": 0.877,
+        "p95": 4.359,
+        "max": 5.218
+      },
+      "raster_ms": {
+        "p50": 1.38,
+        "p95": 3.39,
+        "max": 9.9
+      },
+      "slowest_thread_ms": {
+        "p50": 1.385,
+        "p95": 4.518,
+        "max": 9.9
+      },
+      "jank_60hz": 0,
+      "jank_30hz": 0
+    },
+    {
+      "phase": "402_shuffle",
+      "difficulty": 8,
+      "orientation": "landscape",
+      "scene_size": [
+        771.0769230769231,
+        313.2307692307692
+      ],
+      "board_tile_width": 37.84425451092119,
+      "barrier_minimum_remove_uses": 1,
+      "profile_mode": true,
+      "single_cpu": false,
+      "action_count": 1,
+      "accepted_action_count": 1,
+      "presentation_settled": true,
+      "refresh_hz": 120.00000762939453,
+      "frame_count": 277,
+      "build_ms": {
+        "p50": 0.921,
+        "p95": 1.18,
+        "max": 5.342
+      },
+      "raster_ms": {
+        "p50": 1.525,
+        "p95": 1.727,
+        "max": 3.625
+      },
+      "slowest_thread_ms": {
+        "p50": 1.527,
+        "p95": 1.952,
+        "max": 5.342
+      },
+      "jank_60hz": 0,
+      "jank_30hz": 0
+    },
+    {
+      "phase": "402_rapid_40ms",
+      "difficulty": 8,
+      "orientation": "landscape",
+      "scene_size": [
+        771.0769230769231,
+        313.2307692307692
+      ],
+      "board_tile_width": 37.84425451092119,
+      "barrier_minimum_remove_uses": 1,
+      "profile_mode": true,
+      "single_cpu": false,
+      "action_count": 60,
+      "accepted_action_count": 60,
+      "presentation_settled": true,
+      "refresh_hz": 120.00000762939453,
+      "frame_count": 456,
+      "build_ms": {
+        "p50": 0.834,
+        "p95": 4.449,
+        "max": 6.23
+      },
+      "raster_ms": {
+        "p50": 1.357,
+        "p95": 2.748,
+        "max": 16.841
+      },
+      "slowest_thread_ms": {
+        "p50": 1.364,
+        "p95": 4.487,
+        "max": 16.841
+      },
+      "jank_60hz": 1,
+      "jank_30hz": 0
+    },
+    {
+      "phase": "456_shuffle",
+      "difficulty": 9,
+      "orientation": "landscape",
+      "scene_size": [
+        771.0769230769231,
+        313.2307692307692
+      ],
+      "board_tile_width": 37.84425451092119,
+      "barrier_minimum_remove_uses": 1,
+      "profile_mode": true,
+      "single_cpu": false,
+      "action_count": 1,
+      "accepted_action_count": 1,
+      "presentation_settled": true,
+      "refresh_hz": 120.00000762939453,
+      "frame_count": 277,
+      "build_ms": {
+        "p50": 1.001,
+        "p95": 1.239,
+        "max": 5.288
+      },
+      "raster_ms": {
+        "p50": 1.524,
+        "p95": 1.652,
+        "max": 3.394
+      },
+      "slowest_thread_ms": {
+        "p50": 1.528,
+        "p95": 1.789,
+        "max": 5.288
+      },
+      "jank_60hz": 0,
+      "jank_30hz": 0
+    },
+    {
+      "phase": "456_rapid_40ms",
+      "difficulty": 9,
+      "orientation": "landscape",
+      "scene_size": [
+        771.0769230769231,
+        313.2307692307692
+      ],
+      "board_tile_width": 37.84425451092119,
+      "barrier_minimum_remove_uses": 1,
+      "profile_mode": true,
+      "single_cpu": false,
+      "action_count": 60,
+      "accepted_action_count": 60,
+      "presentation_settled": true,
+      "refresh_hz": 120.00000762939453,
+      "frame_count": 456,
+      "build_ms": {
+        "p50": 0.799,
+        "p95": 4.649,
+        "max": 7.235
+      },
+      "raster_ms": {
+        "p50": 1.349,
+        "p95": 3.009,
+        "max": 13.11
+      },
+      "slowest_thread_ms": {
+        "p50": 1.355,
+        "p95": 4.687,
+        "max": 13.11
+      },
+      "jank_60hz": 0,
+      "jank_30hz": 0
+    },
+    {
+      "phase": "528_shuffle",
+      "difficulty": 10,
+      "orientation": "landscape",
+      "scene_size": [
+        771.0769230769231,
+        313.2307692307692
+      ],
+      "board_tile_width": 37.84425451092119,
+      "barrier_minimum_remove_uses": 3,
+      "profile_mode": true,
+      "single_cpu": false,
+      "action_count": 1,
+      "accepted_action_count": 1,
+      "presentation_settled": true,
+      "refresh_hz": 120.00000762939453,
+      "frame_count": 277,
+      "build_ms": {
+        "p50": 1.173,
+        "p95": 1.471,
+        "max": 6.873
+      },
+      "raster_ms": {
+        "p50": 1.537,
+        "p95": 1.64,
+        "max": 4.129
+      },
+      "slowest_thread_ms": {
+        "p50": 1.539,
+        "p95": 1.718,
+        "max": 6.873
+      },
+      "jank_60hz": 0,
+      "jank_30hz": 0
+    },
+    {
+      "phase": "528_rapid_40ms",
+      "difficulty": 10,
+      "orientation": "landscape",
+      "scene_size": [
+        771.0769230769231,
+        313.2307692307692
+      ],
+      "board_tile_width": 37.84425451092119,
+      "barrier_minimum_remove_uses": 3,
+      "profile_mode": true,
+      "single_cpu": false,
+      "action_count": 60,
+      "accepted_action_count": 60,
+      "presentation_settled": true,
+      "refresh_hz": 120.00000762939453,
+      "frame_count": 454,
+      "build_ms": {
+        "p50": 0.83,
+        "p95": 5.208,
+        "max": 7.401
+      },
+      "raster_ms": {
+        "p50": 1.338,
+        "p95": 3.182,
+        "max": 13.212
+      },
+      "slowest_thread_ms": {
+        "p50": 1.349,
+        "p95": 5.219,
+        "max": 13.212
+      },
+      "jank_60hz": 0,
+      "jank_30hz": 0
+    }
+  ],
+  "previous_report": "tile_quest/evaluation_history/v21_performance_results.json",
+  "single_cpu_run": {
+    "condition": "All available task threads pinned to logical CPU0 by the existing profile harness; Xiaomi 17 remains the hardware, not a Transsion device.",
+    "summary": {
+      "scenes": 12,
+      "recorded_frames": 4394,
+      "maximum_build_ms": 6.222,
+      "maximum_raster_ms": 15.661,
+      "frames_above_16_667_ms": 0,
+      "frames_above_33_333_ms": 0,
+      "all_presentations_settled": true,
+      "all_actions_accepted": true
+    },
+    "scenes": [
+      {
+        "phase": "402_shuffle",
+        "difficulty": 8,
+        "orientation": "portrait",
+        "scene_size": [
+          375.38461538461536,
+          755.0769230769231
+        ],
+        "board_tile_width": 47.648610319721456,
+        "barrier_minimum_remove_uses": 1,
+        "profile_mode": true,
+        "single_cpu": true,
+        "action_count": 1,
+        "accepted_action_count": 1,
+        "presentation_settled": true,
+        "refresh_hz": 120.00000762939453,
+        "frame_count": 276,
+        "build_ms": {
+          "p50": 0.832,
+          "p95": 0.975,
+          "max": 3.626
+        },
+        "raster_ms": {
+          "p50": 2.161,
+          "p95": 2.739,
+          "max": 5.454
+        },
+        "slowest_thread_ms": {
+          "p50": 2.161,
+          "p95": 2.746,
+          "max": 5.454
+        },
+        "jank_60hz": 0,
+        "jank_30hz": 0
+      },
+      {
+        "phase": "402_rapid_40ms",
+        "difficulty": 8,
+        "orientation": "portrait",
+        "scene_size": [
+          375.38461538461536,
+          755.0769230769231
+        ],
+        "board_tile_width": 47.648610319721456,
+        "barrier_minimum_remove_uses": 1,
+        "profile_mode": true,
+        "single_cpu": true,
+        "action_count": 60,
+        "accepted_action_count": 60,
+        "presentation_settled": true,
+        "refresh_hz": 120.00000762939453,
+        "frame_count": 457,
+        "build_ms": {
+          "p50": 0.755,
+          "p95": 3.951,
+          "max": 5.027
+        },
+        "raster_ms": {
+          "p50": 1.923,
+          "p95": 3.834,
+          "max": 13.16
+        },
+        "slowest_thread_ms": {
+          "p50": 1.945,
+          "p95": 4.259,
+          "max": 13.16
+        },
+        "jank_60hz": 0,
+        "jank_30hz": 0
+      },
+      {
+        "phase": "456_shuffle",
+        "difficulty": 9,
+        "orientation": "portrait",
+        "scene_size": [
+          375.38461538461536,
+          755.0769230769231
+        ],
+        "board_tile_width": 47.64861031972144,
+        "barrier_minimum_remove_uses": 1,
+        "profile_mode": true,
+        "single_cpu": true,
+        "action_count": 1,
+        "accepted_action_count": 1,
+        "presentation_settled": true,
+        "refresh_hz": 120.00000762939453,
+        "frame_count": 276,
+        "build_ms": {
+          "p50": 1.019,
+          "p95": 1.404,
+          "max": 4.138
+        },
+        "raster_ms": {
+          "p50": 2.193,
+          "p95": 3.067,
+          "max": 4.755
+        },
+        "slowest_thread_ms": {
+          "p50": 2.196,
+          "p95": 3.232,
+          "max": 4.755
+        },
+        "jank_60hz": 0,
+        "jank_30hz": 0
+      },
+      {
+        "phase": "456_rapid_40ms",
+        "difficulty": 9,
+        "orientation": "portrait",
+        "scene_size": [
+          375.38461538461536,
+          755.0769230769231
+        ],
+        "board_tile_width": 47.64861031972144,
+        "barrier_minimum_remove_uses": 1,
+        "profile_mode": true,
+        "single_cpu": true,
+        "action_count": 60,
+        "accepted_action_count": 60,
+        "presentation_settled": true,
+        "refresh_hz": 120.00000762939453,
+        "frame_count": 456,
+        "build_ms": {
+          "p50": 0.825,
+          "p95": 4.144,
+          "max": 5.132
+        },
+        "raster_ms": {
+          "p50": 1.976,
+          "p95": 4.761,
+          "max": 14.156
+        },
+        "slowest_thread_ms": {
+          "p50": 1.99,
+          "p95": 4.96,
+          "max": 14.156
+        },
+        "jank_60hz": 0,
+        "jank_30hz": 0
+      },
+      {
+        "phase": "528_shuffle",
+        "difficulty": 10,
+        "orientation": "portrait",
+        "scene_size": [
+          375.38461538461536,
+          755.0769230769231
+        ],
+        "board_tile_width": 47.648610319721456,
+        "barrier_minimum_remove_uses": 3,
+        "profile_mode": true,
+        "single_cpu": true,
+        "action_count": 1,
+        "accepted_action_count": 1,
+        "presentation_settled": true,
+        "refresh_hz": 120.00000762939453,
+        "frame_count": 277,
+        "build_ms": {
+          "p50": 1.033,
+          "p95": 1.214,
+          "max": 4.401
+        },
+        "raster_ms": {
+          "p50": 2.138,
+          "p95": 2.899,
+          "max": 4.301
+        },
+        "slowest_thread_ms": {
+          "p50": 2.138,
+          "p95": 2.899,
+          "max": 4.401
+        },
+        "jank_60hz": 0,
+        "jank_30hz": 0
+      },
+      {
+        "phase": "528_rapid_40ms",
+        "difficulty": 10,
+        "orientation": "portrait",
+        "scene_size": [
+          375.38461538461536,
+          755.0769230769231
+        ],
+        "board_tile_width": 47.648610319721456,
+        "barrier_minimum_remove_uses": 3,
+        "profile_mode": true,
+        "single_cpu": true,
+        "action_count": 60,
+        "accepted_action_count": 60,
+        "presentation_settled": true,
+        "refresh_hz": 120.00000762939453,
+        "frame_count": 455,
+        "build_ms": {
+          "p50": 0.842,
+          "p95": 4.325,
+          "max": 5.686
+        },
+        "raster_ms": {
+          "p50": 1.94,
+          "p95": 5.598,
+          "max": 14.941
+        },
+        "slowest_thread_ms": {
+          "p50": 1.958,
+          "p95": 5.646,
+          "max": 14.941
+        },
+        "jank_60hz": 0,
+        "jank_30hz": 0
+      },
+      {
+        "phase": "402_shuffle",
+        "difficulty": 8,
+        "orientation": "landscape",
+        "scene_size": [
+          771.0769230769231,
+          313.2307692307692
+        ],
+        "board_tile_width": 37.84425451092119,
+        "barrier_minimum_remove_uses": 1,
+        "profile_mode": true,
+        "single_cpu": true,
+        "action_count": 1,
+        "accepted_action_count": 1,
+        "presentation_settled": true,
+        "refresh_hz": 120.00000762939453,
+        "frame_count": 277,
+        "build_ms": {
+          "p50": 0.847,
+          "p95": 1.062,
+          "max": 5.094
+        },
+        "raster_ms": {
+          "p50": 2.137,
+          "p95": 2.619,
+          "max": 4.723
+        },
+        "slowest_thread_ms": {
+          "p50": 2.139,
+          "p95": 2.793,
+          "max": 5.094
+        },
+        "jank_60hz": 0,
+        "jank_30hz": 0
+      },
+      {
+        "phase": "402_rapid_40ms",
+        "difficulty": 8,
+        "orientation": "landscape",
+        "scene_size": [
+          771.0769230769231,
+          313.2307692307692
+        ],
+        "board_tile_width": 37.84425451092119,
+        "barrier_minimum_remove_uses": 1,
+        "profile_mode": true,
+        "single_cpu": true,
+        "action_count": 60,
+        "accepted_action_count": 60,
+        "presentation_settled": true,
+        "refresh_hz": 120.00000762939453,
+        "frame_count": 455,
+        "build_ms": {
+          "p50": 0.86,
+          "p95": 4.639,
+          "max": 5.502
+        },
+        "raster_ms": {
+          "p50": 1.899,
+          "p95": 4.352,
+          "max": 15.661
+        },
+        "slowest_thread_ms": {
+          "p50": 1.913,
+          "p95": 4.948,
+          "max": 15.661
+        },
+        "jank_60hz": 0,
+        "jank_30hz": 0
+      },
+      {
+        "phase": "456_shuffle",
+        "difficulty": 9,
+        "orientation": "landscape",
+        "scene_size": [
+          771.0769230769231,
+          313.2307692307692
+        ],
+        "board_tile_width": 37.84425451092119,
+        "barrier_minimum_remove_uses": 1,
+        "profile_mode": true,
+        "single_cpu": true,
+        "action_count": 1,
+        "accepted_action_count": 1,
+        "presentation_settled": true,
+        "refresh_hz": 120.00000762939453,
+        "frame_count": 276,
+        "build_ms": {
+          "p50": 0.925,
+          "p95": 1.13,
+          "max": 5.345
+        },
+        "raster_ms": {
+          "p50": 2.126,
+          "p95": 2.853,
+          "max": 5.014
+        },
+        "slowest_thread_ms": {
+          "p50": 2.126,
+          "p95": 2.981,
+          "max": 5.345
+        },
+        "jank_60hz": 0,
+        "jank_30hz": 0
+      },
+      {
+        "phase": "456_rapid_40ms",
+        "difficulty": 9,
+        "orientation": "landscape",
+        "scene_size": [
+          771.0769230769231,
+          313.2307692307692
+        ],
+        "board_tile_width": 37.84425451092119,
+        "barrier_minimum_remove_uses": 1,
+        "profile_mode": true,
+        "single_cpu": true,
+        "action_count": 60,
+        "accepted_action_count": 60,
+        "presentation_settled": true,
+        "refresh_hz": 120.00000762939453,
+        "frame_count": 457,
+        "build_ms": {
+          "p50": 0.834,
+          "p95": 4.757,
+          "max": 5.42
+        },
+        "raster_ms": {
+          "p50": 1.882,
+          "p95": 4.706,
+          "max": 13.326
+        },
+        "slowest_thread_ms": {
+          "p50": 1.896,
+          "p95": 5.097,
+          "max": 13.326
+        },
+        "jank_60hz": 0,
+        "jank_30hz": 0
+      },
+      {
+        "phase": "528_shuffle",
+        "difficulty": 10,
+        "orientation": "landscape",
+        "scene_size": [
+          771.0769230769231,
+          313.2307692307692
+        ],
+        "board_tile_width": 37.84425451092119,
+        "barrier_minimum_remove_uses": 3,
+        "profile_mode": true,
+        "single_cpu": true,
+        "action_count": 1,
+        "accepted_action_count": 1,
+        "presentation_settled": true,
+        "refresh_hz": 120.00000762939453,
+        "frame_count": 277,
+        "build_ms": {
+          "p50": 1.056,
+          "p95": 1.324,
+          "max": 6.081
+        },
+        "raster_ms": {
+          "p50": 2.143,
+          "p95": 3.274,
+          "max": 6.817
+        },
+        "slowest_thread_ms": {
+          "p50": 2.145,
+          "p95": 3.408,
+          "max": 6.817
+        },
+        "jank_60hz": 0,
+        "jank_30hz": 0
+      },
+      {
+        "phase": "528_rapid_40ms",
+        "difficulty": 10,
+        "orientation": "landscape",
+        "scene_size": [
+          771.0769230769231,
+          313.2307692307692
+        ],
+        "board_tile_width": 37.84425451092119,
+        "barrier_minimum_remove_uses": 3,
+        "profile_mode": true,
+        "single_cpu": true,
+        "action_count": 60,
+        "accepted_action_count": 60,
+        "presentation_settled": true,
+        "refresh_hz": 120.00000762939453,
+        "frame_count": 455,
+        "build_ms": {
+          "p50": 0.791,
+          "p95": 5.204,
+          "max": 6.222
+        },
+        "raster_ms": {
+          "p50": 1.912,
+          "p95": 4.922,
+          "max": 12.304
+        },
+        "slowest_thread_ms": {
+          "p50": 1.936,
+          "p95": 5.473,
+          "max": 12.304
+        },
+        "jank_60hz": 0,
+        "jank_30hz": 0
+      }
+    ]
+  },
+  "source_fingerprint_scope": "Sorted repository-relative paths plus NUL plus bytes plus NUL of lib/pages/tile_quest/**/*.dart and runtime tile PNG/WAV assets (source sheets excluded).",
+  "current_source_sha256": "bc69e7f2192ad5dee6082a6a8744e6a8ee10749de6d9d92645e9cae25b669777",
+  "executed_source_sha256": "fbf9f99409ad747e82fd9d79904eca6f6f789fc9ba896bb93f95244fa193c571",
+  "executed_fingerprint_scope": "Same sorted path/NUL/bytes scope as current, omitting WAV files deliberately absent from the sound-disabled profile harness.",
+  "changes_since_render_measurement": [
+    "assets/audio/tile_quest/entry.wav",
+    "assets/audio/tile_quest/lost.wav",
+    "assets/audio/tile_quest/match.wav",
+    "assets/audio/tile_quest/shuffle.wav",
+    "assets/audio/tile_quest/tap.wav",
+    "assets/audio/tile_quest/tool.wav",
+    "assets/audio/tile_quest/won.wav",
+    "lib/pages/tile_quest/services/audio_voice.dart",
+    "lib/pages/tile_quest/services/feedback_service.dart",
+    "lib/pages/tile_quest/services/ios_audio_voice.dart"
+  ],
+  "changes_scope_note": "The three service Dart differences are comments describing the native iOS backend. WAV assets are deliberately absent from the sound-disabled harness. Rendering and Android runtime implementation remain the measured source."
+}

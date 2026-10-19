@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/config/color_config.dart';
@@ -191,7 +192,12 @@ class _LongContentEditorState extends State<LongContentEditor> {
     final index = widget.active_chapter_index;
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 800),
+        constraints: BoxConstraints(
+          maxWidth: WindowLayoutScope.resolve_max_width(
+            context,
+            WorkEditorStyle.chapter_max_width,
+          ),
+        ),
         child: Column(
           children: [
             Padding(

@@ -5,7 +5,6 @@ import 'package:app/pages/tile_quest/game/engine.dart';
 import 'package:app/pages/tile_quest/game/geometry.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:app/pages/tile_quest/style.dart';
-import 'package:app/pages/tile_quest/widgets/board_backing.dart';
 import 'package:app/pages/tile_quest/widgets/board_motion.dart';
 import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
 import 'package:app/pages/tile_quest/widgets/scene_layout.dart';
@@ -171,21 +170,6 @@ void _same_rect(Rect actual, Rect expected, {String? reason}) {
 bool _at(Rect actual, Rect expected) =>
     (actual.center - expected.center).distance < .6;
 
-void _no_static_board_backing(WidgetTester tester) {
-  for (final widget in tester.widgetList<CustomPaint>(
-    find.byType(CustomPaint),
-  )) {
-    final painter = widget.painter;
-    if (painter is QuestBoardBacking) {
-      expect(
-        painter.tiles,
-        isEmpty,
-        reason: 'moving cards must not leave static backing silhouettes',
-      );
-    }
-  }
-}
-
 void _ring(Rect rect, QuestSceneLayout layout) {
   final radius = QuestBoardMotion.shuffle_radius(layout);
   expect(
@@ -270,7 +254,6 @@ void main() {
         expect(_rect(tester, tile.id).bottom, lessThanOrEqualTo(0));
         expect(_key('tile_quest_tile_${tile.id}'), findsNothing);
       }
-      _no_static_board_backing(tester);
       expect(host.currentState!.presentation_events, [true]);
       await tester.pump(const Duration(milliseconds: 200));
       expect(
@@ -464,7 +447,6 @@ void main() {
           layout.board_tile(initial.tile_by_id(id)),
         );
       }
-      _no_static_board_backing(tester);
       await tester.pump(
         Duration(
           milliseconds: (TileQuestStyle.shuffle_duration_ms * .3).round(),

@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/pages/work_editor/_shared/style.dart';
@@ -70,8 +71,11 @@ class _SkeletonContentState extends State<SkeletonContent>
           ),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: WorkEditorStyle.content_max_width,
+              constraints: BoxConstraints(
+                maxWidth: WindowLayoutScope.resolve_max_width(
+                  context,
+                  WorkEditorStyle.content_max_width,
+                ),
               ),
               child: widget.tab_index == 0
                   ? _build_basic_skeleton(gradient)
@@ -116,7 +120,12 @@ class _SkeletonContentState extends State<SkeletonContent>
                     ),
                     Transform.translate(
                       offset: const Offset(0, -5),
-                      child: _shimmer(gradient, width: 100, height: 30, radius: 8),
+                      child: _shimmer(
+                        gradient,
+                        width: 100,
+                        height: 30,
+                        radius: 8,
+                      ),
                     ),
                   ],
                 ),

@@ -9,7 +9,7 @@ import 'tutorial_layout.dart';
 import 'type_allocator.dart';
 import 'validator.dart';
 
-/// Seeded random footprints, a gentle visible opening, then harder hidden phases.
+/// Seeded geometric templates, a gentle visible opening, then hidden hard phases.
 class TileQuestGenerator {
   static TileQuestState generate({
     required int level,
@@ -103,8 +103,18 @@ class TileQuestGenerator {
           for (var index = 0; index < lead_order.length; index++)
             lead_order[index]: sequence[index],
         };
+        final lead_layer_offset = needs_barrier
+            ? TileQuestExpertBarrier.tile_count_for_difficulty(
+                chosen_difficulty,
+              )
+            : 0;
         final tiles = lead_tiles
-            .map((tile) => tile.copy_with(type: assigned[tile.id]!))
+            .map(
+              (tile) => tile.copy_with(
+                type: assigned[tile.id]!,
+                layer: tile.layer + lead_layer_offset,
+              ),
+            )
             .toList();
         final front_ids = <int>[];
         final partner_ids = <int>[];
@@ -115,6 +125,7 @@ class TileQuestGenerator {
             partner_ids,
             type_start: lead_profile.type_count,
             difficulty: chosen_difficulty,
+            random: random,
           );
         }
 
@@ -138,6 +149,13 @@ class TileQuestGenerator {
                   (tile) => TileQuestTile(
                     id: new_id[tile.id]!,
                     type: palette[tile.type],
+                    region_id: mirror_y
+                        ? switch (tile.region_id) {
+                            'side_top' => 'side_bottom',
+                            'side_bottom' => 'side_top',
+                            _ => tile.region_id,
+                          }
+                        : tile.region_id,
                     layer: tile.layer,
                     x: mirror_x
                         ? TileQuestConfig.board_logical_width -
@@ -337,7 +355,35 @@ class TileQuestGenerator {
     List<int> partner_ids, {
     required int type_start,
     required int difficulty,
+    required Random random,
   }) {
+    // The capacity chain is an ordinary-looking lower basin of the main
+    // island. Choose an actual covered 2x1 base slot, never a fixed edge bay.
+    final candidates = <Point<double>>[];
+    for (var row = 0; row < TileQuestLayoutPatterns.main_rows; row++) {
+      for (
+        var column = 0;
+        column < TileQuestLayoutPatterns.main_columns - 1;
+        column++
+      ) {
+        final x = column + TileQuestLayoutPatterns.grid_gap / 2;
+        final y =
+            TileQuestLayoutPatterns.main_top +
+            row +
+            TileQuestLayoutPatterns.grid_gap / 2;
+        final covered = [x, x + 1].every(
+          (left) => tiles.any(
+            (tile) =>
+                (tile.region_id == 'main' || tile.region_id == 'core') &&
+                (tile.x - left).abs() < .000001 &&
+                (tile.y - y).abs() < .000001,
+          ),
+        );
+        if (covered) candidates.add(Point(x, y));
+      }
+    }
+    if (candidates.isEmpty) throw StateError('No covered capacity basin');
+    final anchor = candidates[random.nextInt(candidates.length)];
     final fronts = TileQuestExpertBarrier.front_types_for_difficulty(
       difficulty,
     );
@@ -354,9 +400,12 @@ class TileQuestGenerator {
         TileQuestTile(
           id: id,
           type: type_start + fronts[index],
+          region_id: 'core',
           layer: core_count - 1 - index,
-          x: 5.5,
-          y: 7,
+          x: anchor.x + .5,
+          y: anchor.y,
+          width: TileQuestLayoutPatterns.tile_extent,
+          height: TileQuestLayoutPatterns.tile_extent,
         ),
       );
     }
@@ -367,9 +416,12 @@ class TileQuestGenerator {
         TileQuestTile(
           id: id,
           type: type_start + partners[index],
+          region_id: 'core',
           layer: (partners.length - 1 - index) ~/ 2,
-          x: 5.0 + index % 2,
-          y: 7,
+          x: anchor.x + index % 2,
+          y: anchor.y,
+          width: TileQuestLayoutPatterns.tile_extent,
+          height: TileQuestLayoutPatterns.tile_extent,
         ),
       );
     }

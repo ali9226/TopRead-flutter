@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -135,61 +136,64 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
           color: bg_color,
           border: Border(top: BorderSide(color: divider_color, width: 0.5)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            /// 进度条区域（上一章 + 进度条 + 下一章）。
-            _buildProgressBarSection(icon_color, bg_color),
+        child: WindowContentLayout(
+          expand_height: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              /// 进度条区域（上一章 + 进度条 + 下一章）。
+              _buildProgressBarSection(icon_color, bg_color),
 
-            /// 四个操作图标。
-            SizedBox(
-              height: 60,
-              child: Row(
-                children: <Widget>[
-                  /// 1. 目录。
-                  Expanded(
-                    child: _buildActionItem(
-                      icon: 'menu',
-                      label: tr('read.catalog'),
-                      icon_color: icon_color,
-                      onTap: widget.on_catalog_tap,
-                    ),
-                  ),
-
-                  /// 2. 设置。
-                  Expanded(
-                    child: _buildActionItem(
-                      icon: 'se_up',
-                      label: tr('short_story_read.setting'),
-                      icon_color: icon_color,
-                      onTap: widget.on_setting_tap,
-                    ),
-                  ),
-
-                  /// 3. 评论，随远端项目配置实时显示或隐藏。
-                  Obx(() {
-                    final bool is_comment_enabled =
-                        Get.find<ProjectConfigStore>()
-                            .current
-                            .is_comment_enabled;
-                    if (!is_comment_enabled) return const SizedBox.shrink();
-
-                    return Expanded(
+              /// 四个操作图标。
+              SizedBox(
+                height: 60,
+                child: Row(
+                  children: <Widget>[
+                    /// 1. 目录。
+                    Expanded(
                       child: _buildActionItem(
-                        icon: 'message',
-                        label: '${widget.comment_count}',
+                        icon: 'menu',
+                        label: tr('read.catalog'),
                         icon_color: icon_color,
-                        onTap: widget.on_comment_tap,
+                        onTap: widget.on_catalog_tap,
                       ),
-                    );
-                  }),
+                    ),
 
-                  /// 4. 喜欢。
-                  Expanded(child: _buildLikeItem(icon_color: icon_color)),
-                ],
+                    /// 2. 设置。
+                    Expanded(
+                      child: _buildActionItem(
+                        icon: 'se_up',
+                        label: tr('short_story_read.setting'),
+                        icon_color: icon_color,
+                        onTap: widget.on_setting_tap,
+                      ),
+                    ),
+
+                    /// 3. 评论，随远端项目配置实时显示或隐藏。
+                    Obx(() {
+                      final bool is_comment_enabled =
+                          Get.find<ProjectConfigStore>()
+                              .current
+                              .is_comment_enabled;
+                      if (!is_comment_enabled) return const SizedBox.shrink();
+
+                      return Expanded(
+                        child: _buildActionItem(
+                          icon: 'message',
+                          label: '${widget.comment_count}',
+                          icon_color: icon_color,
+                          onTap: widget.on_comment_tap,
+                        ),
+                      );
+                    }),
+
+                    /// 4. 喜欢。
+                    Expanded(child: _buildLikeItem(icon_color: icon_color)),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

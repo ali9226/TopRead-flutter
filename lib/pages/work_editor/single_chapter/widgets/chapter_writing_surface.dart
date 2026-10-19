@@ -1,3 +1,5 @@
+import 'package:app/pages/work_editor/_shared/style.dart';
+import 'package:app/components/window_content_layout/index.dart';
 // ignore_for_file: non_constant_identifier_names
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
@@ -27,7 +29,12 @@ class ChapterWritingSurface extends StatelessWidget {
     final keyboard_visible = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 800),
+        constraints: BoxConstraints(
+          maxWidth: WindowLayoutScope.resolve_max_width(
+            context,
+            WorkEditorStyle.chapter_max_width,
+          ),
+        ),
         child: Column(
           children: [
             if (chapter_label != null)
@@ -69,7 +76,10 @@ class ChapterWritingSurface extends StatelessWidget {
                   : null,
               behavior: HitTestBehavior.opaque,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [

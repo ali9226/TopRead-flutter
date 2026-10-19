@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -176,65 +177,71 @@ class _WithdrawRecordState extends State<WithdrawRecord> {
               ),
 
               /// 主列表区域，支持下拉刷新。
-              RefreshIndicator(
-                onRefresh: _handlePullRefresh,
-                child: ListView(
-                  /// 绑定逻辑层滚动控制器，便于统一处理返回顶部按钮。
-                  controller: logic.scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(
-                    TopUpRecordStyle.pageHorizontalPadding + safePadding.left,
-                    contentTopPadding,
-                    TopUpRecordStyle.pageHorizontalPadding + safePadding.right,
-                    TopUpRecordStyle.pageBottomPadding + safePadding.bottom,
-                  ),
-                  children: [
-                    /// 顶部说明卡。
-                    WithdrawRecordHeroCard(isDark: isDark),
-                    const SizedBox(height: TopUpRecordStyle.heroBottomSpacing),
-
-                    /// 没有记录且当前不在加载时，展示空状态。
-                    if (logic.records.isEmpty && !logic.loading)
-                      WithdrawRecordEmptyState(isDark: isDark),
-
-                    /// 有记录时，依次渲染每条提现流水卡片。
-                    if (logic.records.isNotEmpty) ...[
-                      ...logic.records.map(
-                        (item) => WithdrawRecordCard(
-                          isDark: isDark,
-                          item: item,
-                          amountText: logic.displayAmount(item.amountPayable),
-                          serialNumberText: logic.displayText(
-                            item.serialNumber,
-                          ),
-                          createTimeText: logic.displayUtcTime(item.createTime),
-                          payTimeText: logic.displayUtcTime(item.payTime),
-                          payQrCodeText: logic.displayText(item.payQrCode),
-                          showPayTime: logic.shouldShowPayTime(item),
-                          statusText: logic.statusText(context, item),
-                          statusColor: logic.statusColor(isDark, item),
-                          onCopySerialNumber: () {
-                            _handleCopy(item.serialNumber);
-                          },
-                          onCopyPayQrCode: () {
-                            _handleCopy(item.payQrCode);
-                          },
-                        ),
-                      ),
-
-                      /// 列表和底部操作区之间的间距。
+              WindowContentLayout(
+                child: RefreshIndicator(
+                  onRefresh: _handlePullRefresh,
+                  child: ListView(
+                    /// 绑定逻辑层滚动控制器，便于统一处理返回顶部按钮。
+                    controller: logic.scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      TopUpRecordStyle.pageHorizontalPadding,
+                      contentTopPadding,
+                      TopUpRecordStyle.pageHorizontalPadding,
+                      TopUpRecordStyle.pageBottomPadding + safePadding.bottom,
+                    ),
+                    children: [
+                      /// 顶部说明卡。
+                      WithdrawRecordHeroCard(isDark: isDark),
                       const SizedBox(
-                        height: TopUpRecordStyle.listBottomSpacing,
+                        height: TopUpRecordStyle.heroBottomSpacing,
                       ),
 
-                      /// 底部分页状态区。
-                      WithdrawRecordBottomAction(
-                        isDark: isDark,
-                        loadingMore: logic.loadingMore,
-                        hasMore: logic.hasMore,
-                      ),
+                      /// 没有记录且当前不在加载时，展示空状态。
+                      if (logic.records.isEmpty && !logic.loading)
+                        WithdrawRecordEmptyState(isDark: isDark),
+
+                      /// 有记录时，依次渲染每条提现流水卡片。
+                      if (logic.records.isNotEmpty) ...[
+                        ...logic.records.map(
+                          (item) => WithdrawRecordCard(
+                            isDark: isDark,
+                            item: item,
+                            amountText: logic.displayAmount(item.amountPayable),
+                            serialNumberText: logic.displayText(
+                              item.serialNumber,
+                            ),
+                            createTimeText: logic.displayUtcTime(
+                              item.createTime,
+                            ),
+                            payTimeText: logic.displayUtcTime(item.payTime),
+                            payQrCodeText: logic.displayText(item.payQrCode),
+                            showPayTime: logic.shouldShowPayTime(item),
+                            statusText: logic.statusText(context, item),
+                            statusColor: logic.statusColor(isDark, item),
+                            onCopySerialNumber: () {
+                              _handleCopy(item.serialNumber);
+                            },
+                            onCopyPayQrCode: () {
+                              _handleCopy(item.payQrCode);
+                            },
+                          ),
+                        ),
+
+                        /// 列表和底部操作区之间的间距。
+                        const SizedBox(
+                          height: TopUpRecordStyle.listBottomSpacing,
+                        ),
+
+                        /// 底部分页状态区。
+                        WithdrawRecordBottomAction(
+                          isDark: isDark,
+                          loadingMore: logic.loadingMore,
+                          hasMore: logic.hasMore,
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
 
@@ -264,7 +271,10 @@ class _WithdrawRecordState extends State<WithdrawRecord> {
                         ],
                       ),
                     ),
-                    child: LanguageSelection(darkBackground: isDark),
+                    child: WindowContentLayout(
+                      expand_height: false,
+                      child: LanguageSelection(darkBackground: isDark),
+                    ),
                   ),
                 ),
               ),

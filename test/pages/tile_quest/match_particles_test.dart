@@ -14,7 +14,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'scene_probe.dart';
 
 Future<ui.Image> _asset_image() async {
-  final data = await rootBundle.load('assets/img/game/tile_strawberry.png');
+  final data = await rootBundle.load(
+    'assets/img/tile_quest/icons/tile_strawberry.png',
+  );
   final codec = await ui.instantiateImageCodec(
     data.buffer.asUint8List(),
     targetWidth: 192,
@@ -24,12 +26,12 @@ Future<ui.Image> _asset_image() async {
   final recorder = ui.PictureRecorder();
   QuestTileSurface.paint(
     Canvas(recorder),
-    const Rect.fromLTWH(0, 0, 192, 192),
+    const Rect.fromLTWH(0, 0, 192, 216),
     icon: icon,
   );
   final picture = recorder.endRecording();
   try {
-    return await picture.toImage(192, 192);
+    return await picture.toImage(192, 216);
   } finally {
     icon.dispose();
     picture.dispose();
@@ -43,7 +45,7 @@ Future<(int, int, int)> _pixels(ui.Image asset, double progress) async {
     image: asset,
     field: QuestParticleField(42),
     progress: progress,
-  ).paint(canvas, const Size(64, 64));
+  ).paint(canvas, const Size(64, 72));
   final picture = recorder.endRecording();
   final image = await picture.toImage(208, 208);
   final bytes = (await image.toByteData())!.buffer.asUint8List();
@@ -53,7 +55,7 @@ Future<(int, int, int)> _pixels(ui.Image asset, double progress) async {
       final offset = (y * 208 + x) * 4;
       if (bytes[offset + 3] < 12) continue;
       visible++;
-      if (x < 72 || x >= 136 || y < 72 || y >= 136) outside++;
+      if (x < 72 || x >= 136 || y < 72 || y >= 144) outside++;
       if (bytes[offset] > bytes[offset + 1] * 1.5 &&
           bytes[offset] > bytes[offset + 2] * 1.5) {
         red++;
@@ -190,7 +192,7 @@ void main() {
         image: asset,
         field: QuestParticleField(42),
         progress: [0.0, .18, .38, .68][index],
-      ).paint(canvas, const Size(64, 64));
+      ).paint(canvas, const Size(64, 72));
       canvas.restore();
     }
     final picture = recorder.endRecording();

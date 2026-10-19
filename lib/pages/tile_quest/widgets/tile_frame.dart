@@ -11,6 +11,7 @@ class QuestTileFrame {
     required this.rect,
     required this.zone,
     this.blocked = false,
+    this.blocked_amount,
     this.rotation = 0,
     this.dissolve,
     this.previous_type,
@@ -20,6 +21,9 @@ class QuestTileFrame {
   final Rect rect;
   final QuestTileZone zone;
   final bool blocked;
+
+  /// 规则仍使用 blocked；飞牌借用揭牌轨迹时携带独立的连续遮罩强度。
+  final double? blocked_amount;
   final double rotation;
   final double? dissolve;
   final int? previous_type;

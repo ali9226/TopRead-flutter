@@ -5,7 +5,7 @@ import 'shuffle_textures.dart';
 import 'tile_assets.dart';
 import 'tile_surface_style.dart';
 
-export 'tile_assets.dart' show quest_tile_assets;
+export 'tile_assets.dart' show quest_tile_assets, quest_tile_asset_path;
 
 /// 独立使用的立体牌组件；游戏主场景直接复用相同图集进行批量绘制。
 class QuestTileCard extends StatefulWidget {

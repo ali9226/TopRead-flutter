@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/language_selection/index.dart';
 
@@ -34,8 +35,9 @@ class BillPageHeader extends StatelessWidget {
             ],
           ),
         ),
-        child: LanguageSelection(
-          darkBackground: isDark,
+        child: WindowContentLayout(
+          expand_height: false,
+          child: LanguageSelection(darkBackground: isDark),
         ),
       ),
     );

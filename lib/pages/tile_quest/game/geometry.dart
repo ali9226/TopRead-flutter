@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 import 'dart:math';
+import 'geometry_style.dart';
 import 'models.dart';
 
 /// Static rectangle intersections are cached once per board, independent of frames.
@@ -21,15 +22,32 @@ class TileQuestGeometry {
     }
   }
 
-  /// Merely touching edges do not block; any positive geometric intersection does.
+  /// Area is computed from the actual logical rectangles, including fractional
+  /// template offsets. Adjacency and disjoint rectangles have no covered area.
+  static double overlap_area(TileQuestTile lower, TileQuestTile upper) {
+    final width =
+        min(lower.x + lower.width, upper.x + upper.width) -
+        max(lower.x, upper.x);
+    final height =
+        min(lower.y + lower.height, upper.y + upper.height) -
+        max(lower.y, upper.y);
+    if (width <= 0 || height <= 0) return 0;
+    return width * height;
+  }
+
+  /// The lower collision area is the reference even when tile dimensions differ.
+  /// Rounded artwork, its shadow and atlas bleed do not enlarge that rectangle.
+  static double occlusion_area_ratio(
+    TileQuestTile lower,
+    TileQuestTile upper,
+  ) => overlap_area(lower, upper) / (lower.width * lower.height);
+
+  /// Only a higher logical layer can cover a tile. A tiny tolerance eliminates
+  /// numeric slivers without making visibly covered tiles available for tapping.
   static bool overlaps(TileQuestTile lower, TileQuestTile upper) =>
       upper.layer > lower.layer &&
-      min(lower.x + lower.width, upper.x + upper.width) -
-              max(lower.x, upper.x) >
-          .000001 &&
-      min(lower.y + lower.height, upper.y + upper.height) -
-              max(lower.y, upper.y) >
-          .000001;
+      occlusion_area_ratio(lower, upper) >
+          TileQuestGeometryStyle.minimum_occlusion_area_ratio;
 
   List<TileQuestTile> refresh(List<TileQuestTile> tiles) {
     final remaining = tiles

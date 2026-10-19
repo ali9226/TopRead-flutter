@@ -1,5 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'dart:math' as math;
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
@@ -119,7 +121,11 @@ class CreatorHeaderOverlay extends StatelessWidget {
       fontWeight: AuthorStyle.body_weight,
     );
     final double content_width =
-        MediaQuery.sizeOf(context).width -
+        math.min(
+          MediaQuery.sizeOf(context).width -
+              MediaQuery.paddingOf(context).horizontal,
+          WindowLayoutScope.max_width_of(context),
+        ) -
         AuthorStyle.header_content_padding * 2;
     final int title_lines = _measure_line_count(
       title_text,
@@ -166,99 +172,167 @@ class CreatorHeaderOverlay extends StatelessWidget {
       value: is_dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: SizedBox(
         height: safe_height,
-        child: Stack(
-          clipBehavior: Clip.hardEdge,
-          children: <Widget>[
-            Positioned.fill(
-              child: _CreatorFlexibleHeader(
-                expanded_height: expanded_height,
-                is_dark: is_dark,
-                is_cjk: is_cjk,
-                author_name: author_name,
-                works_count: works_count,
-                favorites_count: favorites_count,
-                comments_count: comments_count,
-                dashboard_loaded: dashboard_loaded,
-                on_back: on_back,
-                on_create_work: on_create_work,
-                on_continue_writing: on_continue_writing,
-                on_open_guide: on_open_guide,
-                has_draft: has_draft,
-                avatar_url: avatar_url,
-                random_avatar_index: random_avatar_index,
-              ),
-            ),
-            Positioned(
-              left: AuthorStyle.header_navigation_hit_inset,
-              top: status_bar_height + AuthorStyle.header_navigation_hit_top,
-              child: _HeaderTapTarget(
-                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                on_tap: on_back,
-              ),
-            ),
-            Positioned(
-              right: AuthorStyle.header_content_padding,
-              top: status_bar_height + AuthorStyle.header_expanded_action_top,
-              child: IgnorePointer(
-                ignoring:
-                    expanded_opacity <
-                    AuthorStyle.header_action_interaction_opacity,
-                child: Opacity(
-                  opacity: expanded_opacity,
-                  child: _HeaderTapTarget(
-                    tooltip: easy.tr('creator_center.creator_guide'),
-                    on_tap: on_open_guide,
+        child: DecoratedBox(
+          key: const ValueKey('creator_header_surface'),
+          decoration: BoxDecoration(
+            gradient: AuthorStyle.hero_gradient(is_dark),
+          ),
+          child: Stack(
+            clipBehavior: Clip.hardEdge,
+            children: <Widget>[
+              Positioned(
+                right: -AuthorStyle.header_glow_size * 0.28,
+                top: -AuthorStyle.header_glow_size * 0.34,
+                child: Container(
+                  width: AuthorStyle.header_glow_size,
+                  height: AuthorStyle.header_glow_size,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AuthorStyle.gold.withValues(
+                      alpha: is_dark ? 0.08 : 0.20,
+                    ),
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(
+                        color: AuthorStyle.gold.withValues(
+                          alpha: is_dark ? 0.10 : 0.16,
+                        ),
+                        blurRadius: AuthorStyle.header_glow_blur,
+                        spreadRadius: AuthorStyle.header_glow_blur * 0.16,
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              right:
-                  AuthorStyle.compact_navigation_padding +
-                  AuthorStyle.compact_action_size +
-                  AuthorStyle.compact_action_spacing,
-              top: status_bar_height + AuthorStyle.header_compact_action_top,
-              child: IgnorePointer(
-                ignoring:
-                    compact_opacity <
-                    AuthorStyle.header_action_interaction_opacity,
-                child: Opacity(
-                  opacity: compact_opacity,
-                  child: _HeaderTapTarget(
-                    tooltip: easy.tr('creator_center.creator_guide'),
-                    on_tap: on_open_guide,
-                  ),
+              WindowContentLayout(
+                child: Stack(
+                  clipBehavior: Clip.hardEdge,
+                  children: <Widget>[
+                    Positioned.fill(
+                      child: _CreatorFlexibleHeader(
+                        expanded_height: expanded_height,
+                        is_dark: is_dark,
+                        is_cjk: is_cjk,
+                        author_name: author_name,
+                        works_count: works_count,
+                        favorites_count: favorites_count,
+                        comments_count: comments_count,
+                        dashboard_loaded: dashboard_loaded,
+                        on_back: on_back,
+                        on_create_work: on_create_work,
+                        on_continue_writing: on_continue_writing,
+                        on_open_guide: on_open_guide,
+                        has_draft: has_draft,
+                        avatar_url: avatar_url,
+                        random_avatar_index: random_avatar_index,
+                      ),
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      height:
+                          status_bar_height + AuthorStyle.header_toolbar_height,
+                      child: WindowReservedRegionPadding(
+                        child: Stack(
+                          children: <Widget>[
+                            Positioned(
+                              left: AuthorStyle.header_navigation_hit_inset,
+                              top:
+                                  status_bar_height +
+                                  AuthorStyle.header_navigation_hit_top,
+                              child: _HeaderTapTarget(
+                                tooltip: MaterialLocalizations.of(
+                                  context,
+                                ).backButtonTooltip,
+                                on_tap: on_back,
+                              ),
+                            ),
+                            Positioned(
+                              right: AuthorStyle.header_content_padding,
+                              top:
+                                  status_bar_height +
+                                  AuthorStyle.header_expanded_action_top,
+                              child: IgnorePointer(
+                                ignoring:
+                                    expanded_opacity <
+                                    AuthorStyle
+                                        .header_action_interaction_opacity,
+                                child: Opacity(
+                                  opacity: expanded_opacity,
+                                  child: _HeaderTapTarget(
+                                    tooltip: easy.tr(
+                                      'creator_center.creator_guide',
+                                    ),
+                                    on_tap: on_open_guide,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              right:
+                                  AuthorStyle.compact_navigation_padding +
+                                  AuthorStyle.compact_action_size +
+                                  AuthorStyle.compact_action_spacing,
+                              top:
+                                  status_bar_height +
+                                  AuthorStyle.header_compact_action_top,
+                              child: IgnorePointer(
+                                ignoring:
+                                    compact_opacity <
+                                    AuthorStyle
+                                        .header_action_interaction_opacity,
+                                child: Opacity(
+                                  opacity: compact_opacity,
+                                  child: _HeaderTapTarget(
+                                    tooltip: easy.tr(
+                                      'creator_center.creator_guide',
+                                    ),
+                                    on_tap: on_open_guide,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              right: AuthorStyle.compact_navigation_padding,
+                              top:
+                                  status_bar_height +
+                                  AuthorStyle.header_compact_action_top,
+                              child: IgnorePointer(
+                                ignoring:
+                                    compact_opacity <
+                                    AuthorStyle
+                                        .header_action_interaction_opacity,
+                                child: Opacity(
+                                  opacity: compact_opacity,
+                                  child: _HeaderTapTarget(
+                                    tooltip: easy.tr(
+                                      'creator_center.create_work',
+                                    ),
+                                    on_tap: on_create_work,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: AuthorStyle.header_tab_bar_height,
+                      child: _CreatorFilterTabBar(
+                        tab_controller: tab_controller,
+                        is_dark: is_dark,
+                        is_cjk: is_cjk,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            Positioned(
-              right: AuthorStyle.compact_navigation_padding,
-              top: status_bar_height + AuthorStyle.header_compact_action_top,
-              child: IgnorePointer(
-                ignoring:
-                    compact_opacity <
-                    AuthorStyle.header_action_interaction_opacity,
-                child: Opacity(
-                  opacity: compact_opacity,
-                  child: _HeaderTapTarget(
-                    tooltip: easy.tr('creator_center.create_work'),
-                    on_tap: on_create_work,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: AuthorStyle.header_tab_bar_height,
-              child: _CreatorFilterTabBar(
-                tab_controller: tab_controller,
-                is_dark: is_dark,
-                is_cjk: is_cjk,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -330,78 +404,42 @@ class _CreatorFlexibleHeader extends StatelessWidget {
                   (1 - AuthorStyle.compact_navigation_fade_start))
               .clamp(0.0, 1.0),
         );
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: AuthorStyle.hero_gradient(is_dark),
-          ),
-          child: Stack(
-            clipBehavior: Clip.hardEdge,
-            children: <Widget>[
-              _build_background_glow(),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Transform.translate(
-                  offset: Offset(
-                    0,
-                    -AuthorStyle.expanded_content_translate_y *
-                        collapse_progress,
-                  ),
-                  child: IgnorePointer(
-                    ignoring: expanded_opacity < 0.25,
-                    child: Opacity(
-                      opacity: expanded_opacity,
-                      child: _build_expanded_content(
-                        context,
-                        status_bar_height,
-                      ),
-                    ),
-                  ),
+        return Stack(
+          clipBehavior: Clip.hardEdge,
+          children: <Widget>[
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Transform.translate(
+                offset: Offset(
+                  0,
+                  -AuthorStyle.expanded_content_translate_y * collapse_progress,
                 ),
-              ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
                 child: IgnorePointer(
-                  ignoring: compact_opacity < 0.75,
+                  ignoring: expanded_opacity < 0.25,
                   child: Opacity(
-                    opacity: compact_opacity,
-                    child: _build_compact_navigation(
-                      context,
-                      status_bar_height,
-                    ),
+                    opacity: expanded_opacity,
+                    child: _build_expanded_content(context, status_bar_height),
                   ),
                 ),
               ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// 构建头部背景中的轻量光斑。
-  Widget _build_background_glow() {
-    return Positioned(
-      right: -AuthorStyle.header_glow_size * 0.28,
-      top: -AuthorStyle.header_glow_size * 0.34,
-      child: Container(
-        width: AuthorStyle.header_glow_size,
-        height: AuthorStyle.header_glow_size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: AuthorStyle.gold.withValues(alpha: is_dark ? 0.08 : 0.20),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: AuthorStyle.gold.withValues(alpha: is_dark ? 0.10 : 0.16),
-              blurRadius: AuthorStyle.header_glow_blur,
-              spreadRadius: AuthorStyle.header_glow_blur * 0.16,
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                ignoring: compact_opacity < 0.75,
+                child: Opacity(
+                  opacity: compact_opacity,
+                  child: _build_compact_navigation(context, status_bar_height),
+                ),
+              ),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -422,50 +460,52 @@ class _CreatorFlexibleHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           /// 导航栏：返回按钮靠左、标题、问号靠右。
-          SizedBox(
-            height: AuthorStyle.header_expanded_navigation_height,
-            child: Row(
-              children: <Widget>[
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: on_back,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 2,
-                      vertical: 4,
-                    ),
-                    child: Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      size: 22,
-                      color: AuthorStyle.primary_text(is_dark),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                NicknameBadge(
-                  nickname: author_name,
-                  is_dark: is_dark,
-                  is_cjk: is_cjk,
-                  avatar_url: avatar_url,
-                  random_avatar_index: random_avatar_index,
-                ),
-                const Spacer(),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: on_open_guide,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 2,
-                      vertical: 4,
-                    ),
-                    child: Icon(
-                      Icons.help_outline_rounded,
-                      size: 22,
-                      color: AuthorStyle.primary_text(is_dark),
+          WindowReservedRegionPadding(
+            child: SizedBox(
+              height: AuthorStyle.header_expanded_navigation_height,
+              child: Row(
+                children: <Widget>[
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: on_back,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 2,
+                        vertical: 4,
+                      ),
+                      child: Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 22,
+                        color: AuthorStyle.primary_text(is_dark),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  NicknameBadge(
+                    nickname: author_name,
+                    is_dark: is_dark,
+                    is_cjk: is_cjk,
+                    avatar_url: avatar_url,
+                    random_avatar_index: random_avatar_index,
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: on_open_guide,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 2,
+                        vertical: 4,
+                      ),
+                      child: Icon(
+                        Icons.help_outline_rounded,
+                        size: 22,
+                        color: AuthorStyle.primary_text(is_dark),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -516,7 +556,9 @@ class _CreatorFlexibleHeader extends StatelessWidget {
               const SizedBox(width: AuthorStyle.metric_card_spacing),
               Expanded(
                 child: _build_metric(
-                  number: dashboard_loaded ? int.tryParse(favorites_count) : null,
+                  number: dashboard_loaded
+                      ? int.tryParse(favorites_count)
+                      : null,
                   label: easy.tr('creator_center.stats_favorites'),
                   accent_color: AuthorStyle.gold,
                 ),
@@ -524,7 +566,9 @@ class _CreatorFlexibleHeader extends StatelessWidget {
               const SizedBox(width: AuthorStyle.metric_card_spacing),
               Expanded(
                 child: _build_metric(
-                  number: dashboard_loaded ? int.tryParse(comments_count) : null,
+                  number: dashboard_loaded
+                      ? int.tryParse(comments_count)
+                      : null,
                   label: easy.tr('creator_center.stats_comments'),
                   accent_color: AuthorStyle.coral,
                 ),
@@ -565,7 +609,9 @@ class _CreatorFlexibleHeader extends StatelessWidget {
                               padding: EdgeInsets.only(left: gap),
                               child: _HeaderActionButton(
                                 icon: Icons.edit_note_rounded,
-                                label: easy.tr('creator_center.continue_writing'),
+                                label: easy.tr(
+                                  'creator_center.continue_writing',
+                                ),
                                 is_primary: false,
                                 is_dark: is_dark,
                                 is_cjk: is_cjk,
@@ -591,44 +637,46 @@ class _CreatorFlexibleHeader extends StatelessWidget {
   ) {
     return Padding(
       padding: EdgeInsets.only(top: status_bar_height),
-      child: SizedBox(
-        height: AuthorStyle.header_toolbar_height,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AuthorStyle.compact_navigation_padding,
-          ),
-          child: Row(
-            children: <Widget>[
-              _HeaderIconButton(
-                icon: Icons.arrow_back_ios_new_rounded,
-                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                is_dark: is_dark,
-                on_tap: on_back,
-              ),
-              const SizedBox(width: 10),
-              NicknameBadge(
-                nickname: author_name,
-                is_dark: is_dark,
-                is_cjk: is_cjk,
-                avatar_url: avatar_url,
-                random_avatar_index: random_avatar_index,
-              ),
-              const Spacer(),
-              _HeaderIconButton(
-                icon: Icons.help_outline_rounded,
-                tooltip: easy.tr('creator_center.creator_guide'),
-                is_dark: is_dark,
-                on_tap: on_open_guide,
-              ),
-              const SizedBox(width: 8),
-              _HeaderIconButton(
-                icon: Icons.add_rounded,
-                tooltip: easy.tr('creator_center.create_work'),
-                is_dark: is_dark,
-                is_accent: true,
-                on_tap: on_create_work,
-              ),
-            ],
+      child: WindowReservedRegionPadding(
+        child: SizedBox(
+          height: AuthorStyle.header_toolbar_height,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AuthorStyle.compact_navigation_padding,
+            ),
+            child: Row(
+              children: <Widget>[
+                _HeaderIconButton(
+                  icon: Icons.arrow_back_ios_new_rounded,
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  is_dark: is_dark,
+                  on_tap: on_back,
+                ),
+                const SizedBox(width: 10),
+                NicknameBadge(
+                  nickname: author_name,
+                  is_dark: is_dark,
+                  is_cjk: is_cjk,
+                  avatar_url: avatar_url,
+                  random_avatar_index: random_avatar_index,
+                ),
+                const Spacer(),
+                _HeaderIconButton(
+                  icon: Icons.help_outline_rounded,
+                  tooltip: easy.tr('creator_center.creator_guide'),
+                  is_dark: is_dark,
+                  on_tap: on_open_guide,
+                ),
+                const SizedBox(width: 8),
+                _HeaderIconButton(
+                  icon: Icons.add_rounded,
+                  tooltip: easy.tr('creator_center.create_work'),
+                  is_dark: is_dark,
+                  is_accent: true,
+                  on_tap: on_create_work,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -796,7 +844,9 @@ class _CreatorFilterTabBar extends StatelessWidget {
             width: AuthorStyle.tab_indicator_width,
             color: ColorConstants.themeColor,
           ),
-          insets: const EdgeInsets.only(bottom: AuthorStyle.tab_indicator_bottom_offset),
+          insets: const EdgeInsets.only(
+            bottom: AuthorStyle.tab_indicator_bottom_offset,
+          ),
         ),
         labelColor: AuthorStyle.primary_text(is_dark),
         unselectedLabelColor: AuthorStyle.secondary_text(is_dark),
@@ -1040,7 +1090,8 @@ class _AnimatedCounterState extends State<_AnimatedCounter>
   @override
   Widget build(BuildContext context) {
     final int target = widget.target;
-    final double lineHeight = widget.style.fontSize! * (widget.style.height ?? 1.2);
+    final double lineHeight =
+        widget.style.fontSize! * (widget.style.height ?? 1.2);
 
     /// 测量最宽数字（通常是目标值本身）的像素宽度。
     final TextPainter tp = TextPainter(
@@ -1052,7 +1103,9 @@ class _AnimatedCounterState extends State<_AnimatedCounter>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
-        final double progress = Curves.easeOutCubic.transform(_controller.value);
+        final double progress = Curves.easeOutCubic.transform(
+          _controller.value,
+        );
         final double offset = target * lineHeight * progress;
 
         return SizedBox(
@@ -1069,10 +1122,7 @@ class _AnimatedCounterState extends State<_AnimatedCounter>
                   children: List<Widget>.generate(target + 1, (i) {
                     return SizedBox(
                       height: lineHeight,
-                      child: Text(
-                        '$i',
-                        style: widget.style,
-                      ),
+                      child: Text('$i', style: widget.style),
                     );
                   }),
                 ),

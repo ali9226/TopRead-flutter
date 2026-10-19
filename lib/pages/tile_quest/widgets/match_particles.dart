@@ -47,7 +47,7 @@ class _QuestMatchParticlesState extends State<QuestMatchParticles> {
     if (progress == 0) return widget.child;
     final textures = widget.textures;
     final atlas = textures?.atlas;
-    final source = textures?.source_of(widget.type, blocked: false);
+    final source = textures?.content_of(widget.type, blocked: false);
     if (atlas != null && source != null) {
       return CustomPaint(
         painter: QuestMatchParticlePainter(
@@ -103,7 +103,7 @@ class QuestMatchParticlePainter extends CustomPainter {
 
   final ui.Image image;
 
-  /// 图集中完整牌的内容区域；未提供时沿用单张纹理的完整正方形。
+  /// 图集中完整牌的内容区域；未提供时使用单张纹理的完整矩形。
   final Rect? source_rect;
   final QuestParticleField field;
   final double progress;
@@ -113,19 +113,21 @@ class QuestMatchParticlePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (progress >= 1 || size.isEmpty) return;
-    final edge = math.min(size.width, size.height);
     final source =
         source_rect ??
-        Rect.fromLTWH(
-          0,
-          0,
-          math.min(image.width, image.height).toDouble(),
-          math.min(image.width, image.height).toDouble(),
-        );
-    final source_edge = source.shortestSide;
-    final cell = source_edge / QuestParticleField.columns;
-    final base_scale = edge / source_edge;
-    final origin = size.center(Offset.zero) - Offset(edge / 2, edge / 2);
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
+    if (source.isEmpty) return;
+    final cell_width = source.width / QuestParticleField.columns;
+    final cell_height = source.height / QuestParticleField.columns;
+    // 完整矩形等比映射到牌格，保留底部厚度，不能先裁成短边正方形。
+    final base_scale = math.min(
+      size.width / source.width,
+      size.height / source.height,
+    );
+    final edge = source.width * base_scale;
+    final origin =
+        size.center(Offset.zero) -
+        Offset(source.width * base_scale / 2, source.height * base_scale / 2);
     final motion_scale = reduced_motion ? .12 : 1.0;
     for (var index = 0; index < QuestParticleField.count; index++) {
       final local = ((progress - field.delay[index]) / (1 - field.delay[index]))
@@ -151,9 +153,9 @@ class QuestMatchParticlePainter extends CustomPainter {
       final center =
           origin +
           Offset(
-            (column + .5) * cell * base_scale +
+            (column + .5) * cell_width * base_scale +
                 field.dx[index] * edge * travel * motion_scale,
-            (row + .5) * cell * base_scale +
+            (row + .5) * cell_height * base_scale +
                 (field.dy[index] * travel + .38 * local * local) *
                     edge *
                     motion_scale,
@@ -161,12 +163,14 @@ class QuestMatchParticlePainter extends CustomPainter {
       final offset = index * 4;
       field.transforms[offset] = scos;
       field.transforms[offset + 1] = ssin;
-      field.transforms[offset + 2] = center.dx - (scos - ssin) * cell / 2;
-      field.transforms[offset + 3] = center.dy - (scos + ssin) * cell / 2;
-      field.sources[offset] = source.left + column * cell;
-      field.sources[offset + 1] = source.top + row * cell;
-      field.sources[offset + 2] = source.left + (column + 1) * cell;
-      field.sources[offset + 3] = source.top + (row + 1) * cell;
+      field.transforms[offset + 2] =
+          center.dx - scos * cell_width / 2 + ssin * cell_height / 2;
+      field.transforms[offset + 3] =
+          center.dy - ssin * cell_width / 2 - scos * cell_height / 2;
+      field.sources[offset] = source.left + column * cell_width;
+      field.sources[offset + 1] = source.top + row * cell_height;
+      field.sources[offset + 2] = source.left + (column + 1) * cell_width;
+      field.sources[offset + 3] = source.top + (row + 1) * cell_height;
       field.colors[index] = ((fade * 255).round() << 24) | 0x00FFFFFF;
     }
     canvas.drawRawAtlas(

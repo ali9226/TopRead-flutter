@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart' as flutter_html;
 import 'package:get/get.dart';
@@ -306,87 +307,89 @@ class _ImageTextState extends State<ImageText> {
                   ),
                 ),
               ),
-              RefreshIndicator(
-                onRefresh: _on_refresh,
-                child: ListView(
-                  controller: scroll_controller,
-                  physics: const AlwaysScrollableScrollPhysics(
-                    parent: BouncingScrollPhysics(),
-                  ),
-                  padding: EdgeInsets.fromLTRB(
-                    Style.page_horizontal_padding + safe_padding.left,
-                    content_top_padding,
-                    Style.page_horizontal_padding + safe_padding.right,
-                    Style.page_bottom_padding + safe_padding.bottom,
-                  ),
-                  children: <Widget>[
-                    if (loading)
-                      _build_loading_skeleton(is_dark: is_dark)
-                    else ...<Widget>[
-                      Padding(
-                        padding: Style.article_content_padding,
-                        child: Text(
-                          (detail?.title ?? '').trim().isEmpty
-                              ? '-'
-                              : detail!.title,
-                          style: TextStyle(
-                            fontSize: Style.title_font_size,
-                            height: Style.title_line_height,
-                            fontWeight: Style.title_font_weight,
-                            color: is_dark
-                                ? ColorConstants.whiteColor
-                                : ColorConstants.lightTextColor,
+              WindowContentLayout(
+                child: RefreshIndicator(
+                  onRefresh: _on_refresh,
+                  child: ListView(
+                    controller: scroll_controller,
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
+                    padding: EdgeInsets.fromLTRB(
+                      Style.page_horizontal_padding,
+                      content_top_padding,
+                      Style.page_horizontal_padding,
+                      Style.page_bottom_padding + safe_padding.bottom,
+                    ),
+                    children: <Widget>[
+                      if (loading)
+                        _build_loading_skeleton(is_dark: is_dark)
+                      else ...<Widget>[
+                        Padding(
+                          padding: Style.article_content_padding,
+                          child: Text(
+                            (detail?.title ?? '').trim().isEmpty
+                                ? '-'
+                                : detail!.title,
+                            style: TextStyle(
+                              fontSize: Style.title_font_size,
+                              height: Style.title_line_height,
+                              fontWeight: Style.title_font_weight,
+                              color: is_dark
+                                  ? ColorConstants.whiteColor
+                                  : ColorConstants.lightTextColor,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: Style.title_to_content_spacing),
-                      Padding(
-                        padding: Style.article_content_padding,
-                        child: flutter_html.Html(
-                          data: detail?.content ?? '',
-                          onLinkTap: (String? url, _, __) async {
-                            if (url == null || url.isEmpty) return;
-                            final Uri uri = Uri.parse(url);
-                            if (await canLaunchUrl(uri)) {
-                              await launchUrl(uri);
-                            }
-                          },
-                          style: <String, flutter_html.Style>{
-                            'html': flutter_html.Style(
-                              fontSize: flutter_html.FontSize(
-                                Style.html_default_font_size,
+                        const SizedBox(height: Style.title_to_content_spacing),
+                        Padding(
+                          padding: Style.article_content_padding,
+                          child: flutter_html.Html(
+                            data: detail?.content ?? '',
+                            onLinkTap: (String? url, _, __) async {
+                              if (url == null || url.isEmpty) return;
+                              final Uri uri = Uri.parse(url);
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri);
+                              }
+                            },
+                            style: <String, flutter_html.Style>{
+                              'html': flutter_html.Style(
+                                fontSize: flutter_html.FontSize(
+                                  Style.html_default_font_size,
+                                ),
+                                lineHeight: flutter_html.LineHeight(
+                                  is_zh_language
+                                      ? Style.html_default_line_height
+                                      : 1.85,
+                                ),
+                                textAlign: TextAlign.start,
+                                color: is_dark
+                                    ? Colors.white.withValues(alpha: 0.95)
+                                    : ColorConstants.lightTextColor,
+                                margin: flutter_html.Margins.zero,
+                                padding: flutter_html.HtmlPaddings.zero,
                               ),
-                              lineHeight: flutter_html.LineHeight(
-                                is_zh_language
-                                    ? Style.html_default_line_height
-                                    : 1.85,
+                              'body': flutter_html.Style(
+                                margin: flutter_html.Margins.zero,
+                                padding: flutter_html.HtmlPaddings.zero,
                               ),
-                              textAlign: TextAlign.start,
-                              color: is_dark
-                                  ? Colors.white.withValues(alpha: 0.95)
-                                  : ColorConstants.lightTextColor,
-                              margin: flutter_html.Margins.zero,
-                              padding: flutter_html.HtmlPaddings.zero,
-                            ),
-                            'body': flutter_html.Style(
-                              margin: flutter_html.Margins.zero,
-                              padding: flutter_html.HtmlPaddings.zero,
-                            ),
-                            'p': flutter_html.Style(
-                              margin: flutter_html.Margins.only(
-                                bottom: is_zh_language ? 12 : 16,
+                              'p': flutter_html.Style(
+                                margin: flutter_html.Margins.only(
+                                  bottom: is_zh_language ? 12 : 16,
+                                ),
+                                lineHeight: flutter_html.LineHeight(
+                                  is_zh_language
+                                      ? Style.html_default_line_height
+                                      : 1.9,
+                                ),
                               ),
-                              lineHeight: flutter_html.LineHeight(
-                                is_zh_language
-                                    ? Style.html_default_line_height
-                                    : 1.9,
-                              ),
-                            ),
-                          },
+                            },
+                          ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
               Positioned(
@@ -407,7 +410,10 @@ class _ImageTextState extends State<ImageText> {
                         ],
                       ),
                     ),
-                    child: LanguageSelection(darkBackground: is_dark),
+                    child: WindowContentLayout(
+                      expand_height: false,
+                      child: LanguageSelection(darkBackground: is_dark),
+                    ),
                   ),
                 ),
               ),

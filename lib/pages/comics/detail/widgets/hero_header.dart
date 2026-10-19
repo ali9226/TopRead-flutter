@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/components/svg_icon/index.dart';
@@ -57,27 +58,38 @@ class ComicDetailHeroHeader extends StatelessWidget {
             /// 顶部悬浮操作：下移状态栏高度，浮在封面之上。
             Positioned(
               top: top_padding + ComicDetailStyle.floating_action_margin.top,
-              left: ComicDetailStyle.floating_action_margin.left,
-              right: ComicDetailStyle.floating_action_margin.right,
-              child: Row(
-                children: <Widget>[
-                  ComicDetailFloatingButton(
-                    key: const ValueKey('comic_detail_back'),
-                    svg_name: 'right',
-                    reverse: true,
-                    label: MaterialLocalizations.of(context).backButtonTooltip,
-                    is_dark: is_dark,
-                    on_pressed: on_back,
+              left: 0,
+              right: 0,
+              child: WindowContentLayout(
+                expand_height: false,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: ComicDetailStyle.floating_action_margin.left,
+                    right: ComicDetailStyle.floating_action_margin.right,
                   ),
-                  const Spacer(),
-                  ComicDetailFloatingButton(
-                    key: const ValueKey('comic_detail_comments'),
-                    svg_name: 'message',
-                    label: easy.tr('comics.comments'),
-                    is_dark: is_dark,
-                    on_pressed: on_comments,
+                  child: Row(
+                    children: <Widget>[
+                      ComicDetailFloatingButton(
+                        key: const ValueKey('comic_detail_back'),
+                        svg_name: 'right',
+                        reverse: true,
+                        label: MaterialLocalizations.of(
+                          context,
+                        ).backButtonTooltip,
+                        is_dark: is_dark,
+                        on_pressed: on_back,
+                      ),
+                      const Spacer(),
+                      ComicDetailFloatingButton(
+                        key: const ValueKey('comic_detail_comments'),
+                        svg_name: 'message',
+                        label: easy.tr('comics.comments'),
+                        is_dark: is_dark,
+                        on_pressed: on_comments,
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ],

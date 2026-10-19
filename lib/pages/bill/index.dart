@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -387,21 +388,23 @@ class _BillState extends State<Bill> {
               BillPageBackground(isDark: isDark),
 
               /// 主滚动内容层。
-              BillPageContent(
-                isDark: isDark,
-                loading: loading,
-                hasMore: hasMore,
-                list: list,
-                scrollController: scrollController,
-                padding: EdgeInsets.fromLTRB(
-                  Style.pageHorizontalPadding + safePadding.left,
-                  contentTopPadding,
-                  Style.pageHorizontalPadding + safePadding.right,
-                  Style.pageBottomPadding + safePadding.bottom,
+              WindowContentLayout(
+                child: BillPageContent(
+                  isDark: isDark,
+                  loading: loading,
+                  hasMore: hasMore,
+                  list: list,
+                  scrollController: scrollController,
+                  padding: EdgeInsets.fromLTRB(
+                    Style.pageHorizontalPadding,
+                    contentTopPadding,
+                    Style.pageHorizontalPadding,
+                    Style.pageBottomPadding + safePadding.bottom,
+                  ),
+                  onRefresh: _handlePullRefresh,
+                  onLoadMore: fetchBillList,
+                  onCopySerialNumber: copyBillNo,
                 ),
-                onRefresh: _handlePullRefresh,
-                onLoadMore: fetchBillList,
-                onCopySerialNumber: copyBillNo,
               ),
 
               /// 固定在顶部的标题层。

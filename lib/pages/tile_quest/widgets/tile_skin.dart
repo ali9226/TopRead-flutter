@@ -1,16 +1,17 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 import 'package:flutter/painting.dart';
-import '../style.dart';
+import 'tile_surface_style.dart';
 
 /// 立体底板与图标共用 Flutter ImageCache；每个场景仅持有独立的解码引用。
 class QuestTileSkin {
   const QuestTileSkin._();
 
-  static const asset = 'assets/img/game/quest_tile_body_v4.png';
+  /// 用户提供的原始立体牌底，直接用于普通牌、飞牌和洗牌图集。
+  static const asset = 'assets/img/tile_quest/lattice.png';
 
-  /// 皮肤和图集像素一一对应，避免将原始高分辨率素材上传到每个场景。
+  /// 牌面和图集像素一一对应，原始大图仅解码到实际绘制尺寸。
   static ImageProvider<Object> get provider => ResizeImage.resizeIfNeeded(
-    TileQuestStyle.tile_cache_width,
+    QuestTileSurfaceStyle.cell_edge,
     null,
     const AssetImage(asset),
   );

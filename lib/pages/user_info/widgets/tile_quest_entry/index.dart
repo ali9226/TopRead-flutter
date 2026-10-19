@@ -53,7 +53,7 @@ class TileQuestEntry extends StatelessWidget {
                       TileQuestEntryStyle.icon_radius,
                     ),
                     child: Image.asset(
-                      'assets/img/game/app_icon.png',
+                      'assets/img/tile_quest/app_icon.png',
                       width: TileQuestEntryStyle.icon_size,
                       height: TileQuestEntryStyle.icon_size,
                       fit: BoxFit.contain,

@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/config/color_config.dart';
@@ -89,8 +90,11 @@ class StepUtils {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: WorkEditorStyle.content_max_width,
+          constraints: BoxConstraints(
+            maxWidth: WindowLayoutScope.resolve_max_width(
+              context,
+              WorkEditorStyle.content_max_width,
+            ),
           ),
           child: Column(
             children: children

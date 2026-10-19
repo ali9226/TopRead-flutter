@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:app/pages/comics/detail/logic.dart';
@@ -8,6 +9,7 @@ import 'package:app/pages/comics/detail/widgets/about_section.dart';
 import 'package:app/pages/comics/detail/widgets/action_bar.dart';
 import 'package:app/pages/comics/detail/widgets/chapter_list.dart';
 import 'package:app/pages/comics/detail/widgets/hero_header.dart';
+import 'package:app/pages/comics/detail/widgets/content_sliver.dart';
 import 'package:app/pages/comics/detail/widgets/info_section.dart';
 import 'package:app/pages/comics/detail/widgets/language_selector.dart';
 import 'package:app/pages/comics/style.dart';
@@ -62,170 +64,166 @@ class _ComicDetailPageState extends State<ComicDetailPage> {
       if (detail == null) {
         return Scaffold(
           backgroundColor: background,
-          appBar: AppBar(
-            backgroundColor: background,
-            surfaceTintColor: Colors.transparent,
-            leading: IconButton(
-              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-              onPressed: _on_back,
-              icon: const Icon(Icons.arrow_back_rounded),
-            ),
-            title: Text(
-              tr('comics.title'),
-              style: ComicDetailStyle.text(context, strong: true),
+          appBar: WindowAppBar(
+            child: AppBar(
+              backgroundColor: background,
+              surfaceTintColor: Colors.transparent,
+              leading: IconButton(
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                onPressed: _on_back,
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
+              title: Text(
+                tr('comics.title'),
+                style: ComicDetailStyle.text(context, strong: true),
+              ),
             ),
           ),
-          body: Center(
-            child: ComicsEmptyState(
-              loading: _logic.loading,
-              error: _logic.error,
-              message: tr('comics.unavailable'),
-              on_retry: _logic.load,
+          body: WindowContentLayout(
+            child: Center(
+              child: ComicsEmptyState(
+                loading: _logic.loading,
+                error: _logic.error,
+                message: tr('comics.unavailable'),
+                on_retry: _logic.load,
+              ),
             ),
           ),
         );
       }
       return Scaffold(
         backgroundColor: background,
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: ComicsStyle.content_width,
-            ),
-            child: RefreshIndicator(
-              onRefresh: _logic.load,
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: <Widget>[
-                  ComicDetailHeroHeader(
-                    detail: detail,
-                    is_dark: is_dark,
-                    cover_image: widget.cover_image,
-                    on_back: _on_back,
-                    on_comments: _on_comments,
-                  ),
-                  SliverToBoxAdapter(
-                    child: Container(
-                      decoration: BoxDecoration(color: background),
-                      padding: const EdgeInsets.fromLTRB(
-                        ComicDetailStyle.content_padding_h,
-                        ComicDetailStyle.content_padding_top,
-                        ComicDetailStyle.content_padding_h,
-                        0,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          ComicDetailInfoSection(
+        body: RefreshIndicator(
+          onRefresh: _logic.load,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: <Widget>[
+              ComicDetailHeroHeader(
+                detail: detail,
+                is_dark: is_dark,
+                cover_image: widget.cover_image,
+                on_back: _on_back,
+                on_comments: _on_comments,
+              ),
+              SliverToBoxAdapter(
+                child: WindowContentLayout(
+                  expand_height: false,
+                  child: Container(
+                    decoration: BoxDecoration(color: background),
+                    padding: const EdgeInsets.fromLTRB(
+                      ComicDetailStyle.content_padding_h,
+                      ComicDetailStyle.content_padding_top,
+                      ComicDetailStyle.content_padding_h,
+                      0,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        ComicDetailInfoSection(
+                          detail: detail,
+                          is_dark: is_dark,
+                          is_cjk: is_cjk,
+                        ),
+                        if (detail.languages.isNotEmpty) ...<Widget>[
+                          _section_title(
+                            context,
+                            tr('comics.language'),
+                            is_cjk,
+                          ),
+                          ComicDetailLanguageSelector(
                             detail: detail,
+                            is_dark: is_dark,
+                            enabled: !_logic.loading,
+                            on_selected: (language) =>
+                                _logic.load(language: language),
+                          ),
+                        ],
+                        if (detail.selected_language?.description
+                                .trim()
+                                .isNotEmpty ==
+                            true) ...<Widget>[
+                          _section_title(context, tr('comics.about'), is_cjk),
+                          ComicDetailAboutSection(
+                            key: ValueKey(
+                              'comic_about_${detail.selected_language_id}',
+                            ),
+                            description: detail.selected_language!.description,
                             is_dark: is_dark,
                             is_cjk: is_cjk,
                           ),
-                          if (detail.languages.isNotEmpty) ...<Widget>[
-                            _section_title(
-                              context,
-                              tr('comics.language'),
-                              is_cjk,
-                            ),
-                            ComicDetailLanguageSelector(
-                              detail: detail,
-                              is_dark: is_dark,
-                              enabled: !_logic.loading,
-                              on_selected: (language) =>
-                                  _logic.load(language: language),
-                            ),
-                          ],
-                          if (detail.selected_language?.description
-                                  .trim()
-                                  .isNotEmpty ==
-                              true) ...<Widget>[
-                            _section_title(context, tr('comics.about'), is_cjk),
-                            ComicDetailAboutSection(
-                              key: ValueKey(
-                                'comic_about_${detail.selected_language_id}',
+                        ],
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: ComicDetailStyle.section_top_spacing,
+                          ),
+                          child: Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: Text(
+                                  tr('comics.chapters'),
+                                  style: _section_title_style(context, is_cjk),
+                                ),
                               ),
-                              description:
-                                  detail.selected_language!.description,
-                              is_dark: is_dark,
-                              is_cjk: is_cjk,
-                            ),
-                          ],
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              top: ComicDetailStyle.section_top_spacing,
-                            ),
-                            child: Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: Text(
-                                    tr('comics.chapters'),
-                                    style: _section_title_style(
-                                      context,
-                                      is_cjk,
-                                    ),
+                              if (_logic.loading)
+                                const SizedBox.square(
+                                  dimension: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
                                   ),
                                 ),
-                                if (_logic.loading)
-                                  const SizedBox.square(
-                                    dimension: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(
+                          height: ComicDetailStyle.section_title_gap,
+                        ),
+                        if (_logic.error != null)
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: ComicDetailStyle.section_title_gap,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  _logic.error!,
+                                  style: ComicDetailStyle.text(
+                                    context,
+                                    color: ComicDetailStyle.muted(context),
                                   ),
+                                ),
+                                TextButton(
+                                  onPressed: _logic.load,
+                                  style: ComicDetailStyle.text_button(context),
+                                  child: Text(tr('comics.retry')),
+                                ),
                               ],
                             ),
                           ),
-                          const SizedBox(
-                            height: ComicDetailStyle.section_title_gap,
-                          ),
-                          if (_logic.error != null)
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: ComicDetailStyle.section_title_gap,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Text(
-                                    _logic.error!,
-                                    style: ComicDetailStyle.text(
-                                      context,
-                                      color: ComicDetailStyle.muted(context),
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: _logic.load,
-                                    style: ComicDetailStyle.text_button(
-                                      context,
-                                    ),
-                                    child: Text(tr('comics.retry')),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: ComicDetailStyle.content_padding_h,
-                    ),
-                    sliver: ComicDetailChapterList(
-                      chapters: _logic.readable_chapters,
-                      is_dark: is_dark,
-                      resume_chapter_id: _logic.resume_record?.chapter.id ?? 0,
-                      on_open: _logic.open_chapter,
-                    ),
-                  ),
-                  const SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: ComicDetailStyle.content_padding_bottom,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+              ComicDetailContentSliver(
+                child: SliverPadding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: ComicDetailStyle.content_padding_h,
+                  ),
+                  sliver: ComicDetailChapterList(
+                    chapters: _logic.readable_chapters,
+                    is_dark: is_dark,
+                    resume_chapter_id: _logic.resume_record?.chapter.id ?? 0,
+                    on_open: _logic.open_chapter,
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(
+                child: SizedBox(
+                  height: ComicDetailStyle.content_padding_bottom,
+                ),
+              ),
+            ],
           ),
         ),
         bottomNavigationBar: ComicDetailActionBar(

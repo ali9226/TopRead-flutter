@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -240,69 +241,71 @@ class _ChangePasswordState extends State<ChangePassword> {
                   ),
 
                   /// 主滚动内容区域。
-                  ListView(
-                    padding: EdgeInsets.fromLTRB(
-                      Style.pageHorizontalPadding,
-                      0,
-                      Style.pageHorizontalPadding,
-                      Style.pageBottomPadding + safePadding.bottom,
+                  WindowContentLayout(
+                    child: ListView(
+                      padding: EdgeInsets.fromLTRB(
+                        Style.pageHorizontalPadding,
+                        0,
+                        Style.pageHorizontalPadding,
+                        Style.pageBottomPadding + safePadding.bottom,
+                      ),
+                      children: <Widget>[
+                        /// 顶部留白（为固定导航栏腾出空间）。
+                        SizedBox(height: safePadding.top + 36),
+
+                        /// 导航栏占位（由 Positioned 的 LanguageSelection 处理）。
+                        const SizedBox.shrink(),
+                        const SizedBox(height: 8),
+
+                        /// 英雄区域（标题 + 副标题 + 猫咪吉祥物）。
+                        HeroSection(
+                          isCovering: _shouldMascotCover,
+                          isDark: isDark,
+                        ),
+
+                        /// 表单卡片（新密码 + 强度条 + 确认密码）。
+                        const SizedBox(height: 4),
+                        PasswordFormCard(
+                          newPasswordController: _newPasswordController,
+                          confirmPasswordController: _confirmPasswordController,
+                          newPasswordFocusNode: _newPasswordFocusNode,
+                          confirmPasswordFocusNode: _confirmPasswordFocusNode,
+                          newPasswordObscured: _newPasswordObscured,
+                          confirmPasswordObscured: _confirmPasswordObscured,
+                          isDark: isDark,
+                          onChanged: (_) {
+                            if (mounted) setState(() {});
+                          },
+                          onNewPasswordSubmitted: (_) {
+                            _confirmPasswordFocusNode.requestFocus();
+                          },
+                          onConfirmPasswordSubmitted: (_) => _handleSubmit(),
+                          onNewPasswordVisibilityTap: () {
+                            setState(() {
+                              _newPasswordObscured = !_newPasswordObscured;
+                            });
+                          },
+                          onConfirmPasswordVisibilityTap: () {
+                            setState(() {
+                              _confirmPasswordObscured =
+                                  !_confirmPasswordObscured;
+                            });
+                          },
+                        ),
+
+                        /// 确认修改按钮。
+                        SizedBox(height: Style.submitTopSpacing),
+                        SubmitButton(
+                          isLoading: _isSubmitting,
+                          isDark: isDark,
+                          onPressed: _handleSubmit,
+                        ),
+
+                        /// 密码小贴士卡片（位于按钮下方）。
+                        SizedBox(height: Style.formCardSpacing),
+                        PasswordTipsCard(isDark: isDark),
+                      ],
                     ),
-                    children: <Widget>[
-                      /// 顶部留白（为固定导航栏腾出空间）。
-                      SizedBox(height: safePadding.top + 36),
-
-                      /// 导航栏占位（由 Positioned 的 LanguageSelection 处理）。
-                      const SizedBox.shrink(),
-                      const SizedBox(height: 8),
-
-                      /// 英雄区域（标题 + 副标题 + 猫咪吉祥物）。
-                      HeroSection(
-                        isCovering: _shouldMascotCover,
-                        isDark: isDark,
-                      ),
-
-                      /// 表单卡片（新密码 + 强度条 + 确认密码）。
-                      const SizedBox(height: 4),
-                      PasswordFormCard(
-                        newPasswordController: _newPasswordController,
-                        confirmPasswordController: _confirmPasswordController,
-                        newPasswordFocusNode: _newPasswordFocusNode,
-                        confirmPasswordFocusNode: _confirmPasswordFocusNode,
-                        newPasswordObscured: _newPasswordObscured,
-                        confirmPasswordObscured: _confirmPasswordObscured,
-                        isDark: isDark,
-                        onChanged: (_) {
-                          if (mounted) setState(() {});
-                        },
-                        onNewPasswordSubmitted: (_) {
-                          _confirmPasswordFocusNode.requestFocus();
-                        },
-                        onConfirmPasswordSubmitted: (_) => _handleSubmit(),
-                        onNewPasswordVisibilityTap: () {
-                          setState(() {
-                            _newPasswordObscured = !_newPasswordObscured;
-                          });
-                        },
-                        onConfirmPasswordVisibilityTap: () {
-                          setState(() {
-                            _confirmPasswordObscured =
-                                !_confirmPasswordObscured;
-                          });
-                        },
-                      ),
-
-                      /// 确认修改按钮。
-                      SizedBox(height: Style.submitTopSpacing),
-                      SubmitButton(
-                        isLoading: _isSubmitting,
-                        isDark: isDark,
-                        onPressed: _handleSubmit,
-                      ),
-
-                      /// 密码小贴士卡片（位于按钮下方）。
-                      SizedBox(height: Style.formCardSpacing),
-                      PasswordTipsCard(isDark: isDark),
-                    ],
                   ),
 
                   /// 顶部固定语言选择导航栏（返回按钮 + 语言切换）。
@@ -310,18 +313,21 @@ class _ChangePasswordState extends State<ChangePassword> {
                     top: 0,
                     left: 0,
                     right: 0,
-                    child: LanguageSelection(
-                      title: '',
-                      showLeftIcon: true,
-                      showRightLanguageEntry: false,
-                      useSafeAreaTop: true,
-                      topOffset: 0,
-                      horizontalPadding: Style.pageHorizontalPadding,
-                      darkBackground: isDark,
-                      onLeftTapOverride: () {
-                        _dismissKeyboard();
-                        routerUtil(path: '/user_info', type: 'replace');
-                      },
+                    child: WindowContentLayout(
+                      expand_height: false,
+                      child: LanguageSelection(
+                        title: '',
+                        showLeftIcon: true,
+                        showRightLanguageEntry: false,
+                        useSafeAreaTop: true,
+                        topOffset: 0,
+                        horizontalPadding: Style.pageHorizontalPadding,
+                        darkBackground: isDark,
+                        onLeftTapOverride: () {
+                          _dismissKeyboard();
+                          routerUtil(path: '/user_info', type: 'replace');
+                        },
+                      ),
                     ),
                   ),
                 ],

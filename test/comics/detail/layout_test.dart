@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:app/config/layout_config.dart';
+import 'package:app/components/window_content_layout/index.dart';
+import 'package:app/pages/comics/detail/widgets/action_bar.dart';
 import 'package:app/models/comics.dart';
 import 'package:app/models/language_info.dart';
 import 'package:app/models/user_info.dart';
@@ -14,7 +16,6 @@ import 'package:app/pages/comics/detail/widgets/about_section.dart';
 import 'package:app/pages/comics/detail/widgets/chapter_list.dart';
 import 'package:app/pages/comics/detail/widgets/hero_header.dart';
 import 'package:app/pages/comics/detail/widgets/language_selector.dart';
-import 'package:app/pages/read/widgets/introduction_section/style.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/tag_section/index.dart';
 import 'package:app/stores/language_store.dart';
 import 'package:app/stores/user_information.dart';
@@ -188,6 +189,7 @@ void main() {
     double scale = 1,
     bool reduce_motion = false,
     GlobalKey? boundary,
+    EdgeInsets? safe_padding,
   }) async {
     await tester.pumpWidget(
       RepaintBoundary(
@@ -214,6 +216,7 @@ void main() {
               ),
               builder: (context, child) => MediaQuery(
                 data: MediaQuery.of(context).copyWith(
+                  padding: safe_padding ?? MediaQuery.paddingOf(context),
                   textScaler: TextScaler.linear(scale),
                   disableAnimations: reduce_motion,
                 ),
@@ -240,6 +243,53 @@ void main() {
       await destination.parent.create(recursive: true);
       await destination.writeAsBytes(bytes!.buffer.asUint8List());
       image.dispose();
+    });
+  }
+
+  for (final dark in <bool>[false, true]) {
+    testWidgets('Duo保留区只约束控件，海报和底栏表面贯穿整窗 ${dark ? 'dark' : 'light'}', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(466, 678);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await mount(
+        tester,
+        WindowLayoutScope(
+          child: ComicDetailPage(
+            comic_id: 42,
+            controller: _Logic('en'),
+            cover_image: const ColoredBox(color: Colors.orange),
+          ),
+        ),
+        dark: dark,
+        safe_padding: const EdgeInsets.only(right: 84, bottom: 34),
+      );
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getSize(find.byKey(const ValueKey('comic_detail_cover'))).width,
+        466,
+      );
+      expect(tester.getSize(find.byType(ComicDetailActionBar)).width, 466);
+      for (final key in <String>[
+        'comic_detail_back',
+        'comic_detail_comments',
+        'comic_detail_collect',
+        'comic_detail_read',
+      ]) {
+        final rect = tester.getRect(find.byKey(ValueKey(key)));
+        expect(rect.left, greaterThanOrEqualTo(0));
+        expect(rect.right, lessThanOrEqualTo(382));
+      }
+      // 模拟展开后实时增长视口，封面继续满幅，不复用收起态的旧宽度。
+      tester.view.physicalSize = const Size(1048, 748);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(find.byKey(const ValueKey('comic_detail_cover'))).width,
+        1048,
+      );
+      expect(tester.takeException(), isNull);
     });
   }
 
@@ -486,7 +536,7 @@ void main() {
     }
   }
   for (final dark in <bool>[false, true]) {
-    testWidgets('小说式完整封面与无描边半透明导航 ${dark ? 'dark' : 'light'}', (tester) async {
+    testWidgets('满幅封面与无描边半透明导航 ${dark ? 'dark' : 'light'}', (tester) async {
       int back = 0, comments = 0;
       await mount(
         tester,
@@ -556,17 +606,23 @@ void main() {
         findsNothing,
       );
       final cover_finder = find.byKey(const ValueKey('comic_detail_cover'));
-      expect(tester.getSize(cover_finder), const Size(108, 144));
+      final cover_size = Size(
+        tester.view.physicalSize.width / tester.view.devicePixelRatio,
+        ComicDetailStyle.cover_height,
+      );
+      expect(tester.getSize(cover_finder), cover_size);
       final clip = tester.widget<ClipRRect>(
         find.byKey(const ValueKey('comic_detail_cover_art')),
       );
       expect(
         clip.borderRadius,
-        BorderRadius.circular(IntroductionStyle.cover_radius),
+        const BorderRadius.vertical(
+          bottom: Radius.circular(ComicDetailStyle.cover_radius),
+        ),
       );
       expect(
         tester.getSize(find.byKey(const ValueKey('fixture_complete_cover'))),
-        const Size(108, 144),
+        cover_size,
       );
       expect(tester.takeException(), isNull);
     });
@@ -630,61 +686,69 @@ void main() {
     const Size(480, 320),
     const Size(300, 300),
   ]) {
-    testWidgets('完整封面实际图面圆角 ${dimensions.width}×${dimensions.height}', (
-      tester,
-    ) async {
-      // 不依赖外部网络：真实Image尺寸驱动RenderImage布局，而非固定占位框。
-      final recorder = ui.PictureRecorder();
-      Canvas(
-        recorder,
-      ).drawRect(Offset.zero & dimensions, Paint()..color = Colors.orange);
-      final picture = recorder.endRecording();
-      final image = picture.toImageSync(
-        dimensions.width.toInt(),
-        dimensions.height.toInt(),
-      );
-      picture.dispose();
-      addTearDown(image.dispose);
-      await mount(
-        tester,
-        Scaffold(
-          body: CustomScrollView(
-            slivers: <Widget>[
-              ComicDetailHeroHeader(
-                detail: _fixture('en'),
-                is_dark: false,
-                on_back: () {},
-                on_comments: () {},
-                cover_image: RawImage(image: image, fit: BoxFit.contain),
+    for (final viewport in const <Size>[
+      Size(466, 678),
+      Size(669, 951),
+      Size(951, 669),
+    ]) {
+      testWidgets(
+        '满幅封面底部圆角 ${dimensions.width}×${dimensions.height} 窗口$viewport',
+        (tester) async {
+          tester.view.devicePixelRatio = 1;
+          tester.view.physicalSize = viewport;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          // 不依赖外部网络：真实Image尺寸驱动RenderImage布局，而非固定占位框。
+          final recorder = ui.PictureRecorder();
+          Canvas(
+            recorder,
+          ).drawRect(Offset.zero & dimensions, Paint()..color = Colors.orange);
+          final picture = recorder.endRecording();
+          final image = picture.toImageSync(
+            dimensions.width.toInt(),
+            dimensions.height.toInt(),
+          );
+          picture.dispose();
+          addTearDown(image.dispose);
+          await mount(
+            tester,
+            Scaffold(
+              body: CustomScrollView(
+                slivers: <Widget>[
+                  ComicDetailHeroHeader(
+                    detail: _fixture('en'),
+                    is_dark: false,
+                    on_back: () {},
+                    on_comments: () {},
+                    cover_image: RawImage(image: image, fit: BoxFit.cover),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+          final slot = find.byKey(const ValueKey('comic_detail_cover'));
+          final art = find.byKey(const ValueKey('comic_detail_cover_art'));
+          final expected = Size(viewport.width, ComicDetailStyle.cover_height);
+          expect(tester.getSize(slot), expected);
+          expect(tester.getSize(art), expected);
+          expect(tester.getRect(art).center, tester.getRect(slot).center);
+          expect(tester.getSize(find.byType(RawImage)), tester.getSize(art));
+          expect(
+            tester.widget<ClipRRect>(art).borderRadius,
+            const BorderRadius.vertical(
+              bottom: Radius.circular(ComicDetailStyle.cover_radius),
+            ),
+          );
+          expect(
+            tester.widget<RawImage>(find.byType(RawImage)).fit,
+            BoxFit.cover,
+          );
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pumpAndSettle();
+        },
       );
-      final slot = find.byKey(const ValueKey('comic_detail_cover'));
-      final art = find.byKey(const ValueKey('comic_detail_cover_art'));
-      final ratio = (108 / dimensions.width).clamp(0, 144 / dimensions.height);
-      final expected = Size(
-        dimensions.width * ratio,
-        dimensions.height * ratio,
-      );
-      expect(tester.getSize(slot), const Size(108, 144));
-      expect(tester.getSize(art).width, closeTo(expected.width, 0.01));
-      expect(tester.getSize(art).height, closeTo(expected.height, 0.01));
-      expect(tester.getRect(art).center, tester.getRect(slot).center);
-      expect(tester.getSize(find.byType(RawImage)), tester.getSize(art));
-      expect(
-        tester.widget<ClipRRect>(art).borderRadius,
-        BorderRadius.circular(8),
-      );
-      expect(
-        tester.widget<RawImage>(find.byType(RawImage)).fit,
-        BoxFit.contain,
-      );
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpAndSettle();
-    });
+    }
   }
   testWidgets('减少动画偏好立即展开，短简介没有无效展开按钮', (tester) async {
     await mount(

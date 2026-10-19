@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "version": "1.2.2+22",
+  "completed_at": "2026-10-19T19:27:41.729600+08:00",
+  "tests": {
+    "command": "fvm flutter test --no-pub",
+    "passed": 1124,
+    "optional_skipped": 4,
+    "failed": 0,
+    "analyzer_command": "fvm dart analyze",
+    "analyzer_errors": 0,
+    "analyzer_note": "Existing project warning/info diagnostics remain; no new compile errors. The Flutter analyze LSP wrapper has a UTF-8 Content-Length bug on this Chinese path."
+  },
+  "layouts": {
+    "closed_window": [
+      466,
+      678
+    ],
+    "open_landscape_window": [
+      951,
+      669
+    ],
+    "open_portrait_window": [
+      669,
+      951
+    ],
+    "observed_safe_insets": {
+      "left": 0,
+      "top": 0,
+      "right": 84,
+      "bottom": 34
+    },
+    "partial_fold_observed": {
+      "hinge": [
+        455.5,
+        0,
+        40,
+        669
+      ],
+      "occlusion": [
+        867,
+        0,
+        84,
+        124
+      ]
+    },
+    "scaffold_audit": "48 non-game Scaffold surfaces; backgrounds remain full window, readable foreground is separately safe and width bounded. Games preserve natural artwork corners and actual brick overlap."
+  },
+  "verification": {
+    "background_pixel_tests": "test/components/fullbleed_surfaces_test.dart",
+    "game_corner_tests": "test/pages/tile_quest/board_corner_transparency_test.dart",
+    "reading_auto_fold_test": "test/pages/read/fold_auto_read_test.dart",
+    "render_profile": "tile_quest_profile_results.json",
+    "ios_audio": "tile_quest/ios_audio_probe_results.json",
+    "installed_versions": "../build/tile_quest/install_receipt_v22.json"
+  },
+  "screenshots": [
+    "../build/tile_quest/duo_fullbleed_profile_closed.png",
+    "../build/tile_quest/duo_fullbleed_profile_open.png",
+    "../build/tile_quest/duo_compact_playfield.png"
+  ],
+  "apple_references": [
+    "https://developer.apple.com/iphone-duo/prepare/",
+    "https://developer.apple.com/videos/play/tech-talks/111461/",
+    "https://developer.apple.com/videos/play/tech-talks/111463/",
+    "https://developer.apple.com/design/human-interface-guidelines/layout",
+    "https://developer.apple.com/documentation/avfaudio/avaudioplayernode"
+  ],
+  "deployment": {
+    "version": "1.2.2+22",
+    "timestamp": "2026-10-19T19:27:41.729600+08:00",
+    "package": "com.topread.novel",
+    "ios": {
+      "device": "iPhone 16 Pro Max",
+      "mode": "profile",
+      "installed_version": "1.2.2",
+      "installed_bundle_version": "22",
+      "formal_main_entry_verified": true,
+      "installed": true,
+      "launched": true,
+      "data_preserved": true,
+      "bundle_copy": "/tmp/topread_formal_v22.app"
+    },
+    "duo": {
+      "os": "iOS 27.1",
+      "mode": "debug",
+      "installed": true,
+      "xcode_build_succeeded": true
+    },
+    "android": {
+      "apk": "build/tile_quest/topread-1.2.2+22-arm64.apk",
+      "sha256": "e48fa252244dc193db630c33c114bc52516b70baddba728c24758a3b795e21ea",
+      "built": true,
+      "installed": false,
+      "reason": "Xiaomi ADB device disconnected after frame profiling; no connected Android device at final deployment."
+    }
+  }
+}

@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -124,22 +125,36 @@ class _SelectionLanguageState extends State<SelectionLanguage> {
           // 主内容区。
           Stack(
             children: <Widget>[
-              // 可滚动列表。
-              _build_language_list(headerOverlayHeight),
+              WindowContentLayout(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // 可滚动列表。
+                    _build_language_list(headerOverlayHeight),
+                  ],
+                ),
+              ),
               // 顶部渐变过渡遮罩。
               PageTopGradientOverlay(background_color: backgroundColor),
-              // 顶部固定操作栏。
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: SelectionLanguageHeader(
-                  isDark: isDark,
-                  backgroundColor: backgroundColor,
-                  titleColor: titleColor,
-                  changed: changed,
-                  onTapClose: () => routerBack(context),
-                  onTapDone: submit,
+              WindowContentLayout(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // 顶部固定操作栏。
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: SelectionLanguageHeader(
+                        isDark: isDark,
+                        backgroundColor: backgroundColor,
+                        titleColor: titleColor,
+                        changed: changed,
+                        onTapClose: () => routerBack(context),
+                        onTapDone: submit,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

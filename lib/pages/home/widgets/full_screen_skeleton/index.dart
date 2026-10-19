@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
@@ -69,6 +70,8 @@ class _FullScreenSkeletonState extends State<FullScreenSkeleton>
     return SafeArea(
       top: false,
       bottom: false,
+      left: false,
+      right: false,
       child: Container(
         color: background_color,
         child: Stack(
@@ -79,35 +82,38 @@ class _FullScreenSkeletonState extends State<FullScreenSkeleton>
               right: 0,
               child: TopDecoration(is_dark: is_dark),
             ),
-            Column(
-              children: <Widget>[
-                if (has_status_bar_spacing) SizedBox(height: status_bar_height),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: HomeHeaderBar(
-                    is_dark: is_dark,
-                    on_search_tap: widget.on_search_tap,
-                    on_language_tap: widget.on_language_tap,
+            WindowContentLayout(
+              child: Column(
+                children: <Widget>[
+                  if (has_status_bar_spacing)
+                    SizedBox(height: status_bar_height),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: HomeHeaderBar(
+                      is_dark: is_dark,
+                      on_search_tap: widget.on_search_tap,
+                      on_language_tap: widget.on_language_tap,
+                    ),
                   ),
-                ),
-                Transform.translate(
-                  offset: const Offset(
-                    0,
-                    FullScreenSkeletonStyle.tab_bar_top_offset,
+                  Transform.translate(
+                    offset: const Offset(
+                      0,
+                      FullScreenSkeletonStyle.tab_bar_top_offset,
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: FullScreenSkeletonStyle.tab_bar_height,
+                      child: _build_tab_bar_skeleton(is_dark: is_dark),
+                    ),
                   ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: FullScreenSkeletonStyle.tab_bar_height,
-                    child: _build_tab_bar_skeleton(is_dark: is_dark),
+                  Expanded(
+                    child: _build_content_skeleton(
+                      is_dark: is_dark,
+                      panel_color: panel_color,
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: _build_content_skeleton(
-                    is_dark: is_dark,
-                    panel_color: panel_color,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'dart:ui';
 import 'package:app/config/font_config.dart';
 
@@ -244,64 +245,66 @@ class _RankingFullListPageState extends State<RankingFullListPage>
 
             /// 顶部星星点缀装饰。
             StarfieldDecoration(is_dark: is_dark),
-            SafeArea(
-              bottom: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  SizedBox(height: Style.logged_in_top_spacing),
-                  _build_tab_bar(
-                    is_dark: is_dark,
-                    title_color: title_color,
-                    subtitle_color: subtitle_color,
-                    background_color: background_color,
-                  ),
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tab_controller,
-                      children: List<Widget>.generate(_tab_title_list.length, (
-                        int index,
-                      ) {
-                        /// 短篇榜（id=157）使用首页短篇 Tab 的子组件。
-                        if (_tab_id_list[index] == 157) {
-                          return Padding(
-                            key: ValueKey<String>(
-                              'short_story_157_$_content_revision',
-                            ),
-                            padding: const EdgeInsets.only(
-                              top: Style.tab_view_top_spacing,
-                            ),
-                            child: const ShortStoryTabContent(),
-                          );
-                        }
-
-                        // 只有当前选中的 tab 才传入 initial_category_id
-                        final bool is_selected_tab =
-                            index == _tab_controller.index;
-                        final int? category_id =
-                            is_selected_tab && widget.initial_category_id > 0
-                            ? widget.initial_category_id
-                            : null;
-
-                        return _RankingTabPage(
-                          child: BookshelfTabContent(
-                            key: ValueKey<String>(
-                              'ranking_${_tab_id_list[index]}_'
-                              '$_content_revision',
-                            ),
-                            ranking_tab_id: _tab_id_list[index],
-                            accent_color:
-                                RankingFullListLogic.resolve_tab_accent_color(
-                                  index,
-                                ),
-                            is_dark: is_dark,
-                            initial_category_id: category_id,
-                          ),
-                        );
-                      }),
+            WindowContentLayout(
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    SizedBox(height: Style.logged_in_top_spacing),
+                    _build_tab_bar(
+                      is_dark: is_dark,
+                      title_color: title_color,
+                      subtitle_color: subtitle_color,
+                      background_color: background_color,
                     ),
-                  ),
-                ],
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tab_controller,
+                        children: List<Widget>.generate(_tab_title_list.length, (
+                          int index,
+                        ) {
+                          /// 短篇榜（id=157）使用首页短篇 Tab 的子组件。
+                          if (_tab_id_list[index] == 157) {
+                            return Padding(
+                              key: ValueKey<String>(
+                                'short_story_157_$_content_revision',
+                              ),
+                              padding: const EdgeInsets.only(
+                                top: Style.tab_view_top_spacing,
+                              ),
+                              child: const ShortStoryTabContent(),
+                            );
+                          }
+
+                          // 只有当前选中的 tab 才传入 initial_category_id
+                          final bool is_selected_tab =
+                              index == _tab_controller.index;
+                          final int? category_id =
+                              is_selected_tab && widget.initial_category_id > 0
+                              ? widget.initial_category_id
+                              : null;
+
+                          return _RankingTabPage(
+                            child: BookshelfTabContent(
+                              key: ValueKey<String>(
+                                'ranking_${_tab_id_list[index]}_'
+                                '$_content_revision',
+                              ),
+                              ranking_tab_id: _tab_id_list[index],
+                              accent_color:
+                                  RankingFullListLogic.resolve_tab_accent_color(
+                                    index,
+                                  ),
+                              is_dark: is_dark,
+                              initial_category_id: category_id,
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             PageTopGradientOverlay(background_color: background_color),

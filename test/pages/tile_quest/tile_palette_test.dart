@@ -9,26 +9,30 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('the engine and renderer share exactly the requested fifteen icons', () {
     expect(quest_tile_assets, <String>[
-      'watermelon',
-      'strawberry',
-      'pink_flower',
-      'blueberries',
-      'carrot',
-      'apple',
-      'grapes',
-      'lemon',
       'mushroom',
-      'snowflake',
-      'potion',
+      'carrot',
+      'watermelon',
+      'lemon',
+      'shovel',
+      'glove',
       'leaf',
-      'shell',
-      'avocado',
-      'blue_gem',
+      'strawberry',
+      'milk_bottle',
+      'scissors',
+      'hay',
+      'yarn',
+      'star',
+      'grapes',
+      'snowflake',
     ]);
     expect(TileQuestConfig.max_tile_types, quest_tile_assets.length);
     expect(quest_tile_assets.toSet(), hasLength(quest_tile_assets.length));
-    for (final name in quest_tile_assets) {
-      expect(File('assets/img/game/tile_$name.png').existsSync(), isTrue);
+    for (var type = 0; type < quest_tile_assets.length; type++) {
+      expect(
+        quest_tile_asset_path(type),
+        'assets/img/tile_quest/icons/tile_${quest_tile_assets[type]}.png',
+      );
+      expect(File(quest_tile_asset_path(type)).existsSync(), isTrue);
     }
   });
 

@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/comics/mine/logic.dart';
@@ -68,48 +69,51 @@ class _ComicsMinePageState extends State<ComicsMinePage> {
 
     return Scaffold(
       backgroundColor: background,
+
       /// 悬浮新建按钮：主题金底 + 深色文字，与全局主行动按钮一致。
       floatingActionButton: _build_fab(context, is_cjk),
-      body: AnimatedBuilder(
-        animation: _logic,
-        builder: (context, child) {
-          return SafeArea(
-            bottom: false,
-            child: RefreshIndicator(
-              color: ColorConstants.themeColor,
-              backgroundColor: ComicsStyle.surface(context),
-              onRefresh: _logic.refresh,
-              child: CustomScrollView(
-                controller: _scroll_controller,
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: <Widget>[
-                  /// 顶部标题区。
-                  SliverToBoxAdapter(child: _build_header(context, is_cjk)),
+      body: WindowContentLayout(
+        child: AnimatedBuilder(
+          animation: _logic,
+          builder: (context, child) {
+            return SafeArea(
+              bottom: false,
+              child: RefreshIndicator(
+                color: ColorConstants.themeColor,
+                backgroundColor: ComicsStyle.surface(context),
+                onRefresh: _logic.refresh,
+                child: CustomScrollView(
+                  controller: _scroll_controller,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: <Widget>[
+                    /// 顶部标题区。
+                    SliverToBoxAdapter(child: _build_header(context, is_cjk)),
 
-                  /// 列表主体：加载中 / 失败 / 空 / 网格。
-                  ..._build_content(context, is_dark),
+                    /// 列表主体：加载中 / 失败 / 空 / 网格。
+                    ..._build_content(context, is_dark),
 
-                  /// 底部加载更多。
-                  if (_logic.items.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.only(
-                          top: ComicsMineStyle.load_more_top_spacing,
-                          bottom: ComicsStyle.large_gap,
-                        ),
-                        child: LoadMoreFooter(
-                          is_dark: is_dark,
-                          is_loading: _logic.loading_more,
-                          has_more: _logic.has_more,
-                          on_load_more: _logic.load_more,
+                    /// 底部加载更多。
+                    if (_logic.items.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.only(
+                            top: ComicsMineStyle.load_more_top_spacing,
+                            bottom: ComicsStyle.large_gap,
+                          ),
+                          child: LoadMoreFooter(
+                            is_dark: is_dark,
+                            is_loading: _logic.loading_more,
+                            has_more: _logic.has_more,
+                            on_load_more: _logic.load_more,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -165,10 +169,7 @@ class _ComicsMinePageState extends State<ComicsMinePage> {
       return <Widget>[
         SliverFillRemaining(
           hasScrollBody: false,
-          child: ComicsEmptyState(
-            loading: true,
-            message: tr('comics.loading'),
-          ),
+          child: ComicsEmptyState(loading: true, message: tr('comics.loading')),
         ),
       ];
     }

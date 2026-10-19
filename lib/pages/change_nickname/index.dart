@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
@@ -65,8 +66,8 @@ class _ChangeNicknameState extends State<ChangeNickname> {
     final UserInformation userController = Get.find<UserInformation>();
     final String currentName =
         userController.userInfo.value?.name.trim().isNotEmpty == true
-            ? userController.userInfo.value!.name.trim()
-            : '--';
+        ? userController.userInfo.value!.name.trim()
+        : '--';
 
     /// 输入框下划线颜色。
     final Color borderColor = isDark
@@ -127,55 +128,57 @@ class _ChangeNicknameState extends State<ChangeNickname> {
                         height: Style.decorCircleTwoSize,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF67C23A).withValues(
-                            alpha: Style.decorCircleTwoOpacity,
-                          ),
+                          color: const Color(
+                            0xFF67C23A,
+                          ).withValues(alpha: Style.decorCircleTwoOpacity),
                         ),
                       ),
                     ),
                   ),
-                  ListView(
-                    padding: EdgeInsets.fromLTRB(
-                      Style.pageHorizontalPadding,
-                      0,
-                      Style.pageHorizontalPadding,
-                      Style.pageBottomPadding,
+                  WindowContentLayout(
+                    child: ListView(
+                      padding: EdgeInsets.fromLTRB(
+                        Style.pageHorizontalPadding,
+                        0,
+                        Style.pageHorizontalPadding,
+                        Style.pageBottomPadding,
+                      ),
+                      children: <Widget>[
+                        SizedBox(
+                          height: MediaQuery.of(context).padding.top + 16,
+                        ),
+
+                        /// Logo + 口号。
+                        const AuthBrandSection(),
+
+                        /// 当前昵称展示。
+                        _CurrentNicknameSection(
+                          isDark: isDark,
+                          nickname: currentName,
+                        ),
+                        const SizedBox(height: 30),
+
+                        /// 新昵称输入。
+                        _NewNicknameSection(
+                          isDark: isDark,
+                          controller: _nicknameController,
+                          focusNode: _nicknameFocusNode,
+                          maxLength: _maxLength,
+                          onChanged: () => setState(() {}),
+                          borderColor: borderColor,
+                          hintColor: hintColor,
+                        ),
+
+                        /// 提交按钮。
+                        const SizedBox(height: Style.submitTopSpacing),
+                        CommonSubmitButton(
+                          title: context.tr('UserInfo.confirm_update'),
+                          isDark: isDark,
+                          loading: _submitLoading,
+                          onTap: _handleSubmit,
+                        ),
+                      ],
                     ),
-                    children: <Widget>[
-                      SizedBox(
-                        height: MediaQuery.of(context).padding.top + 16,
-                      ),
-
-                      /// Logo + 口号。
-                      const AuthBrandSection(),
-
-                      /// 当前昵称展示。
-                      _CurrentNicknameSection(
-                        isDark: isDark,
-                        nickname: currentName,
-                      ),
-                      const SizedBox(height: 30),
-
-                      /// 新昵称输入。
-                      _NewNicknameSection(
-                        isDark: isDark,
-                        controller: _nicknameController,
-                        focusNode: _nicknameFocusNode,
-                        maxLength: _maxLength,
-                        onChanged: () => setState(() {}),
-                        borderColor: borderColor,
-                        hintColor: hintColor,
-                      ),
-
-                      /// 提交按钮。
-                      const SizedBox(height: Style.submitTopSpacing),
-                      CommonSubmitButton(
-                        title: context.tr('UserInfo.confirm_update'),
-                        isDark: isDark,
-                        loading: _submitLoading,
-                        onTap: _handleSubmit,
-                      ),
-                    ],
                   ),
                   Positioned(
                     top: 0,
@@ -206,14 +209,17 @@ class _ChangeNicknameState extends State<ChangeNickname> {
                     top: 0,
                     left: 0,
                     right: 0,
-                    child: LanguageSelection(
-                      showLeftIcon: true,
-                      showRightLanguageEntry: false,
-                      useSafeAreaTop: true,
-                      topOffset: 0,
-                      horizontalPadding: Style.pageHorizontalPadding,
-                      darkBackground: isDark,
-                      onLeftTapOverride: _handleClose,
+                    child: WindowContentLayout(
+                      expand_height: false,
+                      child: LanguageSelection(
+                        showLeftIcon: true,
+                        showRightLanguageEntry: false,
+                        useSafeAreaTop: true,
+                        topOffset: 0,
+                        horizontalPadding: Style.pageHorizontalPadding,
+                        darkBackground: isDark,
+                        onLeftTapOverride: _handleClose,
+                      ),
                     ),
                   ),
                 ],
@@ -241,9 +247,9 @@ class _ChangeNicknameState extends State<ChangeNickname> {
     });
 
     try {
-      final bool success = await logic.submitNewNickname(
-        <String, String>{'nickname': _nicknameController.text},
-      );
+      final bool success = await logic.submitNewNickname(<String, String>{
+        'nickname': _nicknameController.text,
+      });
       if (!mounted) return;
       if (success) {
         routerUtil(path: '/user_info', type: 'replace');
@@ -269,10 +275,7 @@ class _CurrentNicknameSection extends StatelessWidget {
   final bool isDark;
   final String nickname;
 
-  const _CurrentNicknameSection({
-    required this.isDark,
-    required this.nickname,
-  });
+  const _CurrentNicknameSection({required this.isDark, required this.nickname});
 
   @override
   Widget build(BuildContext context) {
@@ -294,12 +297,7 @@ class _CurrentNicknameSection extends StatelessWidget {
         /// 标签行。
         Row(
           children: <Widget>[
-            SvgIcon(
-              name: 'account',
-              color: labelColor,
-              width: 22,
-              height: 22,
-            ),
+            SvgIcon(name: 'account', color: labelColor, width: 22, height: 22),
             const SizedBox(width: 7),
             Text(
               context.tr('UserInfo.current_nickname_label'),
@@ -326,10 +324,7 @@ class _CurrentNicknameSection extends StatelessWidget {
         ),
 
         /// 下划线。
-        Container(
-          height: 1,
-          color: borderColor,
-        ),
+        Container(height: 1, color: borderColor),
       ],
     );
   }
@@ -371,12 +366,7 @@ class _NewNicknameSection extends StatelessWidget {
         /// 标签行（图标 + 标签 + 计数器）。
         Row(
           children: <Widget>[
-            SvgIcon(
-              name: 'account',
-              color: labelColor,
-              width: 22,
-              height: 22,
-            ),
+            SvgIcon(name: 'account', color: labelColor, width: 22, height: 22),
             const SizedBox(width: 7),
             Expanded(
               child: Text(
@@ -393,10 +383,7 @@ class _NewNicknameSection extends StatelessWidget {
               builder: (_, value, __) {
                 return Text(
                   '${value.text.length}/$maxLength',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: counterColor,
-                  ),
+                  style: TextStyle(fontSize: 13, color: counterColor),
                 );
               },
             ),
@@ -417,10 +404,7 @@ class _NewNicknameSection extends StatelessWidget {
           decoration: InputDecoration(
             hintText: context.tr('UserInfo.tips_03'),
             counterText: '',
-            hintStyle: TextStyle(
-              color: hintColor,
-              fontSize: 15,
-            ),
+            hintStyle: TextStyle(color: hintColor, fontSize: 15),
             enabledBorder: UnderlineInputBorder(
               borderSide: BorderSide(color: borderColor, width: 1),
             ),

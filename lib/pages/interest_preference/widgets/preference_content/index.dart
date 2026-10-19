@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 
@@ -311,7 +312,9 @@ class _InterestPreferenceContentState extends State<InterestPreferenceContent> {
           _build_background_decorations(is_dark),
 
           /// 可滚动内容区（延伸到状态栏下方）。
-          _build_scrollable_content(is_dark, statusBarHeight),
+          WindowContentLayout(
+            child: _build_scrollable_content(is_dark, statusBarHeight),
+          ),
 
           /// 顶部渐变过渡遮罩（平滑过渡背景与内容）。
           PageTopGradientOverlay(
@@ -325,16 +328,19 @@ class _InterestPreferenceContentState extends State<InterestPreferenceContent> {
             top: 0,
             left: 0,
             right: 0,
-            child: TopBar(
-              isDark: is_dark,
-              scrolled: _scrolled,
-              statusBarHeight: statusBarHeight,
-              isLoading: _loading || _saving,
-              canSave: _can_save,
-              onSave: _on_save,
-              onBack: _on_back,
-              onSkip: widget.onSkip,
-              isSkipEnabled: !_saving,
+            child: WindowContentLayout(
+              expand_height: false,
+              child: TopBar(
+                isDark: is_dark,
+                scrolled: _scrolled,
+                statusBarHeight: statusBarHeight,
+                isLoading: _loading || _saving,
+                canSave: _can_save,
+                onSave: _on_save,
+                onBack: _on_back,
+                onSkip: widget.onSkip,
+                isSkipEnabled: !_saving,
+              ),
             ),
           ),
 

@@ -10,8 +10,10 @@ import '../style.dart';
 import '../services/feedback_service.dart';
 import 'board_canvas.dart';
 import 'board_motion.dart';
+import 'board_reveal.dart';
 import 'insertion_timeline.dart';
 import 'match_particles.dart';
+import 'layout_debug.dart';
 import 'quest_controls.dart';
 import 'quest_text.dart';
 import 'scene_layout.dart';
@@ -66,6 +68,7 @@ class _TileQuestSceneState extends State<TileQuestScene>
   List<TileQuestTile> _board_cache_tiles = const [];
   final QuestShuffleTextures _shuffle_textures = QuestShuffleTextures();
   final ValueNotifier<double> _clock = ValueNotifier<double>(0);
+  final QuestBoardReveal _reveal = QuestBoardReveal();
   late final Ticker _ticker;
   late TileQuestState _presented;
   QuestSceneMotion? _active;
@@ -87,6 +90,7 @@ class _TileQuestSceneState extends State<TileQuestScene>
   void initState() {
     super.initState();
     _presented = widget.state;
+    _reveal.reset(widget.state.tiles, blocked_overrides: _reserve_shades);
     // Historical actions never replay, but each newly mounted challenge falls in.
     _seen_actions.addAll(widget.recent_actions);
     if (widget.action != null) _seen_actions.add(widget.action!);
@@ -128,8 +132,15 @@ class _TileQuestSceneState extends State<TileQuestScene>
         widget.state.tiles.map((tile) => tile.type),
       );
       _clock.value = 0;
+      _reveal.reset(widget.state.tiles, blocked_overrides: _reserve_shades);
       _start_entrance();
     }
+    _reveal.update(
+      widget.state.tiles,
+      _clock.value,
+      animate: !MediaQuery.disableAnimationsOf(context),
+      blocked_overrides: _reserve_shades,
+    );
     final events = widget.recent_actions.isEmpty
         ? [if (widget.action != null) widget.action!]
         : widget.recent_actions;
@@ -162,6 +173,7 @@ class _TileQuestSceneState extends State<TileQuestScene>
     } else if (_insertions != null) {
       _extend_insertions(_clock.value);
     }
+    if (_reveal.is_animating) _start_clock();
   }
 
   void _start_clock() {
@@ -299,7 +311,8 @@ class _TileQuestSceneState extends State<TileQuestScene>
       _match_feedback(_active!, now);
     }
     _clock.value = now;
-    if (_active == null && !_entering) {
+    _reveal.advance(now);
+    if (_active == null && !_entering && !_reveal.is_animating) {
       _ticker.stop();
       _report_busy(false);
     }
@@ -320,6 +333,7 @@ class _TileQuestSceneState extends State<TileQuestScene>
   void dispose() {
     _ticker.dispose();
     _clock.dispose();
+    _reveal.dispose();
     _shuffle_textures.dispose();
     _pressed.dispose();
     super.dispose();
@@ -337,6 +351,7 @@ class _TileQuestSceneState extends State<TileQuestScene>
       final layout = QuestSceneLayout(
         Size(constraints.maxWidth, constraints.maxHeight),
         widget.state,
+        display_features: MediaQuery.displayFeaturesOf(context),
       );
       final cjk = quest_is_cjk(context);
       return ClipRect(
@@ -346,6 +361,7 @@ class _TileQuestSceneState extends State<TileQuestScene>
             Positioned.fromRect(
               rect: layout.header,
               child: QuestHeader(
+                compact: layout.compact_header,
                 state: widget.state,
                 sound_enabled: widget.sound_enabled,
                 on_back: widget.on_back,
@@ -379,11 +395,7 @@ class _TileQuestSceneState extends State<TileQuestScene>
             ..._board_tiles(layout),
             Positioned.fromRect(
               rect: layout.tray,
-              child: QuestSlotWell(
-                layout: layout,
-                caption: quest_text(context, 'tray', 'SEVEN TILE TRAY'),
-                cjk: cjk,
-              ),
+              child: QuestSlotWell(layout: layout),
             ),
             if (_show_tools)
               Positioned.fromRect(
@@ -420,6 +432,7 @@ class _TileQuestSceneState extends State<TileQuestScene>
                 layout: layout,
                 clock: _clock,
                 textures: _shuffle_textures,
+                reveal: _reveal,
                 snapshot_at: (now) => _motion_snapshot(layout, now),
                 particle_fields: _particle_fields,
                 reduced_motion: MediaQuery.disableAnimationsOf(context),
@@ -427,6 +440,10 @@ class _TileQuestSceneState extends State<TileQuestScene>
                 on_reserve: widget.on_reserve,
               ),
             ),
+            if (kDebugMode)
+              Positioned.fill(
+                child: QuestLayoutDebug(state: widget.state, layout: layout),
+              ),
           ],
         ),
       );
@@ -483,6 +500,7 @@ class _TileQuestSceneState extends State<TileQuestScene>
         layout: layout,
         textures: _shuffle_textures,
         pressed: _pressed,
+        reveal: _reveal,
         enabled: enabled,
         on_press: (id) => _pressed.value = id,
         on_tile: (id) => widget.on_tile(id),
@@ -497,6 +515,12 @@ class _TileQuestSceneState extends State<TileQuestScene>
       !_board_locked &&
       widget.state.status == TileQuestStatus.playing &&
       widget.state.is_reserve_available(id);
+
+  /// 备用堆使用相同遮罩时钟；移出/撤回及露出下层时也连续衔接。
+  Map<int, bool> get _reserve_shades => {
+    for (final id in widget.state.reserve)
+      id: !widget.state.is_reserve_available(id),
+  };
 
   QuestTileFrame _tile(
     int id,
@@ -519,6 +543,9 @@ class _TileQuestSceneState extends State<TileQuestScene>
     rotation: rotation,
     dissolve: dissolve,
     blocked: blocked,
+    blocked_amount: flying || reserve
+        ? _reveal.amount_of(id, blocked: blocked)
+        : null,
   );
 
   Rect _flight_rect(Rect start, Rect end, double progress) {

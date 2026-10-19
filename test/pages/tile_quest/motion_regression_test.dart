@@ -8,6 +8,7 @@ import 'package:app/pages/tile_quest/services/save_service.dart';
 import 'package:app/pages/tile_quest/services/work_service.dart';
 import 'package:app/pages/tile_quest/widgets/quest_result.dart';
 import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
+import 'package:app/pages/tile_quest/widgets/tile_surface_style.dart';
 import 'package:app/pages/tile_quest/style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -764,11 +765,16 @@ void main() {
     const Size(390, 844),
     const Size(844, 390),
   ]) {
-    testWidgets('tray squares and landing coincide at $size', (tester) async {
+    testWidgets('tall tray slots and shrinking landings coincide at $size', (
+      tester,
+    ) async {
       await _mount(tester, size: size);
       final slots = [for (var i = 0; i < 7; i++) _slot(tester, i)];
       for (final slot in slots) {
-        expect(slot.width, closeTo(slot.height, .01));
+        expect(
+          slot.height,
+          closeTo(slot.width * QuestTileSurfaceStyle.tile_aspect_ratio, .01),
+        );
         expect(slot.width, greaterThan(0));
         expect(slot.left, greaterThanOrEqualTo(0));
         expect(slot.right, lessThanOrEqualTo(size.width));

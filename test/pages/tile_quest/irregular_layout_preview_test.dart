@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'dart:io';
+import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:app/pages/tile_quest/game/config.dart';
@@ -8,7 +9,10 @@ import 'package:app/pages/tile_quest/game/engine.dart';
 import 'package:app/pages/tile_quest/game/generator.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:app/pages/tile_quest/widgets/atmosphere.dart';
+import 'package:app/pages/tile_quest/widgets/playfield.dart';
 import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
+import 'package:app/pages/tile_quest/widgets/scene_assets.dart';
+import 'package:app/pages/tile_quest/widgets/scene_layout.dart';
 import 'package:app/pages/tile_quest/widgets/tile_card.dart';
 import 'package:app/pages/tile_quest/widgets/tile_skin.dart';
 import 'package:flutter/material.dart';
@@ -67,8 +71,9 @@ Future<void> _load_preview_fonts() async {
 Future<void> _export_preview(
   WidgetTester tester,
   TileQuestState state,
-  String path,
-) async {
+  String path, {
+  MediaQueryData? media,
+}) async {
   final key = GlobalKey();
   await tester.pumpWidget(
     MaterialApp(
@@ -80,18 +85,28 @@ Future<void> _export_preview(
             children: <Widget>[
               const Positioned.fill(child: QuestAtmosphere(is_dark: true)),
               Positioned.fill(
-                child: TileQuestScene(
-                  key: ValueKey(state.challenge_id),
-                  state: state,
-                  action: null,
-                  sound_enabled: true,
-                  busy: false,
-                  on_back: () {},
-                  on_restart: () {},
-                  on_sound: () {},
-                  on_tile: (_) {},
-                  on_reserve: (_) {},
-                  on_tool: (_) {},
+                child: Builder(
+                  builder: (context) {
+                    final scene = TileQuestScene(
+                      key: ValueKey(state.challenge_id),
+                      state: state,
+                      action: null,
+                      sound_enabled: true,
+                      busy: false,
+                      on_back: () {},
+                      on_restart: () {},
+                      on_sound: () {},
+                      on_tile: (_) {},
+                      on_reserve: (_) {},
+                      on_tool: (_) {},
+                    );
+                    return media == null
+                        ? scene
+                        : MediaQuery(
+                            data: media,
+                            child: QuestPlayfield(child: scene),
+                          );
+                  },
                 ),
               ),
             ],
@@ -101,18 +116,21 @@ Future<void> _export_preview(
     ),
   );
   // 图片解码运行在真实异步队列；只 pumpAndSettle 会把尚未解码的首批牌
-  // 导出成纯色 backing。使用与 QuestTileCard 相同的 192px 缓存键等待完成。
+  // 导出成纯色 backing。使用与 QuestTileCard 相同的缓存键尺寸等待完成。
   await tester.runAsync(() async {
     final context = key.currentContext!;
     final types = state.tiles.map((tile) => tile.type).toSet();
     await Future.wait<void>(<Future<void>>[
       precacheImage(QuestTileSkin.provider, context),
+      precacheImage(QuestSceneAssets.background, context),
+      for (final image in QuestSceneAssets.powerups.values)
+        precacheImage(image, context),
       for (final type in types)
         precacheImage(
           ResizeImage.resizeIfNeeded(
             192,
             null,
-            AssetImage('assets/img/game/tile_${quest_tile_assets[type]}.png'),
+            AssetImage(quest_tile_asset_path(type)),
           ),
           context,
         ),
@@ -135,7 +153,69 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(_load_preview_fonts);
 
-  testWidgets('export six random irregular silhouettes and difficulty ten', (
+  testWidgets(
+    'export actual Duo closed half-open and open game scenes',
+    (tester) async {
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final state = TileQuestGenerator.generate(level: 2, seed: 730);
+      final poses = <String, MediaQueryData>{
+        'closed': const MediaQueryData(
+          size: Size(466, 678),
+          padding: EdgeInsets.only(right: 84, bottom: 34),
+        ),
+        'half_open': const MediaQueryData(
+          size: Size(951, 669),
+          padding: EdgeInsets.only(right: 84, bottom: 34),
+          displayFeatures: [
+            ui.DisplayFeature(
+              bounds: Rect.fromLTWH(455.5, 0, 40, 669),
+              type: ui.DisplayFeatureType.hinge,
+              state: ui.DisplayFeatureState.postureHalfOpened,
+            ),
+            ui.DisplayFeature(
+              bounds: Rect.fromLTWH(867, 0, 84, 124),
+              type: ui.DisplayFeatureType.cutout,
+              state: ui.DisplayFeatureState.unknown,
+            ),
+          ],
+        ),
+        'open': const MediaQueryData(
+          size: Size(951, 669),
+          padding: EdgeInsets.only(right: 84, bottom: 34),
+        ),
+      };
+      final metrics = <String, Object>{};
+      for (final pose in poses.entries) {
+        await tester.binding.setSurfaceSize(pose.value.size);
+        await _export_preview(
+          tester,
+          state,
+          '/tmp/tile_quest_duo_v23_${pose.key}.png',
+          media: pose.value,
+        );
+        final scene = find.byType(TileQuestScene);
+        final layout = QuestSceneLayout(
+          tester.getSize(scene),
+          state,
+          display_features: MediaQuery.displayFeaturesOf(tester.element(scene)),
+        );
+        metrics[pose.key] = <String, Object>{
+          'window': [pose.value.size.width, pose.value.size.height],
+          'scene': [layout.size.width, layout.size.height],
+          'board_tile_width': layout.unit,
+          'tray_tile_width': layout.tray_tile(0).width,
+          'folded': layout.folded,
+          'landscape': layout.landscape,
+        };
+      }
+      File(
+        '/tmp/tile_quest_duo_v23_geometry.json',
+      ).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(metrics));
+    },
+    skip: !const bool.fromEnvironment('TILE_QUEST_EXPORT_DUO'),
+  );
+
+  testWidgets('export six seeded structured layouts and difficulty ten', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
@@ -151,7 +231,7 @@ void main() {
       final path = '/tmp/tile_quest_layout_variant_$pattern.png';
       await _export_preview(tester, state, path);
       debugPrint(
-        'Random layout variant $pattern: difficulty ${state.difficulty}, '
+        'Structured layout variant $pattern: difficulty ${state.difficulty}, '
         'seed ${state.seed}, $path',
       );
     }

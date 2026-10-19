@@ -1,3 +1,4 @@
+import 'package:app/components/window_content_layout/index.dart';
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -110,141 +111,147 @@ class _AboutTopReadState extends State<AboutTopRead> {
 
       return Scaffold(
         backgroundColor: bgColor,
-        appBar: AppBar(
-          title: Text(
-            easy.tr('UserInfo.about_top_read'),
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-              color: titleColor,
+        appBar: WindowAppBar(
+          child: AppBar(
+            title: Text(
+              easy.tr('UserInfo.about_top_read'),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                color: titleColor,
+              ),
             ),
-          ),
-          centerTitle: true,
-          backgroundColor: appBarBgColor,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          leading: IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios_rounded,
-              color: titleColor,
-              size: 20,
+            centerTitle: true,
+            backgroundColor: appBarBgColor,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_rounded,
+                color: titleColor,
+                size: 20,
+              ),
+              onPressed: () => AppRouter.pop(),
             ),
-            onPressed: () => AppRouter.pop(),
           ),
         ),
-        body: SingleChildScrollView(
-          child: Column(
-            children: [
-              /// Logo区域。
-              const SizedBox(height: Style.logo_top_spacing),
-              Center(
-                child: SvgIcon(
-                  name: 'logo',
-                  color: titleColor,
-                  width: Style.logo_size,
-                  height: Style.logo_size,
-                ),
-              ),
-
-              /// 口号区域（自定义，无固定高度）。
-              const SizedBox(height: Style.logo_to_slogan_spacing),
-              _buildSlogan(isDark, titleColor),
-
-              /// 版本号。
-              const SizedBox(height: Style.slogan_to_version_spacing),
-              Text(
-                'V${Constant.appVersion}',
-                style: TextStyle(
-                  fontSize: Style.version_font_size,
-                  fontWeight: Style.version_weight,
-                  color: titleColor,
-                ),
-              ),
-
-              /// 间距。
-              const SizedBox(height: Style.version_to_list_spacing),
-
-              /// 操作列表（无外框）。
-              Column(
-                children: [
-                  if (projectConfigStore.current.is_rating_enabled)
-                    _buildListItem(
-                      title: easy.tr('AboutTopRead.rate_us'),
-                      textColor: titleColor,
-                      subColor: subColor,
-                      dividerColor: dividerColor,
-                      showDivider: false,
-                      onTap: () => _openRateUs(),
-                    ),
-                  _buildListItem(
-                    title: easy.tr('AboutTopRead.user_agreement'),
-                    textColor: titleColor,
-                    subColor: subColor,
-                    dividerColor: dividerColor,
-                    showDivider: false,
-                    onTap: () {
-                      routerUtil(path: '/image_text?type=60');
-                    },
+        body: WindowContentLayout(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                /// Logo区域。
+                const SizedBox(height: Style.logo_top_spacing),
+                Center(
+                  child: SvgIcon(
+                    name: 'logo',
+                    color: titleColor,
+                    width: Style.logo_size,
+                    height: Style.logo_size,
                   ),
-                  _buildListItem(
-                    title: easy.tr('AboutTopRead.privacy_policy'),
-                    textColor: titleColor,
-                    subColor: subColor,
-                    dividerColor: dividerColor,
-                    showDivider: true,
-                    onTap: () {
-                      routerUtil(path: '/image_text?type=61');
-                    },
+                ),
+
+                /// 口号区域（自定义，无固定高度）。
+                const SizedBox(height: Style.logo_to_slogan_spacing),
+                _buildSlogan(isDark, titleColor),
+
+                /// 版本号。
+                const SizedBox(height: Style.slogan_to_version_spacing),
+                Text(
+                  'V${Constant.appVersion}',
+                  style: TextStyle(
+                    fontSize: Style.version_font_size,
+                    fontWeight: Style.version_weight,
+                    color: titleColor,
                   ),
-                  if (_show_ad_privacy_options)
+                ),
+
+                /// 间距。
+                const SizedBox(height: Style.version_to_list_spacing),
+
+                /// 操作列表（无外框）。
+                Column(
+                  children: [
+                    if (projectConfigStore.current.is_rating_enabled)
+                      _buildListItem(
+                        title: easy.tr('AboutTopRead.rate_us'),
+                        textColor: titleColor,
+                        subColor: subColor,
+                        dividerColor: dividerColor,
+                        showDivider: false,
+                        onTap: () => _openRateUs(),
+                      ),
                     _buildListItem(
-                      title: easy.tr('AboutTopRead.ad_privacy_options'),
+                      title: easy.tr('AboutTopRead.user_agreement'),
                       textColor: titleColor,
                       subColor: subColor,
                       dividerColor: dividerColor,
                       showDivider: false,
                       onTap: () {
-                        unawaited(_open_ad_privacy_options());
+                        routerUtil(path: '/image_text?type=60');
                       },
                     ),
-                  _buildListItem(
-                    title: easy.tr('AboutTopRead.version_update'),
-                    textColor: titleColor,
-                    subColor: subColor,
-                    dividerColor: dividerColor,
-                    showDivider: false,
-                    trailing: Text(
-                      'V${Constant.appVersion}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                        color: titleColor,
-                      ),
-                    ),
-                    onTap: () => logic.checkUpdate(),
-                  ),
-                  if (showDebug)
                     _buildListItem(
-                      title: easy.tr('debug.title'),
+                      title: easy.tr('AboutTopRead.privacy_policy'),
+                      textColor: titleColor,
+                      subColor: subColor,
+                      dividerColor: dividerColor,
+                      showDivider: true,
+                      onTap: () {
+                        routerUtil(path: '/image_text?type=61');
+                      },
+                    ),
+                    if (_show_ad_privacy_options)
+                      _buildListItem(
+                        title: easy.tr('AboutTopRead.ad_privacy_options'),
+                        textColor: titleColor,
+                        subColor: subColor,
+                        dividerColor: dividerColor,
+                        showDivider: false,
+                        onTap: () {
+                          unawaited(_open_ad_privacy_options());
+                        },
+                      ),
+                    _buildListItem(
+                      title: easy.tr('AboutTopRead.version_update'),
                       textColor: titleColor,
                       subColor: subColor,
                       dividerColor: dividerColor,
                       showDivider: false,
-                      onTap: () => routerUtil(path: '/debug'),
+                      trailing: Text(
+                        'V${Constant.appVersion}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontConfig.adjustedWeight(
+                            FontWeight.w400,
+                          ),
+                          color: titleColor,
+                        ),
+                      ),
+                      onTap: () => logic.checkUpdate(),
                     ),
-                  if (isLoggedIn)
-                    _buildListItem(
-                      title: easy.tr('UserInfo.delete_account'),
-                      textColor: ColorConstants.dangerColor,
-                      subColor: ColorConstants.dangerColor,
-                      dividerColor: dividerColor,
-                      showDivider: false,
-                      onTap: () => _handleDeleteAccount(),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 40),
-            ],
+                    if (showDebug)
+                      _buildListItem(
+                        title: easy.tr('debug.title'),
+                        textColor: titleColor,
+                        subColor: subColor,
+                        dividerColor: dividerColor,
+                        showDivider: false,
+                        onTap: () => routerUtil(path: '/debug'),
+                      ),
+                    if (isLoggedIn)
+                      _buildListItem(
+                        title: easy.tr('UserInfo.delete_account'),
+                        textColor: ColorConstants.dangerColor,
+                        subColor: ColorConstants.dangerColor,
+                        dividerColor: dividerColor,
+                        showDivider: false,
+                        onTap: () => _handleDeleteAccount(),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       );

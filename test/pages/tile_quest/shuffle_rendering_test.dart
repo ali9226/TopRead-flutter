@@ -10,6 +10,7 @@ import 'package:app/pages/tile_quest/widgets/scene_motion.dart';
 import 'package:app/pages/tile_quest/widgets/shuffle_motion.dart';
 import 'package:app/pages/tile_quest/widgets/shuffle_textures.dart';
 import 'package:app/pages/tile_quest/widgets/tile_card.dart';
+import 'package:app/pages/tile_quest/widgets/tile_surface.dart';
 import 'package:app/pages/tile_quest/widgets/motion_canvas.dart';
 import 'package:app/pages/tile_quest/widgets/board_canvas.dart';
 import 'scene_probe.dart';
@@ -78,10 +79,13 @@ Future<ui.Image> _raster(
       canvas.save();
       canvas.translate(frame.rect.center.dx, frame.rect.center.dy);
       canvas.rotate(frame.rotation);
-      final dest = Rect.fromCenter(
-        center: Offset.zero,
-        width: frame.rect.width,
-        height: frame.rect.height,
+      // 长牌四边外扩相同像素数；高度不能再乘宽度专用的cell_scale。
+      final dest = QuestTileSurface.cell_rect(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: frame.rect.width,
+          height: frame.rect.height,
+        ),
       );
       if (frame.face_progress < 1) {
         paint.color = Colors.white;

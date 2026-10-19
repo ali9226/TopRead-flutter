@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/pages/comics/editor/logic.dart';
 import 'package:app/pages/comics/editor/style.dart';
 import 'package:app/pages/comics/style.dart';
@@ -35,57 +36,62 @@ class ComicEditorActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool is_cjk = ComicsStyle.is_cjk(context);
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: ComicEditorStyle.action_bar_padding_h,
-          vertical: ComicEditorStyle.action_bar_padding_v,
-        ),
-        decoration: BoxDecoration(
-          color: ComicsStyle.surface(context),
-          border: Border(top: BorderSide(color: ComicsStyle.outline(context))),
-        ),
-        child: Row(
-          children: <Widget>[
-            /// 下架入口（已有作品且可编辑时）。
-            if (on_hide != null)
-              IconButton(
-                tooltip: tr('comics.remove_comic'),
-                onPressed: enabled ? on_hide : null,
-                icon: const Icon(Icons.visibility_off_outlined),
-                color: ComicsStyle.muted(context),
-              ),
-
-            /// 保存草稿。
-            Expanded(
-              child: OutlinedButton(
-                onPressed: enabled && !logic.busy ? on_save_draft : null,
-                style: ComicEditorStyle.secondary_button(context),
-                child: logic.saving
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(tr('comics.save_draft')),
-              ),
+    return Container(
+      decoration: BoxDecoration(
+        color: ComicsStyle.surface(context),
+        border: Border(top: BorderSide(color: ComicsStyle.outline(context))),
+      ),
+      child: SafeArea(
+        top: false,
+        child: WindowContentLayout(
+          expand_height: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: ComicEditorStyle.action_bar_padding_h,
+              vertical: ComicEditorStyle.action_bar_padding_v,
             ),
-            SizedBox(width: is_cjk ? 8 : 10),
+            child: Row(
+              children: <Widget>[
+                /// 下架入口（已有作品且可编辑时）。
+                if (on_hide != null)
+                  IconButton(
+                    tooltip: tr('comics.remove_comic'),
+                    onPressed: enabled ? on_hide : null,
+                    icon: const Icon(Icons.visibility_off_outlined),
+                    color: ComicsStyle.muted(context),
+                  ),
 
-            /// 提交审核：主题金主按钮。
-            Expanded(
-              child: ElevatedButton(
-                onPressed: enabled && !logic.busy ? on_submit : null,
-                style: ComicEditorStyle.primary_button(context),
-                child: logic.submitting
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(tr('comics.submit_review')),
-              ),
+                /// 保存草稿。
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: enabled && !logic.busy ? on_save_draft : null,
+                    style: ComicEditorStyle.secondary_button(context),
+                    child: logic.saving
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(tr('comics.save_draft')),
+                  ),
+                ),
+                SizedBox(width: is_cjk ? 8 : 10),
+
+                /// 提交审核：主题金主按钮。
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: enabled && !logic.busy ? on_submit : null,
+                    style: ComicEditorStyle.primary_button(context),
+                    child: logic.submitting
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(tr('comics.submit_review')),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

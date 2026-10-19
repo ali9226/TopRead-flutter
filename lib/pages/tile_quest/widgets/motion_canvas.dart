@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'match_particles.dart';
+import 'board_reveal.dart';
 import 'scene_layout.dart';
 import 'scene_motion.dart';
 import 'shuffle_motion.dart';
@@ -40,6 +41,7 @@ class QuestMotionCanvas extends StatelessWidget {
     required bool reduced_motion,
     required this.on_reserve,
     required bool Function(int) can_return,
+    QuestBoardReveal? reveal,
   }) : painter = QuestMotionPainter(
          layout: layout,
          clock: clock,
@@ -49,6 +51,7 @@ class QuestMotionCanvas extends StatelessWidget {
          reduced_motion: reduced_motion,
          can_return: can_return,
          on_reserve: on_reserve,
+         reveal: reveal,
        );
   final QuestMotionPainter painter;
   final ValueChanged<int> on_reserve;
@@ -75,6 +78,7 @@ class QuestMotionPainter extends CustomPainter {
     required this.reduced_motion,
     required this.can_return,
     required this.on_reserve,
+    this.reveal,
   }) : super(repaint: Listenable.merge([clock, textures]));
   final QuestSceneLayout layout;
   final ValueListenable<double> clock;
@@ -84,6 +88,7 @@ class QuestMotionPainter extends CustomPainter {
   final bool reduced_motion;
   final bool Function(int) can_return;
   final ValueChanged<int> on_reserve;
+  final QuestBoardReveal? reveal;
   final QuestTileBatch _batch = QuestTileBatch(32);
   QuestShufflePainter? _shuffle;
 
@@ -104,6 +109,7 @@ class QuestMotionPainter extends CustomPainter {
         textures: textures,
         waiting: stage.waiting,
         excluded_ids: stage.excluded_ids,
+        reveal: reveal,
       );
     }
     return _shuffle;
@@ -127,6 +133,7 @@ class QuestMotionPainter extends CustomPainter {
     rect: frame.rect,
     zone: QuestTileZone.flight,
     blocked: frame.blocked,
+    blocked_amount: frame.blocked_amount,
     rotation: frame.rotation,
     face_progress: frame.face_progress,
   );
@@ -153,11 +160,20 @@ class QuestMotionPainter extends CustomPainter {
     final ready = textures.ready;
     for (final frame in snapshot.tiles) {
       if ((frame.dissolve ?? 0) > 0) continue;
-      final source = ready
-          ? textures.source_of(frame.type, blocked: frame.blocked)
+      final normal = ready
+          ? textures.source_of(frame.type, blocked: false)
           : null;
-      if (source != null) {
-        _batch.add(source, frame.rect, rotation: frame.rotation);
+      final blocked = ready
+          ? textures.source_of(frame.type, blocked: true)
+          : null;
+      if (normal != null && blocked != null) {
+        _batch.add_reveal(
+          normal,
+          blocked,
+          frame.rect,
+          frame.blocked_amount ?? (frame.blocked ? 1 : 0),
+          rotation: frame.rotation,
+        );
       } else {
         canvas.save();
         canvas.translate(frame.rect.center.dx, frame.rect.center.dy);
@@ -171,6 +187,7 @@ class QuestMotionPainter extends CustomPainter {
           ),
           frame.type,
           blocked: frame.blocked,
+          blocked_amount: frame.blocked_amount,
         );
         canvas.restore();
       }
@@ -181,7 +198,7 @@ class QuestMotionPainter extends CustomPainter {
     for (final frame in snapshot.tiles) {
       final dissolve = frame.dissolve;
       if (dissolve == null || dissolve <= 0 || dissolve >= 1) continue;
-      final source = textures.source_of(frame.type, blocked: false);
+      final source = textures.content_of(frame.type, blocked: false);
       final atlas = textures.atlas;
       if (atlas == null || source == null) continue;
       canvas.save();

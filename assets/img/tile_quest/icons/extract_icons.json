@@ -1,0 +1,249 @@
+{
+  "source": "assets/img/tile_quest/1.png",
+  "source_sha256": "bddd65e433b28ee708c0544e35fee8f695f16fb5a9ee0704938616e1a16313c2",
+  "canvas_size": 256,
+  "subject_size": 216,
+  "method": "original source RGB and alpha; connected-body alpha noise cleanup; proportional transparent canvas",
+  "icons": {
+    "mushroom": {
+      "source_bounds": [
+        60,
+        60,
+        355,
+        355
+      ],
+      "subject_bounds": [
+        21,
+        20,
+        234,
+        236
+      ],
+      "file": "assets/img/tile_quest/icons/tile_mushroom.png",
+      "sha256": "31cfc0b381016d25535e3b654d884f31db123c85a971a6e6a67ace7ecee8f117"
+    },
+    "carrot": {
+      "source_bounds": [
+        375,
+        40,
+        640,
+        355
+      ],
+      "subject_bounds": [
+        43,
+        20,
+        213,
+        236
+      ],
+      "file": "assets/img/tile_quest/icons/tile_carrot.png",
+      "sha256": "dc52a3637f7d088ec87e5a462f0490cd60dfae2bebd39f8c736973b35530039e"
+    },
+    "watermelon": {
+      "source_bounds": [
+        625,
+        60,
+        935,
+        355
+      ],
+      "subject_bounds": [
+        20,
+        22,
+        236,
+        233
+      ],
+      "file": "assets/img/tile_quest/icons/tile_watermelon.png",
+      "sha256": "c66e3598e8f356bd0e3e1c0d5cca7641b029763d15a6bff3f4cfdd5a9c4afd52"
+    },
+    "lemon": {
+      "source_bounds": [
+        930,
+        60,
+        1220,
+        355
+      ],
+      "subject_bounds": [
+        24,
+        20,
+        232,
+        236
+      ],
+      "file": "assets/img/tile_quest/icons/tile_lemon.png",
+      "sha256": "216aeadb4d3d9d3da2ed39eeb34025614f89732b65b162a8dc54d13a458cb36a"
+    },
+    "shovel": {
+      "source_bounds": [
+        1210,
+        50,
+        1490,
+        360
+      ],
+      "subject_bounds": [
+        35,
+        20,
+        220,
+        236
+      ],
+      "file": "assets/img/tile_quest/icons/tile_shovel.png",
+      "sha256": "13b82b14de5982887ebf20d2e33b3e87b3e42cc866f17295d690c88eb12bc9b9"
+    },
+    "glove": {
+      "source_bounds": [
+        45,
+        360,
+        340,
+        670
+      ],
+      "subject_bounds": [
+        26,
+        20,
+        230,
+        236
+      ],
+      "file": "assets/img/tile_quest/icons/tile_glove.png",
+      "sha256": "9f8173a43548acdf5d60d80d460002e8c9e7e97b07aec757d6cdb7252ea81bed"
+    },
+    "leaf": {
+      "source_bounds": [
+        350,
+        365,
+        610,
+        670
+      ],
+      "subject_bounds": [
+        35,
+        20,
+        221,
+        236
+      ],
+      "file": "assets/img/tile_quest/icons/tile_leaf.png",
+      "sha256": "9dd1156eac976228a19c971a4ca0a239547043b78b7b2c2ee6c7993fbc03f4e9"
+    },
+    "strawberry": {
+      "source_bounds": [
+        615,
+        355,
+        890,
+        670
+      ],
+      "subject_bounds": [
+        33,
+        20,
+        222,
+        236
+      ],
+      "file": "assets/img/tile_quest/icons/tile_strawberry.png",
+      "sha256": "b8fd5ac696f1e89dccc7a5c0d6b9a489abe54cff38a6a298be0518b022cedbb2"
+    },
+    "milk_bottle": {
+      "source_bounds": [
+        900,
+        340,
+        1175,
+        680
+      ],
+      "subject_bounds": [
+        45,
+        20,
+        210,
+        236
+      ],
+      "file": "assets/img/tile_quest/icons/tile_milk_bottle.png",
+      "sha256": "16c5623eeaf9771bf046dedb62332d8830c30e4c314d4848d70814b21ddaeee0"
+    },
+    "scissors": {
+      "source_bounds": [
+        1180,
+        360,
+        1500,
+        670
+      ],
+      "subject_bounds": [
+        20,
+        22,
+        236,
+        234
+      ],
+      "file": "assets/img/tile_quest/icons/tile_scissors.png",
+      "sha256": "31ab8b9544ede5f63f7d9197fe672a4061c8001df03b98a02a80d90203ad8f97"
+    },
+    "hay": {
+      "source_bounds": [
+        35,
+        670,
+        330,
+        975
+      ],
+      "subject_bounds": [
+        22,
+        20,
+        233,
+        236
+      ],
+      "file": "assets/img/tile_quest/icons/tile_hay.png",
+      "sha256": "110a86306b2b7fdff7191686cc64618e2a415f953b59522d9694f4b05b1302e6"
+    },
+    "yarn": {
+      "source_bounds": [
+        330,
+        670,
+        635,
+        975
+      ],
+      "subject_bounds": [
+        20,
+        21,
+        236,
+        234
+      ],
+      "file": "assets/img/tile_quest/icons/tile_yarn.png",
+      "sha256": "77aed4d4d2030726ddc5790a4e2ffc3317c0dfcd9c3a9f10e2c0df7af96e5d70"
+    },
+    "star": {
+      "source_bounds": [
+        610,
+        670,
+        915,
+        975
+      ],
+      "subject_bounds": [
+        20,
+        24,
+        236,
+        231
+      ],
+      "file": "assets/img/tile_quest/icons/tile_star.png",
+      "sha256": "a20eab21c1d394e8cf0a775c346e2bf8e8337eee7b14fad6c068c9e59835aab7"
+    },
+    "grapes": {
+      "source_bounds": [
+        910,
+        665,
+        1210,
+        975
+      ],
+      "subject_bounds": [
+        28,
+        20,
+        227,
+        236
+      ],
+      "file": "assets/img/tile_quest/icons/tile_grapes.png",
+      "sha256": "7c6d19410e3fe3751af1e32361882a7fb257e623b72e250d1317926b22195f30"
+    },
+    "snowflake": {
+      "source_bounds": [
+        1200,
+        655,
+        1510,
+        985
+      ],
+      "subject_bounds": [
+        30,
+        20,
+        225,
+        236
+      ],
+      "file": "assets/img/tile_quest/icons/tile_snowflake.png",
+      "sha256": "a420686cabc383d2cd40488bb8675c1cf17c4c47484624e726afbd8ded2c6099"
+    }
+  }
+}
