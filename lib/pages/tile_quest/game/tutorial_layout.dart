@@ -17,11 +17,11 @@ class TileQuestTutorial {
   static const double upper_offset_y = .5;
 
   /// 从规则与绘图共用的图案表解析类型，素材重排不会改变颜色分组。
-  /// 红、蓝、绿各取一种；草莓和手套加权以强化教学辨识度。
+  /// 红、蓝、绿各取一种；胡萝卜和手套加权以强化教学辨识度。
   static final List<int> _red_types = <String>[
-    'strawberry',
-    'strawberry',
-    'strawberry',
+    'carrot',
+    'carrot',
+    'carrot',
     'watermelon',
   ].map(quest_tile_assets.indexOf).toList(growable: false);
   static final List<int> _blue_types = <String>[

@@ -37,10 +37,8 @@ void main() {
       expect(prepared.result.after, same(prepared.engine.state));
       expect(prepared.engine.state.tray, [tapped_id]);
       expect(prepared.engine.state.tile_by_id(tapped_id).is_removed, isTrue);
-      expect(
-        TileQuestValidator.validate_solution(prepared.engine.state).valid,
-        isTrue,
-      );
+      // 纯随机洗牌不保证有解，只校验状态结构与库存。
+      expect(prepared.engine.state.certified_solution, isEmpty);
       expect(prepared.engine.undo().accepted, isTrue);
       expect(prepared.engine.state.tile_by_id(tapped_id).is_removed, isFalse);
       expect(prepared.engine.state.tray, isEmpty);

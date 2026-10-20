@@ -12,6 +12,9 @@ class QuestSceneMotion {
   double started_at = 0;
   double travel_ms = 0;
   bool match_feedback_sent = false;
+
+  /// 本段航距对应的飞行时长；首次获知几何后锁定，预飞与落槽共用。
+  double? _flight_ms;
   late final Set<int> moved_ids = result.moved_ids.toSet();
   late final Map<int, int> moved_indices = {
     for (var index = 0; index < result.moved_ids.length; index++)
@@ -53,19 +56,25 @@ class QuestSceneMotion {
   int get incoming_id => result.moved_ids.single;
   List<int> get insertion_tray => result.settlement_tray;
 
+  /// 锁定本段飞行时长；同一事务的预飞与落槽必须共用，交接才不跳变。
+  double lock_flight(double distance) =>
+      _flight_ms ??= TileQuestStyle.flight_duration_ms(distance);
+
+  /// 未获知航距时按最长航段兜底，保证调度仍然保守。
+  double get flight_ms =>
+      _flight_ms ?? TileQuestStyle.flight_duration_max_ms;
+
   /// 每张新牌从点击时刻独立计时，整段飞行都使用同一条曲线。
   /// 排在匹配或其他插入后面的牌也能直接落入槽位，不再在半空等队列。
   double preflight_progress(double now) => preflight
-      ? _smooth_progress(
-          (now - queued_at) / TileQuestStyle.flight_duration.inMilliseconds,
-        )
+      ? _smooth_progress((now - queued_at) / flight_ms)
       : 0;
 
   /// 规则呈现仍按事务顺序交接；交接仅等待尚未完成的飞行部分。
   /// 已经并行落槽的牌无需重复补飞，匹配则从交接后正常保持、消散。
   void start(double now) {
     started_at = now;
-    final base = TileQuestStyle.flight_duration.inMilliseconds.toDouble();
+    final base = flight_ms;
     travel_ms = inserts
         ? preflight
               ? (base - (now - queued_at)).clamp(0.0, base)

@@ -56,8 +56,20 @@ class QuestSceneLayout {
             TileQuestStyle.landscape_bottom_spacing,
       );
       final controls_width = controls_pane.width - inset * 2;
-      final reserve_height = _reserve_height_for(controls_width);
-      final tray_height = _tray_height(controls_width);
+      final slot_cap = _planned_slot_cap(
+        board_width: board.width,
+        board_height: board.height,
+      );
+      final reserve_height = _reserve_height_for(
+        controls_width,
+        two_row: true,
+        max_edge: slot_cap,
+      );
+      final tray_height = _tray_height_for(
+        controls_width,
+        two_row: true,
+        max_edge: slot_cap,
+      );
       const tools_height = TileQuestStyle.landscape_tools_height;
       final controls_height =
           reserve_height + tray_height + tools_height + _landscape_gap * 2;
@@ -93,14 +105,34 @@ class QuestSceneLayout {
       // 操作区独占右栏，保留完整44px顶栏及尽可能大的游戏区域。
       final controls_width = _landscape_controls_width(size, inset);
       final controls_left = size.width - controls_width - inset;
-      final tray_height = _tray_height(controls_width);
       header = Rect.fromLTWH(
         inset,
         _header_top,
         controls_left - inset * 2,
         TileQuestStyle.landscape_header_height,
       );
-      final reserve_height = _reserve_height_for(controls_width);
+      // 槽位外框与牌面同高：短横屏牌面被高度约束时，托盘框不能继续按 60px 算。
+      final slot_cap = _planned_slot_cap(
+        board_width:
+            controls_left -
+            TileQuestStyle.landscape_controls_gap -
+            TileQuestStyle.board_side_margin,
+        board_height:
+            size.height -
+            header.bottom -
+            TileQuestStyle.landscape_board_gap -
+            TileQuestStyle.landscape_bottom_spacing,
+      );
+      final tray_height = _tray_height_for(
+        controls_width,
+        two_row: true,
+        max_edge: slot_cap,
+      );
+      final reserve_height = _reserve_height_for(
+        controls_width,
+        two_row: true,
+        max_edge: slot_cap,
+      );
       final tools_height = math.min(
         TileQuestStyle.landscape_tools_height,
         math.max(
@@ -165,7 +197,10 @@ class QuestSceneLayout {
       header = full_header;
       final controls_width = size.width - inset * 2;
       const tools_height = _tools_height;
-      final reserve_height = _reserve_height_for(controls_width);
+      final reserve_height = _reserve_height_for(
+        controls_width,
+        two_row: landscape || folded,
+      );
       final tray_height = _tray_height(controls_width);
       if (compact_portrait) {
         // 托盘保持全宽；备用区与道具同行，为牌阵归还整行高度。
@@ -333,31 +368,60 @@ class QuestSceneLayout {
   late final double min_x, min_y, unit, unit_y;
   late final Offset board_origin;
 
-  /// 七格共享可用宽度，不再施加二次缩小；超出最大牌宽时整组居中。
-  static double _tray_edge(double width) => math.min(
-    maximum_tray_edge,
-    (width - tray_padding * 2 - tray_gap * (slot_count - 1)) / slot_count,
-  );
-
+  /// 竖屏七格一排共用可用宽度；超出最大牌宽时整组居中。
   static double _tray_height(double width) =>
-      _tray_edge(width) * QuestTileSurfaceStyle.tile_aspect_ratio +
-      tray_padding * 2;
+      _tray_height_for(width, two_row: false);
+
+  /// 横屏/折叠托盘上3下4双行；按最宽一行（4格）算边长，槽位更大。
+  static const int landscape_tray_top_count = 3;
+
+  static double _tray_edge_for(
+    double width, {
+    required bool two_row,
+    double? max_edge,
+  }) {
+    final cols = two_row ? slot_count - landscape_tray_top_count : slot_count;
+    return math.min(
+      max_edge ?? maximum_tray_edge,
+      (width - tray_padding * 2 - tray_gap * (cols - 1)) / cols,
+    );
+  }
+
+  static double _tray_height_for(
+    double width, {
+    required bool two_row,
+    double? max_edge,
+  }) {
+    final edge = _tray_edge_for(width, two_row: two_row, max_edge: max_edge);
+    final rows = two_row ? 2 : 1;
+    return edge * QuestTileSurfaceStyle.tile_aspect_ratio * rows +
+        tray_gap * (rows - 1) +
+        tray_padding * 2;
+  }
 
   /// 先给牌阵保留可读尺度，再把宽屏余量交给七格；手机短横屏仍由高度
   /// 限定牌宽，因此无需为扩大托盘而缩小原本可玩的主牌阵。
   static double _landscape_controls_width(Size size, double inset) {
+    // 横屏双行最宽 4 格，控件列不必再按 7 格一排留宽。
+    const bottom_cols = slot_count - landscape_tray_top_count;
     final minimum_tray_width =
-        TileQuestStyle.readable_tray_tile_width * slot_count +
+        TileQuestStyle.readable_tray_tile_width * bottom_cols +
         tray_padding * 2 +
-        tray_gap * (slot_count - 1);
+        tray_gap * (bottom_cols - 1);
+    final maximum_tray_width =
+        maximum_tray_edge * bottom_cols +
+        tray_padding * 2 +
+        tray_gap * (bottom_cols - 1);
     final board_height =
         size.height -
         _header_top -
         TileQuestStyle.landscape_header_height -
         TileQuestStyle.landscape_board_gap -
         TileQuestStyle.landscape_bottom_spacing;
+    // 用牌面目标上限估计主牌阵，宽屏时操作区只拿够用的宽度，
+    // 余量留给牌盘，避免全展开方块比竖屏还小。
     final board_unit = math.min(
-      TileQuestStyle.readable_tray_tile_width,
+      TileQuestStyle.landscape_board_unit_cap,
       board_height /
           (TileQuestStyle.landscape_reference_rows *
               QuestTileSurfaceStyle.tile_aspect_ratio),
@@ -369,26 +433,44 @@ class QuestSceneLayout {
         TileQuestStyle.landscape_controls_gap -
         QuestLandscapeBoardLayout.reference_width * board_unit;
     final preferred = (size.width * TileQuestStyle.wide_controls_fraction)
-        .clamp(
-          minimum_tray_width,
-          maximum_tray_edge * slot_count +
-              tray_padding * 2 +
-              tray_gap * (slot_count - 1),
-        );
-    return math.min(
-      preferred,
-      math.max(TileQuestStyle.landscape_controls_min_width, available),
+        .clamp(minimum_tray_width, maximum_tray_width);
+    // 托盘至少保持可点宽度，但不能继续挤占牌盘。
+    return math.max(
+      minimum_tray_width,
+      math.min(
+        preferred,
+        math.max(TileQuestStyle.landscape_controls_min_width, available),
+      ),
     );
   }
 
-  /// 备用牌与七格托盘分别自适应；移出和返回动画读取相应目标矩形即可。
-  static double _reserve_edge(double width) => math.min(
-    TileQuestStyle.reserve_tile_max_width,
-    _tray_edge(width) * TileQuestStyle.reserve_tile_width_scale,
-  );
+  /// 横屏双行后托盘更宽，备用牌与托盘槽完全同尺寸；
+  /// 竖屏一排仍按比例略小于托盘，保持紧凑。
+  static double _reserve_edge(
+    double width, {
+    bool two_row = false,
+    double? max_edge,
+  }) {
+    final edge = _tray_edge_for(
+      width,
+      two_row: two_row,
+      max_edge: two_row ? max_edge : null,
+    );
+    return two_row
+        ? edge
+        : math.min(
+            TileQuestStyle.reserve_tile_max_width,
+            edge * TileQuestStyle.reserve_tile_width_scale,
+          );
+  }
 
-  static double _reserve_height_for(double width) =>
-      _reserve_edge(width) * QuestTileSurfaceStyle.tile_aspect_ratio +
+  static double _reserve_height_for(
+    double width, {
+    bool two_row = false,
+    double? max_edge,
+  }) =>
+      _reserve_edge(width, two_row: two_row, max_edge: max_edge) *
+          QuestTileSurfaceStyle.tile_aspect_ratio +
       reserve_vertical_padding * 2 +
       reserve_stack_lift * (TileQuestConfig.remove_uses_per_challenge - 1);
 
@@ -404,15 +486,54 @@ class QuestSceneLayout {
     tile.height * unit_y,
   );
 
+  /// 卡槽不明显大于牌面：手机横屏牌面受高度约束变小时，卡槽同步缩小。
+  double _slot_edge_for(bool two_row, double width_edge) =>
+      math.min(width_edge, unit * .9);
+
+  /// 构造期先估算牌面单元，让托盘/备用外框与后续槽位同高。
+  static double _planned_slot_cap({
+    required double board_width,
+    required double board_height,
+  }) {
+    final planned_unit = math.min(
+      board_width / QuestLandscapeBoardLayout.reference_width,
+      board_height /
+          (TileQuestStyle.landscape_reference_rows *
+              QuestTileSurfaceStyle.tile_aspect_ratio),
+    );
+    return math.min(maximum_tray_edge, planned_unit * .9);
+  }
+
   /// 槽背景与牌都必须使用本矩形，禁止分别按组件高度推算槽位。
+  /// 横屏/折叠使用上3下4双行，竖屏保持七格一排。
   Rect tray_tile(int index) {
-    final edge = _tray_edge(tray.width);
-    final occupied_width = edge * slot_count + tray_gap * (slot_count - 1);
+    final two_row = landscape || folded;
+    final edge = _slot_edge_for(
+      two_row,
+      _tray_edge_for(tray.width, two_row: two_row),
+    );
+    final tile_height = edge * QuestTileSurfaceStyle.tile_aspect_ratio;
+    if (!two_row) {
+      final occupied_width = edge * slot_count + tray_gap * (slot_count - 1);
+      return Rect.fromLTWH(
+        tray.center.dx - occupied_width / 2 + index * (edge + tray_gap),
+        tray.top + tray_padding,
+        edge,
+        tile_height,
+      );
+    }
+    final top = index < landscape_tray_top_count;
+    final row_index = top ? index : index - landscape_tray_top_count;
+    final row_count = top ? landscape_tray_top_count : slot_count - landscape_tray_top_count;
+    final row_width = row_count * edge + tray_gap * (row_count - 1);
+    final row_top = top
+        ? tray.top + tray_padding
+        : tray.top + tray_padding + tile_height + tray_gap;
     return Rect.fromLTWH(
-      tray.center.dx - occupied_width / 2 + index * (edge + tray_gap),
-      tray.top + tray_padding,
+      tray.center.dx - row_width / 2 + row_index * (edge + tray_gap),
+      row_top,
       edge,
-      edge * QuestTileSurfaceStyle.tile_aspect_ratio,
+      tile_height,
     );
   }
 
@@ -424,7 +545,10 @@ class QuestSceneLayout {
             (reserve.width - reserve_right_padding * 2 - reserve_gap * 2) /
                 reserve_count,
           )
-        : _reserve_edge(reserve.width);
+        : _slot_edge_for(
+            landscape || folded,
+            _reserve_edge(reserve.width, two_row: landscape || folded),
+          );
     final height = edge * QuestTileSurfaceStyle.tile_aspect_ratio;
     return Rect.fromLTWH(
       compact_portrait && !folded

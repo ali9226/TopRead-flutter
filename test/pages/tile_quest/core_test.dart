@@ -241,7 +241,8 @@ void main() {
       'Shuffle preserves geometry, tray, reserve and exact type multiset',
       () {
         final engine = TileQuestEngine(
-          TileQuestGenerator.generate(level: 2, seed: 68),
+          // 固定难度：本用例验证洗牌保形，不应随全局难度漂移。
+          TileQuestGenerator.generate(level: 2, seed: 68, difficulty: 8),
         );
         replay(engine, engine.state.certified_solution.take(5).toList());
         engine.remove();
@@ -281,12 +282,10 @@ void main() {
         final after_types = engine.state.tiles.map((tile) => tile.type).toList()
           ..sort();
         expect(after_types, before_types);
-        expect(
-          TileQuestValidator.validate_solution(engine.state).valid,
-          isTrue,
-        );
-        replay(engine, List<int>.from(engine.state.certified_solution));
-        expect(engine.state.status, TileQuestStatus.won);
+        // 纯随机洗牌不保证有解，证书随洗牌清空。
+        expect(engine.state.certified_solution, isEmpty);
+        // 洗牌道具只有一枚，用掉后不可再洗。
+        expect(engine.state.tools[TileQuestTool.shuffle], 0);
         expect(engine.shuffle().accepted, isFalse);
       },
     );
@@ -331,35 +330,8 @@ void main() {
               final result = engine.shuffle(seed: seed * 31 + prefix);
               if (result.accepted) {
                 accepted_count++;
-                final barrier = engine.state.expert_barrier;
-                if (barrier != null &&
-                    barrier.minimum_remove_uses >
-                        TileQuestConfig.initial_tool_uses(
-                          TileQuestTool.remove,
-                        ) &&
-                    barrier.is_closed(engine.state)) {
-                  expect(engine.state.certified_solution, isEmpty);
-                  expect(
-                    TileQuestValidator.validate_solution(engine.state).valid,
-                    isFalse,
-                  );
-                  expect(
-                    TileQuestValidator.validate_tool_solution(
-                      engine.state,
-                      barrier.witness,
-                      remove_uses: barrier.minimum_remove_uses,
-                    ).valid,
-                    isTrue,
-                    reason: 'barrier witness $difficulty/$seed/$prefix',
-                  );
-                  expect(barrier.to_json(), before['state']['expert_barrier']);
-                } else {
-                  expect(
-                    TileQuestValidator.validate_solution(engine.state).valid,
-                    isTrue,
-                    reason: 'difficulty=$difficulty seed=$seed prefix=$prefix',
-                  );
-                }
+                // 纯随机洗牌：不校验有解，证书清空，牌型多重集与托盘保持不变。
+                expect(engine.state.certified_solution, isEmpty);
                 TileQuestValidator.validate_state(engine.state);
                 expect(
                   engine.state.tiles.map((tile) => tile.type).toList()..sort(),
@@ -370,15 +342,7 @@ void main() {
                 final restored = TileQuestEngine.restore(
                   deep_json(engine.export_json()),
                 );
-                if (seed == 0 &&
-                    prefix % 4 == 0 &&
-                    restored.state.certified_solution.isNotEmpty) {
-                  replay(
-                    restored,
-                    List<int>.from(restored.state.certified_solution),
-                  );
-                  expect(restored.state.status, TileQuestStatus.won);
-                }
+                expect(restored.state.certified_solution, isEmpty);
               } else {
                 rejected_count++;
                 expect(engine.export_json(), before);
@@ -388,13 +352,14 @@ void main() {
           }
         }
         expect(observed_occupancies, containsAll([0, 1, 2, 3, 4, 5, 6]));
+        // 新契约：只要还剩棋盘牌，洗牌必成功。
+        expect(rejected_count, 0);
         expect(accepted_count, greaterThan(100));
-        expect(rejected_count, greaterThan(0));
       },
     );
 
     test(
-      'Shuffle with six singleton tray tiles safely fails without charge',
+      'Shuffle with six singleton tray tiles still succeeds and charges once',
       () {
         final engine = flat_board([
           for (var copy = 0; copy < 3; copy++)
@@ -403,10 +368,15 @@ void main() {
         for (var id = 0; id < 6; id++) {
           engine.tap_tile(id);
         }
-        final before = engine.export_json();
-        expect(engine.shuffle().accepted, isFalse);
-        expect(engine.export_json(), before);
-        expect(engine.state.tools[TileQuestTool.shuffle], 1);
+        final before_types =
+            engine.state.tiles.map((tile) => tile.type).toList()..sort();
+        expect(engine.shuffle().accepted, isTrue);
+        expect(engine.state.tools[TileQuestTool.shuffle], 0);
+        expect(
+          engine.state.tiles.map((tile) => tile.type).toList()..sort(),
+          before_types,
+        );
+        expect(engine.state.tray, [0, 1, 2, 3, 4, 5]);
       },
     );
     test(

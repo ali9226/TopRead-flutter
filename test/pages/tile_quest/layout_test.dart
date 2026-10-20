@@ -214,6 +214,8 @@ void main() {
       await tester.tapAt(quest_scene_frames(tester)[reserve_id]!.rect.center);
       await tester.pumpAndSettle();
       expect(logic.state!.reserve, isEmpty);
+      await tester.tap(find.byKey(const ValueKey('tile_quest_settings')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('tile_quest_sound')));
       await tester.pumpAndSettle();
       expect(logic.sound_enabled, isFalse);
@@ -474,10 +476,12 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        expect(
-          find.text(scenario.locale == 'fr' ? 'Niveau 1' : '第 1 关'),
-          findsOneWidget,
-        );
+        // 标题区只保留 logo 与工具按钮；设置展开后才出现重开。
+        expect(find.byKey(const ValueKey('tile_quest_back')), findsOneWidget);
+        expect(find.byKey(const ValueKey('tile_quest_settings')), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('tile_quest_settings')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('tile_quest_restart')), findsOneWidget);
         await tester.tap(find.byKey(const ValueKey('tile_quest_restart')));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);

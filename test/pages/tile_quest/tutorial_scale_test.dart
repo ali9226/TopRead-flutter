@@ -91,7 +91,7 @@ void main() {
   test(
     'tutorial selects reproducible red, blue and green shapes across seeds',
     () {
-      const red_shapes = <String>{'strawberry', 'watermelon'};
+      const red_shapes = <String>{'carrot', 'watermelon'};
       const blue_shapes = <String>{'glove', 'snowflake'};
       const green_shapes = <String>{'leaf'};
       final palettes = <String>{};

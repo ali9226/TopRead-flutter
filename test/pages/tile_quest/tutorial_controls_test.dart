@@ -237,7 +237,7 @@ void main() {
     final host = await _mount_scene(tester, state, animate_entry: false);
     await tester.pumpAndSettle();
     _expect_normal_controls();
-    expect(find.bySemanticsLabel(RegExp(r'Remove 2/2')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp(r'Remove 2')), findsOneWidget);
     final id = state.clickable_tiles.first.id;
     await tester.tapAt(quest_scene_frames(tester)[id]!.rect.center);
     await tester.pumpAndSettle();
@@ -338,6 +338,8 @@ void main() {
         quest_scene_frames(tester)[main_tile.id]!.rect,
         main_tile,
       );
+      await tester.tap(_key('tile_quest_settings'));
+      await tester.pumpAndSettle();
       await tester.tap(_key('tile_quest_restart'));
       await tester.pumpAndSettle();
       await tester.tap(_key('tile_quest_confirm_restart'));

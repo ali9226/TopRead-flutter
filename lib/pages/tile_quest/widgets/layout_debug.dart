@@ -103,6 +103,13 @@ class _QuestLayoutDebugState extends State<QuestLayoutDebug> {
   /// 紧凑顶栏没有第二行空位；在真实未占用的棋盘边角安放调试入口。
   /// 无安全空位时不创建浮层，不能盖住重开、牌面或任何游戏控件。
   Rect? _toggle_rect(QuestSceneLayout layout) {
+    // 顶栏工具行（返回/声音/重开）整行不可覆盖，与 compact 无关。
+    final toolbar = Rect.fromLTWH(
+      layout.header.left,
+      layout.header.top,
+      layout.header.width,
+      TileQuestStyle.toolbar_height,
+    );
     final candidates = <Rect>[
       if (!layout.compact_header)
         Rect.fromLTWH(
@@ -138,7 +145,7 @@ class _QuestLayoutDebugState extends State<QuestLayoutDebug> {
           candidate.overlaps(layout.tray)) {
         continue;
       }
-      if (layout.compact_header && candidate.overlaps(layout.header)) {
+      if (candidate.overlaps(toolbar) || candidate.overlaps(layout.header)) {
         continue;
       }
       if (!cards.any(candidate.overlaps)) return candidate;

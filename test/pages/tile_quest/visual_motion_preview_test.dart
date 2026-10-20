@@ -220,7 +220,8 @@ void main() {
       await tester.binding.setSurfaceSize(_size);
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final engine = TileQuestEngine(
-        TileQuestGenerator.generate(level: 2, seed: 730),
+        // 固定难度：专家洗牌渲染用例不随全局难度漂移。
+        TileQuestGenerator.generate(level: 2, seed: 730, difficulty: 8),
       );
       final reserved_type = engine.state
           .tile_by_id(engine.state.certified_solution.first)
@@ -310,7 +311,8 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       Directory(_preview_directory).createSync(recursive: true);
       final engine = TileQuestEngine(
-        TileQuestGenerator.generate(level: 2, seed: 730),
+        // 固定难度：专家洗牌渲染用例不随全局难度漂移。
+        TileQuestGenerator.generate(level: 2, seed: 730, difficulty: 8),
       );
       expect(engine.state.total_count, 402);
       expect(engine.state.difficulty, 8);

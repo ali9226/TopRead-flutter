@@ -257,8 +257,19 @@ void main() {
           first_slot.width,
           lessThanOrEqualTo(QuestSceneLayout.maximum_tray_edge),
         );
+        // 横屏上3下4：每行独立居中，行首行尾关于托盘中线对称。
+        final top_last = layout.tray_tile(
+          QuestSceneLayout.landscape_tray_top_count - 1,
+        );
+        final bottom_first = layout.tray_tile(
+          QuestSceneLayout.landscape_tray_top_count,
+        );
         expect(
-          (first_slot.left + last_slot.right) / 2,
+          (first_slot.left + top_last.right) / 2,
+          closeTo(layout.tray.center.dx, _epsilon),
+        );
+        expect(
+          (bottom_first.left + last_slot.right) / 2,
           closeTo(layout.tray.center.dx, _epsilon),
         );
         for (final bounds in [

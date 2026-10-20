@@ -283,7 +283,7 @@ void main() {
     expect_inventory(engine.state);
   });
 
-  test('Shuffle after a lead tap preserves the mandatory gate and witness', () {
+  test('Shuffle after a lead tap keeps gate tiles and still succeeds', () {
     final engine = TileQuestEngine(mandatory_tool_fixture());
     expect(
       engine.tap_tile(engine.state.certified_solution.first).accepted,
@@ -294,25 +294,14 @@ void main() {
     final result = engine.shuffle(seed: 2026);
     expect(result.accepted, isTrue, reason: result.reason);
     expect(engine.state.tools_used, 1);
+    // 专家门正/配对牌保持不变，其余棋盘牌可被纯随机重排。
     for (final id in [...barrier.front_ids, ...barrier.partner_ids]) {
       expect(
         engine.state.tile_by_id(id).to_json(),
         before.tile_by_id(id).to_json(),
       );
     }
-    expect(
-      TileQuestValidator.validate_tool_solution(
-        engine.state,
-        engine.state.certified_solution,
-        remove_uses: 0,
-      ).valid,
-      isFalse,
-    );
-    for (final step in List<int>.of(engine.state.certified_solution)) {
-      expect(replay_step(engine, step).accepted, isTrue);
-    }
-    expect(engine.state.status, TileQuestStatus.won);
-    expect(engine.state.tools_used, 2);
+    expect(engine.state.certified_solution, isEmpty);
     expect_inventory(engine.state);
   });
 

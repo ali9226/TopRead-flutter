@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:ui' as ui;
+import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 import 'package:app/pages/tile_quest/game/engine.dart';
 import 'package:app/pages/tile_quest/game/generator.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
@@ -10,6 +11,7 @@ import 'package:app/pages/tile_quest/services/feedback_service.dart';
 import 'package:app/pages/tile_quest/services/save_service.dart';
 import 'package:app/pages/tile_quest/services/work_service.dart';
 import 'package:app/pages/tile_quest/widgets/quest_result.dart';
+import 'package:app/pages/tile_quest/widgets/scene_assets.dart';
 import 'package:app/pages/tile_quest/widgets/session_pause.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -164,6 +166,14 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        // 背景图真实异步解码，必须先预热再采样，否则 before/after 下垫内容不一致。
+        await tester.runAsync(
+          () => precacheImage(
+            QuestSceneAssets.background,
+            tester.element(find.byType(TileQuestPage)),
+          ),
+        );
+        await tester.pumpAndSettle();
         // 探针位于棋盘安全区以外：右侧状态栏、底部手势区以及右下角。
         final probes = [
           Offset(size.width - 2, size.height / 2),
@@ -192,8 +202,9 @@ void main() {
         );
         expect(button.right, lessThanOrEqualTo(size.width - 84));
         expect(button.bottom, lessThanOrEqualTo(size.height - 34));
-        if (pose == 'half_open')
+        if (pose == 'half_open') {
           expect(button.overlaps(_hinge.bounds), isFalse);
+        }
         await tester.tap(
           find.byKey(const ValueKey('tile_quest_result_primary')),
         );

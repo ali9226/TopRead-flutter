@@ -30,14 +30,17 @@ class QuestInsertionTimeline {
 
   /// 下一组三消只等待上一组腾出槽位，粒子尾迹继续独立播放。
   /// 若多个组同帧点击，后组从点击时刻沿一条稍长曲线飞行，途中不停顿。
-  void add(QuestSceneMotion motion, double now) {
+  ///
+  /// [distance] 为起点到目标槽的航距；用它换算时长，近牌不显迟缓。
+  void add(QuestSceneMotion motion, double now, {double distance = 0}) {
+    if (distance > 0) motion.lock_flight(distance);
     final result = motion.result;
     final flight_start = math.max(
       started_at,
       motion.preflight ? motion.queued_at : now,
     );
     final flight_end = math.max(
-      flight_start + TileQuestStyle.flight_duration.inMilliseconds,
+      flight_start + motion.flight_ms,
       _slot_release_at,
     );
     final shift_start = math.max(flight_start, _last_match_at);
@@ -183,6 +186,7 @@ class _QuestInsertionPath {
     _resolve(layout);
     final origin = _cached_origin!;
     final destination = _cached_destination!;
+    // 调度端已按航距写入 ends_at；让位拉长时整段曲线一起拉长，避免中途悬停。
     final duration = ends_at - starts_at;
     final time = ((now - starts_at) / duration).clamp(0.0, 1.0);
     final time_squared = time * time;

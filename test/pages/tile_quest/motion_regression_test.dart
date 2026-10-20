@@ -1,4 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
+import 'dart:math' as math;
 import 'package:app/pages/tile_quest/game/engine.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:app/pages/tile_quest/index.dart';
@@ -213,28 +214,31 @@ void main() {
         }
         if (_at(first, first_slot)) first_arrival ??= frame;
         if (_at(second, second_slot)) second_arrival ??= frame;
-        if (first_arrival != null) {
+        if (first_arrival != null && first != null) {
           _same_rect(
-            first!,
+            first,
             first_slot,
             reason: 'an already landed tile must not jump back to the board',
           );
         }
-        if (second_arrival != null) break;
+        if (second_arrival != null && second != null) {
+          _same_rect(
+            second,
+            second_slot,
+            reason: 'an already landed tile must not jump back to the board',
+          );
+        }
+        if (first_arrival != null && second_arrival != null) break;
       }
       expect(saw_first_in_transit, isTrue);
       expect(saw_second_in_transit, isTrue);
       expect(first_arrival, isNotNull);
       expect(second_arrival, isNotNull);
+      // 匀速飞行下近牌先落槽；两枚都必须在最长单跳时长内落槽。
       expect(
-        first_arrival!,
-        lessThanOrEqualTo(second_arrival!),
-        reason: 'independent flights preserve the tap order when tied',
-      );
-      expect(
-        second_arrival * _frame.inMilliseconds,
+        math.max(first_arrival!, second_arrival!) * _frame.inMilliseconds,
         lessThanOrEqualTo(
-          TileQuestStyle.flight_duration.inMilliseconds + _frame.inMilliseconds,
+          TileQuestStyle.flight_duration_max_ms + _frame.inMilliseconds,
         ),
       );
       await tester.pumpAndSettle();

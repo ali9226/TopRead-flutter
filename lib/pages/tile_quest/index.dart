@@ -4,6 +4,7 @@ import 'package:app/stores/device_info.dart';
 import 'package:app/util/router/router_back.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:app/stores/user_information.dart';
 import 'game/models.dart';
 import 'logic.dart';
 import 'style.dart';
@@ -76,6 +77,14 @@ class _TileQuestPageState extends State<TileQuestPage> {
     // 局部 GetBuilder 不注册全局实例，页面显式结束控制器生命周期。
     _logic.onDelete();
     super.dispose();
+  }
+
+  /// 用户已登录且 user_info.debug == 2 才显示布局调试层；与 kDebugMode 无关。
+  bool get _layout_debug_visible {
+    if (!Get.isRegistered<UserInformation>()) return false;
+    final store = Get.find<UserInformation>();
+    final info = store.userInfo.value;
+    return store.isLoggedIn.value && (info?.debug ?? 0) == 2;
   }
 
   Future<void> _leave() async {
@@ -329,6 +338,7 @@ class _TileQuestPageState extends State<TileQuestPage> {
                         on_tool: (tool) => unawaited(
                           _tool(tool, board_revision: board_revision),
                         ),
+                        show_layout_debug: _layout_debug_visible,
                       ),
                     ),
                     if (state.status != TileQuestStatus.playing &&

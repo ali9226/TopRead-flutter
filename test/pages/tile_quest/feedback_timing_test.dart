@@ -9,7 +9,6 @@ import 'package:app/pages/tile_quest/logic.dart';
 import 'package:app/pages/tile_quest/services/feedback_service.dart';
 import 'package:app/pages/tile_quest/services/save_service.dart';
 import 'package:app/pages/tile_quest/services/work_service.dart';
-import 'package:app/pages/tile_quest/style.dart';
 import 'package:app/pages/tile_quest/widgets/quest_result.dart';
 import 'package:app/pages/tile_quest/widgets/quest_scene.dart';
 import 'package:app/pages/tile_quest/widgets/scene_layout.dart';
@@ -391,37 +390,37 @@ void main() {
         reason: 'accepting the rule result cannot play a future match or win',
       );
       await tester.pump();
-      final before_match =
-          TileQuestStyle.flight_duration +
-          Duration(milliseconds: TileQuestStyle.match_hold_ms.toInt() - 1);
-      await tester.pump(before_match);
-      expect(feedback.events, <TileQuestFeedbackEvent>[
-        TileQuestFeedbackEvent.tap,
-      ]);
-      expect(find.byType(QuestResult), findsNothing);
-
-      await tester.pump(const Duration(milliseconds: 1));
+      // 飞行时长随航距变化，按小步推进直至 match，避免大跳帧吞掉提示。
+      for (var step = 0; step < 80; step++) {
+        if (feedback.events.contains(TileQuestFeedbackEvent.match)) break;
+        expect(feedback.events, <TileQuestFeedbackEvent>[
+          TileQuestFeedbackEvent.tap,
+        ], reason: 'match must not play before the flight settles');
+        expect(find.byType(QuestResult), findsNothing);
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(
+        feedback.events.contains(TileQuestFeedbackEvent.match),
+        isTrue,
+        reason: 'match must play after the flight',
+      );
       expect(feedback.events, <TileQuestFeedbackEvent>[
         TileQuestFeedbackEvent.tap,
         TileQuestFeedbackEvent.match,
       ]);
-      await tester.pump(
-        Duration(milliseconds: TileQuestStyle.match_fade_ms.toInt() - 1),
-      );
-      expect(
-        feedback.events.where((event) => event == TileQuestFeedbackEvent.won),
-        isEmpty,
-      );
-      expect(find.byType(QuestResult), findsNothing);
-      final final_particle_frame = quest_scene_frames(tester)[2]!;
-      expect(final_particle_frame.dissolve, greaterThan(0));
-      expect(
-        final_particle_frame.dissolve,
-        lessThan(1),
-        reason: 'the last group remains visible until its fade ends',
-      );
-
-      await tester.pump(const Duration(milliseconds: 1));
+      // 消散期间必须仍可见且尚未 won；小步推进直到 won，避免跳过中段。
+      var saw_partial_fade = false;
+      for (var step = 0; step < 80; step++) {
+        if (feedback.events.contains(TileQuestFeedbackEvent.won)) break;
+        expect(find.byType(QuestResult), findsNothing);
+        final frame = quest_scene_frames(tester)[2];
+        final dissolve = frame?.dissolve;
+        if (dissolve != null && dissolve > 0 && dissolve < 1) {
+          saw_partial_fade = true;
+        }
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(saw_partial_fade, isTrue, reason: 'particles must fade out visibly');
       await tester.pump();
       expect(feedback.events, <TileQuestFeedbackEvent>[
         TileQuestFeedbackEvent.tap,
@@ -468,14 +467,20 @@ void main() {
       TileQuestFeedbackEvent.tap,
     ]);
     await tester.pump();
-    await tester.pump(
-      TileQuestStyle.flight_duration - const Duration(milliseconds: 1),
+    // lost 必须等第七张牌飞到卡槽；航距不同时长不同，按小步等待。
+    for (var step = 0; step < 80; step++) {
+      if (feedback.events.contains(TileQuestFeedbackEvent.lost)) break;
+      expect(feedback.events, <TileQuestFeedbackEvent>[
+        TileQuestFeedbackEvent.tap,
+      ], reason: 'loss cue must wait for the flight to land');
+      expect(find.byType(QuestResult), findsNothing);
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(
+      feedback.events.contains(TileQuestFeedbackEvent.lost),
+      isTrue,
+      reason: 'loss must play after the flight lands',
     );
-    expect(feedback.events, <TileQuestFeedbackEvent>[
-      TileQuestFeedbackEvent.tap,
-    ]);
-    expect(find.byType(QuestResult), findsNothing);
-    await tester.pump(const Duration(milliseconds: 1));
     await tester.pumpAndSettle();
     expect(feedback.events, <TileQuestFeedbackEvent>[
       TileQuestFeedbackEvent.tap,

@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/layout_config.dart';
 
 /// 游戏的视觉尺度、文字适配与配色集中在此，避免布局中分散调整。
 class TileQuestStyle {
@@ -17,14 +18,17 @@ class TileQuestStyle {
   static const double landscape_controls_max_width = 280;
 
   /// 可用空间足够时，七格保留完整触摸尺度；不能把七张牌压入窄工具栏。
-  static const double wide_controls_fraction = .40;
-  static const double readable_tray_tile_width = 44;
+  static const double wide_controls_fraction = .34;
+  static const double readable_tray_tile_width = 37;
   static const double fold_pane_min_width = 300;
   static const double fold_pane_min_height = 400;
   static const double landscape_controls_gap = 12;
+
+  /// 横屏牌面单元目标上限：宽屏放大牌面，而不是把余量全给操作区。
+  static const double landscape_board_unit_cap = 72;
   static const double landscape_board_gap = 8;
   static const double landscape_bottom_spacing = 8;
-  static const double landscape_tools_height = 80;
+  static const double landscape_tools_height = 68;
 
   /// 主阵和辅助岛横向排列，区域之间保留四分之三格的明确间隔。
   static const double landscape_main_columns = 6;
@@ -45,7 +49,8 @@ class TileQuestStyle {
   static const double narrow_tool_width = 80;
   static const double narrow_tool_icon_size = 24;
   static const double narrow_tool_content_inset = 4;
-  static const double page_inset = 16;
+  /// 与首页等页面共用同一左右边距变量，统一调整只改 LayoutConfig。
+  static const double page_inset = LayoutConfig.page_horizontal_padding;
   static const double board_side_margin = 4;
 
   /// 七格槽按父容器宽度均分，宽屏/平板达到此宽度后停止长大并整体居中。
@@ -54,22 +59,52 @@ class TileQuestStyle {
   /// 备用牌保持紧凑而独立的尺度，避免放宽七格槽后挤小主牌阵。
   static const double reserve_tile_width_scale = .86;
   static const double reserve_tile_max_width = 52;
-  static const double portrait_tools_height = 56;
+  static const double portrait_tools_height = 48;
   static const int tool_icon_cache_width = 128;
   static const double tool_icon_compact_size = 34;
   static const double tool_icon_size = 36;
-  static const double tool_tall_threshold = 78;
+  static const double tool_tall_threshold = 56;
   static const double tool_content_inset = 6;
   static const double tool_content_gap = 4;
+
+  /// 道具剩余次数角标：主题色圆点 + 外发光 + 白字，无描边。
+  static const double tool_badge_min_size = 20;
+  static const double tool_badge_font = 13;
+
+  /// 角标向外挂出的偏移：避开按钮内文字。
+  static const double tool_badge_top = -6;
+  static const double tool_badge_right = -4;
+
+  /// 加号图标在数字角标基础上再右移，避免盖住文字。
+  static const double tool_badge_add_right = -11;
+  static const double tool_badge_add_size = 30;
+
+  /// 数字 ↔ 加号 切换动画。
+  static const int tool_badge_switch_ms = 240;
+
+  /// 按压回弹：顶栏图标与道具按钮共用。
+  static const double press_scale = 0.88;
+  static const int press_down_ms = 90;
+  static const int press_up_ms = 280;
   static const double compact_title_size_cjk = 18;
   static const double compact_title_size_alphabetic = 18;
   static const double portrait_bottom_spacing = 6;
   static const double portrait_controls_gap = 4;
   static const double board_bottom_spacing = 2;
   static const double toolbar_height = 44;
-  static const double header_height = 96;
-  static const double tutorial_top = 106;
-  static const double board_top = 108;
+  static const double header_height = 52;
+
+  /// 顶栏图片图标显示尺寸。
+  static const double header_icon_size = 42;
+
+  /// 设置展开/收起：声音与重置滑出滑入，logo 同步淡出。
+  static const int header_expand_ms = 260;
+  static const double header_action_gap = 7;
+
+  /// 分享与声音之间更宽的间隔。
+  static const double header_share_gap = 14;
+  static const double tutorial_top = 52;
+  static const double board_top = 64;
   static const double corner = 22;
   static const double tile_corner_radius_fraction = .107;
 
@@ -93,7 +128,24 @@ class TileQuestStyle {
   static const double line_height_alphabetic = 1.4;
   static const double button_min_width_cjk = 92;
   static const double button_min_width_alphabetic = 112;
+  /// 飞牌目标速度（像素/毫秒）。短跳由时长下限托底显得干脆，
+  /// 长跳由时长上限收敛到旧 340ms 观感，避免顶部飞牌过快发飘。
+  static const double flight_speed = 1.5;
+
+  /// 时长下限：近距离也保留完整起落节奏，不致闪现。
+  static const double flight_duration_min_ms = 110;
+
+  /// 时长上限：长距离依旧轻快，与旧固定 340ms 的最远航段观感一致。
+  static const double flight_duration_max_ms = 340;
+
+  /// 最长航段时长；等待“飞完”时可作保守上界。
   static const Duration flight_duration = Duration(milliseconds: 340);
+
+  /// 由航距换算飞牌时长（毫秒），保证不同起点的观感速度一致。
+  static double flight_duration_ms(double distance) => (distance / flight_speed)
+      .clamp(flight_duration_min_ms, flight_duration_max_ms)
+      .toDouble();
+
   static const double flight_lift_max = 18;
   static const double flight_lift_distance_fraction = .06;
   static const double match_hold_ms = 28;

@@ -330,4 +330,78 @@ void main() {
       lessThan(.000001),
     );
   });
+
+  test('flight duration scales with hop distance so near tiles stay quick', () {
+    final before = _fixture();
+    final engine = TileQuestEngine(before);
+    final layout = QuestSceneLayout(_size, before);
+    // 取棋盘最上与最下两枚，航距差应驱动时长差。
+    TileQuestTile top = before.tiles.first;
+    TileQuestTile bottom = before.tiles.first;
+    for (final tile in before.tiles) {
+      if (tile.y < top.y) top = tile;
+      if (tile.y > bottom.y) bottom = tile;
+    }
+    expect(top.id, isNot(bottom.id));
+
+    final top_motion = QuestSceneMotion(engine.tap_tile(top.id), 0);
+    final top_from = layout.location(top_motion.result.before, top_motion.incoming_id);
+    final top_to = layout.tray_tile(top_motion.insertion_tray.indexOf(top_motion.incoming_id));
+    final top_distance = (top_from.center - top_to.center).distance;
+    final top_ms = TileQuestStyle.flight_duration_ms(top_distance);
+
+    final bottom_engine = TileQuestEngine(top_motion.result.after);
+    final bottom_motion = QuestSceneMotion(bottom_engine.tap_tile(bottom.id), 0);
+    final bottom_from = layout.location(
+      bottom_motion.result.before,
+      bottom_motion.incoming_id,
+    );
+    final bottom_to = layout.tray_tile(
+      bottom_motion.insertion_tray.indexOf(bottom_motion.incoming_id),
+    );
+    final bottom_distance =
+        (bottom_from.center - bottom_to.center).distance;
+    final bottom_ms = TileQuestStyle.flight_duration_ms(bottom_distance);
+
+    expect(top_distance, greaterThan(bottom_distance + 80));
+    expect(bottom_ms, lessThan(top_ms));
+    expect(bottom_ms, greaterThanOrEqualTo(TileQuestStyle.flight_duration_min_ms));
+    expect(top_ms, lessThanOrEqualTo(TileQuestStyle.flight_duration_max_ms));
+    // 中段匀速：时长 = clamp(航距 / 速度)。
+    expect(
+      top_ms,
+      closeTo(
+        (top_distance / TileQuestStyle.flight_speed)
+            .clamp(
+              TileQuestStyle.flight_duration_min_ms,
+              TileQuestStyle.flight_duration_max_ms,
+            )
+            .toDouble(),
+        .001,
+      ),
+    );
+
+    final top_timeline = QuestInsertionTimeline(before, 0)
+      ..add(top_motion, 0, distance: top_distance);
+    _same_rect(
+      top_timeline.tracks[top_motion.incoming_id]!.rect(layout, top_ms),
+      top_to,
+    );
+
+    final bottom_timeline =
+        QuestInsertionTimeline(bottom_motion.result.before, 0)
+          ..add(bottom_motion, 0, distance: bottom_distance);
+    final bottom_track = bottom_timeline.tracks[bottom_motion.incoming_id]!;
+    _same_rect(bottom_track.rect(layout, bottom_ms), bottom_to);
+    // 近牌落槽时，远牌仍在途中。
+    expect(bottom_ms, lessThan(top_ms - 30));
+    expect(
+      (top_timeline.tracks[top_motion.incoming_id]!.rect(layout, bottom_ms)
+              .center -
+          top_to.center)
+          .distance,
+      greaterThan(1),
+      reason: 'far hop must still be flying when the near hop lands',
+    );
+  });
 }

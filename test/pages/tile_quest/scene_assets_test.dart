@@ -294,14 +294,16 @@ void main() {
           ),
         );
         expect(button.remaining, tool == TileQuestTool.remove ? 1 : 0);
+        // 角标只显示剩余次数；为 0 时整体隐藏。
+        final badge_text = tool == TileQuestTool.remove ? '1' : '0';
         expect(
           find.descendant(
             of: find.byWidgetPredicate(
               (widget) => widget is QuestToolButton && widget.tool == tool,
             ),
-            matching: find.text(tool == TileQuestTool.remove ? '1/2' : '0/1'),
+            matching: find.text(badge_text),
           ),
-          findsOneWidget,
+          tool == TileQuestTool.remove ? findsOneWidget : findsNothing,
         );
         _expect_decoded_assets(tester);
         expect(tester.takeException(), isNull);

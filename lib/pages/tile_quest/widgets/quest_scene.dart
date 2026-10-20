@@ -43,6 +43,7 @@ class TileQuestScene extends StatefulWidget {
     required this.on_tile,
     required this.on_reserve,
     required this.on_tool,
+    this.show_layout_debug = false,
   });
   final TileQuestState state;
   final TileQuestActionResult? action;
@@ -53,6 +54,9 @@ class TileQuestScene extends StatefulWidget {
   final VoidCallback on_back, on_restart, on_sound;
   final ValueChanged<int> on_tile, on_reserve;
   final ValueChanged<TileQuestTool> on_tool;
+
+  /// 仅用户信息 debug==2 时展示布局调试层，与构建模式无关。
+  final bool show_layout_debug;
   @override
   State<TileQuestScene> createState() => _TileQuestSceneState();
 }
@@ -78,6 +82,9 @@ class _TileQuestSceneState extends State<TileQuestScene>
   bool _entering = false;
   double _entry_started_at = 0;
   List<TileQuestTile> _entry_tiles = const [];
+
+  /// 最近一帧的场景坐标表；调度飞行时长要用到真实航距。
+  QuestSceneLayout? _latest_layout;
   bool get _show_tools => widget.state.level > 1;
 
   /// Only board-wide effects lock input; normal flights still accept rapid taps.
@@ -215,7 +222,7 @@ class _TileQuestSceneState extends State<TileQuestScene>
     _active = motion;
     if (motion.inserts) {
       _insertions = QuestInsertionTimeline(motion.result.before, now)
-        ..add(motion, now);
+        ..add(motion, now, distance: _hop_distance(motion));
       _extend_insertions(now);
     } else {
       motion.start(now);
@@ -231,10 +238,23 @@ class _TileQuestSceneState extends State<TileQuestScene>
     }
   }
 
+  /// 起点到目标槽的航距；拿不到布局时返回 0，调用方按最长航段兜底。
+  double _hop_distance(QuestSceneMotion motion) {
+    final layout = _latest_layout;
+    if (layout == null) return 0;
+    final result = motion.result;
+    final id = motion.incoming_id;
+    final source = layout.location(result.before, id);
+    final slot = result.settlement_tray.indexOf(id);
+    if (slot < 0) return 0;
+    return (source.center - layout.tray_tile(slot).center).distance;
+  }
+
   /// 连续插入共享呈现批次；道具保持在队首，等待所有牌与碎粒完成。
   void _extend_insertions(double now) {
     while (_pending.isNotEmpty && _pending.first.inserts) {
-      _insertions!.add(_pending.removeFirst(), now);
+      final motion = _pending.removeFirst();
+      _insertions!.add(motion, now, distance: _hop_distance(motion));
     }
   }
 
@@ -353,45 +373,12 @@ class _TileQuestSceneState extends State<TileQuestScene>
         widget.state,
         display_features: MediaQuery.displayFeaturesOf(context),
       );
+      _latest_layout = layout;
       final cjk = quest_is_cjk(context);
       return ClipRect(
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Positioned.fromRect(
-              rect: layout.header,
-              child: QuestHeader(
-                compact: layout.compact_header,
-                state: widget.state,
-                sound_enabled: widget.sound_enabled,
-                on_back: widget.on_back,
-                on_restart: widget.on_restart,
-                on_sound: widget.on_sound,
-              ),
-            ),
-            if (layout.tutorial.height > 0)
-              Positioned.fromRect(
-                rect: layout.tutorial,
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      quest_text(
-                        context,
-                        'tutorial',
-                        'Match 3 identical tiles to clear them!',
-                      ),
-                      style: TileQuestStyle.caption(
-                        cjk,
-                        color: TileQuestStyle.cream,
-                      ).copyWith(letterSpacing: 0),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      softWrap: false,
-                    ),
-                  ),
-                ),
-              ),
             ..._board_tiles(layout),
             Positioned.fromRect(
               rect: layout.tray,
@@ -416,6 +403,7 @@ class _TileQuestSceneState extends State<TileQuestScene>
                         const SizedBox(width: 10),
                       Expanded(
                         child: QuestToolButton(
+                          key: ValueKey('tile_quest_tool_${tool.name}'),
                           tool: tool,
                           remaining: widget.state.tools[tool] ?? 0,
                           enabled: _tool_enabled(tool),
@@ -440,7 +428,18 @@ class _TileQuestSceneState extends State<TileQuestScene>
                 on_reserve: widget.on_reserve,
               ),
             ),
-            if (kDebugMode)
+            Positioned.fromRect(
+              rect: layout.header,
+              child: QuestHeader(
+                compact: layout.compact_header,
+                state: widget.state,
+                sound_enabled: widget.sound_enabled,
+                on_back: widget.on_back,
+                on_restart: widget.on_restart,
+                on_sound: widget.on_sound,
+              ),
+            ),
+            if (widget.show_layout_debug)
               Positioned.fill(
                 child: QuestLayoutDebug(state: widget.state, layout: layout),
               ),
@@ -631,6 +630,8 @@ class _TileQuestSceneState extends State<TileQuestScene>
         rendered.add(id);
         final source = layout.location(result.before, id);
         final target = layout.tray_tile(motion.insertion_tray.indexOf(id));
+        // 预飞先锁定航距时长，落入时间线时与落槽共用同一速度。
+        motion.lock_flight((source.center - target.center).distance);
         children.add(
           _tile(
             id,

@@ -156,7 +156,7 @@ void main() {
         );
         expect(fourth.topLeft, junction);
         // 紧贴的直边中段由真实牌体覆盖，透明只来自素材的圆角轮廓。
-        final straight = Offset(first.right - .5, first.center.dy);
+        final straight = Offset(first.right - first.width * .06, first.center.dy);
         for (var channel = 0; channel < 4; channel++) {
           expect(
             red.at(straight)[channel],

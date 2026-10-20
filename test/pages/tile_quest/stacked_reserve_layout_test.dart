@@ -144,6 +144,19 @@ bool _has_return_callback(WidgetTester tester, int id) {
 }
 
 void _counter(String value) {
+  // 角标只显示剩余次数；0 时不渲染任何数字。
+  if (value == '0') {
+    expect(
+      find.descendant(
+        of: _remove,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is Text && widget.data == '0',
+        ),
+      ),
+      findsNothing,
+    );
+    return;
+  }
   expect(
     find.descendant(of: _remove, matching: find.text(value)),
     findsOneWidget,
@@ -226,7 +239,11 @@ void main() {
         ) {
           for (var depth = 0; depth < 2; depth++) {
             final tile = layout.reserve_tile(column, depth: depth);
-            if (!layout.compact_portrait) {
+            if (layout.landscape || layout.folded) {
+              // 横屏双行：备用牌与托盘槽同尺寸。
+              expect(tile.width, closeTo(tray_tile.width, _tolerance));
+              expect(tile.height, closeTo(tray_tile.height, _tolerance));
+            } else if (!layout.compact_portrait) {
               expect(
                 tile.width,
                 closeTo(
@@ -262,9 +279,9 @@ void main() {
     'two Removes count down, preserve six tiles and land in two layers',
     (tester) async {
       final host = (await _mount(tester)).currentState!;
-      _counter('2/2');
+      _counter('2');
       await _remove_batch(tester, host, <int>[0, 1, 2], <int>[0, 1, 2]);
-      _counter('1/2');
+      _counter('1');
       final bottom_positions = <int, Rect>{
         for (final id in <int>[0, 1, 2]) id: _visible_rect(tester, id),
       };
@@ -274,16 +291,16 @@ void main() {
         <int>[3, 4, 5],
         <int>[0, 1, 2, 3, 4, 5],
       );
-      _counter('0/2');
+      _counter('0');
       expect(host.engine.state.reserve, <int>[0, 1, 2, 3, 4, 5]);
       expect(host.engine.state.tools[TileQuestTool.remove], 0);
       for (final id in <int>[0, 1, 2]) {
         _same_rect(_visible_rect(tester, id), bottom_positions[id]!);
       }
-      final remove_ink = tester.widget<InkWell>(
+      final remove_btn = tester.widget<QuestToolButton>(
         find.byKey(const ValueKey('tile_quest_tool_remove')),
       );
-      expect(remove_ink.onTap, isNull);
+      expect(remove_btn.enabled, isFalse);
       expect(tester.takeException(), isNull);
     },
   );

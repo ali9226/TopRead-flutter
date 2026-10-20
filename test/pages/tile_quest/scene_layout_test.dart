@@ -27,12 +27,20 @@ void main() {
     test('tall tray and reserve geometry fits $size', () {
       final layout = QuestSceneLayout(size, state);
       const tolerance = .000001;
+      final two_row = layout.landscape || layout.folded;
+      final cols = two_row
+          ? QuestSceneLayout.slot_count -
+              QuestSceneLayout.landscape_tray_top_count
+          : QuestSceneLayout.slot_count;
       final expected_edge = math.min(
-        QuestSceneLayout.maximum_tray_edge,
-        (layout.tray.width -
-                QuestSceneLayout.tray_padding * 2 -
-                QuestSceneLayout.tray_gap * (QuestSceneLayout.slot_count - 1)) /
-            QuestSceneLayout.slot_count,
+        layout.unit * .9,
+        math.min(
+          QuestSceneLayout.maximum_tray_edge,
+          (layout.tray.width -
+                  QuestSceneLayout.tray_padding * 2 -
+                  QuestSceneLayout.tray_gap * (cols - 1)) /
+              cols,
+        ),
       );
       for (var index = 0; index < QuestSceneLayout.slot_count; index++) {
         final slot = layout.tray_tile(index);
@@ -48,7 +56,11 @@ void main() {
         expect(slot.right, lessThanOrEqualTo(layout.tray.right));
         expect(slot.top, greaterThanOrEqualTo(layout.tray.top));
         expect(slot.bottom, lessThanOrEqualTo(layout.tray.bottom));
-        if (index > 0) {
+        final same_row_as_previous =
+            !two_row ||
+            (index < QuestSceneLayout.landscape_tray_top_count) ==
+                (index - 1 < QuestSceneLayout.landscape_tray_top_count);
+        if (index > 0 && same_row_as_previous) {
           expect(
             slot.left - layout.tray_tile(index - 1).right,
             closeTo(QuestSceneLayout.tray_gap, tolerance),
@@ -80,6 +92,8 @@ void main() {
           lessThanOrEqualTo(
             layout.compact_portrait
                 ? TileQuestStyle.compact_reserve_max_edge
+                : (layout.landscape || layout.folded)
+                ? QuestSceneLayout.maximum_tray_edge
                 : TileQuestStyle.reserve_tile_max_width,
           ),
         );

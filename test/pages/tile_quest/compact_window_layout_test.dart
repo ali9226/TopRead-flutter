@@ -2,6 +2,7 @@
 import 'dart:math' as math;
 import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 import 'package:app/pages/tile_quest/game/engine.dart';
+import 'package:app/pages/tile_quest/style.dart';
 import 'package:app/pages/tile_quest/game/generator.dart';
 import 'package:app/pages/tile_quest/game/geometry.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
@@ -42,7 +43,8 @@ class _Game extends StatefulWidget {
 
 class _GameState extends State<_Game> {
   final engine = TileQuestEngine(
-    TileQuestGenerator.generate(level: 2, seed: 730),
+    // 固定难度：洗牌保形与折痕布局不随全局难度漂移。
+    TileQuestGenerator.generate(level: 2, seed: 730, difficulty: 8),
   );
   final actions = <TileQuestActionResult>[];
   void tap(int id) => setState(() => actions.add(engine.tap_tile(id)));
@@ -386,7 +388,10 @@ void main() {
         expect(rect.left, greaterThan(hinge.right));
       }
       expect(folded.unit, greaterThanOrEqualTo(44));
-      expect(folded.tray_tile(0).width, greaterThanOrEqualTo(44));
+      expect(
+        folded.tray_tile(0).width,
+        greaterThanOrEqualTo(TileQuestStyle.readable_tray_tile_width),
+      );
       for (final tile in game.engine.state.tiles) {
         expect(folded.board_tile(tile).overlaps(hinge), isFalse);
       }
@@ -412,7 +417,10 @@ void main() {
       );
       expect(expanded.landscape, isTrue);
       expect(expanded.unit, greaterThanOrEqualTo(44));
-      expect(expanded.tray_tile(0).width, greaterThanOrEqualTo(44));
+      expect(
+        expanded.tray_tile(0).width,
+        greaterThanOrEqualTo(TileQuestStyle.readable_tray_tile_width),
+      );
       expect(quest_scene_frames(tester)[id]!.rect, expanded.tray_tile(0));
       media.value = media.value.copyWith(
         displayFeatures: const [
@@ -455,6 +463,7 @@ void main() {
                 state: TileQuestGenerator.generate(
                   level: 2,
                   seed: 730,
+                  difficulty: 8,
                 ).copy_with(status: TileQuestStatus.lost),
                 coming_soon: false,
                 busy: false,

@@ -519,19 +519,21 @@ void main() {
     await tester.pump();
     int? first_arrival;
     int? second_arrival;
+    // 航距不同时落槽帧不同：先到的停在槽内，等两枚都到达再收尾。
     for (var frame = 1; frame <= 300; frame++) {
       await tester.pump(_frame);
       if (_at(_rect(tester, 9), first_slot)) first_arrival ??= frame;
       if (_at(_rect(tester, 12), second_slot)) second_arrival ??= frame;
       if (first_arrival != null) _same_rect(_rect(tester, 9), first_slot);
-      if (second_arrival != null) break;
+      if (second_arrival != null) _same_rect(_rect(tester, 12), second_slot);
+      if (first_arrival != null && second_arrival != null) break;
     }
     expect(first_arrival, isNotNull);
     expect(second_arrival, isNotNull);
-    expect(first_arrival, second_arrival);
     expect(
-      second_arrival! * _frame.inMilliseconds,
-      lessThanOrEqualTo(TileQuestStyle.flight_duration.inMilliseconds),
+      math.max(first_arrival!, second_arrival!) * _frame.inMilliseconds,
+      lessThanOrEqualTo(TileQuestStyle.flight_duration_max_ms),
+      reason: 'rapid taps must land within the longest single hop',
     );
     await tester.pumpAndSettle();
     _same_rect(_rect(tester, 9), first_slot);

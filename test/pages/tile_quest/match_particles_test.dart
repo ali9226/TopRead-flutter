@@ -159,16 +159,23 @@ void main() {
       expect(first_frames[id], isNotNull);
       expect(first_frames[id]!.dissolve, 0);
     }
-    await tester.pump(
-      TileQuestStyle.flight_duration +
-          Duration(milliseconds: TileQuestStyle.match_hold_ms.toInt()),
-    );
+    // 飞行时长随航距变化：等消散开始后，用增量校验三张共享同一消散时钟。
+    double? fade_origin;
+    for (var step = 0; step < 80; step++) {
+      final frames = quest_scene_frames(tester);
+      if (matched_ids.every((id) => (frames[id]?.dissolve ?? 0) > 0)) {
+        fade_origin = frames[matched_ids.first]!.dissolve;
+        break;
+      }
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(fade_origin, isNotNull);
     await tester.pump(const Duration(milliseconds: 180));
     final middle_frames = quest_scene_frames(tester);
     for (final id in matched_ids) {
       expect(
-        middle_frames[id]!.dissolve,
-        closeTo(180 / TileQuestStyle.match_fade_ms, .001),
+        middle_frames[id]!.dissolve! - fade_origin!,
+        closeTo(180 / TileQuestStyle.match_fade_ms, .02),
       );
     }
     await tester.pumpAndSettle(const Duration(milliseconds: 16));

@@ -1,6 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
 import 'dart:convert';
-import 'certificate_replay.dart';
 import 'package:app/pages/tile_quest/game/config.dart';
 import 'package:app/pages/tile_quest/game/engine.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
@@ -228,42 +227,43 @@ void main() {
     expect(check.reason, contains('covered'));
   });
 
-  test('Shuffle certifies all six reserve tiles using only exposed tops', () {
+  test('Shuffle keeps six reserve stacks and clears the certificate', () {
     final engine = reserve_board();
     move_two_batches(engine);
     final before = engine.state;
+    final before_types =
+        before.tiles.map((tile) => tile.type).toList()..sort();
     final result = engine.shuffle(seed: 2026);
     expect(result.accepted, isTrue, reason: result.reason);
     expect(engine.state.reserve, before.reserve);
     expect(engine.state.reserve_columns, before.reserve_columns);
-    expect(TileQuestValidator.validate_solution(engine.state).valid, isTrue);
-    for (final id in List<int>.from(engine.state.certified_solution)) {
-      final action = replay_certificate_step(engine, id);
-      expect(action.accepted, isTrue, reason: '$id: ${action.reason}');
-      expect_inventory(engine.state);
-    }
-    expect(engine.state.status, TileQuestStatus.won);
+    expect(engine.state.tray, before.tray);
+    expect(
+      engine.state.tiles.map((tile) => tile.type).toList()..sort(),
+      before_types,
+    );
+    expect(engine.state.certified_solution, isEmpty);
+    expect(engine.state.tools[TileQuestTool.shuffle], 0);
+    expect_inventory(engine.state);
   });
 
-  test(
-    'Shuffle can unlock cyclic reserve dependencies without covered picks',
-    () {
-      // Bottom A B C, top B C A: no type has two immediately exposed reserves.
-      final engine = reserve_board([0, 1, 2, 1, 2, 0, 0, 1, 2]);
-      move_two_batches(engine);
-      final result = engine.shuffle(seed: 99);
-      expect(result.accepted, isTrue, reason: result.reason);
-      expect(TileQuestValidator.validate_solution(engine.state).valid, isTrue);
-      for (final id in List<int>.from(engine.state.certified_solution)) {
-        final action = replay_certificate_step(engine, id);
-        expect(action.accepted, isTrue);
-      }
-      expect(engine.state.status, TileQuestStatus.won);
-      expect_inventory(engine.state);
-    },
-  );
+  test('Shuffle succeeds on cyclic reserve layouts without solvability checks', () {
+    // Bottom A B C, top B C A: 旧实现会在这里拒绝。
+    final engine = reserve_board([0, 1, 2, 1, 2, 0, 0, 1, 2]);
+    move_two_batches(engine);
+    final before_types =
+        engine.state.tiles.map((tile) => tile.type).toList()..sort();
+    final result = engine.shuffle(seed: 99);
+    expect(result.accepted, isTrue, reason: result.reason);
+    expect(
+      engine.state.tiles.map((tile) => tile.type).toList()..sort(),
+      before_types,
+    );
+    expect(engine.state.certified_solution, isEmpty);
+    expect_inventory(engine.state);
+  });
 
-  test('an unsafe six-reserve Shuffle preserves inventory and its charge', () {
+  test('a full six-reserve Shuffle still succeeds and preserves inventory', () {
     final engine = reserve_board([
       for (var copy = 0; copy < 3; copy++)
         ...List.generate(12, (index) => index),
@@ -274,10 +274,16 @@ void main() {
     }
     expect(engine.state.tray.length, 6);
     expect(engine.state.reserve.length, 6);
-    final before = copy_json(engine.export_json());
-    expect(engine.shuffle(seed: 7).accepted, isFalse);
-    expect(engine.export_json(), before);
-    expect(engine.state.tools[TileQuestTool.shuffle], 1);
+    final before_types =
+        engine.state.tiles.map((tile) => tile.type).toList()..sort();
+    expect(engine.shuffle(seed: 7).accepted, isTrue);
+    expect(engine.state.tools[TileQuestTool.shuffle], 0);
+    expect(
+      engine.state.tiles.map((tile) => tile.type).toList()..sort(),
+      before_types,
+    );
+    expect(engine.state.tray.length, 6);
+    expect(engine.state.reserve.length, 6);
     expect_inventory(engine.state);
   });
 }

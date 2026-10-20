@@ -207,6 +207,14 @@ flutter:
     - assets/img/tile_quest/lattice.png
     - assets/img/tile_quest/background.png
     - assets/img/tile_quest/app_icon.png
+    - assets/img/tile_quest/step_back.png
+    - assets/img/tile_quest/sound.png
+    - assets/img/tile_quest/mute.png
+    - assets/img/tile_quest/reset.png
+    - assets/img/tile_quest/logo.png
+    - assets/img/tile_quest/share.png
+    - assets/img/tile_quest/set_up.png
+    - assets/img/tile_quest/closure.png
     - assets/img/tile_quest/icons/
     - assets/img/tile_quest/powerups/
     - assets/img/splash_screen/
