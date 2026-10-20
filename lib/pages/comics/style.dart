@@ -183,6 +183,9 @@ class ComicCardStyle {
   /// 简介字距（拉丁语系）。
   static const double description_letter_spacing_alphabetic = 0.15;
 
+  /// 标签最大展示数量，与首页推荐卡片一致，超出部分截断。
+  static const int max_tag_count = 2;
+
   /// 标签区与简介的间距。
   static const double tag_top_spacing = 8;
 
@@ -272,6 +275,83 @@ class ComicCardStyle {
 
   /// 标签取色：标签序号权重。
   static const int tag_color_index_factor = 3;
+
+  /// 按压时文字区域缩放比例，与首页推荐卡片一致。
+  static const double press_text_scale = 0.96;
+
+  /// 按压缩放动画时长（毫秒）。
+  static const int press_scale_duration_ms = 150;
+
+  /// 按压后指针移动超过该距离则取消缩放，避免列表滚动时误触。
+  static const double press_move_cancel_threshold = 10.0;
+
+  /// 骨架屏流光动画时长。
+  static const Duration skeleton_animation_duration = Duration(
+    milliseconds: 1200,
+  );
+
+  /// 骨架屏每列卡片数，决定骨架屏填充高度。
+  static const int skeleton_row_count = 3;
+
+  /// 骨架屏行间延迟，制造波浪流光。
+  static const double skeleton_row_delay = 0.15;
+
+  /// 骨架屏列间延迟。
+  static const double skeleton_column_delay = 0.08;
+
+  /// 骨架屏标题条圆角。
+  static const double skeleton_title_radius = 4;
+
+  /// 骨架屏标题两行间距。
+  static const double skeleton_title_line_spacing = 4;
+
+  /// 骨架屏标题第二行宽度。
+  static const double skeleton_title_second_line_width = 80;
+
+  /// 骨架屏标题第一行流光延迟。
+  static const double skeleton_title_first_line_delay = 0.05;
+
+  /// 骨架屏标题第二行流光延迟。
+  static const double skeleton_title_second_line_delay = 0.08;
+
+  /// 骨架屏简介条圆角。
+  static const double skeleton_description_radius = 3;
+
+  /// 骨架屏简介两行间距。
+  static const double skeleton_description_line_spacing = 3;
+
+  /// 骨架屏简介第二行宽度。
+  static const double skeleton_description_second_line_width = 100;
+
+  /// 骨架屏简介第一行流光延迟。
+  static const double skeleton_description_first_line_delay = 0.11;
+
+  /// 骨架屏简介第二行流光延迟。
+  static const double skeleton_description_second_line_delay = 0.14;
+
+  /// 骨架屏标签条宽度。
+  static const double skeleton_tag_width = 44;
+
+  /// 骨架屏标签条高度。
+  static const double skeleton_tag_height = 18;
+
+  /// 骨架屏标签起始流光延迟。
+  static const double skeleton_tag_initial_delay = 0.17;
+
+  /// 骨架屏标签间隔流光延迟。
+  static const double skeleton_tag_interval_delay = 0.05;
+
+  /// 骨架屏浅色底色。
+  static const Color skeleton_light_base_color = Color(0xFFF0F1F5);
+
+  /// 骨架屏浅色高亮色。
+  static const Color skeleton_light_highlight_color = Color(0xFFF8F8F8);
+
+  /// 骨架屏深色底色。
+  static const Color skeleton_dark_base_color = Color(0xFF252836);
+
+  /// 骨架屏深色高亮色。
+  static const Color skeleton_dark_highlight_color = Color(0xFF2F3346);
 
   /// 卡片深色背景。
   static const Color card_dark_bg = Color(0xFF171C28);

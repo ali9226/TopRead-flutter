@@ -13,8 +13,9 @@ import 'package:flutter/material.dart';
 ///
 /// 结构：封面（角标 + 渐变信息条）→ 标题 → 简介 → 分类标签。
 /// 标签颜色按漫画 id 稳定取色，日夜主题下均保持可读对比度。
+/// 交互与首页推荐卡片一致：按下时文字区域轻微缩放，封面保持不变。
 /// 设计参数统一由 [ComicCardStyle] 管理。
-class ComicCard extends StatelessWidget {
+class ComicCard extends StatefulWidget {
   /// 漫画数据。
   final ComicItem comic;
 
@@ -22,6 +23,74 @@ class ComicCard extends StatelessWidget {
   final VoidCallback? on_tap;
 
   const ComicCard({super.key, required this.comic, this.on_tap});
+
+  @override
+  State<ComicCard> createState() => _ComicCardState();
+}
+
+class _ComicCardState extends State<ComicCard>
+    with SingleTickerProviderStateMixin {
+  /// 文字区域按压缩放动画控制器。
+  late final AnimationController _press_scale_controller;
+
+  /// 文字区域按压缩放动画：1.0 → [ComicCardStyle.press_text_scale]。
+  late final Animation<double> _press_scale_animation;
+
+  /// 指针按下时的初始位置，用于判断是否滑动以取消缩放。
+  Offset _pointer_start_position = Offset.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _press_scale_controller = AnimationController(
+      vsync: this,
+      duration: const Duration(
+        milliseconds: ComicCardStyle.press_scale_duration_ms,
+      ),
+    );
+    _press_scale_animation =
+        Tween<double>(begin: 1.0, end: ComicCardStyle.press_text_scale)
+            .animate(
+              CurvedAnimation(
+                parent: _press_scale_controller,
+                curve: Curves.easeOutCubic,
+              ),
+            );
+  }
+
+  @override
+  void dispose() {
+    _press_scale_controller.dispose();
+    super.dispose();
+  }
+
+  /// 指针按下：启动文字区域缩放动画。
+  void _on_pointer_down(PointerDownEvent event) {
+    _pointer_start_position = event.position;
+    _press_scale_controller.forward();
+  }
+
+  /// 指针移动：超过阈值时恢复缩放，避免列表滚动过程中卡片仍处于压缩状态。
+  void _on_pointer_move(PointerMoveEvent event) {
+    if (!_press_scale_controller.isAnimating &&
+        _press_scale_controller.value == 0) {
+      return;
+    }
+    final double distance = (event.position - _pointer_start_position).distance;
+    if (distance > ComicCardStyle.press_move_cancel_threshold) {
+      _press_scale_controller.reverse();
+    }
+  }
+
+  /// 指针抬起：回弹恢复文字区域缩放。
+  void _on_pointer_up(PointerUpEvent event) {
+    _press_scale_controller.reverse();
+  }
+
+  /// 指针取消：回弹恢复文字区域缩放。
+  void _on_pointer_cancel(PointerCancelEvent event) {
+    _press_scale_controller.reverse();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,99 +144,131 @@ class ComicCard extends StatelessWidget {
         ? null
         : ComicCardStyle.description_letter_spacing_alphabetic;
 
-    final String display_title = comic.title.trim();
-    final String display_description = comic.description.trim();
-    final List<Map<String, dynamic>> tags = comic.categories;
+    final String display_title = widget.comic.title.trim();
+    final String display_description = widget.comic.description.trim();
+
+    /// 分类标签最多展示 [ComicCardStyle.max_tag_count] 个，与首页推荐卡片一致。
+    final List<Map<String, dynamic>> tags = widget.comic.categories
+        .take(ComicCardStyle.max_tag_count)
+        .toList();
 
     return Semantics(
       button: true,
-      label: comic.author_name.isEmpty
+      label: widget.comic.author_name.isEmpty
           ? display_title
           : tr(
               'comics.card_semantic',
               namedArgs: <String, String>{
                 'title': display_title,
-                'author': comic.author_name,
+                'author': widget.comic.author_name,
               },
             ),
-      child: Material(
-        color: card_bg,
-        borderRadius: BorderRadius.circular(ComicCardStyle.card_radius),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: on_tap ?? () => routerUtil(path: '/comics/detail?id=${comic.id}'),
-          splashFactory: InkRipple.splashFactory,
-          splashColor: ripple_color,
-          highlightColor: highlight_color,
-          radius: 240,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              /// 封面区域：角标 + 底部信息条。
-              _build_cover_area(),
+      child: Listener(
+        onPointerDown: _on_pointer_down,
+        onPointerMove: _on_pointer_move,
+        onPointerUp: _on_pointer_up,
+        onPointerCancel: _on_pointer_cancel,
+        child: Material(
+          color: card_bg,
+          borderRadius: BorderRadius.circular(ComicCardStyle.card_radius),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: widget.on_tap ??
+                () =>
+                    routerUtil(path: '/comics/detail?id=${widget.comic.id}'),
+            splashFactory: InkRipple.splashFactory,
+            splashColor: ripple_color,
+            highlightColor: highlight_color,
+            radius: 240,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                /// 封面区域：角标 + 底部信息条，不参与按压缩放。
+                _build_cover_area(),
 
-              /// 文字区域。
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  ComicCardStyle.content_padding_h,
-                  ComicCardStyle.content_padding_top,
-                  ComicCardStyle.content_padding_h,
-                  ComicCardStyle.content_padding_bottom,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    /// 标题。
-                    Text(
-                      display_title,
-                      maxLines: ComicCardStyle.title_max_lines,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: title_color,
-                        fontSize: title_font_size,
-                        height: title_height,
-                        letterSpacing: title_letter_spacing,
-                        fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                      ),
+                /// 文字区域：按下时轻微缩放，抬起回弹。
+                AnimatedBuilder(
+                  animation: _press_scale_animation,
+                  builder: (BuildContext context, Widget? child) {
+                    return Transform.scale(
+                      scale: _press_scale_animation.value,
+                      alignment: Alignment.topCenter,
+                      child: child,
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      ComicCardStyle.content_padding_h,
+                      ComicCardStyle.content_padding_top,
+                      ComicCardStyle.content_padding_h,
+                      ComicCardStyle.content_padding_bottom,
                     ),
-
-                    /// 简介。
-                    if (display_description.isNotEmpty) ...<Widget>[
-                      SizedBox(height: description_top_spacing),
-                      Text(
-                        display_description,
-                        maxLines: ComicCardStyle.description_max_lines,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: description_color,
-                          fontSize: description_font_size,
-                          height: description_height,
-                          letterSpacing: description_letter_spacing,
-                          fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        /// 标题。
+                        Text(
+                          display_title,
+                          maxLines: ComicCardStyle.title_max_lines,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: title_color,
+                            fontSize: title_font_size,
+                            height: title_height,
+                            letterSpacing: title_letter_spacing,
+                            fontWeight: FontConfig.adjustedWeight(
+                              FontWeight.w500,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
 
-                    /// 分类标签。
-                    if (tags.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: ComicCardStyle.tag_top_spacing),
-                      Wrap(
-                        spacing: ComicCardStyle.tag_spacing,
-                        runSpacing: ComicCardStyle.tag_run_spacing,
-                        children: List<Widget>.generate(tags.length, (int index) {
-                          return _build_tag_item(
-                            label: ComicsStyle.category_name(context, tags[index]),
-                            color: _tag_color(index),
-                            card_bg: card_bg,
-                            is_cjk: is_cjk,
-                          );
-                        }),
-                      ),
-                    ],
-                  ],
+                        /// 简介。
+                        if (display_description.isNotEmpty) ...<Widget>[
+                          SizedBox(height: description_top_spacing),
+                          Text(
+                            display_description,
+                            maxLines: ComicCardStyle.description_max_lines,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: description_color,
+                              fontSize: description_font_size,
+                              height: description_height,
+                              letterSpacing: description_letter_spacing,
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        /// 分类标签。
+                        if (tags.isNotEmpty) ...<Widget>[
+                          const SizedBox(height: ComicCardStyle.tag_top_spacing),
+                          Wrap(
+                            spacing: ComicCardStyle.tag_spacing,
+                            runSpacing: ComicCardStyle.tag_run_spacing,
+                            children: List<Widget>.generate(
+                              tags.length,
+                              (int index) {
+                                return _build_tag_item(
+                                  label: ComicsStyle.category_name(
+                                    context,
+                                    tags[index],
+                                  ),
+                                  color: _tag_color(index),
+                                  card_bg: card_bg,
+                                  is_cjk: is_cjk,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -190,8 +291,8 @@ class ComicCard extends StatelessWidget {
               fit: StackFit.expand,
               children: <Widget>[
                 ComicImage(
-                  url: comic.cover_url,
-                  semantic_label: comic.title,
+                  url: widget.comic.cover_url,
+                  semantic_label: widget.comic.title,
                 ),
 
                 /// 底部渐变 + 章节信息。
@@ -215,7 +316,8 @@ class ComicCard extends StatelessWidget {
                             alpha: ComicCardStyle.cover_gradient_top_opacity,
                           ),
                           Colors.black.withValues(
-                            alpha: ComicCardStyle.cover_gradient_bottom_opacity,
+                            alpha:
+                                ComicCardStyle.cover_gradient_bottom_opacity,
                           ),
                         ],
                       ),
@@ -223,7 +325,9 @@ class ComicCard extends StatelessWidget {
                     child: Text(
                       tr(
                         'comics.chapter_count',
-                        namedArgs: <String, String>{'count': '${comic.chapter_count}'},
+                        namedArgs: <String, String>{
+                          'count': '${widget.comic.chapter_count}',
+                        },
                       ),
                       style: TextStyle(
                         color: Colors.white,
@@ -256,13 +360,15 @@ class ComicCard extends StatelessWidget {
               color: Colors.black.withValues(
                 alpha: ComicCardStyle.cover_badge_background_opacity,
               ),
-              borderRadius: BorderRadius.circular(ComicCardStyle.cover_badge_radius),
+              borderRadius: BorderRadius.circular(
+                ComicCardStyle.cover_badge_radius,
+              ),
             ),
             child: Padding(
               padding: ComicCardStyle.cover_badge_padding,
               child: Text(
                 tr(
-                  comic.completion_status == 'completed'
+                  widget.comic.completion_status == 'completed'
                       ? 'comics.completed'
                       : 'comics.ongoing',
                 ),
@@ -331,7 +437,7 @@ class ComicCard extends StatelessWidget {
   Color _tag_color(int index) {
     if (ColorConstants.tagColorList.isEmpty) return ColorConstants.themeColor;
     final int safe_index =
-        (comic.id * ComicCardStyle.tag_color_id_factor +
+        (widget.comic.id * ComicCardStyle.tag_color_id_factor +
             index * ComicCardStyle.tag_color_index_factor) %
         ColorConstants.tagColorList.length;
     return ColorConstants.tagColorList[safe_index];

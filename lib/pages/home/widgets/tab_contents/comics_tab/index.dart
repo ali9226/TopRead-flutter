@@ -15,6 +15,7 @@ import 'package:app/pages/comics/logic.dart';
 import 'package:app/pages/comics/style.dart';
 import 'package:app/pages/comics/widgets/comics_grid.dart';
 import 'package:app/pages/comics/widgets/empty_state.dart';
+import 'package:app/pages/comics/widgets/grid_skeleton.dart';
 import 'package:app/pages/home/widgets/tab_contents/comics_tab/logic.dart';
 import 'package:app/pages/home/widgets/tab_contents/comics_tab/style.dart';
 
@@ -167,16 +168,34 @@ class _ComicsTabContentState extends State<ComicsTabContent>
     );
   }
 
-  /// 列表主体：空态 / 加载失败 / 漫画瀑布流。
+  /// 列表主体：首屏骨架 / 空态 / 加载失败 / 漫画瀑布流。
   ///
   /// [context] 用于读取主题。
   /// [is_dark] 当前是否夜间模式，传递给底部加载组件。
   Widget _build_body(BuildContext context, bool is_dark) {
+    // 首屏加载中展示流光骨架屏，与真实卡片结构一致，加载完成零跳动。
+    if (_logic.items.isEmpty && _logic.loading) {
+      return CustomScrollView(
+        controller: _scroll_controller,
+        physics: ComicsTabStyle.list_scroll_physics,
+        slivers: <Widget>[
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: ComicsStyle.page_padding,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: ComicsGridSkeleton(is_dark: is_dark),
+            ),
+          ),
+        ],
+      );
+    }
+
     // 仅在列表为空时展示空态；下拉刷新和分类切换保留已有内容，避免整屏闪烁。
     if (_logic.items.isEmpty) {
       return CustomScrollView(
         controller: _scroll_controller,
-        physics: const AlwaysScrollableScrollPhysics(),
+        physics: ComicsTabStyle.list_scroll_physics,
         slivers: <Widget>[
           SliverToBoxAdapter(
             child: ComicsEmptyState(
@@ -192,7 +211,7 @@ class _ComicsTabContentState extends State<ComicsTabContent>
 
     return CustomScrollView(
       controller: _scroll_controller,
-      physics: const AlwaysScrollableScrollPhysics(),
+      physics: ComicsTabStyle.list_scroll_physics,
       slivers: <Widget>[
         /// 漫画瀑布流网格。
         SliverPadding(

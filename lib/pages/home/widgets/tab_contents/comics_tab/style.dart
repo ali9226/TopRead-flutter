@@ -2,6 +2,7 @@
 
 import 'package:app/components/fixed_bottom_navigation/style.dart'
     as fixed_nav_style;
+import 'package:flutter/material.dart';
 
 /// 首页漫画 Tab 布局参数。
 ///
@@ -14,4 +15,9 @@ class ComicsTabStyle {
 
   /// 滚动距离底部多少像素时自动触发加载更多。
   static const double load_more_trigger_distance = 600;
+
+  /// 列表滚动物理：始终可滚动以保证下拉刷新，同时启用橡皮筋回弹，
+  /// 与首页瀑布流手感保持一致（含 Android）。
+  static const ScrollPhysics list_scroll_physics =
+      AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics());
 }
