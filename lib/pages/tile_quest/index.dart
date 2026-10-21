@@ -128,14 +128,18 @@ class _TileQuestPageState extends State<TileQuestPage> {
       confirmed = await showDialog<bool>(
         context: context,
         anchorPoint: QuestPlayfield.anchor_for(MediaQuery.of(context)),
-        barrierColor: const Color(0xFF07152D).withValues(alpha: .75),
+        barrierColor: TileQuestStyle.modal_barrier.withValues(alpha: .75),
         builder: (dialog_context) => Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(24),
+          insetPadding: const EdgeInsets.all(TileQuestStyle.panel_inset),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 350),
-            padding: const EdgeInsets.all(24),
-            decoration: TileQuestStyle.glass(radius: 26),
+            constraints: const BoxConstraints(
+              maxWidth: TileQuestStyle.panel_max_width,
+            ),
+            padding: const EdgeInsets.all(TileQuestStyle.panel_inset),
+            decoration: TileQuestStyle.glass(
+              radius: TileQuestStyle.panel_radius,
+            ),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -153,7 +157,11 @@ class _TileQuestPageState extends State<TileQuestPage> {
                       'Restart from level 1?',
                     ),
                     textAlign: TextAlign.center,
-                    style: TileQuestStyle.title(cjk).copyWith(fontSize: 22),
+                    style: TileQuestStyle.title(cjk).copyWith(
+                      fontSize: cjk
+                          ? TileQuestStyle.restart_title_size_cjk
+                          : TileQuestStyle.restart_title_size_alphabetic,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -385,7 +393,10 @@ class _TileQuestPageState extends State<TileQuestPage> {
                                     right: 16,
                                     top: 108,
                                     child: Material(
-                                      color: const Color(0xFF4A3645),
+                                      color:
+                                          TileQuestStyle.save_error_background(
+                                            is_dark,
+                                          ),
                                       borderRadius: BorderRadius.circular(12),
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(

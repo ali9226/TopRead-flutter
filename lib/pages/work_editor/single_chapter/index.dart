@@ -2,6 +2,7 @@
 
 import 'package:app/components/window_content_layout/index.dart';
 import 'dart:convert';
+import 'package:app/config/font_config.dart';
 import 'published_chapter_editor.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/util/language_util/index.dart';
@@ -399,10 +400,9 @@ class _SingleChapterPageState extends State<SingleChapterPage> {
                           ? 'creator_workspace.preview'
                           : 'creator_workspace.edit_chapter',
                     ),
-                    style: WorkspaceStyle.body(
-                      is_dark,
-                      is_cjk,
-                    ).copyWith(fontWeight: FontWeight.w500),
+                    style: WorkspaceStyle.body(is_dark, is_cjk).copyWith(
+                      fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                    ),
                   ),
                   actions: [
                     if (!readOnly &&

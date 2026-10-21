@@ -6,6 +6,7 @@ import 'package:app/pages/read/logic.dart';
 import 'package:app/stores/project_config_store.dart';
 import './style.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/util/language_util/index.dart';
 
 /// 阅读页顶部统计区块组件。
 ///
@@ -17,11 +18,15 @@ class ReadStatSection extends StatelessWidget {
 
   /// 详情数据。
   final ReadDetail detail;
+  final bool hero;
+  final VoidCallback? on_rating_tap;
 
   const ReadStatSection({
     super.key,
     required this.is_dark,
     required this.detail,
+    this.hero = false,
+    this.on_rating_tap,
   });
 
   @override
@@ -35,6 +40,9 @@ class ReadStatSection extends StatelessWidget {
     final bool show_review =
         !Get.find<ProjectConfigStore>().current.is_apple_review_mode;
 
+    if (hero) {
+      return _build_hero_stats(context, show_review: show_review);
+    }
     return IntrinsicHeight(
       child: Row(
         children: <Widget>[
@@ -82,6 +90,53 @@ class ReadStatSection extends StatelessWidget {
       ),
     );
   }
+
+  /// TODO 海报统计保留原有文案与审核开关，只改变对齐和颜色；评分回调由阅读页注入。
+  Widget _build_hero_stats(BuildContext context, {required bool show_review}) =>
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (show_review) ...[
+            Expanded(
+              child: _HeroStatItem(
+                major_text: detail.score_major_text,
+                minor_text: detail.score_minor_text,
+                subtitle_text: detail.review_count_text,
+                icon: Icons.star_rounded,
+                on_tap: on_rating_tap,
+              ),
+            ),
+            _hero_divider(),
+          ],
+          Expanded(
+            child: _HeroStatItem(
+              major_text: detail.reading_major_text,
+              minor_text: detail.reading_minor_text,
+              subtitle_text: detail.reading_subtitle_text,
+              icon: Icons.local_fire_department_rounded,
+            ),
+          ),
+          _hero_divider(),
+          Expanded(
+            child: _HeroStatItem(
+              major_text: detail.word_count_major_text,
+              minor_text: detail.word_count_minor_text,
+              subtitle_text: detail.word_count_subtitle_text,
+              icon: Icons.notes_rounded,
+            ),
+          ),
+        ],
+      );
+
+  Widget _hero_divider() => Container(
+    width: StatStyle.hero_divider_width,
+    height: StatStyle.hero_divider_height,
+    margin: const EdgeInsets.symmetric(
+      horizontal: StatStyle.hero_gap,
+      vertical: StatStyle.hero_gap,
+    ),
+    color: Colors.white.withValues(alpha: StatStyle.hero_divider_alpha),
+  );
 }
 
 /// 阅读页顶部统计单项组件。
@@ -189,6 +244,75 @@ class _ReaderStatItem extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// TODO 海报单项数字在窄列中等比缩放，保留真实单位和完整数据，不让数值挤出封面区域。
+class _HeroStatItem extends StatelessWidget {
+  const _HeroStatItem({
+    required this.major_text,
+    required this.minor_text,
+    required this.subtitle_text,
+    required this.icon,
+    this.on_tap,
+  });
+  final String major_text;
+  final String minor_text;
+  final String subtitle_text;
+  final IconData icon;
+  final VoidCallback? on_tap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cjk = LanguageUtil.is_cjk_language(
+      Localizations.localeOf(context).languageCode,
+    );
+    return InkWell(
+      key: on_tap == null ? null : const ValueKey('novel_hero_rating'),
+      onTap: on_tap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  color: ColorConstants.themeColor,
+                  size: StatStyle.hero_icon_size,
+                ),
+                const SizedBox(width: StatStyle.hero_icon_gap),
+                Text(
+                  '$major_text$minor_text',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: cjk
+                        ? StatStyle.hero_value_size_cjk
+                        : StatStyle.hero_value_size_alphabetic,
+                    fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: StatStyle.hero_label_gap),
+          Text(
+            subtitle_text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: StatStyle.hero_label_alpha),
+              fontSize: cjk
+                  ? StatStyle.hero_label_size_cjk
+                  : StatStyle.hero_label_size_alphabetic,
+              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

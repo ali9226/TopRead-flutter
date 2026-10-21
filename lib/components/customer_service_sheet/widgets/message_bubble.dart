@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:app/config/font_config.dart';
 import '../style.dart';
 
 /// 聊天消息气泡组件。

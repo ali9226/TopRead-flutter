@@ -1,6 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'package:app/models/novel_info.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/util/device/save_body_font_size.dart';
 import 'package:get/get.dart';

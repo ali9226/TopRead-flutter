@@ -2,6 +2,7 @@ import 'package:app/components/window_content_layout/index.dart';
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/config/color_config.dart';
+import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:app/util/language_util/index.dart';
@@ -42,7 +43,7 @@ class StepUtils {
     return TextStyle(
       color: AuthorStyle.primary_text(is_dark),
       fontSize: 15,
-      fontWeight: FontWeight.w400,
+      fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
     );
   }
 

@@ -3,7 +3,7 @@
 /// A single switch controls every challenge after the introductory level.
 class TileQuestConfig {
   static const int level1Difficulty = 1;
-  static const int gameDifficulty = 9;
+  static const int gameDifficulty = 10;
   static const int tray_capacity = 7;
 
   /// 从第五档难度起，静态容量门槛确保必须实际使用道具。

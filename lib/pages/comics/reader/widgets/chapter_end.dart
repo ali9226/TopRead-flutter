@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import 'package:app/config/color_config.dart';
+import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/comics/reader/style.dart';
 import 'package:app/pages/comics/style.dart';
 
@@ -65,7 +66,7 @@ class ComicReaderChapterEnd extends StatelessWidget {
             child: Text(
               tr('comics.chapter_finished'),
               style: TextStyle(
-                color: Colors.white,
+                color: ComicReaderStyle.foreground(context),
                 fontSize: ComicReaderStyle.pick_font_size(
                   is_cjk: is_cjk,
                   cjk: ComicReaderStyle.end_title_font_size_cjk,
@@ -86,7 +87,7 @@ class ComicReaderChapterEnd extends StatelessWidget {
                   ? tr('comics.next_chapter')
                   : tr('comics.end_list'),
               style: TextStyle(
-                color: ComicReaderStyle.muted_text,
+                color: ComicReaderStyle.secondary_foreground(context),
                 fontSize: ComicReaderStyle.end_subtitle_font_size,
                 fontWeight: ComicReaderStyle.weight_regular,
               ),
@@ -163,18 +164,27 @@ class ComicReaderChapterEnd extends StatelessWidget {
                   constraints: const BoxConstraints(
                     minHeight: ComicReaderStyle.end_secondary_height,
                   ),
-                  child: TextButton(
+                  child: TextButton.icon(
+                    icon: SvgIcon(
+                      name: 'customer_service',
+                      width: ComicReaderStyle.nav_icon_size,
+                      height: ComicReaderStyle.nav_icon_size,
+                      color: ComicReaderStyle.secondary_foreground(context),
+                      animateColor: false,
+                    ),
                     onPressed: on_comments,
                     style: TextButton.styleFrom(
-                      foregroundColor: ComicReaderStyle.muted_text,
+                      foregroundColor: ComicReaderStyle.secondary_foreground(
+                        context,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(
                           ComicReaderStyle.end_button_radius,
                         ),
                       ),
                     ),
-                    child: Text(
-                      tr('comics.chapter_comments'),
+                    label: Text(
+                      tr('comics.comments_tab'),
                       style: TextStyle(
                         fontSize: ComicReaderStyle.pick_font_size(
                           is_cjk: is_cjk,

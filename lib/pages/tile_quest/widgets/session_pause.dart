@@ -18,15 +18,19 @@ class QuestSessionPause extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ColoredBox(
-    color: const Color(0xE807152D),
+    color: TileQuestStyle.session_scrim,
     child: QuestPlayfieldOverlay(
       child: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(TileQuestStyle.panel_inset),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 330),
-            padding: const EdgeInsets.all(24),
-            decoration: TileQuestStyle.glass(radius: 26),
+            constraints: const BoxConstraints(
+              maxWidth: TileQuestStyle.session_panel_max_width,
+            ),
+            padding: const EdgeInsets.all(TileQuestStyle.panel_inset),
+            decoration: TileQuestStyle.glass(
+              radius: TileQuestStyle.panel_radius,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

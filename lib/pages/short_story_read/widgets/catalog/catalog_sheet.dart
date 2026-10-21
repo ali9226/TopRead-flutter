@@ -101,8 +101,6 @@ class _CatalogSheetState extends State<CatalogSheet> {
   /// 已构建目录项的布局锚点。
   final Map<int, GlobalKey> _item_keys = <int, GlobalKey>{};
 
-
-
   /// 是否已自动滚动到当前阅读位置（仅首次数据加载时触发一次）。
   bool _has_scrolled_to_current = false;
 
@@ -153,7 +151,7 @@ class _CatalogSheetState extends State<CatalogSheet> {
         final BuildContext? current_context = _item_key_for(
           widget.current_story_id,
         ).currentContext;
-        if (current_context != null) {
+        if (current_context != null && current_context.mounted) {
           await Scrollable.ensureVisible(
             current_context,
             alignment: ShortStoryReadStyle.catalog_current_item_alignment,

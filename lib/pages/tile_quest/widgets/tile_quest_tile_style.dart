@@ -83,6 +83,27 @@ class TileQuestTileStyle {
   /// 辅助高光强度。
   static const Color highlight_aux = Color(0x59FFFFFF);
 
+  /// 向量牌面与离屏图集共用相同的边缘阴影和高光渐变。
+  static const Color transparent_white = Color(0x00FFFFFF);
+  static const List<Color> wall_shade_colors = [
+    Color(0x00000000),
+    Color(0x2E000000),
+  ];
+  static const List<Color> highlight_tail_colors = [
+    Color(0x28FFFFFF),
+    Color(0x0CFFFFFF),
+    transparent_white,
+  ];
+  static const List<Color> highlight_core_colors = [
+    highlight_main,
+    Color(0x50FFFFFF),
+    transparent_white,
+  ];
+  static const List<Color> highlight_aux_colors = [
+    highlight_aux,
+    transparent_white,
+  ];
+
   /// 主高光中心相对牌体的位置。
   static const Offset highlight_center = Offset(0.26, 0.20);
 

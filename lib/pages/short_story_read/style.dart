@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:app/config/color_config.dart';
 import 'package:app/config/layout_config.dart';
 
 /// 短篇小说阅读页面样式常量。
@@ -342,12 +341,10 @@ class ShortStoryReadStyle {
   static const Color decoration_light_color = Color(0x0A000000);
 
   /// 目录弹窗背景色（日间模式，与首页背景色一致）。
-  static Color get catalog_sheet_light_bg =>
-      ColorConstants.sheetBackground(false);
+  static const Color catalog_sheet_light_bg = Color(0xFFF6F7FB);
 
   /// 目录弹窗背景色（夜间模式，与首页背景色一致）。
-  static Color get catalog_sheet_dark_bg =>
-      ColorConstants.sheetBackground(true);
+  static const Color catalog_sheet_dark_bg = Color(0xFF12121C);
 
   /// 点赞激活颜色。
   static const Color like_active_color = Color(0xFFFF6B6B);

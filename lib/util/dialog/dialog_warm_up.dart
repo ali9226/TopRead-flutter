@@ -19,6 +19,10 @@ class UserInfoDialogWarmUp {
     _hasStarted = true;
 
     await PopUpInputWarmUp.warmUp(context: context);
+    if (!context.mounted) {
+      _hasStarted = false;
+      return;
+    }
     await ShowMessageWarmUp.warmUp(context: context);
   }
 }

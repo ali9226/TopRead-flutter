@@ -2147,6 +2147,34 @@ class _ReadPageState extends State<ReadPage>
 
   // ==================== UI 构建 ====================
 
+  /// 简介头图与正文工具栏共用原来的小说分享入口。
+  void _show_novel_share(ReadDetail detail, bool is_dark) {
+    showShareSheet(
+      context: context,
+      novel_id: widget.story_id,
+      novel_title: detail.title,
+      novel_author: detail.author_name,
+      novel_cover_url: detail.cover_url,
+      novel_intro: detail.intro_text,
+      is_dark: is_dark,
+    );
+  }
+
+  /// 头图和阅读工具栏共用登录检查与收藏操作，避免维护两套收藏状态。
+  Future<void> _toggle_novel_favorite() async {
+    final is_logged_in = await showLoginRequiredDialog(
+      title: easy.tr('short_story_read.login_required'),
+    );
+    if (!is_logged_in || !mounted) return;
+    final is_favorited = await logic.toggle_favorite();
+    if (!mounted || is_favorited == null) return;
+    showBottomTip(
+      easy.tr(
+        is_favorited ? 'favorite.add_success' : 'favorite.remove_success',
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!logic.has_valid_story_id) {
@@ -2226,6 +2254,17 @@ class _ReadPageState extends State<ReadPage>
                             status_bar_height: status_bar_height,
                             is_dark: is_dark,
                             detail: detail,
+                            on_read: _scroll_to_reading_section,
+                            on_favorite: _toggle_novel_favorite,
+                            favorited: logic.is_favorited.value,
+                            favorite_loading: logic.is_favorite_loading.value,
+                            on_back: () => AppRouter.back(),
+                            on_share:
+                                Get.find<ProjectConfigStore>()
+                                    .current
+                                    .is_share_enabled
+                                ? () => _show_novel_share(detail, is_dark)
+                                : null,
                             reading_items: reading_items,
                             reading_section_key: reading_section_key,
                             on_reading_tap_down: _handle_reading_tap_down,
@@ -2259,8 +2298,14 @@ class _ReadPageState extends State<ReadPage>
                   ],
                 ),
               ),
-              // 顶部渐变遮罩：提供顶部状态栏区域的视觉过渡。
-              PageTopGradientOverlay(background_color: background_color),
+              // 封面头图使用自己的深色渐变；进入正文后才启用原来的状态栏遮罩。
+              ValueListenableBuilder<bool>(
+                valueListenable: _has_started_reading_notifier,
+                builder: (context, has_started, _) =>
+                    has_started || !logic.should_show_introduction
+                    ? PageTopGradientOverlay(background_color: background_color)
+                    : const SizedBox.shrink(),
+              ),
               WindowContentLayout(
                 child: Stack(
                   fit: StackFit.expand,
@@ -2345,32 +2390,8 @@ class _ReadPageState extends State<ReadPage>
                 is_dark: is_dark,
                 show: logic.show_navigation.value,
                 on_back: () => AppRouter.back(),
-                on_favorite_tap: () async {
-                  final bool is_logged_in = await showLoginRequiredDialog(
-                    title: easy.tr('short_story_read.login_required'),
-                  );
-                  if (!is_logged_in) return;
-                  final bool? is_favorited = await logic.toggle_favorite();
-                  if (!mounted || is_favorited == null) return;
-                  showBottomTip(
-                    easy.tr(
-                      is_favorited
-                          ? 'favorite.add_success'
-                          : 'favorite.remove_success',
-                    ),
-                  );
-                },
-                on_share: () {
-                  showShareSheet(
-                    context: context,
-                    novel_id: widget.story_id,
-                    novel_title: detail.title,
-                    novel_author: detail.author_name,
-                    novel_cover_url: detail.cover_url,
-                    novel_intro: detail.intro_text,
-                    is_dark: is_dark,
-                  );
-                },
+                on_favorite_tap: _toggle_novel_favorite,
+                on_share: () => _show_novel_share(detail, is_dark),
                 is_favorited: logic.is_favorited.value,
                 is_favorite_loading: logic.is_favorite_loading.value,
               ),

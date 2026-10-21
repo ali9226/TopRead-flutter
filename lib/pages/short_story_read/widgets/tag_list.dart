@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:app/config/color_config.dart';
-import 'package:app/pages/short_story_read/style.dart';
+import 'package:app/components/content_category_tag/index.dart';
 
 /// 标签列表组件。
 ///
@@ -38,35 +37,20 @@ class TagList extends StatelessWidget {
     }
 
     return Wrap(
-      spacing: ShortStoryReadStyle.tag_spacing,
-      runSpacing: ShortStoryReadStyle.tag_spacing,
-      children: List<Widget>.generate(tags.length, (int index) {
-        /// 从 tagColorList 取色，使用 story_id 和 index 生成固定的颜色索引。
-        final Color tag_color = ColorConstants.tagColorList[
-            (story_id * 7 + index * 3) % ColorConstants.tagColorList.length];
-
-        /// 标签背景色（使用 12% 透明度）。
-        final Color tag_bg = tag_color.withValues(alpha: 0.12);
-
-        return Container(
-          padding: EdgeInsets.symmetric(
-            /// CJK 语系水平间距较小，非 CJK 语系稍宽以适配较长单词。
-            horizontal: is_cjk ? 6 : 8,
-            vertical: ShortStoryReadStyle.tag_vertical_padding,
+      spacing: ContentCategoryTagStyle.spacing,
+      runSpacing: ContentCategoryTagStyle.spacing,
+      children: List<Widget>.generate(
+        tags.length,
+        (index) => ContentCategoryTag(
+          label: tags[index],
+          color: ContentCategoryTagStyle.color_for(
+            content_id: story_id,
+            index: index,
           ),
-          decoration: BoxDecoration(
-            color: tag_bg,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            tags[index],
-            style: TextStyle(
-              fontSize: ShortStoryReadStyle.tag_font_size,
-              color: tag_color,
-            ),
-          ),
-        );
-      }),
+          is_dark: is_dark,
+          is_cjk: is_cjk,
+        ),
+      ),
     );
   }
 }

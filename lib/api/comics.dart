@@ -43,6 +43,15 @@ Future<ComicDetail> comics_detail(int comic_id, {String? language}) async =>
       }),
     );
 
+/// 查询相似漫画推荐（按共享分类匹配）。
+Future<List<ComicItem>> comics_similar(int comic_id, {int limit = 10}) async {
+  final data = await comics_request('similar', <String, dynamic>{
+    'comic_id': comic_id,
+    'limit': limit,
+  });
+  return comics_list(data['list']).map(ComicItem.from_json).toList();
+}
+
 Future<ComicReading> comics_read(
   int chapter_id, {
   String? authorization_token,

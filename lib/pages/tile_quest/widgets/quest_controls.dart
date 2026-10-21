@@ -195,7 +195,7 @@ class _QuestHeaderState extends State<QuestHeader> {
                 key: const ValueKey('tile_quest_share'),
                 asset: QuestSceneAssets.share,
                 icon: Icons.share_rounded,
-                label: 'Share',
+                label: quest_text(context, 'share', 'Share'),
                 on_tap: () {
                   // 分享点击暂不处理。
                 },
@@ -249,7 +249,9 @@ class _QuestHeaderState extends State<QuestHeader> {
                 icon: _expanded
                     ? Icons.close_rounded
                     : Icons.settings_rounded,
-                label: _expanded ? 'Close' : 'Settings',
+                label: _expanded
+                    ? quest_text(context, 'close', 'Close')
+                    : quest_text(context, 'settings', 'Settings'),
                 on_tap: () => setState(() => _expanded = !_expanded),
               ),
             ],
@@ -608,19 +610,25 @@ class QuestPrimaryButton extends StatelessWidget {
     color: Colors.transparent,
     child: InkWell(
       onTap: on_tap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(TileQuestStyle.primary_button_radius),
       child: Ink(
-        height: 48,
+        height: TileQuestStyle.primary_button_height,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: primary
-                ? [const Color(0xFFFFE6A0), const Color(0xFFF4BC54)]
-                : [const Color(0xFF344F78), const Color(0xFF263E64)],
+                ? TileQuestStyle.primary_button_colors
+                : TileQuestStyle.secondary_button_colors,
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: .25)),
+          borderRadius: BorderRadius.circular(
+            TileQuestStyle.primary_button_radius,
+          ),
+          border: Border.all(
+            color: Colors.white.withValues(
+              alpha: TileQuestStyle.primary_button_border_opacity,
+            ),
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -628,10 +636,10 @@ class QuestPrimaryButton extends StatelessWidget {
             if (icon != null) ...[
               Icon(
                 icon,
-                size: 19,
+                size: TileQuestStyle.primary_button_icon_size,
                 color: primary ? TileQuestStyle.ink : TileQuestStyle.cream,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: TileQuestStyle.primary_button_icon_gap),
             ],
             Flexible(
               child: FittedBox(

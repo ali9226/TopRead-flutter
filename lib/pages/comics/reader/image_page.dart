@@ -137,8 +137,11 @@ class _ComicReaderImageState extends State<ComicReaderImage> {
               fit: StackFit.expand,
               children: <Widget>[
                 if (!_loaded)
-                  const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                  Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: ColorConstants.themeColor,
+                    ),
                   ),
                 if (_provider != null)
                   Image(

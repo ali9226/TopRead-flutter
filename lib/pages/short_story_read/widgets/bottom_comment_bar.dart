@@ -1,10 +1,12 @@
+import 'package:app/components/reader_bottom_action/index.dart';
+import 'package:app/components/reader_bottom_action/style.dart';
+import 'package:app/components/reader_action_icon/index.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'dart:math' as math;
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/font_config.dart';
 
 import 'package:app/config/color_config.dart';
@@ -119,7 +121,7 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
   @override
   Widget build(BuildContext context) {
     /// 底部安全区域高度。
-    final double bottom_padding = MediaQuery.viewPaddingOf(context).bottom;
+    final double bottom_padding = ReaderBottomActionStyle.safe_bottom(context);
 
     /// 背景色。
     final Color bg_color = widget.is_dark
@@ -127,9 +129,7 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
         : ShortStoryReadStyle.bottom_bar_light_bg;
 
     /// 图标/文字颜色。
-    final Color icon_color = widget.is_dark
-        ? ShortStoryReadStyle.secondary_dark_color
-        : ShortStoryReadStyle.secondary_light_color;
+    final Color icon_color = ReaderBottomActionStyle.foreground(widget.is_dark);
 
     /// 分割线颜色。
     final Color divider_color = widget.is_dark
@@ -152,13 +152,13 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
 
             /// 四个操作图标。
             SizedBox(
-              height: ShortStoryReadStyle.bottom_bar_height,
+              height: ReaderBottomActionStyle.row_height(context),
               child: Row(
                 children: <Widget>[
                   /// 1. 目录。
                   Expanded(
                     child: _buildActionItem(
-                      icon: 'menu',
+                      icon: 'qr_code',
                       label: tr('short_story_read.catalog'),
                       icon_color: icon_color,
                       onTap: widget.on_catalog_tap,
@@ -181,11 +181,12 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
                         Get.find<ProjectConfigStore>()
                             .current
                             .is_comment_enabled;
-                    if (!is_comment_enabled) return const SizedBox.shrink();
+                    if (!is_comment_enabled)
+                      return const Expanded(child: SizedBox.shrink());
 
                     return Expanded(
                       child: _buildActionItem(
-                        icon: 'message',
+                        icon: 'customer_service',
                         label: NumberFormatUtil.format_count(
                           widget.comment_count,
                         ),
@@ -588,22 +589,11 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
     required Color icon_color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          SvgIcon(name: icon, width: 22, height: 22, color: icon_color),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: icon_color),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
+    return ReaderBottomAction(
+      icon_name: icon,
+      label: label,
+      color: icon_color,
+      on_pressed: onTap,
     );
   }
 
@@ -618,33 +608,22 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
     /// 当前显示的颜色（已点赞时使用红色）。
     final Color current_color = widget.is_liked ? active_color : icon_color;
 
-    return GestureDetector(
-      onTap: widget.is_like_loading ? null : widget.on_like_tap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          TweenAnimationBuilder<double>(
-            duration: const Duration(milliseconds: 560),
-            curve: Curves.elasticOut,
-            tween: Tween<double>(begin: 0.6, end: widget.is_liked ? 1.0 : 1.0),
-            builder: (context, scale, child) {
-              return Transform.scale(scale: scale, child: child);
-            },
-            key: ValueKey(widget.is_liked),
-            child: SvgIcon(
-              name: widget.is_liked ? 'love_02' : 'love',
-              width: 22,
-              height: 22,
-              color: current_color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            NumberFormatUtil.format_count(widget.like_count),
-            style: TextStyle(fontSize: 11, color: current_color),
-          ),
-        ],
+    return ReaderBottomAction(
+      label: NumberFormatUtil.format_count(widget.like_count),
+      color: current_color,
+      on_pressed: widget.is_like_loading ? null : widget.on_like_tap,
+      icon_widget: TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 560),
+        curve: Curves.elasticOut,
+        tween: Tween<double>(begin: 0.6, end: 1),
+        key: ValueKey(widget.is_liked),
+        builder: (_, scale, child) =>
+            Transform.scale(scale: scale, child: child),
+        child: ReaderActionIcon(
+          name: widget.is_liked ? 'love_02' : 'love',
+          size: ReaderBottomActionStyle.icon_size,
+          color: current_color,
+        ),
       ),
     );
   }

@@ -48,7 +48,8 @@ Future<void> showUpgradeDialog({
   Future<void> Function()? onLeftPressed,
 }) async {
   final DeviceInfo deviceInfo = Get.find<DeviceInfo>();
-  final BottomNavigationInfo bottomNavigationInfo = Get.find<BottomNavigationInfo>();
+  final BottomNavigationInfo bottomNavigationInfo =
+      Get.find<BottomNavigationInfo>();
   final bool isDark = deviceInfo.theme.value == ThemeMode.dark;
   final NavigatorState? rootNavigator = AppRouter.navigatorState();
   if (rootNavigator == null) return;
@@ -87,11 +88,9 @@ Future<void> showUpgradeDialog({
 
       return StatefulBuilder(
         builder: (context, setState) {
-          final Color textColor =
-              isDark ? Colors.white : const Color(0xFF222222);
-          final Color subColor = isDark
-              ? Colors.white.withValues(alpha: 0.6)
-              : const Color(0xFF9CA3AF);
+          final Color textColor = isDark
+              ? Colors.white
+              : const Color(0xFF222222);
 
           return SafeArea(
             child: Center(
@@ -125,7 +124,9 @@ Future<void> showUpgradeDialog({
                       ),
                       if (isDark)
                         BoxShadow(
-                          color: const Color(0xFF8DB7FF).withValues(alpha: 0.10),
+                          color: const Color(
+                            0xFF8DB7FF,
+                          ).withValues(alpha: 0.10),
                           blurRadius: 20,
                           offset: const Offset(0, -2),
                         ),
@@ -159,8 +160,9 @@ Future<void> showUpgradeDialog({
                                 shape: BoxShape.circle,
                                 gradient: RadialGradient(
                                   colors: [
-                                    const Color(0xFF8DB7FF)
-                                        .withValues(alpha: 0.16),
+                                    const Color(
+                                      0xFF8DB7FF,
+                                    ).withValues(alpha: 0.16),
                                     Colors.transparent,
                                   ],
                                 ),
@@ -217,8 +219,7 @@ Future<void> showUpgradeDialog({
                                     borderRadius: BorderRadius.circular(18),
                                     border: Border.all(
                                       color: isDark
-                                          ? Colors.white
-                                              .withValues(alpha: 0.06)
+                                          ? Colors.white.withValues(alpha: 0.06)
                                           : const Color(0xFFE5E7EB),
                                     ),
                                   ),
@@ -245,7 +246,8 @@ Future<void> showUpgradeDialog({
                                           fontSize: 16,
                                           height: 1.3,
                                           fontWeight: FontConfig.adjustedWeight(
-                                              FontWeight.w500),
+                                            FontWeight.w500,
+                                          ),
                                           color: textColor,
                                         ),
                                       ),
@@ -260,23 +262,25 @@ Future<void> showUpgradeDialog({
                                               height: 1.2,
                                               fontWeight:
                                                   FontConfig.adjustedWeight(
-                                                      FontWeight.w400),
+                                                    FontWeight.w400,
+                                                  ),
                                               color: isDark
                                                   ? Colors.white
                                                   : ColorConstants
-                                                      .lightTextColor,
+                                                        .lightTextColor,
                                             ),
                                           ),
                                           Padding(
                                             padding: const EdgeInsets.symmetric(
-                                                horizontal: 4),
+                                              horizontal: 4,
+                                            ),
                                             child: Icon(
                                               Icons.arrow_forward_ios_rounded,
                                               size: 10,
                                               color: isDark
                                                   ? Colors.white
                                                   : ColorConstants
-                                                      .lightTextColor,
+                                                        .lightTextColor,
                                             ),
                                           ),
                                           Text(
@@ -286,9 +290,9 @@ Future<void> showUpgradeDialog({
                                               height: 1.2,
                                               fontWeight:
                                                   FontConfig.adjustedWeight(
-                                                      FontWeight.w500),
-                                              color:
-                                                  ColorConstants.themeColor,
+                                                    FontWeight.w500,
+                                                  ),
+                                              color: ColorConstants.themeColor,
                                             ),
                                           ),
                                         ],
@@ -309,7 +313,8 @@ Future<void> showUpgradeDialog({
                                     fontSize: 14,
                                     height: 1.6,
                                     fontWeight: FontConfig.adjustedWeight(
-                                        FontWeight.w400),
+                                      FontWeight.w400,
+                                    ),
                                     color: isDark
                                         ? Colors.white
                                         : ColorConstants.lightTextColor,
@@ -336,36 +341,37 @@ Future<void> showUpgradeDialog({
                                                 });
                                                 try {
                                                   await closeDialog();
-                                                  if (onLeftPressed !=
-                                                      null) {
+                                                  if (onLeftPressed != null) {
                                                     await onLeftPressed();
                                                   }
                                                 } finally {
-                                                  if (!completer
-                                                      .isCompleted) {
+                                                  if (!completer.isCompleted) {
                                                     completer.complete();
                                                   }
                                                 }
                                               },
                                         style: OutlinedButton.styleFrom(
                                           minimumSize: const Size(0, 48),
-                                          padding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 10,
-                                                  vertical: 12),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 12,
+                                          ),
                                           side: BorderSide(
                                             color: isDark
-                                                ? Colors.white
-                                                    .withValues(alpha: 0.08)
+                                                ? Colors.white.withValues(
+                                                    alpha: 0.08,
+                                                  )
                                                 : const Color(0xFFE0E6EF),
                                           ),
                                           backgroundColor: isDark
-                                              ? Colors.white
-                                                  .withValues(alpha: 0.03)
+                                              ? Colors.white.withValues(
+                                                  alpha: 0.03,
+                                                )
                                               : Colors.white,
                                           shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(16),
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
                                           ),
                                         ),
                                         child: Text(
@@ -375,7 +381,8 @@ Future<void> showUpgradeDialog({
                                             height: 1.28,
                                             fontWeight:
                                                 FontConfig.adjustedWeight(
-                                                    FontWeight.w500),
+                                                  FontWeight.w500,
+                                                ),
                                             color: textColor,
                                           ),
                                           textAlign: TextAlign.center,
@@ -397,13 +404,11 @@ Future<void> showUpgradeDialog({
                                               });
                                               try {
                                                 await closeDialog();
-                                                if (onRightPressed !=
-                                                    null) {
+                                                if (onRightPressed != null) {
                                                   await onRightPressed();
                                                 }
                                               } finally {
-                                                if (!completer
-                                                    .isCompleted) {
+                                                if (!completer.isCompleted) {
                                                   completer.complete();
                                                 }
                                               }
@@ -411,23 +416,25 @@ Future<void> showUpgradeDialog({
                                       style: ElevatedButton.styleFrom(
                                         minimumSize: const Size(0, 48),
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 12),
+                                          horizontal: 10,
+                                          vertical: 12,
+                                        ),
                                         elevation: 0,
                                         backgroundColor:
                                             ColorConstants.themeColor,
                                         foregroundColor:
                                             ColorConstants.lightTextColor,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
                                         ),
                                       ),
                                       child: isProcessing
                                           ? const SizedBox(
                                               width: 18,
                                               height: 18,
-                                              child:
-                                                  CircularProgressIndicator(
+                                              child: CircularProgressIndicator(
                                                 color: Color(0xFF222222),
                                                 strokeWidth: 2,
                                               ),
@@ -439,9 +446,9 @@ Future<void> showUpgradeDialog({
                                                 height: 1.28,
                                                 fontWeight:
                                                     FontConfig.adjustedWeight(
-                                                        FontWeight.w500),
-                                                color: const Color(
-                                                    0xFF222222),
+                                                      FontWeight.w500,
+                                                    ),
+                                                color: const Color(0xFF222222),
                                               ),
                                               textAlign: TextAlign.center,
                                             ),

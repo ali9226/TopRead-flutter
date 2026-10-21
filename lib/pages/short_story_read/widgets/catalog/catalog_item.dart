@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/components/catalog_card/index.dart';
 
 import 'package:app/common_style/selection_chip/style.dart';
 import 'package:app/config/color_config.dart';
@@ -195,11 +196,6 @@ class _CatalogItemState extends State<CatalogItem>
               ? ShortStoryTabStyle.card_like_dark_text
               : ShortStoryTabStyle.card_like_light_text);
 
-    /// 卡片背景色（与首页卡片一致）。
-    final Color card_bg = widget.is_dark
-        ? ShortStoryTabStyle.card_dark_bg
-        : ShortStoryTabStyle.card_light_bg;
-
     /// 当前语种是否为 CJK。
     final bool is_cjk = LanguageUtil.is_cjk_language(
       Localizations.localeOf(context).languageCode,
@@ -224,12 +220,8 @@ class _CatalogItemState extends State<CatalogItem>
         onPointerDown: widget.on_tap == null ? null : _on_pointer_down,
         onPointerUp: widget.on_tap == null ? null : _on_pointer_up,
         onPointerCancel: widget.on_tap == null ? null : _on_pointer_cancel,
-        child: Material(
-          color: card_bg,
-          borderRadius: BorderRadius.circular(
-            ShortStoryTabStyle.card_border_radius,
-          ),
-          clipBehavior: Clip.antiAlias,
+        child: CatalogCardSurface(
+          is_dark: widget.is_dark,
           child: InkWell(
             onTap: widget.on_tap,
             splashColor: ColorConstants.themeColor.withValues(alpha: 0.12),

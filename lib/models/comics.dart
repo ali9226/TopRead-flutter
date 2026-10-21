@@ -30,6 +30,13 @@ class ComicItem {
   final String completion_status;
   final String review_reason;
   final int lock_version;
+  final String author_avatar;
+  final int favorite_count;
+  final int view_count;
+  final int comment_count;
+  final double rating;
+  final int rating_count;
+  final String update_time;
 
   const ComicItem({
     required this.id,
@@ -45,6 +52,13 @@ class ComicItem {
     this.completion_status = 'ongoing',
     this.review_reason = '',
     this.lock_version = 0,
+    this.author_avatar = '',
+    this.favorite_count = 0,
+    this.view_count = 0,
+    this.comment_count = 0,
+    this.rating = 0,
+    this.rating_count = 0,
+    this.update_time = '',
   });
 
   factory ComicItem.from_json(Map<String, dynamic> json) => ComicItem(
@@ -64,6 +78,13 @@ class ComicItem {
         json['review_reason']?.toString() ??
         '',
     lock_version: comics_int(json['lock_version']),
+    author_avatar: json['author_avatar']?.toString() ?? '',
+    favorite_count: comics_int(json['favorite_count']),
+    view_count: comics_int(json['view_count']),
+    comment_count: comics_int(json['comment_count']),
+    rating: (json['rating'] is num ? (json['rating'] as num).toDouble() : 0),
+    rating_count: comics_int(json['rating_count']),
+    update_time: json['update_time']?.toString() ?? '',
   );
 }
 
@@ -124,6 +145,7 @@ class ComicChapter {
   final int page_count;
   final int sort_order;
   final String status;
+  final String update_time;
   final int lock_version;
   final List<ComicImageData> images;
 
@@ -135,6 +157,7 @@ class ComicChapter {
     required this.status,
     required this.images,
     this.lock_version = 0,
+    this.update_time = '',
   });
 
   factory ComicChapter.from_json(Map<String, dynamic> json) => ComicChapter(
@@ -143,6 +166,7 @@ class ComicChapter {
     page_count: comics_int(json['page_count']),
     sort_order: comics_int(json['sort_order']),
     status: json['status']?.toString() ?? 'published',
+    update_time: json['update_time']?.toString() ?? '',
     lock_version: comics_int(json['lock_version']),
     images: comics_list(json['images']).map(ComicImageData.from_json).toList(),
   );

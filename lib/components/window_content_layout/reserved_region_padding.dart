@@ -5,16 +5,23 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'index.dart' show WindowLayoutData;
 
-/// 只对真正与系统顶角区域相交的导航控件加横向避让。
+/// TODO 默认保留短导航条行为；标题模式允许超过局部遮挡高度的多行标题参与避让。
+enum WindowReservedRegionPaddingMode { toolbar, heading }
+
+/// 只对真正与系统顶角区域相交的前景控件加横向避让。
 /// 自身背景留在本组件外，因此系统区域后方仍绘制原来的页面背景。
 class WindowReservedRegionPadding extends StatefulWidget {
   const WindowReservedRegionPadding({
     super.key,
     required this.child,
     this.enabled = true,
+    this.mode = WindowReservedRegionPaddingMode.toolbar,
   });
   final Widget child;
   final bool enabled;
+
+  /// TODO 仅标题显式使用heading；不改变正文、底栏和既有导航条的默认测量策略。
+  final WindowReservedRegionPaddingMode mode;
 
   @override
   State<WindowReservedRegionPadding> createState() =>
@@ -35,7 +42,8 @@ class _WindowReservedRegionPaddingState
       for (final region in scope!.regions) {
         final obstruction = region.bounds;
         if (!bounds.overlaps(obstruction) ||
-            bounds.height > obstruction.height) {
+            (widget.mode == WindowReservedRegionPaddingMode.toolbar &&
+                bounds.height > obstruction.height)) {
           continue;
         }
         if (obstruction.left <= bounds.left) {

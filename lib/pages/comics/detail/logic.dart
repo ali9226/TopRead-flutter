@@ -97,6 +97,7 @@ class ComicDetailLogic extends ComicsController {
   }
 
   ComicDetail? detail;
+  List<ComicItem> similar_comics = <ComicItem>[];
   bool loading = true;
   bool collecting = false;
   bool collected = false;
@@ -168,6 +169,19 @@ class ComicDetailLogic extends ComicsController {
         loading = false;
         emit();
       }
+    }
+  }
+
+  /// 加载相似漫画推荐（公开方法，由页面在适当时机调用）。
+  Future<void> load_similar() async {
+    try {
+      final list = await comics_similar(comic_id);
+      if (!disposed) {
+        similar_comics = list;
+        emit();
+      }
+    } catch (_) {
+      // 相似推荐是锦上添花，失败不影响主流程。
     }
   }
 

@@ -51,4 +51,16 @@ class StatStyle {
 
   /// 次要文字在夜间主题下的透明度
   static const double secondary_text_night_alpha = 0.64;
+  static const double hero_divider_width = 0.5;
+  static const double hero_divider_height = 18;
+  static const double hero_divider_alpha = 0.28;
+  static const double hero_gap = 5;
+  static const double hero_icon_size = 16;
+  static const double hero_icon_gap = 3;
+  static const double hero_label_gap = 2;
+  static const double hero_value_size_cjk = 14;
+  static const double hero_value_size_alphabetic = 13;
+  static const double hero_label_size_cjk = 10;
+  static const double hero_label_size_alphabetic = 10;
+  static const double hero_label_alpha = 0.78;
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:app/config/font_config.dart';
+import 'package:app/components/content_category_tag/index.dart';
 
 import 'package:flutter/material.dart';
 
@@ -401,31 +402,13 @@ class _RecommendBookCardState extends State<RecommendBookCard>
     required BookListTagItem tag_item,
     required bool is_dark,
   }) {
-    final Color tag_background_color = Color.alphaBlend(
-      tag_item.color.withValues(
-        alpha: RecommendBookCardStyle.tag_background_opacity,
-      ),
-      is_dark
+    return ContentCategoryTag(
+      label: tag_item.label,
+      color: tag_item.color,
+      is_dark: is_dark,
+      surface_color: is_dark
           ? RecommendBookCardStyle.card_dark_bg
           : RecommendBookCardStyle.card_light_bg,
-    );
-
-    return Container(
-      padding: RecommendBookCardStyle.tag_padding,
-      decoration: BoxDecoration(
-        color: tag_background_color,
-        borderRadius: BorderRadius.circular(RecommendBookCardStyle.tag_radius),
-      ),
-      child: Text(
-        tag_item.label,
-        style: TextStyle(
-          color: tag_item.color.withValues(
-            alpha: RecommendBookCardStyle.tag_text_opacity,
-          ),
-          fontSize: RecommendBookCardStyle.tag_font_size,
-          fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-        ),
-      ),
     );
   }
 }

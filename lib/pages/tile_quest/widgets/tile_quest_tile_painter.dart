@@ -126,7 +126,7 @@ class TileQuestTilePainter extends CustomPainter {
         ..shader = const LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [Color(0x00000000), Color(0x2E000000)],
+          colors: TileQuestTileStyle.wall_shade_colors,
         ).createShader(strip),
     );
   }
@@ -227,11 +227,7 @@ class TileQuestTilePainter extends CustomPainter {
       tail,
       Paint()
         ..shader = const RadialGradient(
-          colors: [
-            Color(0x28FFFFFF),
-            Color(0x0CFFFFFF),
-            Color(0x00FFFFFF),
-          ],
+          colors: TileQuestTileStyle.highlight_tail_colors,
           stops: [0.0, 0.50, 1.0],
         ).createShader(tail),
     );
@@ -246,11 +242,7 @@ class TileQuestTilePainter extends CustomPainter {
       core,
       Paint()
         ..shader = const RadialGradient(
-          colors: [
-            TileQuestTileStyle.highlight_main,
-            Color(0x50FFFFFF),
-            Color(0x00FFFFFF),
-          ],
+          colors: TileQuestTileStyle.highlight_core_colors,
           stops: [0.0, 0.42, 1.0],
         ).createShader(core),
     );
@@ -267,10 +259,7 @@ class TileQuestTilePainter extends CustomPainter {
       aux,
       Paint()
         ..shader = const RadialGradient(
-          colors: [
-            TileQuestTileStyle.highlight_aux,
-            Color(0x00FFFFFF),
-          ],
+          colors: TileQuestTileStyle.highlight_aux_colors,
         ).createShader(aux),
     );
   }

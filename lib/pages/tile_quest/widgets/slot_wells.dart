@@ -8,9 +8,6 @@ class QuestSlotWell extends StatelessWidget {
   const QuestSlotWell({super.key, required this.layout});
 
   final QuestSceneLayout layout;
-  static const double _radius = 19;
-  static const double _border_width = 1.5;
-  static const double _slot_radius = 9;
 
   @override
   Widget build(BuildContext context) => Stack(
@@ -19,12 +16,15 @@ class QuestSlotWell extends StatelessWidget {
       // DecoratedBox 不像带 border 的 Container 那样给子节点隐式加 padding。
       Positioned.fill(
         child: DecoratedBox(
-          decoration: TileQuestStyle.glass(radius: _radius).copyWith(
-            border: Border.all(
-              color: const Color(0xFF9DBCDC).withValues(alpha: .58),
-              width: _border_width,
-            ),
-          ),
+          decoration:
+              TileQuestStyle.glass(
+                radius: TileQuestStyle.tray_well_radius,
+              ).copyWith(
+                border: Border.all(
+                  color: TileQuestStyle.tray_well_border.withValues(alpha: .58),
+                  width: TileQuestStyle.tray_well_border_width,
+                ),
+              ),
         ),
       ),
       for (var index = 0; index < QuestSceneLayout.slot_count; index++)
@@ -33,10 +33,12 @@ class QuestSlotWell extends StatelessWidget {
           rect: layout.tray_tile(index).shift(-layout.tray.topLeft),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: const Color(0xFF0B1931).withValues(alpha: .73),
-              borderRadius: BorderRadius.circular(_slot_radius),
+              color: TileQuestStyle.slot_well_background.withValues(alpha: .73),
+              borderRadius: BorderRadius.circular(
+                TileQuestStyle.slot_well_radius,
+              ),
               border: Border.all(
-                color: const Color(0xFF7796BA).withValues(alpha: .35),
+                color: TileQuestStyle.slot_well_border.withValues(alpha: .35),
               ),
             ),
           ),
@@ -56,7 +58,6 @@ class QuestReserveWell extends StatelessWidget {
 
   final QuestSceneLayout layout;
   final bool cjk, occupied;
-  static const double _slot_radius = 9;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -70,10 +71,12 @@ class QuestReserveWell extends StatelessWidget {
             rect: layout.reserve_tile(index).shift(-layout.reserve.topLeft),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: const Color(
-                  0xFF142544,
-                ).withValues(alpha: occupied ? .7 : .3),
-                borderRadius: BorderRadius.circular(_slot_radius),
+                color: TileQuestStyle.reserve_well_background.withValues(
+                  alpha: occupied ? .7 : .3,
+                ),
+                borderRadius: BorderRadius.circular(
+                  TileQuestStyle.slot_well_radius,
+                ),
                 border: Border.all(
                   color: TileQuestStyle.pale.withValues(alpha: .25),
                 ),

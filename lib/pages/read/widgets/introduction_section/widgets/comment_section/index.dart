@@ -57,10 +57,8 @@ class ReadCommentSection extends StatelessWidget {
             ),
           ),
         ...comment_list.map(
-          (ReadComment comment) => ReadCommentItem(
-            is_dark: is_dark,
-            comment: comment,
-          ),
+          (ReadComment comment) =>
+              ReadCommentItem(is_dark: is_dark, comment: comment),
         ),
       ],
     );

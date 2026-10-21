@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:app/components/network_cover_image/index.dart';
 import 'package:app/pages/read/logic.dart';
-import 'package:app/pages/read/widgets/introduction_section/widgets/author_section/index.dart';
-import 'package:app/pages/read/widgets/introduction_section/widgets/stat_section/index.dart';
+import 'package:app/pages/read/widgets/introduction_section/widgets/hero/index.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/tag_section/index.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/intro_summary_section/index.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/comment_section/index.dart';
-import 'package:app/config/font_config.dart';
-import 'package:app/components/title_with_story_id/index.dart';
 import 'package:app/stores/project_config_store.dart';
+import 'package:app/pages/read/widgets/introduction_section/widgets/content_panel/index.dart';
+import 'package:app/pages/read/widgets/introduction_section/widgets/content_panel/overlap_layout.dart';
 import './style.dart';
 
 /// 阅读页介绍组件。
@@ -26,6 +24,14 @@ class ReadIntroductionSection extends StatelessWidget {
 
   /// 关注状态变更回调。
   final ValueChanged<bool>? on_focus_changed;
+  final VoidCallback? on_author_tap;
+  final VoidCallback? on_rating_tap;
+  final VoidCallback? on_back;
+  final VoidCallback? on_share;
+  final VoidCallback? on_read;
+  final VoidCallback? on_favorite;
+  final bool favorited;
+  final bool favorite_loading;
 
   /// 替换封面成功回调，携带新的封面信息。
   final void Function(String cover_url, int cover_width, int cover_height)?
@@ -36,85 +42,67 @@ class ReadIntroductionSection extends StatelessWidget {
     required this.is_dark,
     required this.detail,
     this.on_focus_changed,
+    this.on_author_tap,
+    this.on_rating_tap,
+    this.on_back,
+    this.on_share,
+    this.on_read,
+    this.on_favorite,
+    this.favorited = false,
+    this.favorite_loading = false,
     this.on_cover_replaced,
   });
 
   @override
   Widget build(BuildContext context) {
-    // 标题文字颜色
-    final Color title_color = is_dark
-        ? IntroductionStyle.title_color_dark
-        : IntroductionStyle.title_color_light;
-
     // iOS 审核模式下隐藏评论区。
     final bool show_comment =
         !Get.find<ProjectConfigStore>().current.is_apple_review_mode;
 
-    // 该区块按"封面 -> 标题 -> 作者 -> 统计 -> 标签 -> 简介 -> 评论"的顺序组织。
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        // 封面图居中显示，加载失败时回退到 story_id 文案占位。
-        Align(
-          child: NetworkCoverImage(
-            image_url: detail.cover_url,
-            width: IntroductionStyle.cover_width,
-            height: IntroductionStyle.cover_height,
-            border_radius: IntroductionStyle.cover_radius,
-            is_dark: is_dark,
-            error_text: '${detail.story_id}',
-          ),
-        ),
-        // 封面与标题之间保持固定垂直节奏。
-        const SizedBox(height: IntroductionStyle.title_top_spacing),
-        // 书名在头图区居中展示，保证视觉焦点明确。
-        // 书名后内联小说 ID 徽标，仅登录且 debug=2 用户可见、点击可复制。
-        Center(
-          child: TitleWithStoryId(
-            title: detail.title,
-            story_id: detail.story_id,
-            on_cover_replaced: on_cover_replaced,
-            text_align: TextAlign.center,
-            title_style: TextStyle(
-              color: title_color,
-              fontSize: IntroductionStyle.title_font_size,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+    return ReadIntroductionLayout(
+      key: const ValueKey('novel_introduction_layout'),
+      overlap: IntroductionStyle.content_panel_overlap,
+      hero: ReadIntroductionHero(
+        is_dark: is_dark,
+        detail: detail,
+        on_back: on_back,
+        on_share: on_share,
+        on_read: on_read,
+        on_favorite: on_favorite,
+        favorited: favorited,
+        favorite_loading: favorite_loading,
+        on_author_tap: on_author_tap,
+        on_rating_tap: on_rating_tap,
+        on_focus_changed: on_focus_changed,
+        on_cover_replaced: on_cover_replaced,
+        bottom_overlap: IntroductionStyle.content_panel_overlap,
+      ),
+      panel: ReadIntroductionPanel(
+        is_dark: is_dark,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 标签子组件，展示小说标签列表。
+            ReadTagSection(is_dark: is_dark, tag_list: detail.tag_list),
+            // 标签区与简介区之间的间距。
+            const SizedBox(height: IntroductionStyle.intro_top_spacing),
+            // 所有作品类型共用卡片与完整正文裁切动画。
+            ReadIntroSummarySection(
+              is_dark: is_dark,
+              intro_text: detail.intro_text,
             ),
-          ),
+            if (show_comment) ...[
+              // 简介区与评论区之间的间距。
+              const SizedBox(height: IntroductionStyle.comment_top_spacing),
+              // 评论子组件，展示热门书评列表。
+              ReadCommentSection(
+                is_dark: is_dark,
+                comment_list: detail.comment_list,
+              ),
+            ],
+          ],
         ),
-        // 标题与作者区之间的间距。
-        const SizedBox(height: IntroductionStyle.author_top_spacing),
-        // 作者信息子组件，负责头像、名称和关注标签。
-        ReadAuthorSection(
-          is_dark: is_dark,
-          detail: detail,
-          on_focus_changed: on_focus_changed,
-        ),
-        // 作者信息与统计区之间的间距。
-        const SizedBox(height: IntroductionStyle.stat_panel_top_spacing),
-        // 统计子组件，展示评分、在读人数、字数三个指标。
-        ReadStatSection(is_dark: is_dark, detail: detail),
-        // 统计区与标签区之间的间距。
-        const SizedBox(height: IntroductionStyle.tag_section_top_spacing),
-        // 标签子组件，展示小说标签列表。
-        ReadTagSection(is_dark: is_dark, tag_list: detail.tag_list),
-        // 标签区与简介区之间的间距。
-        const SizedBox(height: IntroductionStyle.intro_top_spacing),
-        // 简介子组件，展示单行摘要与"更多"入口文案。
-        ReadIntroSummarySection(
-          is_dark: is_dark,
-          intro_text: detail.intro_text,
-        ),
-        if (show_comment) ...[
-          // 简介区与评论区之间的间距。
-          const SizedBox(height: IntroductionStyle.comment_top_spacing),
-          // 评论子组件，展示热门书评列表。
-          ReadCommentSection(
-            is_dark: is_dark,
-            comment_list: detail.comment_list,
-          ),
-        ],
-      ],
+      ),
     );
   }
 }

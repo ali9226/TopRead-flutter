@@ -6,7 +6,6 @@ import 'package:app/components/comment_list/style.dart';
 import 'package:app/components/comment_list/widgets/comment_avatar.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/font_config.dart';
-import 'package:app/util/language_util/index.dart';
 
 import '../api.dart';
 import '../logic.dart';

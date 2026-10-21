@@ -28,6 +28,7 @@ import 'package:app/stores/bottom_navigation_info.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/components/window_display_features/index.dart';
+import 'package:app/components/app_wrapper/widgets/system_ui_region/index.dart';
 
 /// AppWrapper 是整个应用的根容器。
 ///
@@ -273,22 +274,24 @@ class _AppWrapperState extends State<AppWrapper> {
           final smartDialogChild = smartDialogBuilder(context, child);
 
           // 如果需要显示开屏页面，使用 Stack 将开屏页面覆盖在最上层
-          return WindowDisplayFeatures(
-            child: _show_splash
-                ? Stack(
-                    children: [
-                      smartDialogChild,
-                      SplashScreen(
-                        on_complete: () {
-                          // 开屏完成后隐藏开屏页面
-                          setState(() {
-                            _show_splash = false;
-                          });
-                        },
-                      ),
-                    ],
-                  )
-                : smartDialogChild,
+          return AppSystemUiRegion(
+            child: WindowDisplayFeatures(
+              child: _show_splash
+                  ? Stack(
+                      children: [
+                        smartDialogChild,
+                        SplashScreen(
+                          on_complete: () {
+                            // 开屏完成后隐藏开屏页面
+                            setState(() {
+                              _show_splash = false;
+                            });
+                          },
+                        ),
+                      ],
+                    )
+                  : smartDialogChild,
+            ),
           );
         },
       ),

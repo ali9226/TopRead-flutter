@@ -410,7 +410,7 @@ class _QuestTileMaterial {
     wall_shade_paint.shader = const LinearGradient(
       begin: Alignment.centerLeft,
       end: Alignment.centerRight,
-      colors: [Color(0x00000000), Color(0x2E000000)],
+      colors: TileQuestTileStyle.wall_shade_colors,
     ).createShader(wall_strip);
 
     // 第三、四层：曲面（正面+倒角一体）。
@@ -473,15 +473,11 @@ class _QuestTileMaterial {
       height: minor * 1.7,
     );
     _highlight_tail_paint.shader = const RadialGradient(
-      colors: [Color(0x28FFFFFF), Color(0x0CFFFFFF), Color(0x00FFFFFF)],
+      colors: TileQuestTileStyle.highlight_tail_colors,
       stops: [0.0, 0.50, 1.0],
     ).createShader(_highlight_tail);
     _highlight_core_paint.shader = const RadialGradient(
-      colors: [
-        TileQuestTileStyle.highlight_main,
-        Color(0x50FFFFFF),
-        Color(0x00FFFFFF),
-      ],
+      colors: TileQuestTileStyle.highlight_core_colors,
       stops: [0.0, 0.42, 1.0],
     ).createShader(_highlight_core);
 
@@ -493,7 +489,7 @@ class _QuestTileMaterial {
         face_rect.width * TileQuestTileStyle.highlight_aux_radius;
     _highlight_aux = Rect.fromCircle(center: aux_center, radius: aux_radius);
     _highlight_aux_paint.shader = const RadialGradient(
-      colors: [TileQuestTileStyle.highlight_aux, Color(0x00FFFFFF)],
+      colors: TileQuestTileStyle.highlight_aux_colors,
     ).createShader(_highlight_aux);
   }
 

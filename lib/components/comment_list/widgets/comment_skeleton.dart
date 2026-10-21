@@ -1,3 +1,5 @@
+// ignore_for_file: non_constant_identifier_names
+
 import 'package:flutter/material.dart';
 
 import 'package:app/components/comment_list/style.dart';
@@ -13,7 +15,15 @@ class CommentSkeleton extends StatefulWidget {
   /// 骨架屏条目数量。
   final int count;
 
-  const CommentSkeleton({super.key, required this.is_dark, this.count = 5});
+  /// TODO 作为外层列表条目时按内容计算高度，避免加载态产生无限高度视口。
+  final bool shrink_wrap;
+
+  const CommentSkeleton({
+    super.key,
+    required this.is_dark,
+    this.count = 5,
+    this.shrink_wrap = false,
+  });
 
   @override
   State<CommentSkeleton> createState() => _CommentSkeletonState();
@@ -81,6 +91,8 @@ class _CommentSkeletonState extends State<CommentSkeleton>
             ).createShader(bounds);
           },
           child: ListView.builder(
+            shrinkWrap: widget.shrink_wrap,
+            primary: false,
             physics: const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(
               vertical: CommentListStyle.list_vertical_padding,

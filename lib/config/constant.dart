@@ -4,7 +4,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 ///
 /// 集中管理 App 名称、版本号、本地存储 key、网络请求域名等全局常量。
 class Constant {
-
   /// App 的显示名称。
   static const String app_name = "TopRead";
 
@@ -27,7 +26,8 @@ class Constant {
   }
 
   /// 同步获取版本号（需要先调用 [getAppVersion] 初始化）。
-  static String get appVersion => _appVersion.isNotEmpty ? _appVersion : "1.0.0";
+  static String get appVersion =>
+      _appVersion.isNotEmpty ? _appVersion : "1.0.0";
 
   /// 保存在本地的密码的 key。
   static const String passwordKey = "password_key";
@@ -47,9 +47,9 @@ class Constant {
   static String get requestUrl {
     // 本地调试地址
     // return "http://192.168.31.120:5006";
-    // return "http://0.0.0.0:5006";
+    return "http://0.0.0.0:5006";
     // 正式域名（发布前取消注释上面一行，注释此行）
-    return "https://app.read.top";
+    // return "https://app.read.top";
   }
 
   /// 网络请求的前缀。

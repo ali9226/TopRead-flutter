@@ -296,9 +296,7 @@ class _ShortNovelEditorPageState extends State<ShortNovelEditorPage>
       if (result.status) {
         _leave_editor();
       } else {
-        showBottomTip(
-          result.message ?? easy.tr('creator_center.delete_failed'),
-        );
+        showBottomTip(result.message);
       }
     } catch (e) {
       if (mounted) showBottomTip(easy.tr('creator_center.delete_failed'));

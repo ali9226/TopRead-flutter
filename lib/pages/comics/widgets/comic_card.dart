@@ -3,6 +3,7 @@
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/models/comics.dart';
+import 'package:app/components/content_category_tag/index.dart';
 import 'package:app/pages/comics/style.dart';
 import 'package:app/pages/comics/widgets/comic_image.dart';
 import 'package:app/util/router/router_util.dart';
@@ -49,13 +50,12 @@ class _ComicCardState extends State<ComicCard>
       ),
     );
     _press_scale_animation =
-        Tween<double>(begin: 1.0, end: ComicCardStyle.press_text_scale)
-            .animate(
-              CurvedAnimation(
-                parent: _press_scale_controller,
-                curve: Curves.easeOutCubic,
-              ),
-            );
+        Tween<double>(begin: 1.0, end: ComicCardStyle.press_text_scale).animate(
+          CurvedAnimation(
+            parent: _press_scale_controller,
+            curve: Curves.easeOutCubic,
+          ),
+        );
   }
 
   @override
@@ -173,9 +173,9 @@ class _ComicCardState extends State<ComicCard>
           borderRadius: BorderRadius.circular(ComicCardStyle.card_radius),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: widget.on_tap ??
-                () =>
-                    routerUtil(path: '/comics/detail?id=${widget.comic.id}'),
+            onTap:
+                widget.on_tap ??
+                () => routerUtil(path: '/comics/detail?id=${widget.comic.id}'),
             splashFactory: InkRipple.splashFactory,
             splashColor: ripple_color,
             highlightColor: highlight_color,
@@ -243,24 +243,25 @@ class _ComicCardState extends State<ComicCard>
 
                         /// 分类标签。
                         if (tags.isNotEmpty) ...<Widget>[
-                          const SizedBox(height: ComicCardStyle.tag_top_spacing),
+                          const SizedBox(
+                            height: ComicCardStyle.tag_top_spacing,
+                          ),
                           Wrap(
                             spacing: ComicCardStyle.tag_spacing,
                             runSpacing: ComicCardStyle.tag_run_spacing,
-                            children: List<Widget>.generate(
-                              tags.length,
-                              (int index) {
-                                return _build_tag_item(
-                                  label: ComicsStyle.category_name(
-                                    context,
-                                    tags[index],
-                                  ),
-                                  color: _tag_color(index),
-                                  card_bg: card_bg,
-                                  is_cjk: is_cjk,
-                                );
-                              },
-                            ),
+                            children: List<Widget>.generate(tags.length, (
+                              int index,
+                            ) {
+                              return _build_tag_item(
+                                label: ComicsStyle.category_name(
+                                  context,
+                                  tags[index],
+                                ),
+                                color: _tag_color(index),
+                                card_bg: card_bg,
+                                is_cjk: is_cjk,
+                              );
+                            }),
                           ),
                         ],
                       ],
@@ -316,8 +317,7 @@ class _ComicCardState extends State<ComicCard>
                             alpha: ComicCardStyle.cover_gradient_top_opacity,
                           ),
                           Colors.black.withValues(
-                            alpha:
-                                ComicCardStyle.cover_gradient_bottom_opacity,
+                            alpha: ComicCardStyle.cover_gradient_bottom_opacity,
                           ),
                         ],
                       ),
@@ -397,37 +397,11 @@ class _ComicCardState extends State<ComicCard>
     required Color card_bg,
     required bool is_cjk,
   }) {
-    /// 标签背景：主色以固定不透明度叠在卡片底色上。
-    final Color tag_background_color = Color.alphaBlend(
-      color.withValues(alpha: ComicCardStyle.tag_background_opacity),
-      card_bg,
-    );
-
-    /// CJK 与拉丁语系标签字号一致地做微调。
-    final double tag_font_size = is_cjk
-        ? ComicCardStyle.tag_font_size_cjk
-        : ComicCardStyle.tag_font_size_alphabetic;
-    final double tag_padding_h = is_cjk
-        ? ComicCardStyle.tag_padding_h_cjk
-        : ComicCardStyle.tag_padding_h_alphabetic;
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: tag_padding_h,
-        vertical: ComicCardStyle.tag_padding_v,
-      ),
-      decoration: BoxDecoration(
-        color: tag_background_color,
-        borderRadius: BorderRadius.circular(ComicCardStyle.tag_radius),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color.withValues(alpha: ComicCardStyle.tag_text_opacity),
-          fontSize: tag_font_size,
-          fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-        ),
-      ),
+    return ContentCategoryTag(
+      label: label,
+      color: color,
+      surface_color: card_bg,
+      is_cjk: is_cjk,
     );
   }
 

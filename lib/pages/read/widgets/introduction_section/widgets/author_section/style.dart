@@ -43,4 +43,7 @@ class AuthorStyle {
 
   /// 品牌主色 (蓝色)，用于头像背景和关注标签
   static const Color brand_color = Color(0xFF3D7DFF);
+  static const double hero_follow_width_ratio = 0.42;
+  static const double hero_name_size_cjk = 13;
+  static const double hero_name_size_alphabetic = 12;
 }

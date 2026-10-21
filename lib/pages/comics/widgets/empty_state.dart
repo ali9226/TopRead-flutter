@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/pages/comics/style.dart';
+import 'package:app/config/color_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
@@ -29,7 +30,7 @@ class ComicsEmptyState extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         if (loading)
-          const CircularProgressIndicator()
+          CircularProgressIndicator(color: ColorConstants.themeColor)
         else
           Icon(
             error == null

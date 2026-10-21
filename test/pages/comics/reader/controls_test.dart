@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:app/pages/comics/reader/index.dart';
+import 'package:app/components/reader_top_bar/action_button.dart';
+import 'package:app/config/color_config.dart';
 import 'package:app/pages/comics/reader/logic.dart';
 import 'package:app/pages/comics/reader/style.dart';
 import 'package:app/pages/comics/reader/widgets/bottom_scrim.dart';
@@ -65,7 +67,7 @@ void main() {
       }
     }
   });
-  testWidgets('日间主题的阅读错误重试按钮在近黑画布可见且能重试', (tester) async {
+  testWidgets('日间主题的白色阅读画布重试按钮可见且能重试', (tester) async {
     var requests = 0;
     final logic = ComicReaderLogic(
       read_chapter: (_) async {
@@ -98,13 +100,18 @@ void main() {
     await tester.pumpAndSettle();
     final retry = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
     final color = retry.style!.foregroundColor!.resolve(<WidgetState>{})!;
-    final rendered = Color.alphaBlend(
-      color,
-      ComicReaderStyle.canvas_background,
-    );
-    final contrast =
-        (rendered.computeLuminance() + 0.05) /
-        (ComicReaderStyle.canvas_background.computeLuminance() + 0.05);
+    final background = tester
+        .widget<Scaffold>(find.byType(Scaffold).first)
+        .backgroundColor!;
+    expect(background, Colors.white);
+    final rendered = Color.alphaBlend(color, background);
+    final lighter = rendered.computeLuminance() > background.computeLuminance()
+        ? rendered.computeLuminance()
+        : background.computeLuminance();
+    final darker = rendered.computeLuminance() < background.computeLuminance()
+        ? rendered.computeLuminance()
+        : background.computeLuminance();
+    final contrast = (lighter + 0.05) / (darker + 0.05);
     expect(contrast, greaterThanOrEqualTo(4.5));
     expect(requests, 1);
     await tester.tap(find.byType(OutlinedButton));
@@ -179,7 +186,8 @@ void main() {
               addTearDown(tester.view.resetPhysicalSize);
               addTearDown(tester.view.resetDevicePixelRatio);
               final key = GlobalKey();
-              var previous = 0, next = 0, comments = 0;
+              var catalog = 0, progress = 0, appearance = 0, comments = 0;
+              var back = 0, shares = 0, collections = 0;
               await tester.pumpWidget(
                 RepaintBoundary(
                   key: key,
@@ -212,7 +220,9 @@ void main() {
                               children: <Widget>[
                                 Positioned.fill(
                                   child: ColoredBox(
-                                    color: ComicReaderStyle.canvas_background,
+                                    color: dark
+                                        ? ComicReaderStyle.canvas_background
+                                        : Colors.white,
                                     child: sample_images.isNotEmpty
                                         ? SingleChildScrollView(
                                             child: Column(
@@ -242,9 +252,9 @@ void main() {
                                         'Chapter 32 — A very long journey into the unknown',
                                     comic_title:
                                         'The Extraordinary Adventure of the Wandering Artist',
-                                    on_back: () {},
-                                    on_open_catalog: () {},
-                                    on_comments: () {},
+                                    on_back: () => back++,
+                                    on_share: () => shares++,
+                                    on_collect: () => collections++,
                                   ),
                                 ),
                                 Align(
@@ -252,11 +262,9 @@ void main() {
                                   child: ComicReaderBottomScrim(
                                     page_index: 5,
                                     page_count: 436,
-                                    has_previous_chapter: true,
-                                    has_next_chapter: true,
-                                    on_previous_chapter: () => previous++,
-                                    on_next_chapter: () => next++,
-                                    on_open_catalog: () {},
+                                    on_open_catalog: () => catalog++,
+                                    on_progress: () => progress++,
+                                    on_appearance: () => appearance++,
                                     on_comments: () => comments++,
                                   ),
                                 ),
@@ -277,18 +285,81 @@ void main() {
                 expect(size.height, greaterThanOrEqualTo(48));
                 expect(size.width, greaterThanOrEqualTo(48));
               }
-              await tester.tap(
-                find.text(locale == 'zh' ? '上一章' : 'Previous chapter'),
+              final bottom_controls = tester
+                  .widgetList<ComicReaderControlButton>(
+                    find.descendant(
+                      of: find.byType(ComicReaderBottomScrim),
+                      matching: find.byType(ComicReaderControlButton),
+                    ),
+                  )
+                  .toList();
+              expect(bottom_controls, hasLength(4));
+              expect(bottom_controls[0].svg_name, 'qr_code');
+              expect(bottom_controls[1].svg_name, 'positioning');
+              expect(
+                bottom_controls[2].svg_name,
+                dark ? 'sun_2' : 'night_mode',
               );
-              await tester.tap(
-                find.text(locale == 'zh' ? '下一章' : 'Next chapter'),
+              expect(bottom_controls[3].svg_name, 'customer_service');
+              expect(
+                bottom_controls[0].label,
+                locale == 'zh' ? '目录' : 'Catalog',
               );
-              await tester.tap(
-                find.text(locale == 'zh' ? '章节评论' : 'Chapter comments'),
+              expect(
+                bottom_controls[1].label,
+                locale == 'zh' ? '进度' : 'Progress',
               );
-              expect(previous, 1);
-              expect(next, 1);
+              expect(
+                bottom_controls[2].label,
+                locale == 'zh'
+                    ? (dark ? '日间' : '夜间')
+                    : (dark ? 'Day' : 'Night'),
+              );
+              expect(
+                bottom_controls[3].label,
+                locale == 'zh' ? '评论' : 'Comments',
+              );
+              for (final button in bottom_controls) {
+                await tester.tap(find.byWidget(button));
+              }
+              expect(catalog, 1);
+              expect(progress, 1);
+              expect(appearance, 1);
               expect(comments, 1);
+              expect(
+                find.text(locale == 'zh' ? '上一章' : 'Previous chapter'),
+                findsNothing,
+              );
+              expect(
+                find.text(locale == 'zh' ? '下一章' : 'Next chapter'),
+                findsNothing,
+              );
+              final top_controls = tester
+                  .widgetList<ReaderTopBarAction>(
+                    find.descendant(
+                      of: find.byType(ComicReaderTopScrim),
+                      matching: find.byType(ReaderTopBarAction),
+                    ),
+                  )
+                  .toList();
+              expect(top_controls, hasLength(3));
+              expect(top_controls.map((action) => action.asset), [
+                'right',
+                null,
+                'share',
+              ]);
+              expect(top_controls[1].icon, Icons.favorite_border_rounded);
+              expect(top_controls[1].color, ColorConstants.dangerColor);
+              for (final action in top_controls) {
+                await tester.tap(find.byWidget(action));
+              }
+              expect(back, 1);
+              expect(shares, 1);
+              expect(collections, 1);
+              expect(
+                find.text('Chapter 32 — A very long journey into the unknown'),
+                findsOneWidget,
+              );
               final top = tester.widget<DecoratedBox>(
                 find
                     .descendant(

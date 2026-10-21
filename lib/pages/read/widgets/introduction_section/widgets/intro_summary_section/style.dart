@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app/components/expandable_synopsis/style.dart';
 
 /// 简介区块样式常量
 class IntroSummaryStyle {
@@ -9,7 +10,7 @@ class IntroSummaryStyle {
   static const double intro_top_spacing = 12;
 
   /// 简介字号
-  static const double intro_font_size = 13;
+  static const double intro_font_size = ExpandableSynopsisStyle.font_size_cjk;
 
   /// 简介文案行高倍数
   static const double intro_line_height = 1.5;

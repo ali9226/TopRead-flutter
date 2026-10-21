@@ -1,6 +1,8 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'package:app/components/svg_icon/index.dart';
+import 'package:app/components/reader_action_icon/index.dart';
+import 'package:app/components/reader_bottom_action/index.dart';
+import 'package:app/components/reader_bottom_action/style.dart';
 import 'package:app/pages/comics/reader/style.dart';
 import 'package:app/pages/comics/style.dart';
 import 'package:flutter/material.dart';
@@ -33,17 +35,26 @@ class ComicReaderControlButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = on_pressed == null
         ? ComicReaderStyle.disabled_color(context)
-        : ComicReaderStyle.secondary_foreground(context);
-    Widget picture = svg_name != null
-        ? SvgIcon(
-            name: svg_name!,
-            width: ComicReaderStyle.nav_icon_size,
-            height: ComicReaderStyle.nav_icon_size,
-            color: color,
-            animateColor: false,
+        : vertical
+        ? ReaderBottomActionStyle.foreground(
+            Theme.of(context).brightness == Brightness.dark,
           )
-        : Icon(icon, size: ComicReaderStyle.nav_icon_size, color: color);
+        : ComicReaderStyle.secondary_foreground(context);
+    final picture_size = vertical
+        ? ReaderBottomActionStyle.icon_size
+        : ComicReaderStyle.nav_icon_size;
+    Widget picture = svg_name != null
+        ? ReaderActionIcon(name: svg_name!, size: picture_size, color: color)
+        : Icon(icon, size: picture_size, color: color);
     if (reverse_icon) picture = RotatedBox(quarterTurns: 2, child: picture);
+    if (vertical) {
+      return ReaderBottomAction(
+        label: label,
+        color: color,
+        on_pressed: on_pressed,
+        icon_widget: picture,
+      );
+    }
     final text = Text(
       label,
       textAlign: TextAlign.center,
@@ -51,12 +62,11 @@ class ComicReaderControlButton extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
         color: color,
-        fontSize: vertical
-            ? ComicReaderStyle.action_label_size(context)
-            : ComicsStyle.is_cjk(context)
+        fontSize: ComicsStyle.is_cjk(context)
             ? ComicReaderStyle.control_font_cjk
             : ComicReaderStyle.control_font_alphabetic,
         fontWeight: ComicReaderStyle.weight_regular,
+        height: 1.3,
       ),
     );
     return Tooltip(
@@ -84,18 +94,6 @@ class ComicReaderControlButton extends StatelessWidget {
                 ),
                 child: icon_only
                     ? Center(widthFactor: 1, heightFactor: 1, child: picture)
-                    : vertical
-                    ? Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          picture,
-                          const SizedBox(
-                            height: ComicReaderStyle.action_label_gap,
-                          ),
-                          text,
-                        ],
-                      )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[

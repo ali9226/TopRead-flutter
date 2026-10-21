@@ -5,7 +5,8 @@ import 'dart:ui' show DisplayFeature;
 
 import 'edge_regions.dart';
 import 'reserved_region_padding.dart';
-export 'reserved_region_padding.dart' show WindowReservedRegionPadding;
+export 'reserved_region_padding.dart'
+    show WindowReservedRegionPadding, WindowReservedRegionPaddingMode;
 export 'window_app_bar.dart' show WindowAppBar;
 
 import 'package:app/config/layout_config.dart';

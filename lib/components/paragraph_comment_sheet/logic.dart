@@ -95,8 +95,9 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
 
   /// 多个操作同时触发登录时只显示一个登录提示。
   Future<bool> _authenticate() async {
-    final Future<bool> pending =
-        _authentication ??= Future<bool>.sync(ensure_authenticated);
+    final Future<bool> pending = _authentication ??= Future<bool>.sync(
+      ensure_authenticated,
+    );
     try {
       return await pending && _active;
     } finally {
@@ -125,7 +126,9 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
     _notify();
     try {
       final response = await repository.inquire(
-        novel_id: novel_id, paragraph_id: paragraph_id, page: page,
+        novel_id: novel_id,
+        paragraph_id: paragraph_id,
+        page: page,
       );
       if (!_active || generation != _generation) return;
       comments = _merge_unique(
@@ -151,7 +154,9 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
 
   /// 首次展开从第 1 页获取完整回复，不把 3 条预览误当作完整分页。
   Future<void> load_replies(ParagraphComment parent) async {
-    if (!_active || is_loading || !can_load_replies(parent) ||
+    if (!_active ||
+        is_loading ||
+        !can_load_replies(parent) ||
         !loading_reply_ids.add(parent.id)) {
       return;
     }
@@ -161,17 +166,23 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
     _notify();
     try {
       final response = await repository.inquire(
-        novel_id: novel_id, paragraph_id: paragraph_id, parent_id: parent.id, page: page,
+        novel_id: novel_id,
+        paragraph_id: paragraph_id,
+        parent_id: parent.id,
+        page: page,
       );
       if (!_active || generation != _generation) return;
-      _replace_comment(parent.id, (current) => current.copy_with(
-        replies: _merge_unique(
-          page == 1 ? [] : current.replies,
-          _preserve_recent_likes(response.list, like_revision),
-          preserve_loaded_replies: true,
+      _replace_comment(
+        parent.id,
+        (current) => current.copy_with(
+          replies: _merge_unique(
+            page == 1 ? [] : current.replies,
+            _preserve_recent_likes(response.list, like_revision),
+            preserve_loaded_replies: true,
+          ),
+          reply_count: response.total,
         ),
-        reply_count: response.total,
-      ));
+      );
       _reply_pages[parent.id] = page;
       _reply_has_more[parent.id] = response.has_more;
       _set_count(response.comment_count);
@@ -194,8 +205,7 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
     List<String> images = const [],
     int? parent_id,
   }) async {
-    if (!_active || is_mutating ||
-        (content.trim().isEmpty && images.isEmpty)) {
+    if (!_active || is_mutating || (content.trim().isEmpty && images.isEmpty)) {
       return false;
     }
     is_submitting = true;
@@ -251,7 +261,11 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
       // 登录期间列表可能刷新，使用当前节点而非点击时捕获的旧对象。
       final current = _find_comment(comments, comment.id);
       if (current == null) return;
-      final result = await repository.like(novel_id, comment.id, !current.is_liked);
+      final result = await repository.like(
+        novel_id,
+        comment.id,
+        !current.is_liked,
+      );
       if (!_active) return;
       final bool liked = parse_paragraph_bool(result['liked']);
       final int count = parse_paragraph_int(result['like_count']);
@@ -260,10 +274,10 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
         liked: liked,
         count: count,
       );
-      _replace_comment(comment.id, (current) => current.copy_with(
-        is_liked: liked,
-        like_count: count,
-      ));
+      _replace_comment(
+        comment.id,
+        (current) => current.copy_with(is_liked: liked, like_count: count),
+      );
     } catch (error) {
       _report_error(error);
     } finally {
@@ -283,8 +297,10 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
     for (final comment in incoming) {
       final previous = by_id[comment.id];
       // 翻页遇到重复父评论时，不能用三条预览折叠用户已经展开的回复。
-      by_id[comment.id] = preserve_loaded_replies &&
-              previous != null && _reply_pages.containsKey(comment.id)
+      by_id[comment.id] =
+          preserve_loaded_replies &&
+              previous != null &&
+              _reply_pages.containsKey(comment.id)
           ? comment.copy_with(replies: previous.replies)
           : comment;
     }
@@ -297,12 +313,12 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
     int request_revision,
   ) => incoming.map((comment) {
     final confirmed = _confirmed_likes[comment.id];
-    final bool keep_like = confirmed != null &&
-        confirmed.revision > request_revision;
+    final bool keep_like =
+        confirmed != null && confirmed.revision > request_revision;
     return comment.copy_with(
       replies: _preserve_recent_likes(comment.replies, request_revision),
-      is_liked: keep_like ? confirmed!.liked : null,
-      like_count: keep_like ? confirmed!.count : null,
+      is_liked: keep_like ? confirmed.liked : null,
+      like_count: keep_like ? confirmed.count : null,
     );
   }).toList();
 
@@ -318,13 +334,16 @@ class ParagraphCommentSheetLogic extends ChangeNotifier {
 
   /// 回复可继续被回复，所有节点共用一套递归更新逻辑。
   void _replace_comment(
-    int comment_id, ParagraphComment Function(ParagraphComment) update,
+    int comment_id,
+    ParagraphComment Function(ParagraphComment) update,
   ) {
-    List<ParagraphComment> replace(List<ParagraphComment> source) => source.map(
-      (comment) => comment.id == comment_id
-          ? update(comment)
-          : comment.copy_with(replies: replace(comment.replies)),
-    ).toList();
+    List<ParagraphComment> replace(List<ParagraphComment> source) => source
+        .map(
+          (comment) => comment.id == comment_id
+              ? update(comment)
+              : comment.copy_with(replies: replace(comment.replies)),
+        )
+        .toList();
     comments = replace(comments);
   }
 

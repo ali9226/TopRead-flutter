@@ -1,7 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
 
-import 'package:app/components/svg_icon/index.dart';
-import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:app/pages/work_editor/_shared/widgets/long_chapter_tile.dart';

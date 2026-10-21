@@ -2639,27 +2639,51 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              /// 标题（有封面时左侧显示封面缩略图）。
-                              if (_logic
-                                      .story_data
-                                      .value
-                                      ?.cover_url
-                                      .isNotEmpty ==
-                                  true)
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    NovelCover(
-                                      image_url:
-                                          _logic.story_data.value!.cover_url,
-                                      width: 48,
-                                      height: 64,
-                                      border_radius: 6,
-                                      is_dark: is_dark,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: TitleWithStoryId(
+                              /// TODO 标题单独避让局部系统区，多行超高标题也适用，正文仍保持完整可读宽度。
+                              WindowReservedRegionPadding(
+                                mode: WindowReservedRegionPaddingMode.heading,
+                                child:
+                                    (_logic
+                                            .story_data
+                                            .value
+                                            ?.cover_url
+                                            .isNotEmpty ==
+                                        true)
+                                    ? Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          NovelCover(
+                                            image_url: _logic
+                                                .story_data
+                                                .value!
+                                                .cover_url,
+                                            width: 48,
+                                            height: 64,
+                                            border_radius: 6,
+                                            is_dark: is_dark,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: TitleWithStoryId(
+                                              title: _logic.title,
+                                              story_id: _logic.story_id,
+                                              on_cover_replaced:
+                                                  _on_cover_replaced,
+                                              title_style: TextStyle(
+                                                fontSize: title_font_size,
+                                                fontWeight:
+                                                    FontConfig.adjustedWeight(
+                                                      FontWeight.w500,
+                                                    ),
+                                                color: title_color,
+                                                height: 1.4,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : TitleWithStoryId(
                                         title: _logic.title,
                                         story_id: _logic.story_id,
                                         on_cover_replaced: _on_cover_replaced,
@@ -2672,23 +2696,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
                                           height: 1.4,
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                )
-                              else
-                                TitleWithStoryId(
-                                  title: _logic.title,
-                                  story_id: _logic.story_id,
-                                  on_cover_replaced: _on_cover_replaced,
-                                  title_style: TextStyle(
-                                    fontSize: title_font_size,
-                                    fontWeight: FontConfig.adjustedWeight(
-                                      FontWeight.w500,
-                                    ),
-                                    color: title_color,
-                                    height: 1.4,
-                                  ),
-                                ),
+                              ),
                               const SizedBox(height: 12),
 
                               /// 标签列表。

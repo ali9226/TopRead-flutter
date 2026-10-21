@@ -29,7 +29,7 @@ class QuestResult extends StatelessWidget {
     final cjk = quest_is_cjk(context);
     return TweenAnimationBuilder<double>(
       key: ValueKey('${state.challenge_id}_${state.status.name}_$coming_soon'),
-      duration: const Duration(milliseconds: 1000),
+      duration: TileQuestStyle.result_duration,
       tween: Tween(begin: 0, end: 1),
       builder: (context, value, child) {
         final appear = Curves.easeOutCubic.transform(
@@ -42,7 +42,9 @@ class QuestResult extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             ColoredBox(
-              color: const Color(0xFF061126).withValues(alpha: .72 * appear),
+              color: TileQuestStyle.result_scrim.withValues(
+                alpha: TileQuestStyle.result_scrim_opacity * appear,
+              ),
             ),
             if (won && !coming_soon)
               IgnorePointer(
@@ -68,22 +70,29 @@ class QuestResult extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) => ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: math.min(350, constraints.maxWidth - 32),
-            maxHeight: constraints.maxHeight - 32,
+            maxWidth: math.min(
+              TileQuestStyle.panel_max_width,
+              constraints.maxWidth - TileQuestStyle.result_window_inset * 2,
+            ),
+            maxHeight:
+                constraints.maxHeight - TileQuestStyle.result_window_inset * 2,
           ),
           child: SingleChildScrollView(
             child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: TileQuestStyle.glass(radius: 30).copyWith(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF29476D), Color(0xFF142846)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                border: Border.all(
-                  color: TileQuestStyle.gold.withValues(alpha: .35),
-                ),
-              ),
+              padding: const EdgeInsets.all(TileQuestStyle.panel_inset),
+              decoration:
+                  TileQuestStyle.glass(
+                    radius: TileQuestStyle.result_panel_radius,
+                  ).copyWith(
+                    gradient: const LinearGradient(
+                      colors: TileQuestStyle.result_panel_colors,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    border: Border.all(
+                      color: TileQuestStyle.gold.withValues(alpha: .35),
+                    ),
+                  ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -103,9 +112,7 @@ class QuestResult extends StatelessWidget {
                           ? 'Level Complete!'
                           : 'Game Over',
                     ),
-                    style: TileQuestStyle.title(
-                      cjk,
-                    ).copyWith(fontSize: cjk ? 25 : 27),
+                    style: TileQuestStyle.title(cjk),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
@@ -139,7 +146,8 @@ class QuestResult extends StatelessWidget {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0C1D36).withValues(alpha: .6),
+                        color: TileQuestStyle.result_statistics_background
+                            .withValues(alpha: .6),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Column(
@@ -270,7 +278,7 @@ class _ResultCrest extends StatelessWidget {
                     color: TileQuestStyle.gold,
                     shadows: const [
                       Shadow(
-                        color: Color(0xA9ECA936),
+                        color: TileQuestStyle.result_star_shadow,
                         blurRadius: 20,
                         offset: Offset(0, 3),
                       ),
@@ -285,8 +293,8 @@ class _ResultCrest extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  const Color(0xFFADBBE8).withValues(alpha: .35),
-                  const Color(0xFF657BB6).withValues(alpha: .06),
+                  TileQuestStyle.result_crest_glow.withValues(alpha: .35),
+                  TileQuestStyle.result_crest_glow_edge.withValues(alpha: .06),
                 ],
               ),
             ),
@@ -297,7 +305,7 @@ class _ResultCrest extends StatelessWidget {
               size: 54,
               color: coming_soon
                   ? TileQuestStyle.gold
-                  : const Color(0xFFD8DFF7),
+                  : TileQuestStyle.result_moon,
             ),
           ),
   );
@@ -327,7 +335,7 @@ class _CelebrationPainter extends CustomPainter {
         ..color = [
           TileQuestStyle.gold,
           TileQuestStyle.mint,
-          const Color(0xFFC1B4FF),
+          TileQuestStyle.celebration_lilac,
         ][i % 3].withValues(alpha: 1 - t * .9);
       canvas.save();
       canvas.translate(position.dx, position.dy);

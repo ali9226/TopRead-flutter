@@ -35,6 +35,12 @@ class ReadMainList extends StatelessWidget {
 
   /// 正文点击回调。
   final GestureTapDownCallback on_reading_tap_down;
+  final VoidCallback? on_back;
+  final VoidCallback? on_share;
+  final VoidCallback? on_read;
+  final VoidCallback? on_favorite;
+  final bool favorited;
+  final bool favorite_loading;
 
   /// 与短篇共用段落选择、输入和详情弹窗的交互入口。
   final void Function(ReadingContentItem, TextSelection)? on_paragraph_comment;
@@ -77,6 +83,12 @@ class ReadMainList extends StatelessWidget {
     required this.reading_items,
     required this.reading_section_key,
     required this.on_reading_tap_down,
+    this.on_back,
+    this.on_share,
+    this.on_read,
+    this.on_favorite,
+    this.favorited = false,
+    this.favorite_loading = false,
     this.on_paragraph_comment,
     this.on_paragraph_comments,
     this.on_paragraph_share,
@@ -93,11 +105,17 @@ class ReadMainList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 页面列表底部预留阅读进度遮罩高度，避免正文被遮挡。
-    final EdgeInsets list_padding = EdgeInsets.fromLTRB(
-      MainListStyle.page_horizontal_padding,
-      status_bar_height + MainListStyle.top_padding,
-      MainListStyle.page_horizontal_padding,
-      MainListStyle.reading_mask_height,
+    final EdgeInsets list_padding = EdgeInsets.only(
+      // 头图自己处理状态区；直接进入正文时保留原来的顶部落点。
+      top: logic.should_show_introduction
+          ? 0
+          : status_bar_height +
+                MainListStyle.top_padding +
+                math.max(
+                  0,
+                  status_bar_height + MainListStyle.cover_top_spacing,
+                ),
+      bottom: MainListStyle.reading_mask_height,
     );
 
     return ListView(
@@ -108,13 +126,6 @@ class ReadMainList extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            // 顶部加一段间距，让封面与状态栏保持视觉呼吸感。
-            SizedBox(
-              height: math.max(
-                0,
-                status_bar_height + MainListStyle.cover_top_spacing,
-              ),
-            ),
             ReadContent(
               logic: logic,
               is_dark: is_dark,
@@ -123,6 +134,12 @@ class ReadMainList extends StatelessWidget {
               scroll_controller: scroll_controller,
               reading_section_key: reading_section_key,
               on_reading_tap_down: on_reading_tap_down,
+              on_back: on_back,
+              on_share: on_share,
+              on_read: on_read,
+              on_favorite: on_favorite,
+              favorited: favorited,
+              favorite_loading: favorite_loading,
               on_paragraph_comment: on_paragraph_comment,
               on_paragraph_comments: on_paragraph_comments,
               on_paragraph_share: on_paragraph_share,

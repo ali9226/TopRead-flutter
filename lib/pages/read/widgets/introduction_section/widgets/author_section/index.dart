@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
+import 'package:app/util/language_util/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -23,12 +24,16 @@ class ReadAuthorSection extends StatefulWidget {
 
   /// 关注状态变更回调。
   final ValueChanged<bool>? on_focus_changed;
+  final bool hero;
+  final VoidCallback? on_author_tap;
 
   const ReadAuthorSection({
     super.key,
     required this.is_dark,
     required this.detail,
     this.on_focus_changed,
+    this.hero = false,
+    this.on_author_tap,
   });
 
   @override
@@ -58,6 +63,43 @@ class _ReadAuthorSectionState extends State<ReadAuthorSection> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.hero) {
+      return LayoutBuilder(
+        builder: (context, constraints) => Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                onTap: widget.on_author_tap,
+                child: Row(
+                  children: [
+                    _ReaderAuthorAvatar(
+                      is_dark: widget.is_dark,
+                      detail: widget.detail,
+                    ),
+                    const SizedBox(width: AuthorStyle.author_name_left_spacing),
+                    Expanded(
+                      child: _ReaderAuthorName(
+                        detail: widget.detail,
+                        is_dark: widget.is_dark,
+                        hero: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: AuthorStyle.follow_tag_left_spacing),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth:
+                    constraints.maxWidth * AuthorStyle.hero_follow_width_ratio,
+              ),
+              child: _build_follow_tag(),
+            ),
+          ],
+        ),
+      );
+    }
     // 作者信息在封面区中部展示，使用最小宽度避免占满整行。
     return Center(
       child: Row(
@@ -81,7 +123,7 @@ class _ReadAuthorSectionState extends State<ReadAuthorSection> {
   /// 构建关注标签。
   Widget _build_follow_tag() {
     // 夜间模式使用主题色，日间模式使用品牌蓝色。
-    final Color accent_color = widget.is_dark
+    final Color accent_color = widget.hero || widget.is_dark
         ? ColorConstants.themeColor
         : AuthorStyle.brand_color;
 
@@ -114,14 +156,18 @@ class _ReadAuthorSectionState extends State<ReadAuthorSection> {
                 : null,
             borderRadius: BorderRadius.circular(AuthorStyle.follow_tag_radius),
           ),
-          child: Text(
-            _is_focused ? easy.tr('read.followed') : easy.tr('read.follow'),
-            style: TextStyle(
-              color: _is_focused
-                  ? accent_color.withValues(alpha: 0.7)
-                  : accent_color,
-              fontSize: AuthorStyle.follow_tag_font_size,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _is_focused ? easy.tr('read.followed') : easy.tr('read.follow'),
+              maxLines: 1,
+              style: TextStyle(
+                color: _is_focused
+                    ? accent_color.withValues(alpha: 0.7)
+                    : accent_color,
+                fontSize: AuthorStyle.follow_tag_font_size,
+                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+              ),
             ),
           ),
         ),
@@ -232,8 +278,13 @@ class _ReaderAuthorName extends StatelessWidget {
 
   /// 当前是否为夜间主题。
   final bool is_dark;
+  final bool hero;
 
-  const _ReaderAuthorName({required this.detail, required this.is_dark});
+  const _ReaderAuthorName({
+    required this.detail,
+    required this.is_dark,
+    this.hero = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -242,10 +293,16 @@ class _ReaderAuthorName extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
-        color: is_dark
+        color: hero || is_dark
             ? AuthorStyle.author_name_color_dark
             : AuthorStyle.author_name_color_light,
-        fontSize: AuthorStyle.author_name_font_size,
+        fontSize: hero
+            ? (LanguageUtil.is_cjk_language(
+                    Localizations.localeOf(context).languageCode,
+                  )
+                  ? AuthorStyle.hero_name_size_cjk
+                  : AuthorStyle.hero_name_size_alphabetic)
+            : AuthorStyle.author_name_font_size,
         fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
       ),
     );

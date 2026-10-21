@@ -100,7 +100,7 @@ Future<void> telegram_login(BuildContext context) async {
       await Future.delayed(const Duration(seconds: 2));
     }
 
-    if (!is_current()) {
+    if (!is_current() || !context.mounted) {
       return;
     }
 
@@ -119,7 +119,7 @@ Future<void> telegram_login(BuildContext context) async {
     );
   } catch (error) {
     logUtil(msg: "Telegram 授权登录失败: $error", type: 'e');
-    if (is_current()) {
+    if (context.mounted && is_current()) {
       showBottomTip(context.tr('AuthorizedLogin.telegram_auth_failed'));
     }
   }

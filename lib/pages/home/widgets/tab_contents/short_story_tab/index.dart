@@ -473,7 +473,7 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
                   title: easy.tr('dislike_sheet.login_required'),
                 );
                 if (!is_logged_in) return;
-                if (!context.mounted) return;
+                if (!mounted) return;
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (BuildContext _) => const InterestPreferencePage(),

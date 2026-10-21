@@ -16,12 +16,16 @@ class CatalogHeader extends StatelessWidget {
   /// 是否为夜间模式。
   final bool is_dark;
 
+  /// TODO 漫画和推荐列表可复用同款目录标题栏，默认仍显示短篇目录标题。
+  final String? title;
+
   /// 关闭按钮点击回调。
   final VoidCallback on_close;
 
   const CatalogHeader({
     super.key,
     required this.is_dark,
+    this.title,
     required this.on_close,
   });
 
@@ -51,16 +55,16 @@ class CatalogHeader extends StatelessWidget {
           child: Row(
             children: <Widget>[
               /// 标题文字。
-              Text(
-                tr('short_story_read.catalog'),
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                  color: title_color,
+              Expanded(
+                child: Text(
+                  title ?? tr('short_story_read.catalog'),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                    color: title_color,
+                  ),
                 ),
               ),
-
-              const Spacer(),
 
               /// 关闭按钮。
               GestureDetector(

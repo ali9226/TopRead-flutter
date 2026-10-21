@@ -702,6 +702,10 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
   private static let setSplashAdMutedMethod = "setMuted"
   private static let masonryNativeAdFactoryID = "masonryNativeAdCard"
   private static let shortStoryNativeAdFactoryID = "shortStoryNativeAdCard"
+  private var readerBrightnessChannel: FlutterMethodChannel?
+  private var readerBrightnessPreview: UIView?
+  private var readerBrightnessPreviewValue: Double?
+  private var readerBrightnessAppliedPhysical: Double?
   private var badgeChannel: FlutterMethodChannel?
   private var advertisingInfoChannel: FlutterMethodChannel?
   private var masonryNativeAdLayoutChannel: FlutterMethodChannel?
@@ -755,6 +759,84 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     )
     shortStoryNativeAdFactory.layoutChannel = shortStoryLayoutChannel
     shortStoryNativeAdLayoutChannel = shortStoryLayoutChannel
+
+    // 阅读亮度只调整当前屏幕，进入/退出的原值由 Flutter 阅读会话配对保存与恢复。
+    let readerBrightnessChannel = FlutterMethodChannel(
+      name: "com.topread.novel/reader_brightness",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    let readerBrightnessRegistrar = engineBridge.pluginRegistry.registrar(forPlugin: "ComicReaderBrightness")
+    readerBrightnessChannel.setMethodCallHandler { [weak self] call, result in
+      guard let self = self else { return }
+      // 用当前 Flutter 引擎所属场景的屏幕；多窗口或外接屏不能总是写 UIScreen.main。
+      let readerWindow = readerBrightnessRegistrar?.viewController?.viewIfLoaded?.window
+        ?? self.window
+      let readerScreen = readerWindow?.windowScene?.screen ?? UIScreen.main
+      switch call.method {
+      case "getBrightness":
+        let brightness = Double(readerScreen.brightness)
+        #if targetEnvironment(simulator)
+          let arguments = call.arguments as? [String: Any]
+          if arguments?["reset_preview"] as? Bool == true {
+            // Hot restart不会销毁AppDelegate，旧Dart会话的预览不能变成新会话的系统亮度。
+            self.readerBrightnessPreview?.removeFromSuperview()
+            self.readerBrightnessPreview = nil
+            self.readerBrightnessPreviewValue = nil
+            self.readerBrightnessAppliedPhysical = nil
+          }
+          if let applied = self.readerBrightnessAppliedPhysical,
+            abs(applied - brightness) > 0.001 {
+            // 控制中心改变了真实值时，同步阅读预览；不能一直返回上一次滑块值。
+            self.readerBrightnessPreview?.alpha = CGFloat((1 - brightness) * 0.75)
+            self.readerBrightnessPreviewValue = brightness
+            self.readerBrightnessAppliedPhysical = brightness
+          }
+          // 模拟器没有背光，未设置阅读遮罩时呈现的就是满亮画面，不能显示虚假的中间值。
+          let previewValue = self.readerBrightnessPreview?.superview == nil
+            ? 1.0 : self.readerBrightnessPreviewValue ?? 1.0
+          result(["brightness": previewValue, "override": brightness])
+        #else
+        result(["brightness": brightness, "override": brightness])
+        #endif
+      case "setBrightness", "restoreBrightness":
+        guard let arguments = call.arguments as? [String: Any],
+          let value = arguments["value"] as? NSNumber,
+          value.doubleValue.isFinite
+        else {
+          result(FlutterError(code: "invalid_brightness", message: "Brightness must be finite.", details: nil))
+          return
+        }
+        let brightness = min(1, max(0, value.doubleValue))
+        readerScreen.brightness = CGFloat(brightness)
+        #if targetEnvironment(simulator)
+          // 模拟器没有独立背光：仅模拟器使用不可交互遮罩预览变化，真机始终只写真实屏幕亮度。
+          if call.method == "restoreBrightness" {
+            self.readerBrightnessPreview?.removeFromSuperview()
+            self.readerBrightnessPreview = nil
+            self.readerBrightnessPreviewValue = nil
+            self.readerBrightnessAppliedPhysical = nil
+          } else if let readerWindow = readerWindow {
+            let preview = self.readerBrightnessPreview ?? UIView(frame: readerWindow.bounds)
+            preview.backgroundColor = .black
+            preview.isUserInteractionEnabled = false
+            preview.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            preview.alpha = CGFloat((1 - brightness) * 0.75)
+            if preview.superview !== readerWindow {
+              preview.removeFromSuperview()
+              readerWindow.addSubview(preview)
+            }
+            readerWindow.bringSubviewToFront(preview)
+            self.readerBrightnessPreview = preview
+            self.readerBrightnessPreviewValue = brightness
+            self.readerBrightnessAppliedPhysical = Double(readerScreen.brightness)
+          }
+        #endif
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+    self.readerBrightnessChannel = readerBrightnessChannel
 
     let channel = FlutterMethodChannel(
       name: Self.badgeChannelName,

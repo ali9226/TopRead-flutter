@@ -1,5 +1,6 @@
 package com.topread.novel
 
+import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -19,6 +20,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private var advertisingInfoChannel: AdvertisingInfoChannel? = null
+    private var readerBrightnessChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -50,6 +52,39 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             applicationContext,
         )
+
+        // 仅使用当前 Activity 的窗口亮度，不修改系统亮度，也不需要写系统设置权限。
+        readerBrightnessChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.topread.novel/reader_brightness",
+        ).also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "getBrightness" -> {
+                        val override = window.attributes.screenBrightness
+                        val systemBrightness = Settings.System.getInt(
+                            contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128,
+                        ) / 255.0
+                        result.success(mapOf(
+                            "brightness" to if (override >= 0) override.toDouble() else systemBrightness,
+                            "override" to override.toDouble(),
+                        ))
+                    }
+                    "setBrightness", "restoreBrightness" -> {
+                        val value = call.argument<Number>("value")?.toDouble()
+                        if (value == null || !value.isFinite()) {
+                            result.error("invalid_brightness", "Brightness must be finite.", null)
+                        } else {
+                            val attributes = window.attributes
+                            attributes.screenBrightness = if (value < 0) -1f else value.coerceIn(0.01, 1.0).toFloat()
+                            window.attributes = attributes
+                            result.success(null)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -97,6 +132,8 @@ class MainActivity : FlutterActivity() {
             flutterEngine,
             SHORT_STORY_NATIVE_AD_FACTORY_ID,
         )
+        readerBrightnessChannel?.setMethodCallHandler(null)
+        readerBrightnessChannel = null
         advertisingInfoChannel?.dispose()
         advertisingInfoChannel = null
         super.cleanUpFlutterEngine(flutterEngine)

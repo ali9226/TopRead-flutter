@@ -1,4 +1,3 @@
-import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';

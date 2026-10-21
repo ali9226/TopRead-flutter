@@ -5,6 +5,7 @@ import 'package:app/api/comics.dart';
 import 'package:app/models/comics.dart';
 import 'package:app/pages/comics/logic.dart';
 import 'package:app/pages/comics/style.dart';
+import 'package:app/pages/comics/reader/style.dart';
 import 'package:app/services/comics_progress/record.dart';
 import 'package:app/services/comics_progress/service.dart';
 import 'package:flutter/material.dart';
@@ -68,6 +69,8 @@ class ComicReaderLogic extends ComicsController {
     : progress = progress ?? ComicsProgressService.instance {
     scroll.addListener(_on_scroll);
   }
+
+  bool get is_reflowing => _restoring || _adjusting_layout;
 
   List<double> get page_heights =>
       reading?.images
@@ -278,6 +281,50 @@ class ComicReaderLogic extends ComicsController {
     scroll.jumpTo(offset.clamp(0, scroll.position.maxScrollExtent));
     page_index = target;
     _last_fraction = fraction.clamp(0, 1);
+    emit();
+  }
+
+  /// TODO 本章图片的可滚动距离，排除章末操作区，进度条到100%即到漫画内容底部。
+  double get chapter_scroll_extent {
+    final height = page_heights.fold<double>(0, (sum, value) => sum + value);
+    final viewport = scroll.hasClients
+        ? scroll.position.viewportDimension
+        : 0.0;
+    return (height - viewport).clamp(0, double.infinity);
+  }
+
+  double get chapter_progress {
+    if (reading == null || reading!.images.isEmpty || !scroll.hasClients) {
+      return 0;
+    }
+    final extent = chapter_scroll_extent;
+    return extent <= 0 ? 1 : (scroll.offset / extent).clamp(0, 1);
+  }
+
+  /// TODO 连续定位到本章进度，仍由原滚动监听保存图片索引与页内比例。
+  void jump_to_progress(double value) {
+    if (disposed || loading || !value.isFinite || !scroll.hasClients) return;
+    final offset = (chapter_scroll_extent * value.clamp(0, 1))
+        .clamp(0, scroll.position.maxScrollExtent)
+        .toDouble();
+    scroll.jumpTo(offset);
+    _on_scroll();
+    emit();
+  }
+
+  /// TODO 与小说阅读一致，在松开进度滑块后平滑定位；仍由既有滚动监听追踪和保存位置。
+  Future<void> animate_to_progress(double value) async {
+    if (disposed || loading || !value.isFinite || !scroll.hasClients) return;
+    final offset = (chapter_scroll_extent * value.clamp(0, 1))
+        .clamp(0, scroll.position.maxScrollExtent)
+        .toDouble();
+    await scroll.animateTo(
+      offset,
+      duration: ComicReaderStyle.progress_seek_duration,
+      curve: Curves.easeOutCubic,
+    );
+    if (disposed || !scroll.hasClients) return;
+    _on_scroll();
     emit();
   }
 

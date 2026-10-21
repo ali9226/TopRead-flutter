@@ -5,6 +5,7 @@ import 'package:app/models/ad_config.dart';
 import 'package:app/pages/read/logic.dart' as read_logic;
 import 'package:app/pages/read/widgets/ad_free_time_hint/index.dart';
 import 'package:app/pages/read/widgets/introduction_section/index.dart';
+import 'package:app/pages/read/widgets/main_list/style.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/log_util.dart';
@@ -40,6 +41,12 @@ class ReadContent extends StatelessWidget {
 
   /// 正文点击回调，由页面读取最新滚动状态并决定翻页或显示导航栏。
   final GestureTapDownCallback on_reading_tap_down;
+  final VoidCallback? on_back;
+  final VoidCallback? on_share;
+  final VoidCallback? on_read;
+  final VoidCallback? on_favorite;
+  final bool favorited;
+  final bool favorite_loading;
 
   /// 与短篇共用段落选择、输入和详情弹窗的交互入口。
   final void Function(ReadingContentItem, TextSelection)? on_paragraph_comment;
@@ -83,6 +90,12 @@ class ReadContent extends StatelessWidget {
     required this.reading_items,
     required this.scroll_controller,
     required this.on_reading_tap_down,
+    this.on_back,
+    this.on_share,
+    this.on_read,
+    this.on_favorite,
+    this.favorited = false,
+    this.favorite_loading = false,
     this.on_paragraph_comment,
     this.on_paragraph_comments,
     this.on_paragraph_share,
@@ -111,6 +124,12 @@ class ReadContent extends StatelessWidget {
           ReadIntroductionSection(
             is_dark: is_dark,
             detail: detail,
+            on_back: on_back,
+            on_share: on_share,
+            on_read: on_read,
+            on_favorite: on_favorite,
+            favorited: favorited,
+            favorite_loading: favorite_loading,
             on_focus_changed: on_focus_changed,
             // 调试用户点击"替换封面"后同步本地详情并刷新封面展示。
             on_cover_replaced: (cover_url, cover_width, cover_height) =>
@@ -130,6 +149,8 @@ class ReadContent extends StatelessWidget {
             width: double.infinity,
             color: Colors.transparent,
             margin: const EdgeInsets.only(
+              left: MainListStyle.page_horizontal_padding,
+              right: MainListStyle.page_horizontal_padding,
               bottom: ContentStyle.reading_container_bottom_margin,
             ),
             padding: ContentStyle.reading_padding,

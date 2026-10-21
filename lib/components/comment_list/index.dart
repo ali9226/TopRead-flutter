@@ -170,9 +170,6 @@ class _CommentSheetState extends State<CommentSheet>
   /// 总评论数。
   int _total_count = 0;
 
-  /// 段落评论总数（来自服务端 novel_content_paragraph.comment_count，段评时使用）。
-  int _paragraph_comment_count = 0;
-
   /// 每页数量。
   final int _page_size = 20;
 
@@ -340,7 +337,6 @@ class _CommentSheetState extends State<CommentSheet>
           return c.copy_with(replies: _flatten_replies(c.replies));
         }).toList();
         _total_count = result.total;
-        if (result.comment_count != null) _paragraph_comment_count = result.comment_count!;
         _has_more = result.page * result.page_size < result.total;
       });
       // 首次加载成功后，同步最新评论总数到外层
@@ -431,7 +427,6 @@ class _CommentSheetState extends State<CommentSheet>
           _current_page = result.page;
           _comments = [..._comments, ...new_comments];
           _total_count = math.max(_total_count, result.total);
-          if (result.comment_count != null) _paragraph_comment_count = result.comment_count!;
           _has_more = result.page * result.page_size < result.total;
         });
       }
@@ -681,9 +676,7 @@ class _CommentSheetState extends State<CommentSheet>
       case 'report':
         await _handle_report(comment);
       case 'delete':
-        final bool confirmed = await confirmCommentDelete(
-          context: context,
-        );
+        final bool confirmed = await confirmCommentDelete(context: context);
         if (confirmed && mounted) {
           await _handle_delete(comment);
         }
@@ -703,7 +696,10 @@ class _CommentSheetState extends State<CommentSheet>
     });
 
     try {
-      final bool success = await delete_comment(comment_id: comment.id, novel_id: widget.novel_id);
+      final bool success = await delete_comment(
+        comment_id: comment.id,
+        novel_id: widget.novel_id,
+      );
       if (!mounted) return;
 
       if (success) {
@@ -765,7 +761,10 @@ class _CommentSheetState extends State<CommentSheet>
     });
 
     try {
-      final bool success = await dislike_comment(comment_id: comment.id, novel_id: widget.novel_id);
+      final bool success = await dislike_comment(
+        comment_id: comment.id,
+        novel_id: widget.novel_id,
+      );
       if (!mounted) return;
 
       if (success) {
@@ -956,7 +955,6 @@ class _CommentSheetState extends State<CommentSheet>
               ? result['comment_count']
               : int.tryParse(result['comment_count'].toString());
           if (paragraph_count != null) {
-            _paragraph_comment_count = paragraph_count;
             widget.on_paragraph_count_changed?.call(paragraph_count);
           }
           widget.on_novel_count_changed?.call(1);

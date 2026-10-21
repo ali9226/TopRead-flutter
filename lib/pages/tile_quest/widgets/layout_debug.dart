@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../game/models.dart';
 import '../style.dart';
 import 'scene_layout.dart';
+import 'layout_debug_style.dart';
 
 /// 仅由 debug 构建挂载；关闭时不遍历牌阵，也不绘制碰撞或文字。
 class QuestLayoutDebug extends StatefulWidget {
@@ -48,20 +49,20 @@ class _QuestLayoutDebugState extends State<QuestLayoutDebug> {
             ),
           ),
           Positioned(
-            top: layout.header.bottom + _DebugStyle.button_extent,
-            right: _DebugStyle.inset,
+            top: layout.header.bottom + QuestLayoutDebugStyle.button_extent,
+            right: QuestLayoutDebugStyle.inset,
             width: math.min(
-              _DebugStyle.panel_width,
-              layout.size.width - _DebugStyle.inset * 2,
+              QuestLayoutDebugStyle.panel_width,
+              layout.size.width - QuestLayoutDebugStyle.inset * 2,
             ),
             child: IgnorePointer(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: _DebugStyle.panel_color,
-                  borderRadius: BorderRadius.circular(_DebugStyle.radius),
+                  color: QuestLayoutDebugStyle.panel_color,
+                  borderRadius: BorderRadius.circular(QuestLayoutDebugStyle.radius),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(_DebugStyle.panel_padding),
+                  padding: const EdgeInsets.all(QuestLayoutDebugStyle.panel_padding),
                   child: Text(
                     'seed ${widget.state.seed}\n'
                     'clickable $choices  blocked ${tiles.length - choices}\n'
@@ -69,8 +70,8 @@ class _QuestLayoutDebugState extends State<QuestLayoutDebug> {
                     key: const ValueKey('tile_quest_layout_debug_stats'),
                     style: TextStyle(
                       color: TileQuestStyle.cream,
-                      fontSize: _DebugStyle.stats_size,
-                      height: _DebugStyle.line_height,
+                      fontSize: QuestLayoutDebugStyle.stats_size,
+                      height: QuestLayoutDebugStyle.line_height,
                       fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                     ),
                   ),
@@ -83,7 +84,7 @@ class _QuestLayoutDebugState extends State<QuestLayoutDebug> {
           Positioned.fromRect(
             rect: toggle,
             child: SizedBox.square(
-              dimension: _DebugStyle.button_extent,
+              dimension: QuestLayoutDebugStyle.button_extent,
               child: IconButton(
                 key: const ValueKey('tile_quest_layout_debug_toggle'),
                 tooltip: 'Layout debug',
@@ -91,7 +92,7 @@ class _QuestLayoutDebugState extends State<QuestLayoutDebug> {
                 icon: Icon(
                   _enabled ? Icons.grid_off_rounded : Icons.grid_on_rounded,
                   color: _enabled ? TileQuestStyle.gold : TileQuestStyle.pale,
-                  size: _DebugStyle.icon_size,
+                  size: QuestLayoutDebugStyle.icon_size,
                 ),
               ),
             ),
@@ -113,10 +114,10 @@ class _QuestLayoutDebugState extends State<QuestLayoutDebug> {
     final candidates = <Rect>[
       if (!layout.compact_header)
         Rect.fromLTWH(
-          layout.header.right - _DebugStyle.button_extent,
-          layout.header.bottom - _DebugStyle.button_extent,
-          _DebugStyle.button_extent,
-          _DebugStyle.button_extent,
+          layout.header.right - QuestLayoutDebugStyle.button_extent,
+          layout.header.bottom - QuestLayoutDebugStyle.button_extent,
+          QuestLayoutDebugStyle.button_extent,
+          QuestLayoutDebugStyle.button_extent,
         ),
       for (final corner in [
         layout.board.topRight,
@@ -126,13 +127,13 @@ class _QuestLayoutDebugState extends State<QuestLayoutDebug> {
       ])
         Rect.fromLTWH(
           corner.dx == layout.board.right
-              ? corner.dx - _DebugStyle.button_extent
+              ? corner.dx - QuestLayoutDebugStyle.button_extent
               : corner.dx,
           corner.dy == layout.board.bottom
-              ? corner.dy - _DebugStyle.button_extent
+              ? corner.dy - QuestLayoutDebugStyle.button_extent
               : corner.dy,
-          _DebugStyle.button_extent,
-          _DebugStyle.button_extent,
+          QuestLayoutDebugStyle.button_extent,
+          QuestLayoutDebugStyle.button_extent,
         ),
     ];
     final cards = widget.state.tiles
@@ -167,13 +168,13 @@ class _QuestLayoutDebugPainter extends CustomPainter {
     for (final tile in ordered) {
       final rect = layout.board_tile(tile);
       final color = tile.is_blocked
-          ? _DebugStyle.blocked_color
-          : _DebugStyle.open_color;
+          ? QuestLayoutDebugStyle.blocked_color
+          : QuestLayoutDebugStyle.open_color;
       canvas.drawRect(
         rect,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = _DebugStyle.stroke_width
+          ..strokeWidth = QuestLayoutDebugStyle.stroke_width
           ..color = color,
       );
       final text = TextPainter(
@@ -181,8 +182,8 @@ class _QuestLayoutDebugPainter extends CustomPainter {
           text: 'L${tile.layer}\n${tile.region_id}',
           style: TextStyle(
             color: color,
-            backgroundColor: _DebugStyle.panel_color,
-            fontSize: _DebugStyle.tile_size,
+            backgroundColor: QuestLayoutDebugStyle.panel_color,
+            fontSize: QuestLayoutDebugStyle.tile_size,
             fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
           ),
         ),
@@ -198,21 +199,4 @@ class _QuestLayoutDebugPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _QuestLayoutDebugPainter old) =>
       old.tiles != tiles || old.layout != layout;
-}
-
-/// 调试样式独立于游戏视觉，生产构建不会创建调试组件。
-class _DebugStyle {
-  static const double button_extent = 44;
-  static const double icon_size = 18;
-  static const double inset = 4;
-  static const double panel_width = 260;
-  static const double panel_padding = 8;
-  static const double radius = 8;
-  static const double stats_size = 10;
-  static const double tile_size = 7;
-  static const double line_height = 1.3;
-  static const double stroke_width = .8;
-  static const Color panel_color = Color(0xDD091628);
-  static const Color blocked_color = Color(0xFFFFAE7C);
-  static const Color open_color = Color(0xFF7CFFCE);
 }

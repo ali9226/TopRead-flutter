@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 import 'package:app/config/font_config.dart';
+import 'package:app/config/color_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/layout_config.dart';
 
@@ -49,6 +50,7 @@ class TileQuestStyle {
   static const double narrow_tool_width = 80;
   static const double narrow_tool_icon_size = 24;
   static const double narrow_tool_content_inset = 4;
+
   /// 与首页等页面共用同一左右边距变量，统一调整只改 LayoutConfig。
   static const double page_inset = LayoutConfig.page_horizontal_padding;
   static const double board_side_margin = 4;
@@ -94,6 +96,61 @@ class TileQuestStyle {
   static const double toolbar_height = 44;
   static const double header_height = 52;
 
+  /// 结果、重开确认与会话暂停共用的卡片边距及圆角。
+  static const double panel_inset = 24;
+  static const double panel_radius = 26;
+  static const double panel_max_width = 350;
+  static const double session_panel_max_width = 330;
+  static const double result_panel_radius = 30;
+  static const double result_window_inset = 16;
+  static const double restart_title_size_cjk = 22;
+  static const double restart_title_size_alphabetic = 22;
+  static const Color modal_barrier = Color(0xFF07152D);
+  static const Color session_scrim = Color(0xE807152D);
+  static const Color result_scrim = Color(0xFF061126);
+  static const double result_scrim_opacity = .72;
+  static const Duration result_duration = Duration(milliseconds: 1000);
+  static const List<Color> result_panel_colors = [
+    Color(0xFF29476D),
+    Color(0xFF142846),
+  ];
+  static const Color result_statistics_background = Color(0xFF0C1D36);
+  static const Color result_star_shadow = Color(0xA9ECA936);
+  static const Color result_crest_glow = Color(0xFFADBBE8);
+  static const Color result_crest_glow_edge = Color(0xFF657BB6);
+  static const Color result_moon = Color(0xFFD8DFF7);
+  static const Color celebration_lilac = Color(0xFFC1B4FF);
+
+  /// 主要与次要操作共享相同命中尺寸，文字沿用 CJK/非 CJK 正文样式。
+  static const double primary_button_height = 48;
+  static const double primary_button_radius = 16;
+  static const double primary_button_icon_size = 19;
+  static const double primary_button_icon_gap = 6;
+  static const double primary_button_border_opacity = .25;
+  static const List<Color> primary_button_colors = [
+    Color(0xFFFFE6A0),
+    Color(0xFFF4BC54),
+  ];
+  static const List<Color> secondary_button_colors = [
+    Color(0xFF344F78),
+    Color(0xFF263E64),
+  ];
+
+  /// 主槽与备用槽都读取相同的圆角与描边材质。
+  static const double tray_well_radius = 19;
+  static const double tray_well_border_width = 1.5;
+  static const double slot_well_radius = 9;
+  static const Color tray_well_border = Color(0xFF9DBCDC);
+  static const Color slot_well_background = Color(0xFF0B1931);
+  static const Color slot_well_border = Color(0xFF7796BA);
+  static const Color reserve_well_background = Color(0xFF142544);
+
+  /// 保存错误使用全站危险色，混入场景底色后仍保持文字对比度。
+  static Color save_error_background(bool dark) => Color.alphaBlend(
+    ColorConstants.dangerColor.withValues(alpha: .26),
+    dark ? ink : const Color(0xFF264972),
+  );
+
   /// 顶栏图片图标显示尺寸。
   static const double header_icon_size = 42;
 
@@ -128,6 +185,7 @@ class TileQuestStyle {
   static const double line_height_alphabetic = 1.4;
   static const double button_min_width_cjk = 92;
   static const double button_min_width_alphabetic = 112;
+
   /// 飞牌目标速度（像素/毫秒）。短跳由时长下限托底显得干脆，
   /// 长跳由时长上限收敛到旧 340ms 观感，避免顶部飞牌过快发飘。
   static const double flight_speed = 1.5;

@@ -1,6 +1,7 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names
 
 import 'package:app/config/color_config.dart';
+import 'package:app/components/reader_bottom_action/style.dart';
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/pages/comics/style.dart';
@@ -8,6 +9,30 @@ import 'package:app/pages/comics/style.dart';
 /// TODO 漫画画布、小说风格阅读工具栏与章节收尾区的设计参数统一管理。
 /// 控件使用稳定对比度，隐藏后保留完整图片画布，日间与夜间分别配置颜色。
 class ComicReaderStyle {
+  /// TODO 松开进度滑块后的定位过渡时长。
+  static const Duration progress_seek_duration = Duration(milliseconds: 320);
+  static const double page_scroll_fraction = 1;
+
+  /// 与小说阅读器保持同样的方向判定阈值，避免滚动中的轻微抖动切换导航栏。
+  static const double navigation_scroll_threshold = 8;
+  static const int page_scroll_ms = 280;
+  static const double auto_min_speed = 20;
+  static const double auto_speed_range = 280;
+  static const double auto_delta_limit = 0.1;
+  static const double auto_button_inset = 20;
+  static double title_size(BuildContext context) => ComicsStyle.is_cjk(context)
+      ? title_font_size_cjk
+      : title_font_size_alphabetic;
+  static double top_bar_height(BuildContext context) =>
+      (MediaQuery.textScalerOf(context).scale(title_size(context)) * 1.3 + 12)
+          .clamp(control_target, double.infinity);
+  static double bottom_bar_height(BuildContext context) =>
+      ReaderBottomActionStyle.row_height(context);
+  static Color canvas_color(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+      ? canvas_background
+      : Colors.white;
+
   /// TODO 实色控件底板随主题变化，不能依赖漫画图片自身颜色产生对比。
   static Color panel_background(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark

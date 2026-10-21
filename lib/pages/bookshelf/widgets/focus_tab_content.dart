@@ -485,7 +485,7 @@ class _FocusAuthorCard extends StatelessWidget {
       [const Color(0xFF6B8CFF), const Color(0xFF9B6BFF)],
       [const Color(0xFFFF6B8C), const Color(0xFFFF9B6B)],
       [const Color(0xFF6BCCAA), const Color(0xFF6BAAEE)],
-      [const Color(0xCC8B6B), const Color(0xCC6B8B)],
+      [const Color(0xFFCC8B6B), const Color(0xFFCC6B8B)],
       [const Color(0xFF8B6BCC), const Color(0xFF6BCCCB)],
       [const Color(0xFFEE8B6B), const Color(0xFFEECB6B)],
     ];

@@ -75,6 +75,9 @@ class ComicCommentsLogic extends ComicsController {
   int? replying_root_id;
   int page = 0;
   int total = 0;
+
+  /// TODO 可见正文条数包含回复，用于与作品详情展示同一口径。
+  int comment_count = 0;
   int identity_epoch = 0;
   bool loading = true;
   bool loading_more = false;
@@ -112,6 +115,7 @@ class ComicCommentsLogic extends ComicsController {
     sending = false;
     page = 0;
     total = 0;
+    comment_count = 0;
     has_more = false;
     loading_more = false;
     unawaited(load());
@@ -180,6 +184,7 @@ class ComicCommentsLogic extends ComicsController {
       }
       threads.removeWhere((id, _) => !items.any((item) => item.id == id));
       total = comics_int(data['total']);
+      comment_count = comics_int(data['comment_count'] ?? data['total']);
       page = next_page;
       has_more =
           rows.length >= ComicCommentsStyle.page_size &&
@@ -322,6 +327,7 @@ class ComicCommentsLogic extends ComicsController {
         reply_to_nickname: target?.nickname,
       );
       cancel_reply();
+      comment_count++;
       if (root_id == null) {
         items.insert(0, added);
         total++;
