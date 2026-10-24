@@ -1,5 +1,6 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/comics/style.dart';
@@ -20,46 +21,51 @@ class ComicsMineStyle {
   static const double subtitle_font_size_alphabetic = 12;
 
   /// 标题与副标题的间距。
-  static const double subtitle_top_spacing = 4;
+  static const double subtitle_top_spacing = LayoutConfig.space_4;
 
   /// 头部与网格的间距。
-  static const double header_bottom_spacing = 16;
+  static const double header_bottom_spacing = LayoutConfig.space_16;
 
   /// 状态角标字号。
   static const double status_font_size = 11;
 
   /// 状态角标水平内边距（CJK）。
-  static const double status_padding_h_cjk = 8;
+  static const double status_padding_h_cjk = LayoutConfig.space_8;
 
   /// 状态角标水平内边距（拉丁语系，单词更宽需更大留白）。
   static const double status_padding_h_alphabetic = 10;
 
   /// 状态角标垂直内边距。
-  static const double status_padding_v = 4;
+  static const double status_padding_v = LayoutConfig.space_4;
 
   /// 状态角标圆角。
-  static const double status_radius = 999;
+  static const double status_radius = LayoutConfig.radius_pill;
 
   /// 状态角标与卡片边缘的间距。
-  static const EdgeInsets status_margin = EdgeInsets.fromLTRB(8, 8, 8, 0);
+  static const EdgeInsets status_margin = EdgeInsets.fromLTRB(
+    LayoutConfig.space_8,
+    LayoutConfig.space_8,
+    LayoutConfig.space_8,
+    0,
+  );
 
   /// 卡片点击去编辑的遮罩不透明度。
   static const double edit_overlay_opacity = 0.28;
 
   /// 悬浮按钮水平内边距。
-  static const double fab_padding_h = 18;
+  static const double fab_padding_h = LayoutConfig.space_18;
 
   /// 悬浮按钮垂直内边距。
-  static const double fab_padding_v = 14;
+  static const double fab_padding_v = LayoutConfig.space_14;
 
   /// 悬浮按钮圆角。
-  static const double fab_radius = 999;
+  static const double fab_radius = LayoutConfig.radius_pill;
 
   /// 悬浮按钮图标与文字间距。
-  static const double fab_icon_spacing = 8;
+  static const double fab_icon_spacing = LayoutConfig.space_8;
 
   /// 悬浮按钮图标尺寸。
-  static const double fab_icon_size = 22;
+  static const double fab_icon_size = LayoutConfig.icon_compact;
 
   /// 悬浮按钮投影模糊半径。
   static const double fab_shadow_blur = 18;
@@ -71,22 +77,22 @@ class ComicsMineStyle {
   static const double fab_shadow_opacity = 0.28;
 
   /// 加载更多区与网格的间距。
-  static const double load_more_top_spacing = 8;
+  static const double load_more_top_spacing = LayoutConfig.space_8;
 
   /// 空状态操作按钮与文案的间距。
-  static const double empty_action_top_spacing = 20;
+  static const double empty_action_top_spacing = LayoutConfig.space_20;
 
   /// 草稿横幅内边距。
   static const EdgeInsets banner_padding = EdgeInsets.symmetric(
-    horizontal: 14,
-    vertical: 12,
+    horizontal: LayoutConfig.space_14,
+    vertical: LayoutConfig.space_12,
   );
 
   /// 草稿横幅圆角。
-  static const double banner_radius = 14;
+  static const double banner_radius = LayoutConfig.radius_14;
 
   /// 草稿横幅与内容的间距。
-  static const double banner_bottom_spacing = 12;
+  static const double banner_bottom_spacing = LayoutConfig.space_12;
 
   /// 状态角标背景不透明度。
   static const double status_background_opacity = 0.90;
@@ -115,25 +121,25 @@ class ComicsMineStyle {
 /// 「我的漫画」状态角标配色：按发布状态区分语义色，日夜主题均保持可读。
 class ComicsMineStatusStyle {
   /// 角标圆角，与卡片标签共用胶囊形。
-  static const double badge_radius = 999;
+  static const double badge_radius = LayoutConfig.radius_pill;
 
   /// 角标字号。
   static const double badge_font_size = 11;
 
   /// 角标水平内边距（CJK）。
-  static const double badge_padding_h_cjk = 8;
+  static const double badge_padding_h_cjk = LayoutConfig.space_8;
 
   /// 角标水平内边距（拉丁语系）。
   static const double badge_padding_h_alphabetic = 10;
 
   /// 角标垂直内边距。
-  static const double badge_padding_v = 4;
+  static const double badge_padding_v = LayoutConfig.space_4;
 
   /// 草稿：中性灰蓝。
-  static Color draft(BuildContext context) => const Color(0xFF8B93A2);
+  static Color draft(BuildContext context) => ColorConstants.components_recommend_book_card_index_tone_ff8b93a2;
 
   /// 审核中：琥珀黄，与主题金同系但更沉稳。
-  static Color pending(BuildContext context) => const Color(0xFFE0A106);
+  static Color pending(BuildContext context) => ColorConstants.pages_comics_mine_style_tone;
 
   /// 已发布：成功绿。
   static Color published(BuildContext context) => ColorConstants.successColor;

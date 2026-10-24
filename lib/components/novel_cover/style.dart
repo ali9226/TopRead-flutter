@@ -1,4 +1,6 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// 小说封面组件样式常量。
 class NovelCoverStyle {
@@ -11,7 +13,7 @@ class NovelCoverStyle {
   static const double default_height = 128;
 
   /// 外部没有传入圆角时，组件使用的默认圆角。
-  static const double default_border_radius = 8;
+  static const double default_border_radius = LayoutConfig.radius_8;
 
   // ========== 骨架屏动画相关 ==========
 
@@ -30,24 +32,24 @@ class NovelCoverStyle {
   // ========== 日间主题颜色 ==========
 
   /// 日间主题骨架底色。
-  static const Color light_skeleton_base_color = Color(0xFFE8ECF3);
+  static const Color light_skeleton_base_color = ColorConstants.cover_skeleton_light_base;
 
   /// 日间主题骨架高亮色。
-  static const Color light_skeleton_highlight_color = Color(0xFFF7F9FC);
+  static const Color light_skeleton_highlight_color = ColorConstants.pages_short_story_read_widgets_full_appbar_tone_fff7f9fc;
 
   /// 日间主题默认兜底背景色。
-  static const Color light_fallback_background_color = Color(0xFFF3F5F9);
+  static const Color light_fallback_background_color = ColorConstants.cover_fallback_light_bg;
 
   // ========== 夜间主题颜色 ==========
 
   /// 夜间主题骨架底色。
-  static const Color dark_skeleton_base_color = Color(0xFF232B39);
+  static const Color dark_skeleton_base_color = ColorConstants.cover_skeleton_dark_base;
 
   /// 夜间主题骨架高亮色。
-  static const Color dark_skeleton_highlight_color = Color(0xFF384356);
+  static const Color dark_skeleton_highlight_color = ColorConstants.pages_short_story_read_widgets_full_appbar_tone;
 
   /// 夜间主题默认兜底背景色。
-  static const Color dark_fallback_background_color = Color(0xFF1A2130);
+  static const Color dark_fallback_background_color = ColorConstants.pages_bookshelf_widgets_bookshelf_grid_content_tone;
 
   // ========== 默认封面背景相关 ==========
 
@@ -60,34 +62,34 @@ class NovelCoverStyle {
 
   /// 简介文字内边距。
   static const EdgeInsets description_padding = EdgeInsets.fromLTRB(
-    12,
-    12,
-    12,
-    12,
+    LayoutConfig.space_12,
+    LayoutConfig.space_12,
+    LayoutConfig.space_12,
+    LayoutConfig.space_12,
   );
 
   /// 大封面简介文字内边距。
   static const EdgeInsets large_description_padding = EdgeInsets.fromLTRB(
-    15,
-    16,
-    15,
-    16,
+    LayoutConfig.space_15,
+    LayoutConfig.space_16,
+    LayoutConfig.space_15,
+    LayoutConfig.space_16,
   );
 
   /// 小封面简介文字内边距。
   static const EdgeInsets compact_description_padding = EdgeInsets.fromLTRB(
-    4,
-    5,
-    4,
-    5,
+    LayoutConfig.space_4,
+    LayoutConfig.space_5,
+    LayoutConfig.space_4,
+    LayoutConfig.space_5,
   );
 
   /// 中等封面简介文字内边距。
   static const EdgeInsets medium_description_padding = EdgeInsets.fromLTRB(
-    7,
-    8,
-    7,
-    8,
+    LayoutConfig.space_7,
+    LayoutConfig.space_8,
+    LayoutConfig.space_7,
+    LayoutConfig.space_8,
   );
 
   /// 简介文字区域宽度占封面宽度的比例。
@@ -214,10 +216,10 @@ class NovelCoverStyle {
   static const double description_text_opacity = 0.96;
 
   /// 海报深色文字。
-  static const Color poster_dark_text_color = Color(0xFF182034);
+  static const Color poster_dark_text_color = ColorConstants.poster_dark_text_color_ff182034;
 
   /// 海报暖色文字。
-  static const Color poster_warm_text_color = Color(0xFF2A1A10);
+  static const Color poster_warm_text_color = ColorConstants.poster_warm_text_color_ff2a1a10;
 
   /// 文字阴影透明度。
   static const double text_shadow_opacity = 0.45;

@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'dart:math';
 
 import 'package:app/components/svg_icon/index.dart';
@@ -49,7 +50,10 @@ class NicknameBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(
+        horizontal: LayoutConfig.space_8,
+        vertical: LayoutConfig.space_5,
+      ),
       decoration: BoxDecoration(
         color: ColorConstants.themeColor,
         borderRadius: BorderRadius.circular(AuthorStyle.pill_radius),
@@ -58,7 +62,7 @@ class NicknameBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           _build_avatar(),
-          const SizedBox(width: 5),
+          const SizedBox(width: LayoutConfig.space_5),
           Text(
             nickname,
             style: TextStyle(
@@ -82,7 +86,7 @@ class NicknameBadge extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: has_avatar
-            ? Colors.transparent
+            ? ColorConstants.transparent
             : ColorConstants.lightTextColor.withValues(alpha: 0.2),
       ),
       clipBehavior: Clip.antiAlias,
@@ -103,12 +107,8 @@ class NicknameBadge extends StatelessWidget {
         'avatar_${random_avatar_index.toString().padLeft(2, '0')}';
 
     return Padding(
-      padding: const EdgeInsets.all(2),
-      child: SvgIcon(
-        name: avatar_name,
-        width: 16,
-        height: 16,
-      ),
+      padding: const EdgeInsets.all(LayoutConfig.space_2),
+      child: SvgIcon(name: avatar_name, width: 16, height: 16),
     );
   }
 }

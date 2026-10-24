@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
@@ -7,10 +8,10 @@ class AdFreeTimeHintStyle {
   AdFreeTimeHintStyle._();
 
   /// 提示文字与上方内容的间距。
-  static const double top_spacing = 12;
+  static const double top_spacing = LayoutConfig.space_12;
 
   /// 提示文字与下方内容的间距。
-  static const double bottom_spacing = 18;
+  static const double bottom_spacing = LayoutConfig.space_18;
 
   /// 提示文字水平内边距。
   static const double horizontal_padding = 0;
@@ -22,9 +23,7 @@ class AdFreeTimeHintStyle {
   static const double font_size_alphabetic = 12;
 
   /// 提示文字字重。
-  static final FontWeight font_weight = FontConfig.adjustedWeight(
-    FontWeight.w400,
-  );
+  static final FontWeight font_weight = FontConfig.adjustedWeight(FontWeight.w400);
 
   /// 日间模式下提示文字颜色（浅灰色）。
   static final Color text_color_light = ColorConstants.hintColor;

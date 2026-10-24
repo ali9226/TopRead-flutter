@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
@@ -296,6 +297,7 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
         factoryId: 'shortStoryNativeAdCard',
         customOptions: <String, Object>{
           'isDark': is_dark,
+          'palette': ColorConstants.native_ad_palette(is_dark),
           'advertisementLabel': tr('recommend_card.advertisement'),
           'slotId': _slot_id,
           'cardWidth': card_width,
@@ -546,7 +548,7 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
           height: height,
           decoration: BoxDecoration(
             color: skeleton_color,
-            borderRadius: BorderRadius.circular(height / 2),
+            borderRadius: BorderRadius.circular(height / LayoutConfig.radius_2),
           ),
         ),
       );
@@ -560,7 +562,7 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
           height: _ad_height,
           decoration: BoxDecoration(
             color: ad_bg_color,
-            borderRadius: BorderRadius.circular(16.0),
+            borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -568,13 +570,18 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
               Container(height: 260, color: media_skeleton_color),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                  padding: const EdgeInsets.fromLTRB(
+                    LayoutConfig.space_14,
+                    LayoutConfig.space_14,
+                    LayoutConfig.space_14,
+                    LayoutConfig.space_14,
+                  ),
                   child: Column(
                     children: <Widget>[
                       skeleton_line(width_factor: 0.72, height: 18),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: LayoutConfig.space_10),
                       skeleton_line(width_factor: 0.36, height: 12),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: LayoutConfig.space_10),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Container(
@@ -582,7 +589,9 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
                           height: 20,
                           decoration: BoxDecoration(
                             color: skeleton_color,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(
+                              LayoutConfig.radius_10,
+                            ),
                           ),
                         ),
                       ),
@@ -591,7 +600,9 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
                         height: 46,
                         decoration: BoxDecoration(
                           color: skeleton_color,
-                          borderRadius: BorderRadius.circular(23),
+                          borderRadius: BorderRadius.circular(
+                            LayoutConfig.radius_23,
+                          ),
                         ),
                       ),
                     ],
@@ -636,14 +647,14 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
 
       /// 提示文字颜色（夜间偏蓝灰，日间偏灰，与正文次要文字颜色一致）。
       final Color hint_color = is_dark
-          ? const Color(0xFF8B8B9E)
-          : const Color(0xFF999999);
+          ? ColorConstants.components_no_internet_cute_no_internet_cloud_tone_ff8b8b9e
+          : ColorConstants.customer_service_sheet_style_time_color_light;
 
       /// 广告容器背景色（日间使用 whiteColor，夜间使用深色背景，兼容暗色模式）。
       /// 注意：原生端（Android/iOS）的广告内部背景色需保持一致，
       /// 修改时需同步更新 ShortStoryNativeAdFactory。
       final Color ad_bg_color = is_dark
-          ? const Color(0xFF1E2430)
+          ? ColorConstants.pages_short_story_read_widgets_native_ad_banner_tone
           : ColorConstants.whiteColor;
 
       return LayoutBuilder(
@@ -679,8 +690,8 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
 
           final bool is_ios = Theme.of(context).platform == TargetPlatform.iOS;
           final Color card_border_color = is_dark
-              ? Colors.white.withValues(alpha: 0.08)
-              : Colors.black.withValues(alpha: 0.05);
+              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff
+              : ColorConstants.components_home_top_search_entry_index_tone;
 
           return Column(
             mainAxisSize: MainAxisSize.min,
@@ -691,13 +702,11 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
               Container(
                 height: _ad_height,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16.0),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
                   boxShadow: is_ios
                       ? <BoxShadow>[
                           BoxShadow(
-                            color: Colors.black.withValues(
-                              alpha: is_dark ? 0.22 : 0.09,
-                            ),
+                            color: ColorConstants.shadowColor.withValues(alpha: is_dark ? 0.22 : 0.09),
                             blurRadius: 20,
                             spreadRadius: -5,
                             offset: const Offset(0, 8),
@@ -705,7 +714,7 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
                         ]
                       : <BoxShadow>[
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
+                            color: ColorConstants.shadowColor.withValues(alpha: 0.05882),
                             blurRadius: 14,
                             spreadRadius: -2,
                             offset: const Offset(0, 5),
@@ -713,11 +722,11 @@ class _NativeAdBannerState extends State<NativeAdBanner> {
                         ],
                 ),
                 foregroundDecoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16.0),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
                   border: Border.all(color: card_border_color, width: 0.5),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16.0),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
                   child: ColoredBox(
                     color: ad_bg_color,
                     child: AdWidget(ad: _native_ad!),

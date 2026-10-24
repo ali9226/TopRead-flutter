@@ -3,6 +3,7 @@
 import 'package:app/config/font_config.dart';
 import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// 创作者中心统一样式。
 ///
@@ -24,10 +25,10 @@ class AuthorStyle {
   static const double card_radius = LayoutConfig.card_radius;
 
   /// 胶囊圆角。
-  static const double pill_radius = 999;
+  static const double pill_radius = LayoutConfig.radius_pill;
 
   /// 区块纵向间距。
-  static const double section_spacing = 22;
+  static const double section_spacing = LayoutConfig.space_22;
 
   // ==================== 可折叠头部 ====================
 
@@ -42,22 +43,23 @@ class AuthorStyle {
   static const double header_tab_bar_height = 54;
 
   /// 头部内容水平留白，与页面内容 page_padding 保持一致。
-  static const double header_content_padding = 12;
+  static const double header_content_padding = LayoutConfig.space_12;
 
   /// 头部展开导航区高度。
-  static const double header_expanded_navigation_height = 48;
+  static const double header_expanded_navigation_height =
+      LayoutConfig.button_height;
 
   /// 折叠导航两侧留白。
-  static const double compact_navigation_padding = 16;
+  static const double compact_navigation_padding = LayoutConfig.space_16;
 
   /// 折叠导航图标按钮尺寸。
   static const double compact_action_size = 36;
 
   /// 折叠导航右侧图标之间的距离。
-  static const double compact_action_spacing = 8;
+  static const double compact_action_spacing = LayoutConfig.space_8;
 
   /// 共享头部返回点击区左侧偏移。
-  static const double header_navigation_hit_inset = 14;
+  static const double header_navigation_hit_inset = LayoutConfig.space_14;
 
   /// 共享头部返回点击区顶部偏移。
   static const double header_navigation_hit_top = 3;
@@ -90,28 +92,29 @@ class AuthorStyle {
   static const double metric_strip_height = 84;
 
   /// 数据卡片圆角。
-  static const double metric_card_radius = 16;
+  static const double metric_card_radius = LayoutConfig.radius_16;
 
   /// 数据卡片内边距。
   static const EdgeInsets metric_card_padding = EdgeInsets.symmetric(
-    horizontal: 14,
-    vertical: 12,
+    horizontal: LayoutConfig.space_14,
+    vertical: LayoutConfig.space_12,
   );
 
   /// 数据卡片之间的间距。
-  static const double metric_card_spacing = 8;
+  static const double metric_card_spacing = LayoutConfig.space_8;
 
   /// 头部操作按钮高度，与作品卡片的"写新章节"按钮风格一致。
-  static const double header_action_height = 44;
+  static const double header_action_height =
+      LayoutConfig.compact_control_height;
 
   /// 头部操作按钮圆角。
-  static const double header_action_radius = 14;
+  static const double header_action_radius = LayoutConfig.radius_14;
 
   /// Tab 标签的垂直内边距。
-  static const double tab_vertical_padding = 6;
+  static const double tab_vertical_padding = LayoutConfig.space_6;
 
   /// Tab 标签的水平内边距。
-  static const double tab_horizontal_padding = 4;
+  static const double tab_horizontal_padding = LayoutConfig.space_4;
 
   /// Tab 下划线厚度；绘制区域必须位于滚动视口内，避免标签溢出时被裁剪。
   static const double tab_indicator_width = 3;
@@ -156,13 +159,13 @@ class AuthorStyle {
   static const double pointer_axis_lock_distance = 6;
 
   /// 作品列表头部的顶部间距。
-  static const double list_header_top_spacing = 16;
+  static const double list_header_top_spacing = LayoutConfig.space_16;
 
   /// 作品列表头部的底部间距。
-  static const double list_header_bottom_spacing = 12;
+  static const double list_header_bottom_spacing = LayoutConfig.space_12;
 
   /// 作品卡片之间的间距。
-  static const double work_card_spacing = 12;
+  static const double work_card_spacing = LayoutConfig.space_12;
 
   /// 作品列表底部留白。
   static const double list_bottom_spacing = 110;
@@ -198,58 +201,52 @@ class AuthorStyle {
   static const double status_font_size_alphabetic = 10.5;
 
   /// 标题字重。
-  static final FontWeight title_weight = FontConfig.adjustedWeight(
-    FontWeight.w600,
-  );
+  static final FontWeight title_weight = FontConfig.adjustedWeight(FontWeight.w600);
 
   /// 强调字重。
-  static final FontWeight emphasis_weight = FontConfig.adjustedWeight(
-    FontWeight.w500,
-  );
+  static final FontWeight emphasis_weight = FontConfig.adjustedWeight(FontWeight.w500);
 
   /// 正文字重。
-  static final FontWeight body_weight = FontConfig.adjustedWeight(
-    FontWeight.w400,
-  );
+  static final FontWeight body_weight = FontConfig.adjustedWeight(FontWeight.w400);
 
   /// 日间页面背景色。
-  static const Color light_background = Color(0xFFF6F7FA);
+  static const Color light_background = ColorConstants.light_background_fff6f7fa;
 
   /// 夜间页面背景色。
-  static const Color dark_background = Color(0xFF12121C);
+  static const Color dark_background = ColorConstants.nightBackgroundColor;
 
   /// 夜间卡片颜色。
-  static const Color dark_surface = Color(0xFF181A24);
+  static const Color dark_surface = ColorConstants.dark_surface_ff181a24;
 
   /// 夜间次级卡片颜色。
-  static const Color dark_surface_secondary = Color(0xFF202330);
+  static const Color dark_surface_secondary = ColorConstants.dark_surface_secondary_ff202330;
 
   /// 日间主文字颜色。
-  static const Color light_primary_text = Color(0xFF17191F);
+  static const Color light_primary_text = ColorConstants.light_primary_text_ff17191f;
 
   /// 日间次级文字颜色。
-  static const Color light_secondary_text = Color(0xFF777A84);
+  static const Color light_secondary_text = ColorConstants.light_secondary_text_ff777a84;
 
   /// 夜间次级文字颜色。
-  static const Color dark_secondary_text = Color(0xFFA6A9B4);
+  static const Color dark_secondary_text = ColorConstants.dark_secondary_text_ffa6a9b4;
 
   /// 创作者中心暖金强调色，与 ColorConstants.themeColor 一致。
-  static const Color gold = Color(0xFFF8D02D);
+  static const Color gold = ColorConstants.themeColor;
 
   /// 深金色，保证日间背景上的文字对比度。
-  static const Color deep_gold = Color(0xFF9A7300);
+  static const Color deep_gold = ColorConstants.deep_gold_ff9a7300;
 
   /// 蓝色强调色。
-  static const Color blue = Color(0xFF6596FF);
+  static const Color blue = ColorConstants.accent_sky_blue;
 
   /// 珊瑚强调色。
-  static const Color coral = Color(0xFFFF8A72);
+  static const Color coral = ColorConstants.coral_ffff8a72;
 
   /// 绿色成功色。
-  static const Color green = Color(0xFF55B98A);
+  static const Color green = ColorConstants.green_ff55b98a;
 
   /// 紫色定时状态色。
-  static const Color purple = Color(0xFF9A86FF);
+  static const Color purple = ColorConstants.purple_ff9a86ff;
 
   /// 根据主题返回页面背景色。
   static Color background(bool is_dark) {
@@ -258,17 +255,17 @@ class AuthorStyle {
 
   /// 根据主题返回卡片颜色。
   static Color surface(bool is_dark) {
-    return is_dark ? dark_surface : Colors.white;
+    return is_dark ? dark_surface : ColorConstants.whiteColor;
   }
 
   /// 根据主题返回次级卡片颜色。
   static Color secondary_surface(bool is_dark) {
-    return is_dark ? dark_surface_secondary : const Color(0xFFF1F2F5);
+    return is_dark ? dark_surface_secondary : ColorConstants.pages_author_center_author_style_tone;
   }
 
   /// 根据主题返回主文字颜色。
   static Color primary_text(bool is_dark) {
-    return is_dark ? Colors.white : light_primary_text;
+    return is_dark ? ColorConstants.whiteColor : light_primary_text;
   }
 
   /// 根据主题返回次级文字颜色。
@@ -279,8 +276,8 @@ class AuthorStyle {
   /// 根据主题返回描边颜色。
   static Color border(bool is_dark) {
     return is_dark
-        ? Colors.white.withValues(alpha: 0.08)
-        : const Color(0xFFE7E7E2);
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff
+        : ColorConstants.pages_author_center_author_style_tone_ffe7e7e2;
   }
 
   /// 创作者头图渐变。
@@ -289,7 +286,7 @@ class AuthorStyle {
       return const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: <Color>[Color(0xFF2B2515), Color(0xFF1D1E29), dark_background],
+        colors: <Color>[ColorConstants.purple_ff2b2515, ColorConstants.purple_ff1d1e29, dark_background],
         stops: <double>[0, 0.55, 1],
       );
     }
@@ -297,7 +294,7 @@ class AuthorStyle {
     return const LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: <Color>[Color(0xFFFFF0B8), Color(0xFFFFFBEC), light_background],
+      colors: <Color>[ColorConstants.purple_fffff0b8, ColorConstants.purple_fffffbec, light_background],
       stops: <double>[0, 0.54, 1],
     );
   }
@@ -305,8 +302,8 @@ class AuthorStyle {
   /// 头部内部半透明填充色。
   static Color header_glass(bool is_dark) {
     return is_dark
-        ? Colors.white.withValues(alpha: 0.075)
-        : Colors.white.withValues(alpha: 0.66);
+        ? ColorConstants.pages_author_center_author_style_tone_13ffffff
+        : ColorConstants.pages_author_center_author_style_tone_a8ffffff;
   }
 
   /// Tab 选中背景色。
@@ -316,6 +313,6 @@ class AuthorStyle {
 
   /// Tab 选中文字颜色。
   static Color selected_tab_text(bool is_dark) {
-    return is_dark ? gold : const Color(0xFF765600);
+    return is_dark ? gold : ColorConstants.pages_author_center_author_style_tone_ff765600;
   }
 }

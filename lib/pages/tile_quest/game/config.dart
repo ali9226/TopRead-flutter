@@ -1,14 +1,97 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names
 
+/// 强弱档分叉：一次「选错延迟致死」陷阱。
+class TileQuestTrapFork {
+  const TileQuestTrapFork({
+    required this.gap,
+    required this.spread,
+    required this.hit_rate,
+  });
+
+  /// 第三张滞后步数（3-6，防撤回逃逸）。
+  final int gap;
+
+  /// 前两张在解序上的间隔（1=相邻，越大越难被同时点到）。
+  final int spread;
+
+  /// 参考玩家踩中该分叉的概率（乘法模型）。
+  final double hit_rate;
+}
+
 /// A single switch controls every challenge after the introductory level.
 class TileQuestConfig {
   static const int level1Difficulty = 1;
-  static const int gameDifficulty = 10;
+  static const int gameDifficulty = 6;
   static const int tray_capacity = 7;
 
   /// 从第五档难度起，静态容量门槛确保必须实际使用道具。
   static const int mandatory_tool_difficulty = 5;
   static const int remove_uses_per_challenge = 2;
+
+  /// 暗坑必败阈值：难度达到该值后启用容量核（道具 1/1/2 全用完仍无法通关）。
+  static const int trap_difficulty = 10;
+
+  /// 分叉陷阱乘法模型的技能锚点：参考玩家踩中一个满档分叉的概率。
+  /// 真实玩家曲线由对局遥测回收后校正。
+  static const double trap_hit_rate = 0.3;
+
+  /// 残差叉的判定阈值：小于该值视为无残差（目标已被满档叉精确覆盖）。
+  static const double trap_residual_epsilon = 0.001;
+
+  /// 一条延迟三连在途中最多压进槽里的单牌数（前两张各占 1 槽）。
+  static const int trap_pair_hold = 2;
+
+  /// 强弱档分叉：强度由「第三张滞后步数 gap × 前两张解序间隔 spread」
+  /// 决定——gap 越大压槽越久、spread 越小越容易被同时点到，命中率越高。
+  static const List<TileQuestTrapFork> trap_palette = [
+    TileQuestTrapFork(gap: 3, spread: 1, hit_rate: 0.225),
+    TileQuestTrapFork(gap: 3, spread: 2, hit_rate: 0.15),
+    TileQuestTrapFork(gap: 3, spread: 3, hit_rate: 0.1),
+    TileQuestTrapFork(gap: 4, spread: 1, hit_rate: 0.3),
+    TileQuestTrapFork(gap: 4, spread: 2, hit_rate: 0.2),
+    TileQuestTrapFork(gap: 4, spread: 3, hit_rate: 0.15),
+    TileQuestTrapFork(gap: 5, spread: 1, hit_rate: 0.375),
+    TileQuestTrapFork(gap: 5, spread: 2, hit_rate: 0.25),
+    TileQuestTrapFork(gap: 6, spread: 1, hit_rate: 0.45),
+    TileQuestTrapFork(gap: 6, spread: 2, hit_rate: 0.3),
+    TileQuestTrapFork(gap: 5, spread: 3, hit_rate: 0.1875),
+    TileQuestTrapFork(gap: 6, spread: 3, hit_rate: 0.225),
+  ];
+
+  /// 目标通关率 win_rate 的分叉配方：floor(S) 个满档叉 + 1 个残差叉，
+  /// 乘积精确落在目标附近（S=ln(win)/ln(1-trap_hit_rate)）。残差叉按
+  /// 强度档量化，消掉「分叉数只能取整」的偏差。win<=0 交给暗坑容量核。
+  static List<TileQuestTrapFork> trap_recipe(double win_rate) {
+    if (win_rate <= 0 || win_rate >= 1) return const [];
+    final unit = 1 - trap_hit_rate;
+    var full = 0;
+    while (_pow(unit, full + 1) >= win_rate) {
+      full++;
+    }
+    final forks = <TileQuestTrapFork>[
+      for (var index = 0; index < full; index++) trap_palette[3],
+    ];
+    final residual = 1 - win_rate / _pow(unit, full);
+    if (residual > trap_residual_epsilon) {
+      var best = trap_palette.first;
+      for (final candidate in trap_palette) {
+        if ((candidate.hit_rate - residual).abs() <
+            (best.hit_rate - residual).abs()) {
+          best = candidate;
+        }
+      }
+      forks.add(best);
+    }
+    return forks;
+  }
+
+  static double _pow(double base, int exponent) {
+    var value = 1.0;
+    for (var index = 0; index < exponent; index++) {
+      value *= base;
+    }
+    return value;
+  }
   static const int remove_batch_size = 3;
   static const int reserve_columns = 3;
   static const int reserve_capacity =
@@ -59,8 +142,11 @@ class DifficultyProfile {
   /// Prefer keeping a pair unresolved until this many intervening taps occurred.
   final int match_delay;
 
+  /// 陷阱配方：强弱档分叉列表（每叉一张延迟三连：前两张间隔 spread、
+  /// 第三张滞后 gap 步）。选错提前开对会把单牌压进槽里，叠对致死。
+  final List<TileQuestTrapFork> trap_forks;
+
   /// Late phases may preserve a pair while independent chains are resolved.
-  final int sealed_pair_span;
   final double target_failure_rate;
 
   const DifficultyProfile({
@@ -74,7 +160,7 @@ class DifficultyProfile {
     required this.min_initial_choices,
     required this.max_initial_choices,
     required this.match_delay,
-    required this.sealed_pair_span,
+    required this.trap_forks,
     required this.target_failure_rate,
   });
 
@@ -88,7 +174,7 @@ class DifficultyProfile {
     const counts = [90, 126, 162, 198, 246, 294, 348, 402, 456, 528];
     const types = [5, 6, 8, 10, 11, 12, 13, 14, 15, 15];
     const layers = [4, 6, 8, 10, 13, 16, 20, 24, 40, 48];
-    const pressure = [3, 4, 4, 5, 5, 6, 6, 6, 6, 6];
+    const pressure = [2, 2, 3, 3, 5, 6, 6, 6, 6, 6];
     const rates = [.15, .30, .45, .60, .70, .80, .90, .95, .99, 1.0];
     final index = difficulty - 1;
     return DifficultyProfile(
@@ -104,13 +190,12 @@ class DifficultyProfile {
       min_initial_choices: tutorial ? 9 : TileQuestConfig.minimum_opening_tiles,
       max_initial_choices: tutorial ? 9 : TileQuestConfig.maximum_opening_tiles,
       match_delay: tutorial ? 0 : (difficulty - 2).clamp(0, 12),
-      sealed_pair_span: tutorial
-          ? 0
-          : difficulty >= 9
-          ? counts[index] ~/ 2
-          : difficulty == 8
-          ? counts[index] ~/ 4
-          : 0,
+      // 分叉陷阱乘法模型：目标通关率 win=(10-难度)/10，参考玩家踩中
+      // 单个分叉的概率 q=trap_hit_rate，则 win=(1-q)^F → F=ln(win)/ln(1-q)。
+      // q 是技能锚点，真实玩家曲线由对局遥测回收后校正。
+      trap_forks: tutorial
+          ? const []
+          : TileQuestConfig.trap_recipe((10 - difficulty) / 10),
       target_failure_rate: rates[index],
     );
   }
@@ -130,7 +215,7 @@ class DifficultyProfile {
     min_initial_choices: min_initial_choices,
     max_initial_choices: max_initial_choices,
     match_delay: match_delay,
-    sealed_pair_span: sealed_pair_span,
+    trap_forks: trap_forks,
     target_failure_rate: target_failure_rate,
   );
 }

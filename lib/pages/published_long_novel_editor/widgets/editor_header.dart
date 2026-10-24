@@ -29,7 +29,7 @@ class PublishedEditorHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AnnotatedRegion<SystemUiOverlayStyle>(
     value: (is_dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
-        .copyWith(statusBarColor: Colors.transparent),
+        .copyWith(statusBarColor: ColorConstants.transparent),
     child: DecoratedBox(
       decoration: BoxDecoration(gradient: AuthorStyle.hero_gradient(is_dark)),
       child: Stack(

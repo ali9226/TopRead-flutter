@@ -6,7 +6,7 @@ import 'package:app/models/comics.dart';
 import 'package:app/pages/comics/detail/logic.dart';
 import 'package:app/pages/comics/reader/index.dart';
 import 'package:app/components/reader_top_bar/action_button.dart';
-import 'package:app/config/color_config.dart';
+import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/comics/reader/logic.dart';
 import 'package:app/pages/comics/reader/widgets/top_scrim.dart';
 import 'package:app/services/comics_progress/service.dart';
@@ -134,8 +134,8 @@ void main() {
     final favorite = tester
         .widgetList<ReaderTopBarAction>(find.byType(ReaderTopBarAction))
         .singleWhere((action) => action.selected != null);
-    expect(favorite.icon, Icons.favorite_rounded);
-    expect(favorite.color, ColorConstants.dangerColor);
+    expect(favorite.selected, isTrue);
+    expect((favorite.icon_widget! as SvgIcon).name, 'user_selected');
     final touch = find.byKey(const ValueKey('comic_reader_touch_surface'));
     await tester.tapAt(tester.getCenter(touch));
     await tester.pump();

@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/bottom_sheet_drag_handle/index.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/comics/widgets/comment_sheet/style.dart';
@@ -40,7 +41,7 @@ class ComicCommentSheetHeader extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(
               ComicCommentSheetStyle.horizontal_padding,
               0,
-              ComicCommentSheetStyle.horizontal_padding - 8,
+              ComicCommentSheetStyle.horizontal_padding - LayoutConfig.space_8,
               ComicCommentSheetStyle.header_bottom_padding,
             ),
             child: Row(

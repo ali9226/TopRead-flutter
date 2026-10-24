@@ -1,7 +1,9 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 
 import 'style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 解锁免广告时长弹窗入口。
 ///
@@ -32,7 +34,7 @@ class UnlockAdFreePopup {
       isScrollControlled: true,
       enableDrag: true,
       showDragHandle: false,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       barrierColor: UnlockAdFreePopupStyle.barrier_color,
       builder: (BuildContext sheet_context) {
         return _UnlockAdFreePopupSheet(
@@ -88,14 +90,17 @@ class _UnlockAdFreePopupSheetState extends State<_UnlockAdFreePopupSheet>
       duration: UnlockAdFreePopupStyle.countdown_duration,
     );
     // 数值插值：从 24 滚动到目标时长（如 6、3、1）。
-    _countdown_animation = Tween<double>(
-      begin: 24.0,
-      end: widget.duration_hours.toDouble(),
-    ).animate(CurvedAnimation(
-      parent: _countdown_controller,
-      // easeOutCubic 让数字先快后慢，有"刹停"的视觉效果。
-      curve: Curves.easeOutCubic,
-    ));
+    _countdown_animation =
+        Tween<double>(
+          begin: 24.0,
+          end: widget.duration_hours.toDouble(),
+        ).animate(
+          CurvedAnimation(
+            parent: _countdown_controller,
+            // easeOutCubic 让数字先快后慢，有"刹停"的视觉效果。
+            curve: Curves.easeOutCubic,
+          ),
+        );
     // 弹窗出现后立即播放倒计时动画。
     _countdown_controller.forward();
   }
@@ -144,7 +149,7 @@ class _UnlockAdFreePopupSheetState extends State<_UnlockAdFreePopupSheet>
           children: <Widget>[
             // 拖拽指示条，提示用户可以向下拖拽关闭。
             _build_drag_handle(drag_handle_color),
-            const SizedBox(height: 24),
+            const SizedBox(height: LayoutConfig.space_24),
             // 核心视觉：倒计时数字，主题色大字号突出显示。
             _build_animated_number(),
             const SizedBox(
@@ -157,9 +162,7 @@ class _UnlockAdFreePopupSheetState extends State<_UnlockAdFreePopupSheet>
             ),
             // 描述：引导用户操作（"观看短视频即可解锁"）。
             _build_description(desc_color),
-            const SizedBox(
-              height: UnlockAdFreePopupStyle.desc_button_spacing,
-            ),
+            const SizedBox(height: UnlockAdFreePopupStyle.desc_button_spacing),
             // 行动按钮：主题色胶囊按钮。
             _build_button(context),
           ],

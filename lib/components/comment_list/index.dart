@@ -23,6 +23,7 @@ import 'package:app/permission_request/notification_permission_request.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/api/novel_comment.dart';
+import 'package:app/config/color_config.dart';
 
 /// 评论列表弹窗组件。
 ///
@@ -110,12 +111,10 @@ Future<int?> showCommentSheet({
     enableDrag: true,
     showDragHandle: false,
     requestFocus: false,
-    backgroundColor: Colors.transparent,
+    backgroundColor: ColorConstants.transparent,
     clipBehavior: Clip.none,
     constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
-    barrierColor: Colors.black.withValues(
-      alpha: CommentListStyle.sheet_barrier_alpha,
-    ),
+    barrierColor: ColorConstants.shadowColor.withValues(alpha: CommentListStyle.sheet_barrier_alpha),
     sheetAnimationStyle: const AnimationStyle(
       duration: Duration(
         milliseconds: CommentListStyle.sheet_transition_duration_ms,
@@ -1063,11 +1062,9 @@ class _CommentSheetState extends State<CommentSheet>
           ),
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: Colors.black.withValues(
-                alpha: is_dark
+              color: ColorConstants.shadowColor.withValues(alpha: is_dark
                     ? CommentListStyle.sheet_shadow_alpha_dark
-                    : CommentListStyle.sheet_shadow_alpha_light,
-              ),
+                    : CommentListStyle.sheet_shadow_alpha_light),
               blurRadius: CommentListStyle.sheet_shadow_blur,
               offset: const Offset(0, CommentListStyle.sheet_shadow_offset_y),
             ),

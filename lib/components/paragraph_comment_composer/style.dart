@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 
 import 'package:app/components/comment_list/style.dart';
@@ -5,13 +6,13 @@ import 'package:app/components/comment_list/style.dart';
 /// 段评输入弹窗的尺寸、排版和主题参数。
 class ParagraphCommentComposerStyle {
   static const double max_width = 640;
-  static const double radius = 20;
-  static const double horizontal_padding = 18;
-  static const double vertical_padding = 14;
-  static const double section_spacing = 12;
-  static const double quote_padding = 10;
+  static const double radius = LayoutConfig.radius_20;
+  static const double horizontal_padding = LayoutConfig.space_18;
+  static const double vertical_padding = LayoutConfig.space_14;
+  static const double section_spacing = LayoutConfig.space_12;
+  static const double quote_padding = LayoutConfig.space_10;
   static const double quote_border_width = 3;
-  static const double quote_radius = 6;
+  static const double quote_radius = LayoutConfig.radius_6;
   static const int quote_max_lines = 3;
   static const double quote_font_size_cjk = 13;
   static const double quote_font_size_alphabetic = 12;
@@ -19,23 +20,23 @@ class ParagraphCommentComposerStyle {
   static const double line_height_alphabetic = 1.4;
   static const double input_font_size_cjk = 16;
   static const double input_font_size_alphabetic = 15;
-  static const double input_radius = 6;
-  static const double input_padding = 10;
+  static const double input_radius = LayoutConfig.radius_6;
+  static const double input_padding = LayoutConfig.space_10;
   static const int input_min_lines = 3;
   static const int input_max_lines = 5;
   static const int max_content_length = 2000;
-  static const double action_size = 44;
+  static const double action_size = LayoutConfig.compact_control_height;
   static const double action_icon_size = 25;
   static const double send_min_width_cjk = 64;
   static const double send_min_width_alphabetic = 76;
   static const double send_font_size_cjk = 14;
   static const double send_font_size_alphabetic = 13;
-  static const double send_radius = 18;
+  static const double send_radius = LayoutConfig.radius_18;
   static const double image_size = 64;
-  static const double image_spacing = 8;
-  static const double image_radius = 8;
+  static const double image_spacing = LayoutConfig.space_8;
+  static const double image_radius = LayoutConfig.radius_8;
   static const double remove_size = 24;
-  static const double remove_icon_size = 16;
+  static const double remove_icon_size = LayoutConfig.icon_small;
   static const double progress_size = 18;
   static const double progress_stroke = 2;
   static const double error_font_size = 12;

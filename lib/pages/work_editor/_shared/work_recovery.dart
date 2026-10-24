@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'dart:convert';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/util/storage_util/index.dart';
@@ -18,7 +19,8 @@ Future<({CreatorWorkDraft draft, bool restored})> restoreCreatorWork(
   CreatorWorkDraft cloud,
   int owner,
 ) async {
-  if (!cloud.can_save_draft || cloud.revision_id == null) return (draft: cloud, restored: false);
+  if (!cloud.can_save_draft || cloud.revision_id == null)
+    return (draft: cloud, restored: false);
   final key = creatorWorkRecoveryKey(owner, cloud.revision_id!);
   final raw = await StorageUtil.getData(key);
   if (raw == null) return (draft: cloud, restored: false);
@@ -79,7 +81,7 @@ Future<({CreatorWorkDraft draft, bool restored})> restoreCreatorWork(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(tr('creator_workspace.recovery_hint')),
-                const SizedBox(height: 16),
+                const SizedBox(height: LayoutConfig.space_16),
                 Text(tr('creator_workspace.cloud_copy')),
                 preview(cloud),
                 const Divider(),

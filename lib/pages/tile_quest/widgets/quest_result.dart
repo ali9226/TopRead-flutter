@@ -1,4 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
+import 'package:app/config/layout_config.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../game/models.dart';
@@ -97,7 +98,7 @@ class QuestResult extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _ResultCrest(won: won, coming_soon: coming_soon),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: LayoutConfig.space_14),
                   Text(
                     quest_text(
                       context,
@@ -115,7 +116,7 @@ class QuestResult extends StatelessWidget {
                     style: TileQuestStyle.title(cjk),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: LayoutConfig.space_8),
                   Text(
                     coming_soon
                         ? quest_text(
@@ -139,16 +140,18 @@ class QuestResult extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   if (!coming_soon) ...[
-                    const SizedBox(height: 20),
+                    const SizedBox(height: LayoutConfig.space_20),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 15,
-                        vertical: 12,
+                        horizontal: LayoutConfig.space_15,
+                        vertical: LayoutConfig.space_12,
                       ),
                       decoration: BoxDecoration(
                         color: TileQuestStyle.result_statistics_background
                             .withValues(alpha: .6),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(
+                          LayoutConfig.radius_16,
+                        ),
                       ),
                       child: Column(
                         children: [
@@ -159,7 +162,7 @@ class QuestResult extends StatelessWidget {
                             _time(state.elapsed_ms),
                             cjk,
                           ),
-                          const SizedBox(height: 9),
+                          const SizedBox(height: LayoutConfig.space_9),
                           _stat(
                             context,
                             'cleared',
@@ -168,7 +171,7 @@ class QuestResult extends StatelessWidget {
                             cjk,
                           ),
                           if (state.level > 1) ...[
-                            const SizedBox(height: 9),
+                            const SizedBox(height: LayoutConfig.space_9),
                             _stat(
                               context,
                               'tools_used',
@@ -181,7 +184,7 @@ class QuestResult extends StatelessWidget {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 22),
+                  const SizedBox(height: LayoutConfig.space_22),
                   QuestPrimaryButton(
                     key: const ValueKey('tile_quest_result_primary'),
                     label: quest_text(
@@ -209,7 +212,7 @@ class QuestResult extends StatelessWidget {
                   if (state.level > 1 &&
                       !won &&
                       (state.tools[TileQuestTool.undo] ?? 0) > 0) ...[
-                    const SizedBox(height: 9),
+                    const SizedBox(height: LayoutConfig.space_9),
                     QuestPrimaryButton(
                       label: '${quest_text(context, 'undo', 'Undo')} 1/1',
                       primary: false,
@@ -217,7 +220,7 @@ class QuestResult extends StatelessWidget {
                       on_tap: busy ? null : on_undo,
                     ),
                   ],
-                  const SizedBox(height: 9),
+                  const SizedBox(height: LayoutConfig.space_9),
                   QuestPrimaryButton(
                     label: quest_text(context, 'back', 'Back'),
                     primary: false,
@@ -251,7 +254,7 @@ class QuestResult extends StatelessWidget {
           style: TileQuestStyle.body(cjk, color: TileQuestStyle.pale),
         ),
       ),
-      const SizedBox(width: 12),
+      const SizedBox(width: LayoutConfig.space_12),
       Text(value, style: TileQuestStyle.body(cjk, emphasis: true)),
     ],
   );

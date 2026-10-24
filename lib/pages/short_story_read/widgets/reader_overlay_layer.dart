@@ -28,6 +28,9 @@ class ReaderOverlayLayer extends StatelessWidget {
   /// 导航栏是否可见。
   final bool is_appbar_visible;
 
+  /// 海报导航尚在可见区域时不叠加第二组固定导航，正文阶段恢复原有栏位。
+  final bool show_top_bar;
+
   /// 底部栏滑动动画。
   final Animation<Offset> bottom_bar_slide_animation;
 
@@ -99,6 +102,7 @@ class ReaderOverlayLayer extends StatelessWidget {
     required this.bottom_padding,
     required this.bg_color,
     required this.is_appbar_visible,
+    this.show_top_bar = true,
     required this.bottom_bar_slide_animation,
     required this.floating_button_fade_animation,
     required this.show_floating_button,
@@ -135,27 +139,31 @@ class ReaderOverlayLayer extends StatelessWidget {
     return Stack(
       children: <Widget>[
         /// 顶部渐变过渡遮罩。
-        PageTopGradientOverlay(background_color: bg_color),
+        PageTopGradientOverlay(
+          background_color: bg_color,
+          visible: show_top_bar,
+        ),
 
         /// 顶部导航栏。
-        AnimatedPositioned(
-          duration: ShortStoryReadStyle.bar_animation_duration,
-          curve: ShortStoryReadStyle.bar_animation_curve,
-          top: is_appbar_visible
-              ? 0
-              : -(status_bar_height + ShortStoryReadStyle.appbar_height),
-          left: 0,
-          right: 0,
-          child: FullAppbar(
-            is_dark: is_dark,
-            on_back: on_back,
-            on_favorite_tap: on_favorite_tap,
-            on_share: on_share,
-            is_favorited: is_favorited,
-            is_favorite_loading: is_favorite_loading,
-            status_bar_height: status_bar_height,
+        if (show_top_bar)
+          AnimatedPositioned(
+            duration: ShortStoryReadStyle.bar_animation_duration,
+            curve: ShortStoryReadStyle.bar_animation_curve,
+            top: is_appbar_visible
+                ? 0
+                : -(status_bar_height + ShortStoryReadStyle.appbar_height),
+            left: 0,
+            right: 0,
+            child: FullAppbar(
+              is_dark: is_dark,
+              on_back: on_back,
+              on_favorite_tap: on_favorite_tap,
+              on_share: on_share,
+              is_favorited: is_favorited,
+              is_favorite_loading: is_favorite_loading,
+              status_bar_height: status_bar_height,
+            ),
           ),
-        ),
 
         /// 底部评论栏。
         Positioned(

@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/pages/change_password/style.dart';
@@ -13,10 +14,7 @@ class PasswordTipsCard extends StatelessWidget {
   /// 当前是否为夜间模式。
   final bool isDark;
 
-  const PasswordTipsCard({
-    super.key,
-    required this.isDark,
-  });
+  const PasswordTipsCard({super.key, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -26,9 +24,7 @@ class PasswordTipsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Style.tipsCardBackground(isDark: isDark),
         borderRadius: BorderRadius.circular(Style.tipsCardRadius),
-        border: Border.all(
-          color: Style.tipsCardBorder(isDark: isDark),
-        ),
+        border: Border.all(color: Style.tipsCardBorder(isDark: isDark)),
       ),
       child: Stack(
         children: <Widget>[
@@ -61,7 +57,7 @@ class PasswordTipsCard extends StatelessWidget {
                     size: 18,
                     color: Style.tipsTitleColor(isDark: isDark),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: LayoutConfig.space_6),
                   Text(
                     easy.tr('UserInfo.password_tips_title'),
                     style: TextStyle(
@@ -75,20 +71,11 @@ class PasswordTipsCard extends StatelessWidget {
               SizedBox(height: Style.tipsTitleBottomSpacing),
 
               /// 提示内容列表。
-              _buildTipItem(
-                easy.tr('UserInfo.password_tip_1'),
-                isDark,
-              ),
+              _buildTipItem(easy.tr('UserInfo.password_tip_1'), isDark),
               SizedBox(height: Style.tipsItemSpacing),
-              _buildTipItem(
-                easy.tr('UserInfo.password_tip_2'),
-                isDark,
-              ),
+              _buildTipItem(easy.tr('UserInfo.password_tip_2'), isDark),
               SizedBox(height: Style.tipsItemSpacing),
-              _buildTipItem(
-                easy.tr('UserInfo.password_tip_3'),
-                isDark,
-              ),
+              _buildTipItem(easy.tr('UserInfo.password_tip_3'), isDark),
             ],
           ),
         ],
@@ -103,14 +90,14 @@ class PasswordTipsCard extends StatelessWidget {
       children: <Widget>[
         /// 勾选图标。
         Padding(
-          padding: const EdgeInsets.only(top: 2),
+          padding: const EdgeInsets.only(top: LayoutConfig.space_2),
           child: Icon(
             Icons.check_rounded,
             size: 14,
             color: Style.tipsCheckColor(isDark: isDark),
           ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: LayoutConfig.space_6),
 
         /// 提示文字。
         Expanded(

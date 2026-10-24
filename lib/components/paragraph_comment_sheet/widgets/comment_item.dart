@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/comment_list/style.dart';
@@ -9,6 +10,7 @@ import 'package:app/config/font_config.dart';
 
 import '../api.dart';
 import '../logic.dart';
+import 'package:app/config/color_config.dart';
 
 /// 段落评论项，视觉风格与小说主评论完全一致。
 ///
@@ -59,22 +61,28 @@ class _ParagraphCommentItemState extends State<ParagraphCommentItem> {
 
     return GestureDetector(
       onTap: is_disabled ? null : () => widget.on_reply(widget.comment),
-      onLongPressStart: is_disabled ? null : (_) => setState(() => _is_pressed = true),
-      onLongPressEnd: is_disabled ? null : (_) {
-        setState(() => _is_pressed = false);
-        widget.on_actions(widget.comment);
-      },
-      onLongPressCancel: is_disabled ? null : () => setState(() => _is_pressed = false),
+      onLongPressStart: is_disabled
+          ? null
+          : (_) => setState(() => _is_pressed = true),
+      onLongPressEnd: is_disabled
+          ? null
+          : (_) {
+              setState(() => _is_pressed = false);
+              widget.on_actions(widget.comment);
+            },
+      onLongPressCancel: is_disabled
+          ? null
+          : () => setState(() => _is_pressed = false),
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
           color: _is_pressed
               ? (widget.is_dark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : Colors.black.withValues(alpha: 0.04))
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+                    ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+                    : ColorConstants.components_paragraph_comment_sheet_widgets_comment_item_tone)
+              : ColorConstants.transparent,
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_8),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,9 +91,11 @@ class _ParagraphCommentItemState extends State<ParagraphCommentItem> {
             Padding(
               padding: EdgeInsets.only(
                 top: widget.is_reply ? 0 : CommentListStyle.item_top_padding,
-                bottom: widget.is_reply ? 0 : CommentListStyle.item_bottom_padding,
-                left: 4,
-                right: 4,
+                bottom: widget.is_reply
+                    ? 0
+                    : CommentListStyle.item_bottom_padding,
+                left: LayoutConfig.space_4,
+                right: LayoutConfig.space_4,
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,9 +108,11 @@ class _ParagraphCommentItemState extends State<ParagraphCommentItem> {
                         : CommentListStyle.avatar_size,
                     is_dark: widget.is_dark,
                   ),
-                  SizedBox(width: widget.is_reply
-                      ? CommentListStyle.reply_avatar_gap
-                      : CommentListStyle.avatar_content_gap),
+                  SizedBox(
+                    width: widget.is_reply
+                        ? CommentListStyle.reply_avatar_gap
+                        : CommentListStyle.avatar_content_gap,
+                  ),
                   Expanded(
                     child: _build_comment_content(
                       content_color: content_color,
@@ -133,34 +145,36 @@ class _ParagraphCommentItemState extends State<ParagraphCommentItem> {
   }) {
     final double nickname_font_size = widget.is_reply
         ? (widget.is_cjk
-            ? CommentListStyle.reply_nickname_font_size_cjk
-            : CommentListStyle.reply_nickname_font_size_alphabetic)
+              ? CommentListStyle.reply_nickname_font_size_cjk
+              : CommentListStyle.reply_nickname_font_size_alphabetic)
         : (widget.is_cjk
-            ? CommentListStyle.nickname_font_size_cjk
-            : CommentListStyle.nickname_font_size_alphabetic);
+              ? CommentListStyle.nickname_font_size_cjk
+              : CommentListStyle.nickname_font_size_alphabetic);
     final double content_font_size = widget.is_reply
         ? (widget.is_cjk
-            ? CommentListStyle.reply_text_font_size_cjk
-            : CommentListStyle.reply_text_font_size_alphabetic)
+              ? CommentListStyle.reply_text_font_size_cjk
+              : CommentListStyle.reply_text_font_size_alphabetic)
         : (widget.is_cjk
-            ? CommentListStyle.content_font_size_cjk
-            : CommentListStyle.content_font_size_alphabetic);
+              ? CommentListStyle.content_font_size_cjk
+              : CommentListStyle.content_font_size_alphabetic);
     final double content_line_height = widget.is_reply
         ? (widget.is_cjk
-            ? CommentListStyle.reply_line_height_cjk
-            : CommentListStyle.reply_line_height_alphabetic)
+              ? CommentListStyle.reply_line_height_cjk
+              : CommentListStyle.reply_line_height_alphabetic)
         : (widget.is_cjk
-            ? CommentListStyle.content_line_height_cjk
-            : CommentListStyle.content_line_height_alphabetic);
+              ? CommentListStyle.content_line_height_cjk
+              : CommentListStyle.content_line_height_alphabetic);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 昵称（回复时显示"回复 XXX"）
         _build_nickname(nickname_font_size, nickname_color),
-        SizedBox(height: widget.is_reply
-            ? CommentListStyle.reply_content_top_spacing
-            : CommentListStyle.content_top_spacing),
+        SizedBox(
+          height: widget.is_reply
+              ? CommentListStyle.reply_content_top_spacing
+              : CommentListStyle.content_top_spacing,
+        ),
         // 正文内容
         _build_content_text(
           font_size: content_font_size,
@@ -168,9 +182,11 @@ class _ParagraphCommentItemState extends State<ParagraphCommentItem> {
           content_color: content_color,
           nickname_color: nickname_color,
         ),
-        SizedBox(height: widget.is_reply
-            ? CommentListStyle.reply_metadata_top_spacing
-            : CommentListStyle.metadata_top_spacing),
+        SizedBox(
+          height: widget.is_reply
+              ? CommentListStyle.reply_metadata_top_spacing
+              : CommentListStyle.metadata_top_spacing,
+        ),
         // 元数据行：时间 + 回复 + 点赞
         _build_metadata_row(
           metadata_color: metadata_color,
@@ -322,14 +338,17 @@ class _ParagraphCommentItemState extends State<ParagraphCommentItem> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (int index = 0;
-              index < widget.comment.replies.length;
-              index++) ...[
+          for (
+            int index = 0;
+            index < widget.comment.replies.length;
+            index++
+          ) ...[
             if (index > 0)
               const SizedBox(height: CommentListStyle.reply_item_spacing),
             ParagraphCommentItem(
               key: ValueKey(
-                  'paragraph_reply_${widget.comment.replies[index].id}'),
+                'paragraph_reply_${widget.comment.replies[index].id}',
+              ),
               comment: widget.comment.replies[index],
               logic: widget.logic,
               is_dark: widget.is_dark,
@@ -341,22 +360,26 @@ class _ParagraphCommentItemState extends State<ParagraphCommentItem> {
           ],
           if (widget.logic.can_load_replies(widget.comment))
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(top: LayoutConfig.space_8),
               child: GestureDetector(
-                onTap: widget.logic.loading_reply_ids
-                        .contains(widget.comment.id)
+                onTap:
+                    widget.logic.loading_reply_ids.contains(widget.comment.id)
                     ? null
                     : () => widget.logic.load_replies(widget.comment),
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: LayoutConfig.space_4,
+                  ),
                   child: Text(
-                    widget.logic.loading_reply_ids
-                            .contains(widget.comment.id)
+                    widget.logic.loading_reply_ids.contains(widget.comment.id)
                         ? tr('common.loading')
-                        : tr('paragraph_comment.more_replies', namedArgs: {
-                            'count': '${widget.comment.reply_count}',
-                          }),
+                        : tr(
+                            'paragraph_comment.more_replies',
+                            namedArgs: {
+                              'count': '${widget.comment.reply_count}',
+                            },
+                          ),
                     style: TextStyle(
                       fontSize: widget.is_cjk
                           ? CommentListStyle.action_font_size_cjk
@@ -432,18 +455,24 @@ class _ParagraphLikeButtonState extends State<_ParagraphLikeButton>
     );
     _scale_animation = TweenSequence<double>(<TweenSequenceItem<double>>[
       TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 1, end: 0.82)
-            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        tween: Tween<double>(
+          begin: 1,
+          end: 0.82,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)),
         weight: 28,
       ),
       TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 0.82, end: 1.12)
-            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        tween: Tween<double>(
+          begin: 0.82,
+          end: 1.12,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)),
         weight: 40,
       ),
       TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 1.12, end: 1)
-            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        tween: Tween<double>(
+          begin: 1.12,
+          end: 1,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)),
         weight: 32,
       ),
     ]).animate(_scale_controller);
@@ -468,8 +497,8 @@ class _ParagraphLikeButtonState extends State<_ParagraphLikeButton>
     final Color color = widget.is_liked
         ? CommentListStyle.like_active_color
         : widget.is_dark
-            ? CommentListStyle.like_dark_color
-            : CommentListStyle.like_light_color;
+        ? CommentListStyle.like_dark_color
+        : CommentListStyle.like_light_color;
     final double icon_size = widget.compact
         ? CommentListStyle.like_compact_icon_size
         : CommentListStyle.like_icon_size;
@@ -483,8 +512,9 @@ class _ParagraphLikeButtonState extends State<_ParagraphLikeButton>
           minHeight: CommentListStyle.like_touch_height,
         ),
         child: Padding(
-          padding:
-              const EdgeInsets.only(left: CommentListStyle.like_left_padding),
+          padding: const EdgeInsets.only(
+            left: CommentListStyle.like_left_padding,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.end,
@@ -500,8 +530,7 @@ class _ParagraphLikeButtonState extends State<_ParagraphLikeButton>
                 ),
               ),
               if (widget.like_count > 0) ...[
-                const SizedBox(
-                    width: CommentListStyle.like_icon_count_spacing),
+                const SizedBox(width: CommentListStyle.like_icon_count_spacing),
                 Text(
                   _format_like_count(widget.like_count),
                   maxLines: 1,
@@ -554,7 +583,9 @@ class _DisabledParagraphLikeButton extends StatelessWidget {
         minHeight: CommentListStyle.like_touch_height,
       ),
       child: Padding(
-        padding: const EdgeInsets.only(left: CommentListStyle.like_left_padding),
+        padding: const EdgeInsets.only(
+          left: CommentListStyle.like_left_padding,
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.end,

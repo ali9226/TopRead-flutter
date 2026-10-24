@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 
 /// TODO 充值二维码页样式常量。
@@ -5,17 +6,18 @@ import 'package:flutter/material.dart';
 /// 这样 index.dart 只负责结构拼装和状态判断，不直接散落大量硬编码。
 class Style {
   // TODO 页面主体滚动区域的基础边距。
-  static const double pageHorizontalPadding = 18;
-  static const double pageBottomPadding = 28;
-  static const double bottomNoticeTopSpacing = 16;
-  static const double bottomNoticeTopRadius = 24;
+  static const double pageHorizontalPadding =
+      LayoutConfig.page_horizontal_padding;
+  static const double pageBottomPadding = LayoutConfig.space_28;
+  static const double bottomNoticeTopSpacing = LayoutConfig.space_16;
+  static const double bottomNoticeTopRadius = LayoutConfig.radius_24;
   static const double bottomNoticeEstimatedHeight = 240;
 
   // TODO 主卡片与次卡片之间的标准垂直间距。
-  static const double sectionSpacing = 18;
+  static const double sectionSpacing = LayoutConfig.space_18;
 
   // TODO 页面卡片通用大圆角。
-  static const double cardRadius = 28;
+  static const double cardRadius = LayoutConfig.radius_28;
 
   // TODO 页面卡片通用阴影参数。
   // 统一使用这一组阴影值可以让金额卡、二维码卡、注意事项卡保持同一空间层级。
@@ -24,25 +26,35 @@ class Style {
 
   // TODO 顶部金额 Hero 卡片内边距。
   // 这个卡片承担主视觉焦点，所以边距要比普通信息卡更舒展。
-  static const EdgeInsets heroPadding = EdgeInsets.fromLTRB(20, 18, 20, 18);
+  static const EdgeInsets heroPadding = EdgeInsets.fromLTRB(
+    LayoutConfig.space_20,
+    LayoutConfig.space_18,
+    LayoutConfig.space_20,
+    LayoutConfig.space_18,
+  );
 
   // TODO 二维码信息卡内容边距。
   // 单独定义是为了让类型条、二维码区域、地址区域之间的呼吸感更稳定。
-  static const EdgeInsets qrCardPadding = EdgeInsets.fromLTRB(18, 18, 18, 18);
+  static const EdgeInsets qrCardPadding = EdgeInsets.fromLTRB(
+    LayoutConfig.space_18,
+    LayoutConfig.space_18,
+    LayoutConfig.space_18,
+    LayoutConfig.space_18,
+  );
 
   // TODO 注意事项卡内容边距。
   // 注意事项文案较长，单独控制内边距有利于保证阅读舒适度。
   static const EdgeInsets noticeCardPadding = EdgeInsets.fromLTRB(
-    18,
-    16,
-    18,
-    16,
+    LayoutConfig.space_18,
+    LayoutConfig.space_16,
+    LayoutConfig.space_18,
+    LayoutConfig.space_16,
   );
   static const EdgeInsets bottomNoticeCardPadding = EdgeInsets.fromLTRB(
-    18,
-    16,
-    18,
-    16,
+    LayoutConfig.space_18,
+    LayoutConfig.space_16,
+    LayoutConfig.space_18,
+    LayoutConfig.space_16,
   );
 
   // TODO 顶部金额主数字字号。

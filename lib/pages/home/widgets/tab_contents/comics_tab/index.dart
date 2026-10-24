@@ -12,6 +12,7 @@ import 'package:app/components/floating_back_to_top/style.dart'
     as floating_back_to_top_style;
 import 'package:app/components/load_more_footer/index.dart';
 import 'package:app/pages/comics/logic.dart';
+import 'package:app/config/layout_config.dart';
 import 'package:app/pages/comics/style.dart';
 import 'package:app/pages/comics/widgets/comics_grid.dart';
 import 'package:app/pages/comics/widgets/empty_state.dart';
@@ -101,9 +102,7 @@ class _ComicsTabContentState extends State<ComicsTabContent>
   ///
   /// [category_id] 筛选组件回调值，null 表示未选中。
   void _on_category_changed(int? category_id) {
-    _logic.select_category(
-      ComicsTabLogic.to_filter_category_id(category_id),
-    );
+    _logic.select_category(ComicsTabLogic.to_filter_category_id(category_id));
   }
 
   @override
@@ -148,7 +147,6 @@ class _ComicsTabContentState extends State<ComicsTabContent>
               show: _is_back_to_top_visible,
               isDark: is_dark,
               onTap: _scroll_to_top,
-              right: floating_back_to_top_style.FloatingBackToTopStyle.right,
               visibleBottom:
                   fixed_nav_style.Style.bar_height +
                   floating_back_to_top_style
@@ -181,7 +179,7 @@ class _ComicsTabContentState extends State<ComicsTabContent>
         slivers: <Widget>[
           SliverPadding(
             padding: const EdgeInsets.symmetric(
-              horizontal: ComicsStyle.page_padding,
+              horizontal: LayoutConfig.page_horizontal_padding,
             ),
             sliver: SliverToBoxAdapter(
               child: ComicsGridSkeleton(is_dark: is_dark),
@@ -216,7 +214,7 @@ class _ComicsTabContentState extends State<ComicsTabContent>
         /// 漫画瀑布流网格。
         SliverPadding(
           padding: const EdgeInsets.symmetric(
-            horizontal: ComicsStyle.page_padding,
+            horizontal: LayoutConfig.page_horizontal_padding,
           ),
           sliver: ComicsGrid(items: _logic.items),
         ),

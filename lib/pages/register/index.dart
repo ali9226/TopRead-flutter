@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -174,7 +175,7 @@ class _RegisterState extends State<Register> {
 
         /// 用户协议勾选框（仅注册模式显示）。
         if (isRegisterMode) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: LayoutConfig.space_16),
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AuthPageStyle.fieldHorizontalPadding,
@@ -204,16 +205,18 @@ class _RegisterState extends State<Register> {
                                   .withValues(alpha: 0.4),
                         width: 1.5,
                       ),
-                      borderRadius: BorderRadius.circular(3),
+                      borderRadius: BorderRadius.circular(
+                        LayoutConfig.radius_3,
+                      ),
                       color: _isAgreed
                           ? ColorConstants.themeColor
-                          : Colors.transparent,
+                          : ColorConstants.transparent,
                     ),
                     child: _isAgreed
-                        ? const Icon(Icons.check, size: 12, color: Colors.black)
+                        ? const Icon(Icons.check, size: 12, color: ColorConstants.lightTextColor)
                         : null,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: LayoutConfig.space_8),
 
                   /// 协议文字。
                   Flexible(
@@ -236,7 +239,9 @@ class _RegisterState extends State<Register> {
                                 routerUtil(path: '/image_text?type=60');
                               },
                               child: Padding(
-                                padding: const EdgeInsets.only(left: 5),
+                                padding: const EdgeInsets.only(
+                                  left: LayoutConfig.space_5,
+                                ),
                                 child: Text(
                                   context.tr('register.user_agreement'),
                                   style: TextStyle(
@@ -269,7 +274,7 @@ class _RegisterState extends State<Register> {
           onTap: isRegisterMode ? _handleRegister : _handleLogin,
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: LayoutConfig.space_20),
 
         /// 底部跳转入口（根据模式切换文案）。
         AuthFooterAction(
@@ -283,7 +288,7 @@ class _RegisterState extends State<Register> {
         ),
         const SizedBox(height: Style.supportSpacing),
         AuthorizedLoginView(onBeforeLogin: _check_agreement),
-        const SizedBox(height: 30),
+        const SizedBox(height: LayoutConfig.space_30),
       ],
     );
   }

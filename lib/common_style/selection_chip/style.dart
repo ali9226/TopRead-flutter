@@ -1,3 +1,5 @@
+import 'package:app/config/color_config.dart';
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 
 /// 通用选择标签样式常量。
@@ -20,13 +22,13 @@ class SelectionChipStyle {
   // ==================== 尺寸 ========================
 
   /// 标签圆角。
-  static const double borderRadius = 8.0;
+  static const double borderRadius = LayoutConfig.radius_8;
 
   /// 标签水平内边距（兴趣偏好页面用）。
-  static const double horizontalPadding = 16.0;
+  static const double horizontalPadding = LayoutConfig.space_16;
 
   /// 标签垂直内边距（兴趣偏好页面用）。
-  static const double verticalPadding = 10.0;
+  static const double verticalPadding = LayoutConfig.space_10;
 
   /// 标签字号。
   static const double fontSize = 13.0;
@@ -35,10 +37,10 @@ class SelectionChipStyle {
   static const double chipHeight = 38.0;
 
   /// 标签之间水平间距（Wrap spacing）。
-  static const double spacing = 10.0;
+  static const double spacing = LayoutConfig.space_10;
 
   /// 标签之间垂直间距（Wrap runSpacing）。
-  static const double runSpacing = 12.0;
+  static const double runSpacing = LayoutConfig.space_12;
 
   /// 动画时长。
   static const Duration animationDuration = Duration(milliseconds: 200);
@@ -46,36 +48,36 @@ class SelectionChipStyle {
   // ==================== 颜色（日间模式 - 与筛选弹窗一致） ========================
 
   /// 未选中标签背景色（日间）。
-  static const Color unselectedLightBg = Color(0xFFECEEF3);
+  static const Color unselectedLightBg = ColorConstants.unselected_light_bg_ffeceef3;
 
   /// 未选中标签文字色（日间）。
-  static const Color unselectedLightText = Color(0xFF333333);
+  static const Color unselectedLightText = ColorConstants.components_paragraph_comment_sheet_style_tone_ff333333;
 
   /// 选中标签背景色（日间）。
-  static const Color selectedLightBg = Color(0xFFFFF3D6);
+  static const Color selectedLightBg = ColorConstants.warm_accent_soft_bg;
 
   /// 选中标签文字色（日间）。
-  static const Color selectedLightText = Color(0xFFD4920A);
+  static const Color selectedLightText = ColorConstants.warm_accent_text;
 
   /// 选中标签边框色（日间），与主题色一致。
-  static const Color selectedLightBorder = Color(0xFFF8D02D);
+  static const Color selectedLightBorder = ColorConstants.themeColor;
 
   // ==================== 颜色（夜间模式 - 与筛选栏一致） ========================
 
   /// 未选中标签背景色（夜间）。
-  static const Color unselectedDarkBg = Color(0xFF252836);
+  static const Color unselectedDarkBg = ColorConstants.components_category_filter_index_tone;
 
   /// 未选中标签文字色（夜间）。
-  static const Color unselectedDarkText = Color(0xFFBBBBC0);
+  static const Color unselectedDarkText = ColorConstants.components_category_filter_category_filter_bar_tone;
 
   /// 选中标签背景色（夜间）。
-  static const Color selectedDarkBg = Color(0xFF3D3520);
+  static const Color selectedDarkBg = ColorConstants.warm_accent_deep_bg;
 
   /// 选中标签文字色（夜间）。
-  static const Color selectedDarkText = Color(0xFFFFD45A);
+  static const Color selectedDarkText = ColorConstants.message_type_accent_color_list;
 
   /// 选中标签边框色（夜间）。
-  static const Color selectedDarkBorder = Color(0xFFF6D76A);
+  static const Color selectedDarkBorder = ColorConstants.pages_change_password_style_tone_fff6d76a;
 
   // ==================== 颜色方法 ========================
 

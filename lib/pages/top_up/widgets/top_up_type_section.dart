@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
@@ -84,7 +85,7 @@ class TopUpTypeSection extends StatelessWidget {
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutCubic,
               height: Style.typeSelectorHeight,
-              padding: const EdgeInsets.all(1),
+              padding: const EdgeInsets.all(LayoutConfig.space_1),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(Style.typeSelectorRadius),
                 gradient: LinearGradient(
@@ -96,11 +97,9 @@ class TopUpTypeSection extends StatelessWidget {
                           ? Style.typeSelectorGradientEndOpacity
                           : Style.typeSelectorGradientStartOpacity,
                     ),
-                    Colors.white.withValues(
-                      alpha: isDark
+                    ColorConstants.whiteColor.withValues(alpha: isDark
                           ? Style.typeSelectorGradientEndOpacity
-                          : Style.typeSelectorHighlightOpacity,
-                    ),
+                          : Style.typeSelectorHighlightOpacity),
                   ],
                 ),
               ),
@@ -114,8 +113,8 @@ class TopUpTypeSection extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: isDark
-                        ? const <Color>[Color(0xFF1A1F2D), Color(0xFF111420)]
-                        : const <Color>[Color(0xFFFFFCF4), Color(0xFFF7F5EE)],
+                        ? const <Color>[ColorConstants.pages_top_up_widgets_top_up_type_section_tone_ff1a1f2d, ColorConstants.night_sheet_gradient_end]
+                        : const <Color>[ColorConstants.pages_top_up_widgets_top_up_type_section_tone_fffffcf4, ColorConstants.pages_top_up_widgets_top_up_type_section_tone_fff7f5ee],
                   ),
                 ),
                 child: Row(
@@ -129,8 +128,8 @@ class TopUpTypeSection extends StatelessWidget {
                         color: selectedType != null
                             ? Style.accentColor.withValues(alpha: 0.18)
                             : (isDark
-                                  ? Colors.white.withValues(alpha: 0.06)
-                                  : Colors.black.withValues(alpha: 0.04)),
+                                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+                                  : ColorConstants.components_paragraph_comment_sheet_widgets_comment_item_tone),
                       ),
                       child: Center(
                         child: SvgIcon(
@@ -143,7 +142,7 @@ class TopUpTypeSection extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: LayoutConfig.space_12),
                     Expanded(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -185,14 +184,16 @@ class TopUpTypeSection extends StatelessWidget {
                       width: Style.typeSelectorTrailingWidth,
                       height: double.infinity,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(
+                          LayoutConfig.radius_14,
+                        ),
                         color: selectedType != null
                             ? Style.accentColor.withValues(
                                 alpha: isDark ? 0.16 : 0.12,
                               )
                             : (isDark
-                                  ? Colors.white.withValues(alpha: 0.05)
-                                  : Colors.black.withValues(alpha: 0.035)),
+                                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff
+                                  : ColorConstants.pages_short_story_read_widgets_next_story_preview_tone_9222222),
                       ),
                       child: Center(
                         child: Transform.rotate(
@@ -248,20 +249,18 @@ class _TopUpPanel extends StatelessWidget {
     return Container(
       padding: Style.cardPadding,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF171A27) : Colors.white,
+        color: isDark ? ColorConstants.pages_top_up_record_index_tone : ColorConstants.whiteColor,
         borderRadius: BorderRadius.circular(Style.cardRadius),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04),
+              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+              : ColorConstants.components_paragraph_comment_sheet_widgets_comment_item_tone,
         ),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: isDark
+            color: ColorConstants.shadowColor.withValues(alpha: isDark
                   ? Style.cardShadowDarkOpacity
-                  : Style.cardShadowLightOpacity,
-            ),
+                  : Style.cardShadowLightOpacity),
             blurRadius: Style.cardShadowBlur,
             offset: const Offset(0, Style.cardShadowOffsetY),
           ),
@@ -280,7 +279,7 @@ class _TopUpPanel extends StatelessWidget {
               fontWeight: Style.sectionTitleWeight,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: LayoutConfig.space_4),
           Text(
             hint,
             style: TextStyle(
@@ -291,7 +290,7 @@ class _TopUpPanel extends StatelessWidget {
               fontWeight: Style.sectionHintWeight,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: LayoutConfig.space_12),
           child,
         ],
       ),

@@ -2,7 +2,7 @@ import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/pages/read/widgets/introduction_section/style.dart';
 import 'package:flutter/material.dart';
 
-/// 分类、简介与热评共用同一圆角纸面，内容随安全区调整而背景保持全幅。
+/// 简介、分类与热评延续同一纸面，圆角过渡仅由封面组件负责。
 class ReadIntroductionPanel extends StatelessWidget {
   const ReadIntroductionPanel({
     super.key,
@@ -18,10 +18,6 @@ class ReadIntroductionPanel extends StatelessWidget {
     color: is_dark
         ? IntroductionStyle.content_background_dark
         : IntroductionStyle.content_background_light,
-    borderRadius: const BorderRadius.vertical(
-      top: Radius.circular(IntroductionStyle.content_panel_radius),
-    ),
-    clipBehavior: Clip.antiAlias,
     child: WindowReservedRegionPadding(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(

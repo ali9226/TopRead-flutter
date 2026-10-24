@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/stores/authorized_login_store.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -195,7 +196,7 @@ class _LoginState extends State<Login> {
         ),
         const SizedBox(height: Style.supportSpacing),
         AuthorizedLoginView(),
-        const SizedBox(height: 30),
+        const SizedBox(height: LayoutConfig.space_30),
       ],
     );
   }

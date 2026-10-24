@@ -4,6 +4,7 @@ import 'package:app/components/svg_icon/index.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:app/config/color_config.dart';
 
 /// TODO 长篇、短篇与漫画共用的主题切换动画；由弹窗持有并在dispose时取消，避免残留遮罩。
 class ReaderThemeTransition {
@@ -50,11 +51,11 @@ class ReaderThemeTransition {
         animation: _opacity,
         builder: (context, _) => Stack(
           children: [
-            const ModalBarrier(dismissible: false, color: Colors.transparent),
+            const ModalBarrier(dismissible: false, color: ColorConstants.transparent),
             Opacity(
               opacity: _opacity.value,
               child: ColoredBox(
-                color: Colors.black,
+                color: ColorConstants.lightTextColor,
                 child: SizedBox.expand(
                   child: Center(
                     child: Transform.scale(

@@ -1,6 +1,5 @@
 package com.topread.novel
 
-import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
@@ -30,13 +29,13 @@ class MasonryNativeAdFactory(
             R.layout.masonry_native_ad,
             null,
         ) as NativeAdView
-        val isDark = customOptions?.get("isDark") as? Boolean ?: false
+        val palette = NativeAdPalette(customOptions)
         val advertisementLabel =
             customOptions?.get("advertisementLabel") as? String ?: "Ad"
         val slotId = customOptions?.get("slotId") as? String
         val cardWidth = (customOptions?.get("cardWidth") as? Number)?.toDouble()
         val layoutToken = (customOptions?.get("layoutToken") as? Number)?.toInt()
-        applyTheme(adView, isDark)
+        applyTheme(adView, palette)
         adView.findViewById<TextView>(R.id.ad_attribution).text = advertisementLabel
 
         val mediaView = adView.findViewById<MediaView>(R.id.ad_media)
@@ -127,40 +126,40 @@ class MasonryNativeAdFactory(
         view.visibility = View.VISIBLE
     }
 
-    private fun applyTheme(adView: NativeAdView, isDark: Boolean) {
-        val cardColor = if (isDark) Color.rgb(23, 28, 40) else Color.WHITE
-        val primaryColor = if (isDark) Color.WHITE else Color.rgb(22, 28, 40)
-        val secondaryColor = if (isDark) Color.rgb(176, 181, 192) else Color.rgb(116, 124, 138)
-
+    private fun applyTheme(adView: NativeAdView, palette: NativeAdPalette) {
         adView.background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = 18f * adView.resources.displayMetrics.density
-            setColor(cardColor)
+            setColor(palette.color("card_background"))
         }
         adView.findViewById<TextView>(R.id.ad_attribution).apply {
-            setTextColor(Color.rgb(95, 139, 255))
+            setTextColor(palette.color("attribution_text"))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 999f * adView.resources.displayMetrics.density
-                setColor(Color.argb(41, 95, 139, 255))
+                setColor(palette.color("attribution_background"))
             }
         }
-        adView.findViewById<TextView>(R.id.ad_headline).setTextColor(primaryColor)
-        adView.findViewById<TextView>(R.id.ad_body).setTextColor(secondaryColor)
+        adView.findViewById<TextView>(R.id.ad_headline)
+            .setTextColor(palette.color("primary_text"))
+        adView.findViewById<TextView>(R.id.ad_body)
+            .setTextColor(palette.color("secondary_text"))
         adView.findViewById<TextView>(R.id.ad_advertiser).apply {
-            setTextColor(Color.rgb(47, 191, 155))
+            setTextColor(palette.color("advertiser_text"))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 999f * adView.resources.displayMetrics.density
-                setColor(Color.argb(41, 47, 191, 155))
+                setColor(palette.color("advertiser_background"))
             }
         }
-        adView.findViewById<TextView>(R.id.ad_call_to_action).background =
-            GradientDrawable().apply {
+        adView.findViewById<TextView>(R.id.ad_call_to_action).apply {
+            setTextColor(palette.color("cta_text"))
+            background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 10f * adView.resources.displayMetrics.density
-                setColor(Color.rgb(248, 208, 45))
+                setColor(palette.color("cta_background"))
             }
+        }
     }
 
     private companion object {

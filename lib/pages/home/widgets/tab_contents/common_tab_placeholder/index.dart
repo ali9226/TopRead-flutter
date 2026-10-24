@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -49,7 +50,7 @@ class CommonTabPlaceholder extends StatelessWidget {
         itemBuilder: (BuildContext context, int index) {
           return Padding(
             padding: EdgeInsets.only(
-              bottom: index < item_count - 1
+              bottom: index < item_count - LayoutConfig.space_1
                   ? TabPlaceholderStyle.card_spacing
                   : 0,
             ),
@@ -107,8 +108,7 @@ class _PlaceholderCard extends StatelessWidget {
 
     /// 标题骨架条宽度，交替变化模拟真实内容节奏。
     final double title_bar_width =
-        TabPlaceholderStyle.title_bar_max_width -
-            (index % 5) * 24.0;
+        TabPlaceholderStyle.title_bar_max_width - (index % 5) * 24.0;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,

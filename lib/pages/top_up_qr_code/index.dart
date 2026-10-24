@@ -146,8 +146,8 @@ class _TopUpQrCodeState extends State<TopUpQrCode> {
 
       /// 二维码卡片内部的底色。
       final Color qrBackgroundColor = isDark
-          ? const Color(0xFF121521)
-          : Colors.white;
+          ? ColorConstants.pages_top_up_widgets_top_up_amount_section_tone_ff121521
+          : ColorConstants.whiteColor;
 
       /// 页面辅助文案颜色。
       final Color hintColor = isDark
@@ -178,14 +178,14 @@ class _TopUpQrCodeState extends State<TopUpQrCode> {
                       end: Alignment.bottomCenter,
                       colors: isDark
                           ? const <Color>[
-                              Color(0xFF181B29),
-                              Color(0xFF11131D),
-                              Color(0xFF0C0D14),
+                              ColorConstants.night_hero_gradient_start,
+                              ColorConstants.night_gradient_deep,
+                              ColorConstants.night_gradient_deepest,
                             ]
                           : const <Color>[
-                              Color(0xFFFFF3C1),
-                              Color(0xFFF7F7F2),
-                              Color(0xFFFFFFFF),
+                              ColorConstants.gold_page_gradient_start,
+                              ColorConstants.warm_page_gradient_end_alt,
+                              ColorConstants.whiteColor,
                             ],
                     ),
                   ),
@@ -254,7 +254,7 @@ class _TopUpQrCodeState extends State<TopUpQrCode> {
                 left: 0,
                 right: 0,
                 child: Material(
-                  color: Colors.transparent,
+                  color: ColorConstants.transparent,
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -282,7 +282,7 @@ class _TopUpQrCodeState extends State<TopUpQrCode> {
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Container(
-                      color: Colors.black.withValues(alpha: 0.12),
+                      color: ColorConstants.util_dialog_show_bottom_tip_tone_1f222222,
                     ),
                   ),
                 ),

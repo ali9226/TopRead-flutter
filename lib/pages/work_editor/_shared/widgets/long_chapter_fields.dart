@@ -1,4 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
+import 'package:app/config/layout_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -57,7 +58,7 @@ class LongChapterFields extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: LayoutConfig.space_14),
         EditorKeyboardInput(
           builder: (read_only, on_tap) => TextField(
             readOnly: locked || read_only,

@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/comics/editor/logic.dart';
@@ -60,7 +61,7 @@ class ChapterSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: LayoutConfig.space_4),
         Text(
           tr('comics.chapter_description'),
           style: ComicEditorStyle.section_subtitle(context),
@@ -79,7 +80,9 @@ class ChapterSection extends StatelessWidget {
             itemCount: language.chapters.length,
             itemBuilder: (BuildContext context, int index) {
               return _ChapterCard(
-                key: ValueKey('comic_chapter_${language.chapters[index].id}_$index'),
+                key: ValueKey(
+                  'comic_chapter_${language.chapters[index].id}_$index',
+                ),
                 logic: logic,
                 chapter: language.chapters[index],
                 index: index,
@@ -118,16 +121,13 @@ class _EmptyChapters extends StatelessWidget {
             size: 36,
             color: ComicEditorStyle.input_hint(context),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: LayoutConfig.space_12),
           Text(
             tr('comics.create_first_chapter'),
             textAlign: TextAlign.center,
-            style: ComicsStyle.text(
-              context,
-              color: ComicsStyle.muted(context),
-            ),
+            style: ComicsStyle.text(context, color: ComicsStyle.muted(context)),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: LayoutConfig.space_14),
           ElevatedButton(
             onPressed: enabled ? on_add : null,
             style: ComicEditorStyle.primary_button(context),
@@ -191,7 +191,7 @@ class _ChapterCard extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: ColorConstants.themeColor.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_10),
                 ),
                 child: Text(
                   '${index + 1}',

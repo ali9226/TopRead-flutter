@@ -99,7 +99,7 @@ class _SelectionLanguageState extends State<SelectionLanguage> {
     /// 页面底色。
     final Color backgroundColor = isDark
         ? ColorConstants.nightBackgroundColor
-        : const Color(0xFFF6F7FB);
+        : ColorConstants.components_category_filter_category_filter_bar_tone_fff6f7fb;
 
     /// 主标题颜色。
     final Color titleColor = isDark

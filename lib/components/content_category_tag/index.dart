@@ -18,6 +18,7 @@ class ContentCategoryTag extends StatelessWidget {
     this.surface_color,
     this.is_dark,
     this.is_cjk,
+    this.wrap_label = false,
   });
 
   final String label;
@@ -25,6 +26,9 @@ class ContentCategoryTag extends StatelessWidget {
   final Color? surface_color;
   final bool? is_dark;
   final bool? is_cjk;
+
+  /// 详情分类展示完整文案，列表等紧凑场景保持单行胶囊。
+  final bool wrap_label;
 
   @override
   Widget build(BuildContext context) {
@@ -54,8 +58,8 @@ class ContentCategoryTag extends StatelessWidget {
       ),
       child: Text(
         label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+        maxLines: wrap_label ? null : 1,
+        overflow: wrap_label ? TextOverflow.visible : TextOverflow.ellipsis,
         style: TextStyle(
           color: color.withValues(alpha: ContentCategoryTagStyle.text_alpha),
           fontSize: cjk

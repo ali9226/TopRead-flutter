@@ -4,8 +4,15 @@ import 'package:flutter/material.dart';
 
 /// 漫画沿用公共简介卡片，并保留已有交互定位键。
 class ComicAboutStory extends StatelessWidget {
-  const ComicAboutStory({super.key, required this.description});
+  const ComicAboutStory({
+    super.key,
+    required this.description,
+    this.embedded = false,
+    this.is_dark,
+  });
   final String description;
+  final bool embedded;
+  final bool? is_dark;
 
   @override
   Widget build(BuildContext context) => ExpandableSynopsis(
@@ -14,7 +21,10 @@ class ComicAboutStory extends StatelessWidget {
     empty_description: tr('comics.no_description'),
     expand_label: tr('comics.show_more'),
     collapse_label: tr('comics.show_less'),
-    is_dark: Theme.of(context).brightness == Brightness.dark,
+    is_dark: is_dark ?? Theme.of(context).brightness == Brightness.dark,
     key_prefix: 'comic_about',
+    embedded: embedded,
+    collapsed_lines: 2,
+    compact_toggle: true,
   );
 }

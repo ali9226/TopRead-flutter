@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -121,7 +122,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     final bool has_status_bar_spacing = !kIsWeb && status_bar_height > 0;
     final Color bg_color = is_dark
         ? ColorConstants.nightBackgroundColor
-        : const Color(0xFFF6F7FB);
+        : ColorConstants.components_category_filter_category_filter_bar_tone_fff6f7fb;
 
     return SafeArea(
       top: false,
@@ -144,7 +145,9 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                   if (has_status_bar_spacing)
                     SizedBox(height: status_bar_height),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: LayoutConfig.space_16,
+                    ),
                     child: HomeHeaderBar(
                       is_dark: is_dark,
                       on_search_tap: _open_search_page,

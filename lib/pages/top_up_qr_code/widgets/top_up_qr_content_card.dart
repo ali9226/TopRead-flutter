@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/components/svg_icon/index.dart';
@@ -33,16 +34,16 @@ class TopUpQrContentCard extends StatelessWidget {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF171A27) : Colors.white,
+        color: isDark ? ColorConstants.pages_top_up_record_index_tone : ColorConstants.whiteColor,
         borderRadius: BorderRadius.circular(Style.cardRadius),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04),
+              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+              : ColorConstants.components_paragraph_comment_sheet_widgets_comment_item_tone,
         ),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.06),
+            color: ColorConstants.shadowColor.withValues(alpha: isDark ? 0.20 : 0.06),
             blurRadius: Style.cardShadowBlur,
             offset: const Offset(0, Style.cardShadowOffsetY),
           ),
@@ -84,12 +85,17 @@ class TopUpQrContentCard extends StatelessWidget {
               children: <Widget>[
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                  padding: const EdgeInsets.fromLTRB(
+                    LayoutConfig.space_16,
+                    LayoutConfig.space_14,
+                    LayoutConfig.space_16,
+                    LayoutConfig.space_14,
+                  ),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : const Color(0xFFFFF8DD),
-                    borderRadius: BorderRadius.circular(20),
+                        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff
+                        : ColorConstants.pages_top_up_qr_code_widgets_top_up_qr_content_card_tone,
+                    borderRadius: BorderRadius.circular(LayoutConfig.radius_20),
                   ),
                   child: Row(
                     children: <Widget>[
@@ -97,7 +103,9 @@ class TopUpQrContentCard extends StatelessWidget {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(
+                            LayoutConfig.radius_12,
+                          ),
                           color: ColorConstants.themeColor.withValues(
                             alpha: isDark ? 0.14 : 0.16,
                           ),
@@ -111,7 +119,7 @@ class TopUpQrContentCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: LayoutConfig.space_12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,7 +132,7 @@ class TopUpQrContentCard extends StatelessWidget {
                                 fontWeight: FontConfig.adjustedWeight(FontWeight.w700),
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: LayoutConfig.space_4),
                             Text(
                               detail?.typeStr ?? '--',
                               style: TextStyle(
@@ -141,17 +149,15 @@ class TopUpQrContentCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: LayoutConfig.space_16),
                 Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(LayoutConfig.space_14),
                   decoration: BoxDecoration(
                     color: qrBackgroundColor,
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(LayoutConfig.radius_24),
                     boxShadow: <BoxShadow>[
                       BoxShadow(
-                        color: Colors.black.withValues(
-                          alpha: isDark ? 0.14 : 0.05,
-                        ),
+                        color: ColorConstants.shadowColor.withValues(alpha: isDark ? 0.14 : 0.05),
                         blurRadius: 16,
                         offset: const Offset(0, 8),
                       ),
@@ -166,20 +172,27 @@ class TopUpQrContentCard extends StatelessWidget {
                       : QrImageView(
                           data: detail!.payQrCode,
                           size: 220,
-                          backgroundColor: Colors.white,
+                          backgroundColor: ColorConstants.whiteColor,
                         ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: LayoutConfig.space_16),
                 GestureDetector(
                   onTap: onCopyAddress,
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                    padding: const EdgeInsets.fromLTRB(
+                      LayoutConfig.space_14,
+                      LayoutConfig.space_12,
+                      LayoutConfig.space_12,
+                      LayoutConfig.space_12,
+                    ),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withValues(alpha: 0.05)
-                          : Colors.black.withValues(alpha: 0.03),
-                      borderRadius: BorderRadius.circular(18),
+                          ? ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff
+                          : ColorConstants.pages_top_up_qr_code_widgets_top_up_qr_content_card_tone_8222222,
+                      borderRadius: BorderRadius.circular(
+                        LayoutConfig.radius_18,
+                      ),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,14 +209,16 @@ class TopUpQrContentCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: LayoutConfig.space_10),
                         GestureDetector(
                           onTap: onCopyAddress,
                           child: Container(
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                LayoutConfig.radius_12,
+                              ),
                               color: ColorConstants.themeColor.withValues(
                                 alpha: isDark ? 0.16 : 0.12,
                               ),
@@ -222,7 +237,7 @@ class TopUpQrContentCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: LayoutConfig.space_14),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -235,7 +250,9 @@ class TopUpQrContentCard extends StatelessWidget {
                         Style.doneButtonHeight,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(
+                          LayoutConfig.radius_20,
+                        ),
                       ),
                     ),
                     child: Text(

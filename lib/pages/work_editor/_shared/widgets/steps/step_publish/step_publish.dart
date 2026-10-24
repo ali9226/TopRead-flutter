@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
@@ -48,14 +49,14 @@ class StepPublish extends StatelessWidget {
                 easy.tr('creator_center.release_mode'),
                 is_dark,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: LayoutConfig.space_10),
               _build_release_option(
                 mode: CreatorReleaseMode.immediate,
                 icon: Icons.rocket_launch_outlined,
                 title: easy.tr('creator_center.release_immediate_title'),
                 subtitle: easy.tr('creator_center.release_immediate_subtitle'),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: LayoutConfig.space_10),
               _build_release_option(
                 mode: CreatorReleaseMode.scheduled,
                 icon: Icons.schedule_outlined,
@@ -68,7 +69,9 @@ class StepPublish extends StatelessWidget {
                 alignment: Alignment.topCenter,
                 child: release_mode == CreatorReleaseMode.scheduled
                     ? Padding(
-                        padding: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.only(
+                          top: LayoutConfig.space_12,
+                        ),
                         child: _build_schedule_picker(context),
                       )
                     : const SizedBox.shrink(),
@@ -89,18 +92,23 @@ class StepPublish extends StatelessWidget {
     required String subtitle,
   }) {
     final bool is_selected = release_mode == mode;
-    final Color accent = is_dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
+    final Color accent = is_dark
+        ? ColorConstants.themeColor
+        : ColorConstants.lightTextColor;
 
     return GestureDetector(
       onTap: () => on_release_mode_changed(mode),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        padding: const EdgeInsets.symmetric(
+          horizontal: LayoutConfig.space_12,
+          vertical: LayoutConfig.space_14,
+        ),
         decoration: BoxDecoration(
           color: is_selected
               ? accent.withValues(alpha: is_dark ? 0.12 : 0.06)
               : AuthorStyle.secondary_surface(is_dark),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
           border: Border.all(
             color: is_selected
                 ? accent.withValues(alpha: is_dark ? 0.40 : 0.30)
@@ -117,7 +125,7 @@ class StepPublish extends StatelessWidget {
                 color: is_selected
                     ? accent.withValues(alpha: is_dark ? 0.20 : 0.10)
                     : AuthorStyle.secondary_surface(is_dark),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(LayoutConfig.radius_10),
               ),
               child: Icon(
                 icon,
@@ -127,7 +135,7 @@ class StepPublish extends StatelessWidget {
                 size: 19,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: LayoutConfig.space_12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,7 +150,7 @@ class StepPublish extends StatelessWidget {
                           : AuthorStyle.body_weight,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: LayoutConfig.space_2),
                   Text(
                     subtitle,
                     style: TextStyle(
@@ -177,14 +185,17 @@ class StepPublish extends StatelessWidget {
         : easy.tr('creator_center.select_schedule_time');
 
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
       onTap: on_select_schedule_time,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        padding: const EdgeInsets.symmetric(
+          horizontal: LayoutConfig.space_12,
+          vertical: LayoutConfig.space_14,
+        ),
         decoration: BoxDecoration(
           color: AuthorStyle.secondary_surface(is_dark),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
           border: Border.all(color: AuthorStyle.border(is_dark)),
         ),
         child: Row(
@@ -192,11 +203,13 @@ class StepPublish extends StatelessWidget {
             Icon(
               Icons.event_outlined,
               color: scheduled_publish_time != null
-                  ? (is_dark ? ColorConstants.themeColor : ColorConstants.lightTextColor)
+                  ? (is_dark
+                        ? ColorConstants.themeColor
+                        : ColorConstants.lightTextColor)
                   : AuthorStyle.secondary_text(is_dark),
               size: 20,
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: LayoutConfig.space_10),
             Expanded(
               child: Text(
                 formatted_time,
@@ -221,13 +234,15 @@ class StepPublish extends StatelessWidget {
   }
 
   Widget _build_rights_confirmation() {
-    final Color accent = is_dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
+    final Color accent = is_dark
+        ? ColorConstants.themeColor
+        : ColorConstants.lightTextColor;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(LayoutConfig.radius_10),
       onTap: () => on_rights_confirmed_changed(!rights_confirmed),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: LayoutConfig.space_4),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -237,17 +252,15 @@ class StepPublish extends StatelessWidget {
                 if (v != null) on_rights_confirmed_changed(v);
               },
               activeColor: accent,
-              checkColor: is_dark ? AuthorStyle.dark_surface : Colors.white,
+              checkColor: is_dark ? AuthorStyle.dark_surface : ColorConstants.whiteColor,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               visualDensity: VisualDensity.compact,
-              side: BorderSide(
-                color: accent,
-              ),
+              side: BorderSide(color: accent),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: LayoutConfig.space_4),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(top: 2),
+                padding: const EdgeInsets.only(top: LayoutConfig.space_2),
                 child: Text(
                   easy.tr('creator_center.rights_confirm'),
                   style: TextStyle(

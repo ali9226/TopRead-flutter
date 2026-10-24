@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:app/models/paragraph_text_selection.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/config/color_config.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +35,7 @@ void main() {
         item: make_item(text),
         is_dark: false,
         body_font_size: 18,
-        text_color: Colors.black,
+        text_color: ColorConstants.lightTextColor,
         on_comment: (selection) => submitted = selection,
         on_selection_changed: states.add,
         on_tap_position: (_) => turns++,
@@ -69,7 +70,7 @@ void main() {
       item: make_item('Same paragraph', count: count),
       is_dark: true,
       body_font_size: 18,
-      text_color: Colors.white,
+      text_color: ColorConstants.whiteColor,
       on_comment: (_) {},
       on_comments: () => opened++,
       on_tap_position: (_) => turns++,
@@ -96,7 +97,7 @@ void main() {
         item: make_item('Body paragraph'),
         is_dark: false,
         body_font_size: 18,
-        text_color: Colors.black,
+        text_color: ColorConstants.lightTextColor,
         on_comment: (_) {},
         on_selection_changed: states.add,
       ),
@@ -110,7 +111,7 @@ void main() {
         item: make_item('Chapter title', is_title: true),
         is_dark: false,
         body_font_size: 18,
-        text_color: Colors.black,
+        text_color: ColorConstants.lightTextColor,
         on_comment: (_) {},
       ),
     );
@@ -136,14 +137,14 @@ void main() {
               item: make_item('Chapter title', is_title: true),
               is_dark: true,
               body_font_size: 18,
-              text_color: Colors.white,
+              text_color: ColorConstants.whiteColor,
               on_comment: (selection) => submitted.add(('title', selection)),
             ),
             ReaderParagraphItem(
               item: make_item(first, count: 3),
               is_dark: true,
               body_font_size: 18,
-              text_color: Colors.white,
+              text_color: ColorConstants.whiteColor,
               on_comment: (selection) => submitted.add(('101', selection)),
             ),
             ReaderParagraphItem(
@@ -155,7 +156,7 @@ void main() {
               ),
               is_dark: true,
               body_font_size: 18,
-              text_color: Colors.white,
+              text_color: ColorConstants.whiteColor,
               on_comment: (selection) => submitted.add(('102', selection)),
             ),
           ],

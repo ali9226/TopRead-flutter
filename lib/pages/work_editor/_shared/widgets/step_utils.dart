@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 // ignore_for_file: non_constant_identifier_names
 
@@ -58,16 +59,21 @@ class StepUtils {
       ),
       filled: true,
       fillColor: AuthorStyle.secondary_surface(is_dark),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: LayoutConfig.space_14,
+        vertical: LayoutConfig.space_14,
+      ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
         borderSide: BorderSide(color: AuthorStyle.border(is_dark)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
         borderSide: const BorderSide(color: AuthorStyle.gold, width: 1.4),
       ),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
+      ),
     );
   }
 

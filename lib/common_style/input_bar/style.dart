@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/color_config.dart';
 
@@ -11,10 +12,10 @@ class InputBarStyle {
   // ==================== 输入栏整体 ====================
 
   /// 输入栏水平内边距。
-  static const double padding_h = 8;
+  static const double padding_h = LayoutConfig.space_8;
 
   /// 输入栏垂直内边距。
-  static const double padding_v = 6;
+  static const double padding_v = LayoutConfig.space_6;
 
   /// 输入栏背景色（日间模式），与评论面板背景色保持一致。
   static Color get bar_bg_light => ColorConstants.sheetBackground(false);
@@ -31,7 +32,7 @@ class InputBarStyle {
   static const double field_max_height = 104;
 
   /// 输入框圆角半径。
-  static const double field_radius = 20;
+  static const double field_radius = LayoutConfig.radius_20;
 
   /// 输入框背景色（日间模式），与回复区域背景色一致。
   static Color get field_bg_light => ColorConstants.sheetInputBackground(false);
@@ -46,10 +47,10 @@ class InputBarStyle {
   static const double font_size_alphabetic = 14;
 
   /// 输入框内水平内边距。
-  static const double inner_padding = 12;
+  static const double inner_padding = LayoutConfig.space_12;
 
   /// 输入框内垂直内边距（编辑模式下 TextField 的 contentPadding）。
-  static const double content_vertical_padding = 9;
+  static const double content_vertical_padding = LayoutConfig.space_9;
 
   /// 输入框文字行高。
   static const double text_line_height = 1.4;
@@ -58,7 +59,7 @@ class InputBarStyle {
   static const double cursor_width = 2;
 
   /// 输入框与右侧按钮的间距。
-  static const double action_spacing = 8;
+  static const double action_spacing = LayoutConfig.space_8;
 
   // ==================== 发送按钮 ====================
 
@@ -72,10 +73,10 @@ class InputBarStyle {
   static const double send_min_width_alphabetic = 64;
 
   /// 发送按钮圆角半径。
-  static const double send_radius = 18;
+  static const double send_radius = LayoutConfig.radius_18;
 
   /// 发送按钮水平内边距。
-  static const double send_padding_h = 12;
+  static const double send_padding_h = LayoutConfig.space_12;
 
   /// 发送按钮字号（CJK 语系）。
   static const double send_font_size_cjk = 14;
@@ -84,16 +85,16 @@ class InputBarStyle {
   static const double send_font_size_alphabetic = 13;
 
   /// 发送按钮禁用状态背景色（日间模式）。
-  static const Color send_disabled_bg_light = Color(0xFFE8E8E8);
+  static const Color send_disabled_bg_light = ColorConstants.pages_published_long_novel_editor_widgets_skeleton_content_tone;
 
   /// 发送按钮禁用状态背景色（夜间模式）。
-  static const Color send_disabled_bg_dark = Color(0xFF3A3A3A);
+  static const Color send_disabled_bg_dark = ColorConstants.components_cute_mascot_index_tone_ff3a3a3a;
 
   /// 发送按钮禁用状态文字色（日间模式）。
-  static const Color send_disabled_text_light = Color(0xFFB2B2B2);
+  static const Color send_disabled_text_light = ColorConstants.hint_grey_light;
 
   /// 发送按钮禁用状态文字色（夜间模式）。
-  static const Color send_disabled_text_dark = Color(0xFF666666);
+  static const Color send_disabled_text_dark = ColorConstants.customer_service_sheet_style_time_color_dark;
 
   // ==================== 功能按钮（表情、图片等） ====================
 
@@ -109,15 +110,33 @@ class InputBarStyle {
   static const int emoji_columns = 7;
 
   /// 表情面板背景色（日间模式）。
-  static const Color emoji_panel_bg_light = Color(0xFFF5F5F5);
+  static const Color emoji_panel_bg_light = ColorConstants.config_color_config_tone_fff5f5f5;
 
   /// 表情面板背景色（夜间模式）。
-  static const Color emoji_panel_bg_dark = Color(0xFF1A1A2A);
+  static const Color emoji_panel_bg_dark = ColorConstants.customer_service_sheet_style_input_bar_bg_dark;
 
   /// 预置表情列表。
   static const List<String> emoji_list = [
-    '😀', '😂', '😍', '🤔', '😢', '😡', '👍',
-    '👎', '❤️', '🎉', '🔥', '💯', '😊', '🙏',
-    '😎', '🥺', '😤', '🤝', '💪', '✨', '🎊',
+    '😀',
+    '😂',
+    '😍',
+    '🤔',
+    '😢',
+    '😡',
+    '👍',
+    '👎',
+    '❤️',
+    '🎉',
+    '🔥',
+    '💯',
+    '😊',
+    '🙏',
+    '😎',
+    '🥺',
+    '😤',
+    '🤝',
+    '💪',
+    '✨',
+    '🎊',
   ];
 }

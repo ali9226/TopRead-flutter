@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
@@ -75,12 +76,12 @@ class NavigationItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       child: InkResponse(
         onTapDown: on_tap_down,
         onTap: on_tap,
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
+        splashColor: ColorConstants.transparent,
+        highlightColor: ColorConstants.transparent,
         radius: Style.navigation_item_radius,
         containedInkWell: false,
         child: SizedBox(
@@ -162,27 +163,27 @@ class _Badge extends StatelessWidget {
     final String text = count > 99 ? '99+' : '$count';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: LayoutConfig.space_5,
+        vertical: LayoutConfig.space_2,
+      ),
       decoration: BoxDecoration(
         color: ColorConstants.dangerColor,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_pill),
         boxShadow: [
           BoxShadow(
-            color: ColorConstants.dangerColor.withValues(alpha: 0.3),
+            color: ColorConstants.components_fixed_bottom_navigation_widgets_navigation_item_tone,
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),
         ],
       ),
-      constraints: const BoxConstraints(
-        minWidth: 16,
-        minHeight: 16,
-      ),
+      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
       alignment: Alignment.center,
       child: Text(
         text,
         style: TextStyle(
-          color: Colors.white,
+          color: ColorConstants.whiteColor,
           fontSize: 10,
           fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
           height: 1.0,

@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'dart:async';
 
@@ -91,18 +92,18 @@ class _AboutTopReadState extends State<AboutTopRead> {
 
       /// 标题色：日间与背景同色系（深色文字），夜间与背景区分（白色文字）。
       final Color titleColor = isDark
-          ? Colors.white
+          ? ColorConstants.whiteColor
           : ColorConstants.lightTextColor;
 
       /// 次要文字色。
       final Color subColor = isDark
-          ? Colors.white.withValues(alpha: 0.38)
+          ? ColorConstants.pages_read_widgets_read_directory_sheet_index_tone
           : ColorConstants.lightTextColor.withValues(alpha: 0.45);
 
       /// 分割线色。
       final Color dividerColor = isDark
-          ? Colors.white.withValues(alpha: 0.06)
-          : Colors.black.withValues(alpha: 0.06);
+          ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+          : ColorConstants.components_share_sheet_widgets_share_poster_card_tone_f222222;
 
       /// AppBar背景色：日间固定白色，夜间与页面背景区分。
       final Color appBarBgColor = isDark
@@ -221,9 +222,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
                         'V${Constant.appVersion}',
                         style: TextStyle(
                           fontSize: 14,
-                          fontWeight: FontConfig.adjustedWeight(
-                            FontWeight.w400,
-                          ),
+                          fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                           color: titleColor,
                         ),
                       ),
@@ -249,7 +248,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
                       ),
                   ],
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: LayoutConfig.space_40),
               ],
             ),
           ),
@@ -357,7 +356,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
     return Column(
       children: [
         Material(
-          color: Colors.transparent,
+          color: ColorConstants.transparent,
           child: InkWell(
             onTap: onTap,
             splashColor: ColorConstants.themeColor.withValues(alpha: 0.12),
@@ -379,7 +378,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: LayoutConfig.space_10),
                   trailing ??
                       SvgIcon(
                         name: 'right',
@@ -422,7 +421,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
             reverse: false,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: LayoutConfig.space_10),
         Flexible(
           child: Text(
             sloganText,
@@ -436,7 +435,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
             ),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: LayoutConfig.space_10),
         Container(
           width: AuthPageStyle.sloganWidth,
           height: AuthPageStyle.sloganHeight,

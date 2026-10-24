@@ -40,17 +40,15 @@ class BillHeroCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isDark
-              ? const <Color>[Color(0xFF262B3F), Color(0xFF181B29)]
-              : const <Color>[Color(0xFFFFF2B2), Color(0xFFF1D875)],
+              ? const <Color>[ColorConstants.night_hero_card_top, ColorConstants.night_hero_gradient_start]
+              : const <Color>[ColorConstants.gold_gradient_start, ColorConstants.gold_gradient_end],
         ),
         boxShadow: <BoxShadow>[
           BoxShadow(
             /// 柔和阴影把 Hero 区从页面背景中提出来。
-            color: Colors.black.withValues(
-              alpha: isDark
+            color: ColorConstants.shadowColor.withValues(alpha: isDark
                   ? Style.heroShadowDarkOpacity
-                  : Style.heroShadowLightOpacity,
-            ),
+                  : Style.heroShadowLightOpacity),
             blurRadius: Style.heroShadowBlur,
             offset: const Offset(0, Style.heroShadowOffsetY),
           ),

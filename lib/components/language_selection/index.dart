@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:app/components/window_content_layout/index.dart';
@@ -117,7 +118,7 @@ class _LanguageSelectionState extends State<LanguageSelection> {
     final content = Container(
       margin: EdgeInsets.only(top: widget.topOffset),
       height: Style.containerHeight,
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       padding: EdgeInsets.symmetric(horizontal: widget.horizontalPadding),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -150,7 +151,8 @@ class _LanguageSelectionState extends State<LanguageSelection> {
                       alignment: Alignment.centerLeft,
                       child: _buildLeftAction(),
                     ),
-                  if (hasCustomLeftChild) const SizedBox(width: 12),
+                  if (hasCustomLeftChild)
+                    const SizedBox(width: LayoutConfig.space_12),
                   Container(
                     key: _rightKey,
                     height: Style.containerHeight,
@@ -165,7 +167,8 @@ class _LanguageSelectionState extends State<LanguageSelection> {
                     padding: EdgeInsets.symmetric(
                       horizontal: min<double>(
                         titlePadding,
-                        constraints.maxWidth / 2 - 12,
+                        constraints.maxWidth / LayoutConfig.space_2 -
+                            LayoutConfig.space_12,
                       ),
                     ),
                     child: Obx(() {
@@ -345,7 +348,7 @@ class _LanguageSelectionState extends State<LanguageSelection> {
             ),
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: LayoutConfig.space_4),
         Obx(() {
           final isDark = deviceInfo.theme.value == ThemeMode.dark;
           return GestureDetector(
@@ -370,7 +373,7 @@ class _LanguageSelectionState extends State<LanguageSelection> {
             ),
           );
         }),
-        const SizedBox(width: 8),
+        const SizedBox(width: LayoutConfig.space_8),
         Obx(() {
           final isDark = deviceInfo.theme.value == ThemeMode.dark;
           return GestureDetector(

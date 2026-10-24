@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/common_style/input_bar/style.dart';
 import 'package:app/config/color_config.dart';
@@ -16,7 +17,7 @@ class CommentListStyle {
   static const double max_height_ratio = 0.78;
 
   /// 面板顶部圆角。
-  static const double sheet_radius = 14;
+  static const double sheet_radius = LayoutConfig.radius_14;
 
   /// 面板弹出/收起动画时长（毫秒）。
   static const int sheet_transition_duration_ms = 260;
@@ -39,10 +40,10 @@ class CommentListStyle {
   // ==================== 标题栏 ====================
 
   /// 标题栏水平内边距。
-  static const double header_horizontal_padding = 16;
+  static const double header_horizontal_padding = LayoutConfig.space_16;
 
   /// 标题栏右侧内边距。
-  static const double header_right_padding = 8;
+  static const double header_right_padding = LayoutConfig.space_8;
 
   /// 标题栏行高。
   static const double header_row_height = 48;
@@ -65,10 +66,10 @@ class CommentListStyle {
   // ==================== 评论列表 ====================
 
   /// 列表水平内边距。
-  static const double list_horizontal_padding = 16;
+  static const double list_horizontal_padding = LayoutConfig.space_16;
 
   /// 列表垂直内边距。
-  static const double list_vertical_padding = 6;
+  static const double list_vertical_padding = LayoutConfig.space_6;
 
   /// 列表滚动缓存范围（像素）。
   static const double list_cache_extent = 360;
@@ -80,16 +81,16 @@ class CommentListStyle {
   static const int scroll_to_comment_animation_duration_ms = 400;
 
   /// 回复目标与键盘、列表视口边缘之间的安全距离。
-  static const double reply_visibility_margin = 12;
+  static const double reply_visibility_margin = LayoutConfig.space_12;
 
   /// 发送评论后滚动到顶部的动画时长（毫秒）。
   static const int scroll_to_top_animation_duration_ms = 300;
 
   /// 评论项顶部内边距。
-  static const double item_top_padding = 16;
+  static const double item_top_padding = LayoutConfig.space_16;
 
   /// 评论项底部内边距。
-  static const double item_bottom_padding = 14;
+  static const double item_bottom_padding = LayoutConfig.space_14;
 
   /// 头像尺寸。
   static const double avatar_size = 38;
@@ -98,7 +99,7 @@ class CommentListStyle {
   static const double avatar_radius = avatar_size / 2;
 
   /// 头像与内容区间距。
-  static const double avatar_content_gap = 12;
+  static const double avatar_content_gap = LayoutConfig.space_12;
 
   /// 昵称字号（CJK 语系）。
   static const double nickname_font_size_cjk = 14;
@@ -119,10 +120,10 @@ class CommentListStyle {
   static const double content_line_height_alphabetic = 1.55;
 
   /// 评论内容顶部间距。
-  static const double content_top_spacing = 5;
+  static const double content_top_spacing = LayoutConfig.space_5;
 
   /// 元数据（时间、点赞等）顶部间距。
-  static const double metadata_top_spacing = 8;
+  static const double metadata_top_spacing = LayoutConfig.space_8;
 
   /// 时间文字字号。
   static const double time_font_size = 12;
@@ -134,19 +135,19 @@ class CommentListStyle {
   static const double action_font_size_alphabetic = 12;
 
   /// 操作按钮间距。
-  static const double action_spacing = 10;
+  static const double action_spacing = LayoutConfig.space_10;
 
   /// 点赞按钮最小点击区域宽度。
-  static const double like_touch_width = 44;
+  static const double like_touch_width = LayoutConfig.compact_control_height;
 
   /// 点赞按钮最小点击区域高度。
   static const double like_touch_height = 32;
 
   /// 点赞按钮左侧留白，扩大触控区且不挤压图标。
-  static const double like_left_padding = 10;
+  static const double like_left_padding = LayoutConfig.space_10;
 
   /// 点赞图标尺寸。
-  static const double like_icon_size = 20;
+  static const double like_icon_size = LayoutConfig.icon_medium;
 
   /// 点赞数字字号。
   static const double like_count_font_size = 12;
@@ -155,7 +156,7 @@ class CommentListStyle {
   static const double like_compact_icon_size = 18;
 
   /// 点赞图标与数字间距。
-  static const double like_icon_count_spacing = 3;
+  static const double like_icon_count_spacing = LayoutConfig.space_3;
 
   /// 点赞状态切换缩放动画时长（毫秒）。
   static const int like_animation_duration_ms = 300;
@@ -184,7 +185,7 @@ class CommentListStyle {
   // ==================== 加载更多指示器 ====================
 
   /// 加载更多指示器的外边距。
-  static const double load_more_padding_vertical = 16;
+  static const double load_more_padding_vertical = LayoutConfig.space_16;
 
   /// 加载更多指示器的尺寸。
   static const double load_more_indicator_size = 20;
@@ -195,13 +196,13 @@ class CommentListStyle {
   // ==================== 空状态 ====================
 
   /// 空状态区域内边距。
-  static const double empty_padding_vertical = 60;
+  static const double empty_padding_vertical = LayoutConfig.space_60;
 
   /// 空状态图标尺寸。
   static const double empty_icon_size = 48;
 
   /// 空状态图标与文字的间距。
-  static const double empty_icon_text_spacing = 16;
+  static const double empty_icon_text_spacing = LayoutConfig.space_16;
 
   /// 空状态文字字号。
   static const double empty_text_font_size = 14;
@@ -215,16 +216,16 @@ class CommentListStyle {
   static const double reply_indent = divider_indent;
 
   /// 子回复列表底部留白。
-  static const double reply_section_bottom_padding = 16;
+  static const double reply_section_bottom_padding = LayoutConfig.space_16;
 
   /// 回复项间距。
-  static const double reply_item_spacing = 16;
+  static const double reply_item_spacing = LayoutConfig.space_16;
 
   /// 子回复头像尺寸。
   static const double reply_avatar_size = 26;
 
   /// 子回复头像与内容区间距。
-  static const double reply_avatar_gap = 9;
+  static const double reply_avatar_gap = LayoutConfig.space_9;
 
   /// 子回复昵称字号（CJK 语系）。
   static const double reply_nickname_font_size_cjk = 13.5;
@@ -245,10 +246,10 @@ class CommentListStyle {
   static const double reply_line_height_alphabetic = 1.55;
 
   /// 子回复正文顶部间距。
-  static const double reply_content_top_spacing = 4;
+  static const double reply_content_top_spacing = LayoutConfig.space_4;
 
   /// 回复元数据顶部间距。
-  static const double reply_metadata_top_spacing = 7;
+  static const double reply_metadata_top_spacing = LayoutConfig.space_7;
 
   /// 评论定位高亮动画时长（毫秒）。
   static const int highlight_animation_duration_ms = 1500;
@@ -259,13 +260,13 @@ class CommentListStyle {
   // 因此在通用 InputBarStyle 基础上保留评论区专用的胶囊尺寸和色彩。
 
   /// 输入栏水平内边距。
-  static const double input_horizontal_padding = 12;
+  static const double input_horizontal_padding = LayoutConfig.space_12;
 
   /// 输入栏顶部内边距。
-  static const double input_top_padding = 10;
+  static const double input_top_padding = LayoutConfig.space_10;
 
   /// 输入栏底部内边距。
-  static const double input_bottom_padding = 9;
+  static const double input_bottom_padding = LayoutConfig.space_9;
 
   /// 输入框高度。
   static const double input_height = 42;
@@ -277,7 +278,7 @@ class CommentListStyle {
   static const double input_radius = input_height / 2;
 
   /// 输入框内水平内边距。
-  static const double input_inner_padding = 14;
+  static const double input_inner_padding = LayoutConfig.space_14;
 
   /// 输入框内垂直内边距。
   static const double input_content_vertical_padding =
@@ -303,19 +304,19 @@ class CommentListStyle {
   static const double input_area_height = 56;
 
   /// 输入框与按钮间距。
-  static const double input_action_spacing = 10;
+  static const double input_action_spacing = LayoutConfig.space_10;
 
   /// 表情按钮点击区域尺寸。
   static const double emoji_button_size = 36;
 
   /// 表情图标显示尺寸。
-  static const double emoji_icon_size = 22;
+  static const double emoji_icon_size = LayoutConfig.icon_compact;
 
   /// 表情按钮与输入框右边界的留白。
-  static const double emoji_button_right_padding = 3;
+  static const double emoji_button_right_padding = LayoutConfig.space_3;
 
   /// 表情按钮内部视觉高亮的圆角。
-  static const double emoji_button_radius = 18;
+  static const double emoji_button_radius = LayoutConfig.radius_18;
 
   /// 发送按钮高度。
   static const double send_button_height = input_height;
@@ -330,7 +331,7 @@ class CommentListStyle {
   static const double send_button_radius = input_height / 2;
 
   /// 发送按钮水平内边距。
-  static const double send_button_horizontal_padding = 14;
+  static const double send_button_horizontal_padding = LayoutConfig.space_14;
 
   /// 输入状态切换的轻量动画时长。
   static const int input_state_animation_duration_ms = 140;
@@ -362,7 +363,7 @@ class CommentListStyle {
   // ==================== 骨架屏 ====================
 
   /// 骨架块圆角。
-  static const double skeleton_block_radius = 4;
+  static const double skeleton_block_radius = LayoutConfig.radius_4;
 
   /// 骨架昵称宽度。
   static const double skeleton_nickname_width = 76;
@@ -377,7 +378,7 @@ class CommentListStyle {
   static const double skeleton_time_width = 50;
 
   /// 骨架行间距。
-  static const double skeleton_line_spacing = 7;
+  static const double skeleton_line_spacing = LayoutConfig.space_7;
 
   /// 骨架动画时长（毫秒）。
   static const int skeleton_animation_duration_ms = 1400;
@@ -416,7 +417,7 @@ class CommentListStyle {
   static const double action_button_size = 24;
 
   /// 操作按钮间距（兼容已有引用）。
-  static const double action_button_spacing = 16;
+  static const double action_button_spacing = LayoutConfig.space_16;
 
   // ==================== 日间颜色 ====================
 
@@ -424,49 +425,49 @@ class CommentListStyle {
   static Color get sheet_light_bg => ColorConstants.sheetBackground(false);
 
   /// 卡片背景色（日间模式）。
-  static const Color card_light_bg = Color(0xFFFFFFFF);
+  static const Color card_light_bg = ColorConstants.whiteColor;
 
   /// 输入栏背景色（日间模式），引用 InputBarStyle。
   static Color get input_bar_light_bg => InputBarStyle.bar_bg_light;
 
   /// 标题文字色（日间模式）。
-  static const Color title_light_color = Color(0xFF191919);
+  static const Color title_light_color = ColorConstants.components_image_source_sheet_index_tone_ff191919;
 
   /// 次要文字色（日间模式）。
-  static const Color secondary_light_color = Color(0xFF8C8C8C);
+  static const Color secondary_light_color = ColorConstants.comment_secondary_grey;
 
   /// 提示文字色（日间模式）。
-  static const Color hint_light_color = Color(0xFFB2B2B2);
+  static const Color hint_light_color = ColorConstants.hint_grey_light;
 
   /// 分割线颜色（日间模式）。
-  static const Color divider_light_color = Color(0xFFEDEDED);
+  static const Color divider_light_color = ColorConstants.customer_service_chat_style_page_bg_color_light;
 
   /// 输入框背景色（日间模式）。
   static Color get input_light_bg => ColorConstants.sheetInputBackground(false);
 
   /// 输入框边框色（日间模式）。
-  static const Color input_border_light_color = Color(0xFFECECED);
+  static const Color input_border_light_color = ColorConstants.input_border_light_color_ffececed;
 
   /// 表情按钮激活背景色（日间模式）。
-  static const Color emoji_active_light_bg = Color(0x1FF8D02D);
+  static const Color emoji_active_light_bg = ColorConstants.pages_home_widgets_tab_contents_short_story_tab_widgets_short_story_card_tone;
 
   /// 昵称文字色（日间模式）。
-  static const Color nickname_light_color = Color(0xFF9A9A9A);
+  static const Color nickname_light_color = ColorConstants.pages_read_widgets_read_directory_sheet_style_tone_ff9a9a9a;
 
   /// 评论正文颜色（日间模式）。
-  static const Color content_light_color = Color(0xFF3D3D3D);
+  static const Color content_light_color = ColorConstants.content_light_color_ff3d3d3d;
 
   /// 时间等弱元数据颜色（日间模式）。
-  static const Color metadata_light_color = Color(0xFFB5B5B5);
+  static const Color metadata_light_color = ColorConstants.components_story_rank_card_index_tone;
 
   /// 回复操作文字颜色（日间模式）。
-  static const Color action_light_color = Color(0xFF8F8F8F);
+  static const Color action_light_color = ColorConstants.action_light_color_ff8f8f8f;
 
   /// 点赞图标色（日间模式）。
-  static const Color like_light_color = Color(0xFF929292);
+  static const Color like_light_color = ColorConstants.comment_meta_grey;
 
   /// 评论定位高亮色（日间模式）。
-  static const Color highlight_light_color = Color(0x24F8D02D);
+  static const Color highlight_light_color = ColorConstants.pages_bill_widgets_bill_record_card_tone_24f8d02d;
 
   // ==================== 夜间颜色 ====================
 
@@ -474,52 +475,52 @@ class CommentListStyle {
   static Color get sheet_dark_bg => ColorConstants.sheetBackground(true);
 
   /// 卡片背景色（夜间模式）。
-  static const Color card_dark_bg = Color(0xFF191919);
+  static const Color card_dark_bg = ColorConstants.components_image_source_sheet_index_tone_ff191919;
 
   /// 输入栏背景色（夜间模式），引用 InputBarStyle。
   static Color get input_bar_dark_bg => InputBarStyle.bar_bg_dark;
 
   /// 标题文字色（夜间模式）。
-  static const Color title_dark_color = Color(0xFFF2F2F2);
+  static const Color title_dark_color = ColorConstants.title_dark_color_fff2f2f2;
 
   /// 次要文字色（夜间模式）。
-  static const Color secondary_dark_color = Color(0xFF8C8C8C);
+  static const Color secondary_dark_color = ColorConstants.comment_secondary_grey;
 
   /// 提示文字色（夜间模式）。
-  static const Color hint_dark_color = Color(0xFF737373);
+  static const Color hint_dark_color = ColorConstants.hint_grey_dark;
 
   /// 分割线颜色（夜间模式）。
-  static const Color divider_dark_color = Color(0xFF2C2C2C);
+  static const Color divider_dark_color = ColorConstants.components_comment_list_widgets_comment_avatar_tone;
 
   /// 输入框背景色（夜间模式）。
   static Color get input_dark_bg => ColorConstants.sheetInputBackground(true);
 
   /// 输入框边框色（夜间模式）。
-  static const Color input_border_dark_color = Color(0xFF343434);
+  static const Color input_border_dark_color = ColorConstants.input_border_dark_color_ff343434;
 
   /// 表情按钮激活背景色（夜间模式）。
-  static const Color emoji_active_dark_bg = Color(0x29F8D02D);
+  static const Color emoji_active_dark_bg = ColorConstants.pages_comics_reader_widgets_chapter_end_tone;
 
   /// 昵称文字色（夜间模式）。
-  static const Color nickname_dark_color = Color(0xFF929292);
+  static const Color nickname_dark_color = ColorConstants.comment_meta_grey;
 
   /// 评论正文颜色（夜间模式）。
-  static const Color content_dark_color = Color(0xFFE3E3E3);
+  static const Color content_dark_color = ColorConstants.content_dark_color_ffe3e3e3;
 
   /// 时间等弱元数据颜色（夜间模式）。
-  static const Color metadata_dark_color = Color(0xFF737373);
+  static const Color metadata_dark_color = ColorConstants.hint_grey_dark;
 
   /// 回复操作文字颜色（夜间模式）。
-  static const Color action_dark_color = Color(0xFF9A9A9A);
+  static const Color action_dark_color = ColorConstants.pages_read_widgets_read_directory_sheet_style_tone_ff9a9a9a;
 
   /// 点赞图标色（夜间模式）。
-  static const Color like_dark_color = Color(0xFF8C8C8C);
+  static const Color like_dark_color = ColorConstants.comment_secondary_grey;
 
   /// 评论定位高亮色（夜间模式）。
-  static const Color highlight_dark_color = Color(0x24FFFFFF);
+  static const Color highlight_dark_color = ColorConstants.components_back_to_top_button_style_tone_24ffffff;
 
   /// 微信式点赞激活红色。
-  static const Color like_active_color = Color(0xFFFA5151);
+  static const Color like_active_color = ColorConstants.like_active_color_fffa5151;
 
   // ==================== 表情面板 ====================
 
@@ -533,10 +534,10 @@ class CommentListStyle {
   static Color get emoji_panel_dark_bg => sheet_dark_bg;
 
   /// 表情面板顶部分隔线颜色（日间模式）。
-  static const Color emoji_panel_divider_light_color = Color(0xFFEFEFF0);
+  static const Color emoji_panel_divider_light_color = ColorConstants.emoji_panel_divider_light_color_ffefeff0;
 
   /// 表情面板顶部分隔线颜色（夜间模式）。
-  static const Color emoji_panel_divider_dark_color = Color(0xFF2B2B2B);
+  static const Color emoji_panel_divider_dark_color = ColorConstants.emoji_panel_divider_dark_color_ff2b2b2b;
 
   /// 表情面板顶部分隔线粗细。
   static const double emoji_panel_divider_thickness = 0.5;
@@ -545,28 +546,28 @@ class CommentListStyle {
   static const double emoji_panel_max_width = 420;
 
   /// 表情网格水平内边距。
-  static const double emoji_panel_horizontal_padding = 14;
+  static const double emoji_panel_horizontal_padding = LayoutConfig.space_14;
 
   /// 表情网格垂直内边距。
-  static const double emoji_panel_vertical_padding = 12;
+  static const double emoji_panel_vertical_padding = LayoutConfig.space_12;
 
   /// 表情单元的水平间距。
-  static const double emoji_item_horizontal_spacing = 6;
+  static const double emoji_item_horizontal_spacing = LayoutConfig.space_6;
 
   /// 表情单元的垂直间距。
-  static const double emoji_item_vertical_spacing = 8;
+  static const double emoji_item_vertical_spacing = LayoutConfig.space_8;
 
   /// 表情单元高度。
   static const double emoji_item_height = 40;
 
   /// 表情单元触控反馈圆角。
-  static const double emoji_item_radius = 12;
+  static const double emoji_item_radius = LayoutConfig.radius_12;
 
   /// 表情单元触控反馈色（日间模式）。
-  static const Color emoji_item_feedback_light_color = Color(0x14000000);
+  static const Color emoji_item_feedback_light_color = ColorConstants.components_fixed_bottom_navigation_style_tone;
 
   /// 表情单元触控反馈色（夜间模式）。
-  static const Color emoji_item_feedback_dark_color = Color(0x1FFFFFFF);
+  static const Color emoji_item_feedback_dark_color = ColorConstants.components_fixed_bottom_navigation_widgets_night_panel_decor_tone;
 
   /// 表情字号。
   static const double emoji_font_size = 25;
@@ -580,13 +581,13 @@ class CommentListStyle {
   // ==================== 段落引用 ====================
 
   /// 段落引用底部间距。
-  static const double paragraph_quote_margin_bottom = 8;
+  static const double paragraph_quote_margin_bottom = LayoutConfig.space_8;
 
   /// 段落引用内边距。
-  static const double paragraph_quote_padding = 10;
+  static const double paragraph_quote_padding = LayoutConfig.space_10;
 
   /// 段落引用圆角。
-  static const double paragraph_quote_radius = 8;
+  static const double paragraph_quote_radius = LayoutConfig.radius_8;
 
   /// 段落引用背景透明度（夜间模式）。
   static const double paragraph_quote_bg_opacity_dark = 0.05;
@@ -632,16 +633,16 @@ class CommentListStyle {
   // ==================== 禁用/发送中状态颜色 ====================
 
   /// 禁用点赞图标颜色（夜间模式）。
-  static const Color like_disabled_color_dark = Color(0xFF4A4A4E);
+  static const Color like_disabled_color_dark = ColorConstants.like_disabled_color_dark_ff4a4a4e;
 
   /// 禁用点赞图标颜色（日间模式）。
-  static const Color like_disabled_color_light = Color(0xFFBDBDBD);
+  static const Color like_disabled_color_light = ColorConstants.components_auth_page_style_tone;
 
   /// 沙漏图标颜色（夜间模式）。
-  static const Color sending_indicator_color_dark = Color(0xFF8B8B9E);
+  static const Color sending_indicator_color_dark = ColorConstants.components_no_internet_cute_no_internet_cloud_tone_ff8b8b9e;
 
   /// 沙漏图标颜色（日间模式）。
-  static const Color sending_indicator_color_light = Color(0xFF929292);
+  static const Color sending_indicator_color_light = ColorConstants.comment_meta_grey;
 
   /// 沙漏图标尺寸。
   static const double sending_indicator_size = 18;

@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:get/get.dart';
@@ -25,6 +26,7 @@ import 'package:app/pages/interest_preference/index.dart';
 import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/util/percentage_probability.dart';
+import 'package:app/config/color_config.dart';
 
 /// 短篇 Tab 内容组件。
 class ShortStoryTabContent extends StatefulWidget {
@@ -452,7 +454,7 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
       context: context,
       barrierDismissible: false,
       barrierLabel: '',
-      barrierColor: Colors.transparent,
+      barrierColor: ColorConstants.transparent,
       transitionDuration: Duration.zero,
       pageBuilder:
           (
@@ -608,7 +610,6 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
             show: _is_back_to_top_visible,
             isDark: is_dark,
             onTap: _scroll_to_top,
-            right: floating_back_to_top_style.FloatingBackToTopStyle.right,
             visibleBottom:
                 fixed_nav_style.Style.bar_height +
                 floating_back_to_top_style
@@ -633,11 +634,11 @@ class _ShortStoryTabContentState extends State<ShortStoryTabContent>
         ? ShortStoryTabStyle.card_dark_bg
         : ShortStoryTabStyle.card_light_bg;
     final Color shimmer_base = is_dark
-        ? const Color(0xFF252836)
-        : const Color(0xFFF0F1F5);
+        ? ColorConstants.components_category_filter_index_tone
+        : ColorConstants.components_category_filter_index_tone_fff0f1f5;
     final Color shimmer_highlight = is_dark
-        ? const Color(0xFF2E3145)
-        : const Color(0xFFF8F8FA);
+        ? ColorConstants.components_category_filter_index_tone_ff2e3145
+        : ColorConstants.components_category_filter_index_tone_fff8f8fa;
 
     return ListView.builder(
       padding: const EdgeInsets.only(
@@ -703,7 +704,7 @@ class _SkeletonCardState extends State<_SkeletonCard>
       animation: _shimmer_controller,
       builder: (BuildContext context, Widget? child) {
         return Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(LayoutConfig.space_14),
           decoration: BoxDecoration(
             color: widget.card_bg,
             borderRadius: BorderRadius.circular(
@@ -714,13 +715,13 @@ class _SkeletonCardState extends State<_SkeletonCard>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               _block(double.infinity, 16),
-              const SizedBox(height: 4),
+              const SizedBox(height: LayoutConfig.space_4),
               _block(180, 16),
-              const SizedBox(height: 6),
+              const SizedBox(height: LayoutConfig.space_6),
               _block(double.infinity, 14),
-              const SizedBox(height: 4),
+              const SizedBox(height: LayoutConfig.space_4),
               _block(double.infinity, 14),
-              const SizedBox(height: 4),
+              const SizedBox(height: LayoutConfig.space_4),
               _block(120, 14),
               const SizedBox(
                 height: ShortStoryTabStyle.card_desc_bottom_gap_cjk,
@@ -747,7 +748,7 @@ class _SkeletonCardState extends State<_SkeletonCard>
       width: width,
       height: height,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,

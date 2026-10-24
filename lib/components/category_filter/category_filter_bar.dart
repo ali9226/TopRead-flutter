@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/config/color_config.dart';
@@ -76,8 +77,8 @@ class _CategoryFilterBarState extends State<CategoryFilterBar> {
 
     /// 右侧箭头图标的颜色。
     final Color arrow_color = widget.is_dark
-        ? const Color(0xFFBBBBC0)
-        : const Color(0xFF666666);
+        ? ColorConstants.components_category_filter_category_filter_bar_tone
+        : ColorConstants.customer_service_sheet_style_time_color_dark;
 
     /// 未选中标签背景色。
     final Color unselected_bg = widget.is_dark
@@ -101,11 +102,13 @@ class _CategoryFilterBarState extends State<CategoryFilterBar> {
 
     /// 渐变遮罩颜色（与页面背景一致）。
     final Color gradient_color = widget.is_dark
-        ? const Color(0xFF12121C)
-        : const Color(0xFFF6F7FB);
+        ? ColorConstants.nightBackgroundColor
+        : ColorConstants.components_category_filter_category_filter_bar_tone_fff6f7fb;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: CategoryFilterStyle.filter_bar_bottom_padding),
+      padding: const EdgeInsets.only(
+        bottom: CategoryFilterStyle.filter_bar_bottom_padding,
+      ),
       child: SizedBox(
         height: filter_bar_height,
         child: Stack(
@@ -126,7 +129,9 @@ class _CategoryFilterBarState extends State<CategoryFilterBar> {
                     cacheExtent: double.infinity,
                     padding: const EdgeInsets.only(
                       left: CategoryFilterStyle.arrow_right_margin,
-                      right: CategoryFilterStyle.arrow_right_margin + 10,
+                      right:
+                          CategoryFilterStyle.arrow_right_margin +
+                          LayoutConfig.space_10,
                     ),
                     itemCount: widget.category_list.length,
                     itemBuilder: (BuildContext context, int index) {
@@ -138,11 +143,11 @@ class _CategoryFilterBarState extends State<CategoryFilterBar> {
                           right: CategoryFilterStyle.tag_spacing,
                         ),
                         child: Material(
-                          color: Colors.transparent,
+                          color: ColorConstants.transparent,
                           child: InkWell(
                             onTap: () => widget.on_tag_tap(item.id),
-                            splashColor: Colors.transparent,
-                            highlightColor: Colors.transparent,
+                            splashColor: ColorConstants.transparent,
+                            highlightColor: ColorConstants.transparent,
                             child: Center(
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
@@ -152,7 +157,9 @@ class _CategoryFilterBarState extends State<CategoryFilterBar> {
                                   vertical: vertical_padding,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: is_selected ? selected_bg : unselected_bg,
+                                  color: is_selected
+                                      ? selected_bg
+                                      : unselected_bg,
                                   borderRadius: BorderRadius.circular(
                                     CategoryFilterStyle.tag_border_radius,
                                   ),
@@ -168,7 +175,9 @@ class _CategoryFilterBarState extends State<CategoryFilterBar> {
                                   style: TextStyle(
                                     fontSize: font_size,
                                     fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                                    color: is_selected ? selected_text : unselected_text,
+                                    color: is_selected
+                                        ? selected_text
+                                        : unselected_text,
                                   ),
                                 ),
                               ),

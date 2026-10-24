@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:app/components/share_sheet/widgets/share_icon_item.dart';
 import 'package:app/components/share_sheet/widgets/card_preview_sheet.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
+import 'package:app/config/color_config.dart';
 
 /// 分享弹窗组件。
 ///
@@ -112,7 +114,10 @@ class ShareSheet extends StatelessWidget {
   Widget _buildDragBar(Color color) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.only(top: 12, bottom: 20),
+        padding: const EdgeInsets.only(
+          top: LayoutConfig.space_12,
+          bottom: LayoutConfig.space_20,
+        ),
         child: Container(
           width: ShareSheetStyle.drag_bar_width,
           height: ShareSheetStyle.drag_bar_height,
@@ -130,7 +135,7 @@ class ShareSheet extends StatelessWidget {
   /// 构建弹窗标题。
   Widget _buildTitle(Color title_color) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.only(bottom: LayoutConfig.space_24),
       child: Text(
         easy.tr('share_sheet.title'),
         style: TextStyle(
@@ -149,7 +154,7 @@ class ShareSheet extends StatelessWidget {
   /// 最后一行不满时靠左对齐。
   Widget _buildShareIconRow(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: LayoutConfig.space_16),
       child: Obx(() {
         /// 从 ShareStore 获取分享渠道列表。
         final List<Rotation> share_list = _share_store.rotation_list;
@@ -163,10 +168,10 @@ class ShareSheet extends StatelessWidget {
               name: 'image',
               width: ShareSheetStyle.icon_inner_size,
               height: ShareSheetStyle.icon_inner_size,
-              color: is_dark ? Colors.white : null,
+              color: is_dark ? ColorConstants.whiteColor : null,
             ),
             label: easy.tr('share_sheet.generate_image'),
-            icon_color: const Color(0xFF667EEA),
+            icon_color: ColorConstants.components_share_sheet_index_tone,
             is_dark: is_dark,
             on_tap: () => _onGenerateImage(context),
           ),
@@ -179,10 +184,10 @@ class ShareSheet extends StatelessWidget {
                 name: item.represent,
                 width: ShareSheetStyle.icon_inner_size,
                 height: ShareSheetStyle.icon_inner_size,
-                color: is_dark ? Colors.white : null,
+                color: is_dark ? ColorConstants.whiteColor : null,
               ),
               label: item.title,
-              icon_color: is_dark ? Colors.white : Colors.black,
+              icon_color: is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor,
               is_dark: is_dark,
               on_tap: () => _onShareToChannel(context, item),
             );
@@ -195,10 +200,10 @@ class ShareSheet extends StatelessWidget {
               name: 'link',
               width: ShareSheetStyle.icon_inner_size,
               height: ShareSheetStyle.icon_inner_size,
-              color: is_dark ? Colors.white : null,
+              color: is_dark ? ColorConstants.whiteColor : null,
             ),
             label: easy.tr('share_sheet.copy_link'),
-            icon_color: const Color(0xFFFF8E53),
+            icon_color: ColorConstants.components_share_sheet_index_tone_ffff8e53,
             is_dark: is_dark,
             on_tap: () => _onCopyLink(context),
           ),
@@ -241,7 +246,7 @@ class ShareSheet extends StatelessWidget {
               rows.add(Row(children: rowItems));
 
               if (i + crossAxisCount < items.length) {
-                rows.add(const SizedBox(height: 22));
+                rows.add(const SizedBox(height: LayoutConfig.space_22));
               }
             }
 
@@ -318,7 +323,7 @@ void showShareSheet({
 
   showModalBottomSheet(
     context: context,
-    backgroundColor: Colors.transparent,
+    backgroundColor: ColorConstants.transparent,
     isScrollControlled: true,
     builder: (BuildContext ctx) {
       return ShareSheet(

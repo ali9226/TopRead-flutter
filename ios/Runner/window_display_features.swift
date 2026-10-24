@@ -70,7 +70,7 @@ final class WindowDisplayFeaturesPlugin: NSObject, FlutterPlugin, FlutterStreamH
       new_probe.autoresizingMask = [.flexibleWidth, .flexibleHeight]
       new_probe.isUserInteractionEnabled = false
       new_probe.isAccessibilityElement = false
-      new_probe.backgroundColor = .clear
+      new_probe.backgroundColor = nil
       new_probe.on_change = { [weak self] snapshot in self?.send_if_changed(snapshot) }
       probe = new_probe
       view.addSubview(new_probe)

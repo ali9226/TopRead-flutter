@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/config/color_config.dart';
@@ -86,8 +87,8 @@ class _WithdrawConfirmDialogState extends State<WithdrawConfirmDialog> {
   Widget build(BuildContext context) {
     // 弹窗基础背景色。
     final Color dialogBackground = widget.isDark
-        ? const Color(0xFF171A27)
-        : Colors.white;
+        ? ColorConstants.pages_top_up_record_index_tone
+        : ColorConstants.whiteColor;
 
     // 标题颜色。
     final Color titleColor = widget.isDark
@@ -101,12 +102,14 @@ class _WithdrawConfirmDialogState extends State<WithdrawConfirmDialog> {
 
     // 主要数值颜色。
     final Color valueColor = widget.isDark
-        ? const Color(0xFFFFE8A3)
+        ? ColorConstants.pages_withdraw_widgets_type_selector_tone_ffffe8a3
         : ColorConstants.lightTextColor;
 
     return Dialog(
       backgroundColor: dialogBackground,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 22),
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: LayoutConfig.space_22,
+      ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(WithdrawStyle.confirmDialogRadius),
       ),
@@ -165,7 +168,7 @@ class _WithdrawConfirmDialogState extends State<WithdrawConfirmDialog> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: LayoutConfig.space_12),
                   _WithdrawConfirmDetailCard(
                     isDark: widget.isDark,
                     labelColor: labelColor,
@@ -175,7 +178,7 @@ class _WithdrawConfirmDialogState extends State<WithdrawConfirmDialog> {
                     walletValue: widget.walletValue,
                     amountValue: widget.amountValue,
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: LayoutConfig.space_18),
                   Row(
                     children: <Widget>[
                       Expanded(
@@ -193,7 +196,7 @@ class _WithdrawConfirmDialogState extends State<WithdrawConfirmDialog> {
                           },
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: LayoutConfig.space_12),
                       Expanded(
                         child: _WithdrawDialogButton(
                           isDark: widget.isDark,
@@ -205,7 +208,7 @@ class _WithdrawConfirmDialogState extends State<WithdrawConfirmDialog> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: LayoutConfig.space_18),
                   ConfirmTips(isDark: widget.isDark),
                 ],
               ),
@@ -253,11 +256,11 @@ class _WithdrawConfirmDetailCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // 钱包地址展示框的淡色背景。
     final Color fieldBackground = isDark
-        ? Colors.white.withValues(alpha: 0.05)
-        : Colors.black.withValues(alpha: 0.03);
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff
+        : ColorConstants.pages_top_up_qr_code_widgets_top_up_qr_content_card_tone_8222222;
 
     return Container(
-      decoration: const BoxDecoration(color: Colors.transparent),
+      decoration: const BoxDecoration(color: ColorConstants.transparent),
       child: Column(
         children: <Widget>[
           SizedBox(
@@ -265,8 +268,8 @@ class _WithdrawConfirmDetailCard extends StatelessWidget {
             height: 124,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(22),
+                color: ColorConstants.transparent,
+                borderRadius: BorderRadius.circular(LayoutConfig.radius_22),
               ),
               child: Stack(
                 children: <Widget>[
@@ -326,7 +329,7 @@ class _WithdrawConfirmDetailCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: LayoutConfig.space_12),
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -338,13 +341,18 @@ class _WithdrawConfirmDetailCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: LayoutConfig.space_8),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+            padding: const EdgeInsets.fromLTRB(
+              LayoutConfig.space_14,
+              LayoutConfig.space_12,
+              LayoutConfig.space_12,
+              LayoutConfig.space_12,
+            ),
             decoration: BoxDecoration(
               color: fieldBackground,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(LayoutConfig.radius_18),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -365,7 +373,7 @@ class _WithdrawConfirmDetailCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: LayoutConfig.space_10),
                 GestureDetector(
                   onTap: () async {
                     // 只有有真实地址时才执行复制，避免复制占位值。
@@ -379,7 +387,9 @@ class _WithdrawConfirmDetailCard extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(
+                        LayoutConfig.radius_12,
+                      ),
                       color: ColorConstants.themeColor.withValues(
                         alpha: isDark ? 0.14 : 0.12,
                       ),
@@ -438,7 +448,10 @@ class _WithdrawAmountHighlight extends StatelessWidget {
               alignment: PlaceholderAlignment.bottom,
               baseline: TextBaseline.alphabetic,
               child: Padding(
-                padding: const EdgeInsets.only(right: 2, bottom: 2),
+                padding: const EdgeInsets.only(
+                  right: LayoutConfig.space_2,
+                  bottom: LayoutConfig.space_2,
+                ),
                 child: Text(
                   '\$',
                   style: TextStyle(
@@ -616,19 +629,19 @@ class _WithdrawDialogButton extends StatelessWidget {
     final Color backgroundColor = filled
         ? ColorConstants.themeColor
         : (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04));
+              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+              : ColorConstants.components_paragraph_comment_sheet_widgets_comment_item_tone);
     final Color textColor = filled
-        ? Colors.black
+        ? ColorConstants.lightTextColor
         : (isDark ? ColorConstants.whiteColor : ColorConstants.lightTextColor);
     final Color borderColor = filled
         ? ColorConstants.themeColor
         : (isDark
-              ? Colors.white.withValues(alpha: 0.10)
-              : Colors.black.withValues(alpha: 0.08));
+              ? ColorConstants.components_authorized_login_index_tone
+              : ColorConstants.components_fixed_bottom_navigation_style_tone);
 
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(
           WithdrawStyle.confirmDialogButtonRadius,

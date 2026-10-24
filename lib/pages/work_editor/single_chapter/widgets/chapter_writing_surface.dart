@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:app/components/window_content_layout/index.dart';
 // ignore_for_file: non_constant_identifier_names
@@ -39,7 +40,12 @@ class ChapterWritingSurface extends StatelessWidget {
           children: [
             if (chapter_label != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  LayoutConfig.space_12,
+                  LayoutConfig.space_6,
+                  LayoutConfig.space_12,
+                  0,
+                ),
                 child: SizedBox(
                   height: kMinInteractiveDimension,
                   child: Align(
@@ -59,7 +65,12 @@ class ChapterWritingSurface extends StatelessWidget {
               ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 28),
+                padding: const EdgeInsets.fromLTRB(
+                  LayoutConfig.space_12,
+                  LayoutConfig.space_4,
+                  LayoutConfig.space_12,
+                  LayoutConfig.space_28,
+                ),
                 child: LongChapterFields(
                   title_controller: title_controller,
                   content_controller: content_controller,
@@ -77,8 +88,8 @@ class ChapterWritingSurface extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+                  horizontal: LayoutConfig.space_12,
+                  vertical: LayoutConfig.space_10,
                 ),
                 child: Stack(
                   alignment: Alignment.center,

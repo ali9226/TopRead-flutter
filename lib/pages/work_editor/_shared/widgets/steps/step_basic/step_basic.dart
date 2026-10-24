@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'dart:io';
 
 import 'package:app/components/bottom_sheet_drag_handle/index.dart';
@@ -94,14 +95,14 @@ class StepBasic extends StatelessWidget {
                 is_dark,
                 required: true,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: LayoutConfig.space_8),
               _build_title_field(context),
               const SizedBox(height: WorkEditorStyle.field_spacing),
               StepUtils.build_field_label(
                 easy.tr('creator_center.intro_label'),
                 is_dark,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: LayoutConfig.space_8),
               _build_introduction_field(context),
               const SizedBox(height: WorkEditorStyle.field_spacing),
               StepUtils.build_field_label(
@@ -109,7 +110,7 @@ class StepBasic extends StatelessWidget {
                 is_dark,
                 required: true,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: LayoutConfig.space_8),
               _build_language_picker(context),
             ],
           ),
@@ -125,20 +126,20 @@ class StepBasic extends StatelessWidget {
       children: <Widget>[
         /// 封面图片区域。
         InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
           onTap: is_uploading_cover ? null : on_pick_cover,
           child: Container(
             width: WorkEditorStyle.cover_width,
             height: WorkEditorStyle.cover_height,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
               color: AuthorStyle.secondary_surface(is_dark),
               border: Border.all(color: AuthorStyle.border(is_dark)),
             ),
             child: _build_cover_content(),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: LayoutConfig.space_16),
 
         /// 右侧文字和按钮。
         Expanded(
@@ -155,7 +156,7 @@ class StepBasic extends StatelessWidget {
                       easy.tr('creator_center.cover'),
                       is_dark,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: LayoutConfig.space_8),
                     Text(
                       easy.tr('creator_center.cover_hint'),
                       style: TextStyle(
@@ -188,7 +189,7 @@ class StepBasic extends StatelessWidget {
       return Stack(
         children: <Widget>[
           ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
             child: Image.file(
               File(cover_local_path!),
               width: WorkEditorStyle.cover_width,
@@ -200,8 +201,8 @@ class StepBasic extends StatelessWidget {
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: Colors.black.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
+                  color: ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone,
                 ),
                 child: const Center(
                   child: SizedBox(
@@ -209,7 +210,7 @@ class StepBasic extends StatelessWidget {
                     height: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      color: Colors.white,
+                      color: ColorConstants.whiteColor,
                     ),
                   ),
                 ),
@@ -222,7 +223,7 @@ class StepBasic extends StatelessWidget {
     /// 网络图片。
     if (cover_url != null && cover_url!.isNotEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
         child: CachedNetworkImage(
           imageUrl: cover_url!,
           width: WorkEditorStyle.cover_width,
@@ -258,7 +259,7 @@ class StepBasic extends StatelessWidget {
             size: 28,
             color: AuthorStyle.secondary_text(is_dark),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: LayoutConfig.space_6),
           Text(
             easy.tr('creator_center.upload_cover'),
             style: TextStyle(
@@ -277,12 +278,15 @@ class StepBasic extends StatelessWidget {
 
     return InkWell(
       onTap: is_uploading_cover ? null : on_pick_cover,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(LayoutConfig.radius_8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(
+          horizontal: LayoutConfig.space_10,
+          vertical: LayoutConfig.space_6,
+        ),
         decoration: BoxDecoration(
           color: ColorConstants.themeColor,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -293,7 +297,7 @@ class StepBasic extends StatelessWidget {
               height: 16,
               color: ColorConstants.lightTextColor,
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: LayoutConfig.space_4),
             Text(
               easy.tr(
                 has_cover
@@ -377,14 +381,17 @@ class StepBasic extends StatelessWidget {
           : easy.tr('creator_center.language_label');
 
       return InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
         onTap: () => _show_language_sheet(context),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          padding: const EdgeInsets.symmetric(
+            horizontal: LayoutConfig.space_12,
+            vertical: LayoutConfig.space_14,
+          ),
           decoration: BoxDecoration(
             color: AuthorStyle.secondary_surface(is_dark),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
             border: Border.all(color: AuthorStyle.border(is_dark)),
           ),
           child: Row(
@@ -394,7 +401,7 @@ class StepBasic extends StatelessWidget {
                   current_lang ?? LanguageInfo(code: language_code),
                   size: 22,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: LayoutConfig.space_10),
               ],
               Expanded(
                 child: Text(
@@ -466,20 +473,26 @@ class StepBasic extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       builder: (BuildContext sheet_context) {
         return Container(
           width: double.infinity,
           decoration: BoxDecoration(
             color: AuthorStyle.surface(is_dark),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(LayoutConfig.radius_20),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               BottomSheetDragHandle(is_dark: is_dark),
               Padding(
-                padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
+                padding: const EdgeInsets.only(
+                  left: LayoutConfig.space_12,
+                  right: LayoutConfig.space_12,
+                  bottom: LayoutConfig.space_8,
+                ),
                 child: Row(
                   children: <Widget>[
                     Text(
@@ -511,20 +524,24 @@ class StepBasic extends StatelessWidget {
                   return ListView.separated(
                     shrinkWrap: true,
                     padding: EdgeInsets.fromLTRB(
-                      12,
-                      8,
-                      12,
-                      MediaQuery.paddingOf(sheet_context).bottom + 16,
+                      LayoutConfig.space_12,
+                      LayoutConfig.space_8,
+                      LayoutConfig.space_12,
+                      MediaQuery.paddingOf(sheet_context).bottom +
+                          LayoutConfig.space_16,
                     ),
                     itemCount: languages.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 4),
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: LayoutConfig.space_4),
                     itemBuilder: (BuildContext _, int index) {
                       final LanguageInfo lang = languages[index];
                       final bool is_selected =
                           lang.language_code == language_code;
 
                       return InkWell(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(
+                          LayoutConfig.radius_12,
+                        ),
                         onTap: () {
                           // 防止列表重建前点击旧选项绕过刚变更的权限。
                           if (!LanguagePermission.is_language_allowed(
@@ -537,16 +554,18 @@ class StepBasic extends StatelessWidget {
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
+                            horizontal: LayoutConfig.space_12,
+                            vertical: LayoutConfig.space_12,
                           ),
                           decoration: BoxDecoration(
                             color: is_selected
                                 ? ColorConstants.themeColor.withValues(
                                     alpha: 0.10,
                                   )
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
+                                : ColorConstants.transparent,
+                            borderRadius: BorderRadius.circular(
+                              LayoutConfig.radius_12,
+                            ),
                             border: is_selected
                                 ? Border.all(
                                     color: ColorConstants.themeColor.withValues(
@@ -558,7 +577,7 @@ class StepBasic extends StatelessWidget {
                           child: Row(
                             children: <Widget>[
                               _build_flag_icon(lang, size: 24),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: LayoutConfig.space_12),
                               Expanded(
                                 child: Text(
                                   lang.title,
@@ -566,9 +585,7 @@ class StepBasic extends StatelessWidget {
                                     color: AuthorStyle.primary_text(is_dark),
                                     fontSize: 15,
                                     fontWeight: is_selected
-                                        ? FontConfig.adjustedWeight(
-                                            FontWeight.w500,
-                                          )
+                                        ? FontConfig.adjustedWeight(FontWeight.w500)
                                         : AuthorStyle.body_weight,
                                   ),
                                 ),

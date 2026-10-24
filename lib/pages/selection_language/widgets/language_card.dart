@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:app/components/svg_icon/index.dart';
@@ -84,22 +85,22 @@ class LanguageCard extends StatelessWidget {
 
     /// 未选中态背景色。
     final Color normalBg = isDark
-        ? Colors.white.withValues(alpha: 0.04)
-        : Colors.white.withValues(alpha: 0.70);
+        ? ColorConstants.pages_bill_widgets_bill_record_card_tone_affffff
+        : ColorConstants.components_reader_bottom_action_style_tone_b2ffffff;
 
     /// 标题文字色。
     final Color titleColor = isDark
-        ? Colors.white
+        ? ColorConstants.whiteColor
         : ColorConstants.lightTextColor;
 
     /// 口号文字色。
     final Color subtitleColor = isDark
-        ? Colors.white.withValues(alpha: 0.50)
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_80ffffff
         : ColorConstants.lightTextColor.withValues(alpha: 0.45);
 
     /// 国旗图标背景色。
     final Color flagWrapBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
         : ColorConstants.themeColor.withValues(alpha: 0.08);
 
     /// 选中指示器背景色。
@@ -110,7 +111,7 @@ class LanguageCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: Style.itemGap),
       child: Material(
-        color: Colors.transparent,
+        color: ColorConstants.transparent,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(Style.itemRadius),
@@ -131,8 +132,8 @@ class LanguageCard extends StatelessWidget {
                         alpha: isDark ? 0.20 : 0.16,
                       )
                     : (isDark
-                        ? Colors.white.withValues(alpha: 0.04)
-                        : Colors.black.withValues(alpha: 0.03)),
+                          ? ColorConstants.pages_bill_widgets_bill_record_card_tone_affffff
+                          : ColorConstants.pages_top_up_qr_code_widgets_top_up_qr_content_card_tone_8222222),
                 width: 1,
               ),
             ),
@@ -152,11 +153,11 @@ class LanguageCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(Style.flagWrapRadius),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(LayoutConfig.radius_8),
                     child: _build_flag_icon(),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: LayoutConfig.space_12),
 
                 // ── 文字区 ──
                 Expanded(
@@ -176,7 +177,9 @@ class LanguageCard extends StatelessWidget {
                       ),
                       if (subtitle.isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.only(top: 3),
+                          padding: const EdgeInsets.only(
+                            top: LayoutConfig.space_3,
+                          ),
                           child: Text(
                             subtitle,
                             maxLines: 1,
@@ -198,7 +201,7 @@ class LanguageCard extends StatelessWidget {
                   width: Style.checkSize,
                   height: Style.checkSize,
                   decoration: BoxDecoration(
-                    color: isSelected ? checkBg : Colors.transparent,
+                    color: isSelected ? checkBg : ColorConstants.transparent,
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isSelected
@@ -206,8 +209,8 @@ class LanguageCard extends StatelessWidget {
                               alpha: isDark ? 0.40 : 0.50,
                             )
                           : (isDark
-                              ? Colors.white.withValues(alpha: 0.12)
-                              : Colors.black.withValues(alpha: 0.08)),
+                                ? ColorConstants.components_fixed_bottom_navigation_widgets_night_panel_decor_tone
+                                : ColorConstants.components_fixed_bottom_navigation_style_tone),
                       width: 1.5,
                     ),
                   ),

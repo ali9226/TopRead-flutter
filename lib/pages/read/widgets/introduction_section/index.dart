@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/pages/read/logic.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/hero/index.dart';
-import 'package:app/pages/read/widgets/introduction_section/widgets/tag_section/index.dart';
-import 'package:app/pages/read/widgets/introduction_section/widgets/intro_summary_section/index.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/comment_section/index.dart';
 import 'package:app/stores/project_config_store.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/content_panel/index.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/content_panel/overlap_layout.dart';
 import './style.dart';
+import 'package:app/components/work_about_section/index.dart';
 
 /// 阅读页介绍组件。
 ///
@@ -30,7 +29,9 @@ class ReadIntroductionSection extends StatelessWidget {
   final VoidCallback? on_share;
   final VoidCallback? on_read;
   final VoidCallback? on_favorite;
+  final VoidCallback? on_comments;
   final bool favorited;
+  final bool continuing;
   final bool favorite_loading;
 
   /// 替换封面成功回调，携带新的封面信息。
@@ -48,7 +49,9 @@ class ReadIntroductionSection extends StatelessWidget {
     this.on_share,
     this.on_read,
     this.on_favorite,
+    this.on_comments,
     this.favorited = false,
+    this.continuing = false,
     this.favorite_loading = false,
     this.on_cover_replaced,
   });
@@ -61,7 +64,7 @@ class ReadIntroductionSection extends StatelessWidget {
 
     return ReadIntroductionLayout(
       key: const ValueKey('novel_introduction_layout'),
-      overlap: IntroductionStyle.content_panel_overlap,
+      overlap: 0,
       hero: ReadIntroductionHero(
         is_dark: is_dark,
         detail: detail,
@@ -70,6 +73,7 @@ class ReadIntroductionSection extends StatelessWidget {
         on_read: on_read,
         on_favorite: on_favorite,
         favorited: favorited,
+        continuing: continuing,
         favorite_loading: favorite_loading,
         on_author_tap: on_author_tap,
         on_rating_tap: on_rating_tap,
@@ -82,14 +86,17 @@ class ReadIntroductionSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 标签子组件，展示小说标签列表。
-            ReadTagSection(is_dark: is_dark, tag_list: detail.tag_list),
-            // 标签区与简介区之间的间距。
-            const SizedBox(height: IntroductionStyle.intro_top_spacing),
-            // 所有作品类型共用卡片与完整正文裁切动画。
-            ReadIntroSummarySection(
+            WorkAboutSection(
+              description: detail.intro_text,
+              tags: const [],
               is_dark: is_dark,
-              intro_text: detail.intro_text,
+              key_prefix: 'novel_about',
+              surface_color: is_dark
+                  ? IntroductionStyle.content_background_dark
+                  : IntroductionStyle.content_background_light,
+              // 与漫画保持同款两行预览、饰条标题与透明小双箭头交互。
+              collapsed_lines: 2,
+              compact_toggle: true,
             ),
             if (show_comment) ...[
               // 简介区与评论区之间的间距。
@@ -98,6 +105,8 @@ class ReadIntroductionSection extends StatelessWidget {
               ReadCommentSection(
                 is_dark: is_dark,
                 comment_list: detail.comment_list,
+                comment_count: detail.comment_count,
+                on_view_all: on_comments,
               ),
             ],
           ],

@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 
@@ -7,6 +8,7 @@ import 'package:app/pages/short_story_read/widgets/tag_list.dart';
 import 'package:app/pages/short_story_read/widgets/collapse_button.dart';
 import 'package:app/pages/short_story_read/widgets/inline_comment_bar.dart';
 import 'package:app/util/language_util/index.dart';
+import 'package:app/config/color_config.dart';
 
 /// 故事卡片组件。
 ///
@@ -76,12 +78,13 @@ class StoryCard extends StatelessWidget {
 
     /// 阴影颜色。
     final Color shadow_color = is_dark
-        ? Colors.black.withValues(alpha: 0.3)
-        : Colors.black.withValues(alpha: 0.08);
+        ? ColorConstants.shadow_color_4c222222
+        : ColorConstants.components_fixed_bottom_navigation_style_tone;
 
     /// 正文内容（优先使用 content，如果没有则使用 description）。
-    final String display_content =
-        data.content.isNotEmpty ? data.content : data.description;
+    final String display_content = data.content.isNotEmpty
+        ? data.content
+        : data.description;
 
     /// 当前语种是否为 CJK。
     final bool is_cjk = LanguageUtil.is_cjk_language(
@@ -101,7 +104,7 @@ class StoryCard extends StatelessWidget {
         curve: Curves.easeInOut,
         alignment: Alignment.topCenter,
         child: Container(
-          margin: const EdgeInsets.only(bottom: 20),
+          margin: const EdgeInsets.only(bottom: LayoutConfig.space_20),
           decoration: BoxDecoration(
             color: card_bg,
             boxShadow: [
@@ -147,7 +150,12 @@ class StoryCard extends StatelessWidget {
     required bool is_cjk,
   }) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
+      padding: const EdgeInsets.fromLTRB(
+        LayoutConfig.space_12,
+        LayoutConfig.space_16,
+        LayoutConfig.space_12,
+        LayoutConfig.space_16,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,7 +170,7 @@ class StoryCard extends StatelessWidget {
               height: 1.4,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: LayoutConfig.space_10),
 
           /// 标签列表（最多显示 3 个）。
           if (data.tags.isNotEmpty)
@@ -172,7 +180,7 @@ class StoryCard extends StatelessWidget {
               story_id: data.id,
               is_cjk: is_cjk,
             ),
-          const SizedBox(height: 12),
+          const SizedBox(height: LayoutConfig.space_12),
 
           /// 正文内容。
           Flexible(
@@ -186,7 +194,7 @@ class StoryCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: LayoutConfig.space_16),
 
           /// 评论栏（展开状态下显示在正文下方）。
           InlineCommentBar(
@@ -221,7 +229,12 @@ class StoryCard extends StatelessWidget {
           /// 内容区域（标题 + 标签 + 正文）。
           Positioned.fill(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 16, 12, 48),
+              padding: const EdgeInsets.fromLTRB(
+                LayoutConfig.space_12,
+                LayoutConfig.space_16,
+                LayoutConfig.space_12,
+                LayoutConfig.space_48,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -237,7 +250,7 @@ class StoryCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: LayoutConfig.space_10),
 
                   /// 标签列表（最多显示 3 个）。
                   if (data.tags.isNotEmpty)
@@ -247,7 +260,7 @@ class StoryCard extends StatelessWidget {
                       story_id: data.id,
                       is_cjk: is_cjk,
                     ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: LayoutConfig.space_12),
 
                   /// 正文内容（溢出部分被渐变遮罩覆盖）。
                   Expanded(

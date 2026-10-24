@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 账单页二次加载遮罩。
 ///
@@ -14,14 +15,14 @@ class BillPageLoadingOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return IgnorePointer(
       child: Container(
-        color: Colors.black.withValues(alpha: Style.loadingMaskOpacity),
+        color: ColorConstants.lightTextColor.withValues(alpha: Style.loadingMaskOpacity),
         alignment: Alignment.center,
         child: Container(
           padding: const EdgeInsets.all(Style.loadingCardPadding),
           decoration: BoxDecoration(
             color: isDark
-                ? const Color(0xFF1A1D2B)
-                : Colors.white.withValues(alpha: Style.loadingCardOpacity),
+                ? ColorConstants.pages_bill_widgets_bill_page_loading_overlay_tone
+                : ColorConstants.whiteColor.withValues(alpha: Style.loadingCardOpacity),
             borderRadius: BorderRadius.circular(Style.loadingCardRadius),
           ),
           child: const CircularProgressIndicator(),

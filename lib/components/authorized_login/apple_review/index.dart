@@ -160,15 +160,15 @@ class _AppleReviewLoginViewState extends State<AppleReviewLoginView> {
             ),
             decoration: BoxDecoration(
               color: device_info.dark.value
-                  ? Colors.white.withValues(alpha: 0.1)
-                  : Colors.white,
+                  ? ColorConstants.components_authorized_login_index_tone
+                  : ColorConstants.whiteColor,
               borderRadius: BorderRadius.circular(
                 AppleReviewStyle.button_border_radius,
               ),
               border: Border.all(
                 color: device_info.dark.value
-                    ? Colors.white.withValues(alpha: 0.15)
-                    : Colors.black.withValues(alpha: 0.08),
+                    ? ColorConstants.components_authorized_login_apple_review_index_tone
+                    : ColorConstants.components_fixed_bottom_navigation_style_tone,
               ),
             ),
             child: Row(
@@ -198,8 +198,8 @@ class _AppleReviewLoginViewState extends State<AppleReviewLoginView> {
                   Icons.chevron_right,
                   size: 20,
                   color: device_info.dark.value
-                      ? Colors.white.withValues(alpha: 0.3)
-                      : Colors.black.withValues(alpha: 0.2),
+                      ? ColorConstants.components_authorized_login_apple_review_index_tone_4cffffff
+                      : ColorConstants.components_cute_mascot_index_tone_33222222,
                 ),
                 const SizedBox(width: AppleReviewStyle.button_padding_left),
               ],
@@ -246,7 +246,7 @@ class _AppleReviewLoginViewState extends State<AppleReviewLoginView> {
       width: AppleReviewStyle.icon_size,
       height: AppleReviewStyle.icon_size,
       color: (device_info.dark.value && svgName == 'apple')
-          ? Colors.white
+          ? ColorConstants.whiteColor
           : null,
     );
   }

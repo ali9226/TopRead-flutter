@@ -62,6 +62,8 @@ class _RaceWork implements TileQuestWorkService {
     required int seed,
     required int unlocked_level,
     String? challenge_id,
+    int? layout_seed,
+    num? difficulty,
   }) async {
     generation_count++;
     await generation_gate?.future;

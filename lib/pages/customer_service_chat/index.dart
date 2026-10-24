@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
@@ -16,6 +17,7 @@ import 'widgets/message_bubble.dart';
 import 'widgets/emoji_panel.dart';
 import 'widgets/chat_input_bar.dart';
 import 'widgets/image_picker_page.dart' as picker;
+import 'package:app/config/color_config.dart';
 
 /// 在线客服聊天页面。
 ///
@@ -105,7 +107,7 @@ class _CustomerServiceChatPageState extends State<CustomerServiceChatPage>
           backgroundColor: nav_bg,
           elevation: 0,
           scrolledUnderElevation: 0,
-          surfaceTintColor: Colors.transparent,
+          surfaceTintColor: ColorConstants.transparent,
           centerTitle: true,
           leading: IconButton(
             tooltip: MaterialLocalizations.of(context).backButtonTooltip,
@@ -377,7 +379,7 @@ class _CustomerServiceChatPageState extends State<CustomerServiceChatPage>
               name: 'logo',
               width: CustomerServiceChatStyle.admin_avatar_logo_size,
               height: CustomerServiceChatStyle.admin_avatar_logo_size,
-              color: widget.is_dark ? Colors.white : null,
+              color: widget.is_dark ? ColorConstants.whiteColor : null,
             ),
           ),
         ),
@@ -432,9 +434,9 @@ class _CustomerServiceChatPageState extends State<CustomerServiceChatPage>
             name: 'logo',
             width: 64,
             height: 64,
-            color: widget.is_dark ? Colors.white : null,
+            color: widget.is_dark ? ColorConstants.whiteColor : null,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: LayoutConfig.space_16),
           Text(
             easy.tr('customer_service_sheet.empty_hint'),
             style: TextStyle(

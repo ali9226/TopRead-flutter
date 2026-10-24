@@ -48,16 +48,20 @@ class BackendWorkCard extends StatelessWidget {
         : ShortStoryTabStyle.card_light_bg;
 
     /// 波纹颜色。
-    final Color ripple_color =
-        ColorConstants.themeColor.withValues(alpha: 0.12);
+    final Color ripple_color = ColorConstants.themeColor.withValues(
+      alpha: 0.12,
+    );
 
     /// 高亮颜色。
-    final Color highlight_color =
-        ColorConstants.themeColor.withValues(alpha: 0.06);
+    final Color highlight_color = ColorConstants.themeColor.withValues(
+      alpha: 0.06,
+    );
 
     return Material(
       color: card_bg,
-      borderRadius: BorderRadius.circular(ShortStoryTabStyle.card_border_radius),
+      borderRadius: BorderRadius.circular(
+        ShortStoryTabStyle.card_border_radius,
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: on_tap,
@@ -102,7 +106,7 @@ class BackendWorkCard extends StatelessWidget {
 
               /// 定时发布倒计时。
               if (_build_countdown() != null) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: LayoutConfig.space_8),
                 _build_countdown()!,
               ],
             ],
@@ -134,8 +138,9 @@ class BackendWorkCard extends StatelessWidget {
         fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
         color: title_color,
         height: title_height,
-        letterSpacing:
-            is_cjk ? null : ShortStoryTabStyle.card_title_letter_spacing_alphabetic,
+        letterSpacing: is_cjk
+            ? null
+            : ShortStoryTabStyle.card_title_letter_spacing_alphabetic,
       ),
     );
   }
@@ -196,7 +201,7 @@ class BackendWorkCard extends StatelessWidget {
         ),
 
         /// 间距。
-        const SizedBox(width: 10),
+        const SizedBox(width: LayoutConfig.space_10),
 
         /// 右侧封面图片。
         ClipRRect(
@@ -211,13 +216,12 @@ class BackendWorkCard extends StatelessWidget {
                 width: cover_width,
                 height: cover_height,
               ),
-              loadingBuilder: (context, child, progress) =>
-                  progress == null
-                      ? child
-                      : _build_default_cover(
-                          width: cover_width,
-                          height: cover_height,
-                        ),
+              loadingBuilder: (context, child, progress) => progress == null
+                  ? child
+                  : _build_default_cover(
+                      width: cover_width,
+                      height: cover_height,
+                    ),
             ),
           ),
         ),
@@ -228,10 +232,10 @@ class BackendWorkCard extends StatelessWidget {
   /// 默认封面（渐变背景 + 标题前两字）。
   Widget _build_default_cover({required double width, required double height}) {
     const List<List<Color>> palettes = <List<Color>>[
-      <Color>[Color(0xFF516889), Color(0xFF252D40)],
-      <Color>[Color(0xFF9B7A58), Color(0xFF443124)],
-      <Color>[Color(0xFF577D70), Color(0xFF213D35)],
-      <Color>[Color(0xFF80688D), Color(0xFF382D43)],
+      <Color>[ColorConstants.desc_color_ff516889, ColorConstants.desc_color_ff252d40],
+      <Color>[ColorConstants.desc_color_ff9b7a58, ColorConstants.desc_color_ff443124],
+      <Color>[ColorConstants.desc_color_ff577d70, ColorConstants.desc_color_ff213d35],
+      <Color>[ColorConstants.desc_color_ff80688d, ColorConstants.desc_color_ff382d43],
     ];
     return SizedBox(
       width: width,
@@ -250,7 +254,7 @@ class BackendWorkCard extends StatelessWidget {
             textScaler: TextScaler.noScaling,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: const Color(0xFFFFF5DB),
+              color: ColorConstants.pages_author_center_widgets_backend_work_card_tone,
               fontSize: 16,
               height: 1.3,
               fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
@@ -277,7 +281,7 @@ class BackendWorkCard extends StatelessWidget {
 
         /// 右侧元信息。
         Padding(
-          padding: const EdgeInsets.only(left: 8),
+          padding: const EdgeInsets.only(left: LayoutConfig.space_8),
           child: Text(
             _build_meta_text(),
             maxLines: 1,
@@ -372,8 +376,9 @@ class BackendWorkCard extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: is_dark ? 0.16 : 0.10),
-        borderRadius:
-            BorderRadius.circular(ShortStoryTabStyle.card_tag_border_radius),
+        borderRadius: BorderRadius.circular(
+          ShortStoryTabStyle.card_tag_border_radius,
+        ),
       ),
       child: Text(
         label,
@@ -390,7 +395,9 @@ class BackendWorkCard extends StatelessWidget {
   String _build_meta_text() {
     final int chapters = work.is_published
         ? work.chapter_count
-        : (work.draftChapterCount > 0 ? work.draftChapterCount : work.chapter_count);
+        : (work.draftChapterCount > 0
+              ? work.draftChapterCount
+              : work.chapter_count);
 
     final List<String> parts = <String>[
       easy.tr(
@@ -413,10 +420,13 @@ class BackendWorkCard extends StatelessWidget {
     if (countdown == null) return null;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: LayoutConfig.space_10,
+        vertical: LayoutConfig.space_6,
+      ),
       decoration: BoxDecoration(
         color: AuthorStyle.gold.withValues(alpha: is_dark ? 0.15 : 0.10),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -426,7 +436,7 @@ class BackendWorkCard extends StatelessWidget {
             size: 14,
             color: is_dark ? AuthorStyle.gold : AuthorStyle.deep_gold,
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: LayoutConfig.space_6),
           Text(
             '${easy.tr("creator_center.publish_countdown")} $countdown',
             style: TextStyle(

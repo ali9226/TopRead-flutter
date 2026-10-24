@@ -99,20 +99,19 @@ class _RecommendWaterfallSkeletonState extends State<RecommendWaterfallSkeleton>
           children: List<Widget>.generate(
             RecommendBookCardStyle.skeleton_row_count,
             (int row_index) {
-              return Padding(
-                padding: EdgeInsets.only(
-                  bottom:
-                      row_index < RecommendBookCardStyle.skeleton_row_count - 1
+              final bottom_gap =
+                  row_index < RecommendBookCardStyle.skeleton_row_count - 1
                       ? RecommendBookCardStyle.item_spacing
-                      : 0,
-                ),
+                      : 0.0;
+              return Padding(
+                padding: EdgeInsets.only(bottom: bottom_gap),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Expanded(
                       child: Padding(
                         padding: EdgeInsets.only(
-                          right: RecommendBookCardStyle.column_spacing / 2,
+                          right: RecommendBookCardStyle.half_column_spacing,
                         ),
                         child: _build_skeleton_card(
                           data: _left_cards[row_index],
@@ -127,7 +126,7 @@ class _RecommendWaterfallSkeletonState extends State<RecommendWaterfallSkeleton>
                     Expanded(
                       child: Padding(
                         padding: EdgeInsets.only(
-                          left: RecommendBookCardStyle.column_spacing / 2,
+                          left: RecommendBookCardStyle.half_column_spacing,
                         ),
                         child: _build_skeleton_card(
                           data: _right_cards[row_index],
@@ -261,12 +260,11 @@ class _RecommendWaterfallSkeletonState extends State<RecommendWaterfallSkeleton>
                     children: List<Widget>.generate(data.tag_count, (
                       int index,
                     ) {
+                      final tag_gap = index < data.tag_count - 1
+                          ? RecommendBookCardStyle.tag_spacing
+                          : 0.0;
                       return Padding(
-                        padding: EdgeInsets.only(
-                          right: index < data.tag_count - 1
-                              ? RecommendBookCardStyle.tag_spacing
-                              : 0,
-                        ),
+                        padding: EdgeInsets.only(right: tag_gap),
                         child: _build_skeleton_bar(
                           width: RecommendBookCardStyle.skeleton_tag_width,
                           height:

@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'dart:ui';
 import 'package:app/config/font_config.dart';
@@ -216,7 +217,7 @@ class _RankingFullListPageState extends State<RankingFullListPage>
       /// 页面背景颜色。
       final Color background_color = is_dark
           ? ColorConstants.nightBackgroundColor
-          : const Color(0xFFF6F7FB);
+          : ColorConstants.components_category_filter_category_filter_bar_tone_fff6f7fb;
 
       if (_is_language_refreshing || _tab_title_list.isEmpty) {
         return Scaffold(
@@ -361,7 +362,7 @@ class _RankingFullListPageState extends State<RankingFullListPage>
               fontSize: font_size,
               fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
             ),
-            labelColor: is_dark ? Colors.white : Colors.black,
+            labelColor: is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor,
             unselectedLabelColor: unselected_color,
             indicator: UnderlineTabIndicator(
               borderSide: BorderSide(
@@ -375,7 +376,7 @@ class _RankingFullListPageState extends State<RankingFullListPage>
             dividerHeight: 0,
             tabAlignment: TabAlignment.start,
             splashFactory: NoSplash.splashFactory,
-            overlayColor: WidgetStateProperty.all(Colors.transparent),
+            overlayColor: WidgetStateProperty.all(ColorConstants.transparent),
             tabs: List<Widget>.generate(
               _tab_title_list.length,
               (int index) => _build_tab_item(
@@ -446,7 +447,7 @@ class _RankingFullListPageState extends State<RankingFullListPage>
     required bool is_dark,
     required Color unselected_color,
   }) {
-    final Color selected_color = is_dark ? Colors.white : Colors.black;
+    final Color selected_color = is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor;
 
     return AnimatedBuilder(
       animation: _tab_controller.animation!,
@@ -465,7 +466,10 @@ class _RankingFullListPageState extends State<RankingFullListPage>
         return Transform.scale(
           scale: scale,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: LayoutConfig.space_4,
+              vertical: LayoutConfig.space_6,
+            ),
             child: Text(
               title,
               maxLines: 1,

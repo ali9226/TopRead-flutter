@@ -235,7 +235,7 @@ class _AppWrapperState extends State<AppWrapper> {
             brightness: Brightness.dark,
             primary: ColorConstants.themeColor,
             secondary: ColorConstants.themeColor,
-            surface: Color(0xFF1E1E1E),
+            surface: ColorConstants.pages_author_center_widgets_creator_work_tab_tone,
             onPrimary: ColorConstants.whiteColor,
             onSecondary: ColorConstants.nightBackgroundColor,
             onSurface: ColorConstants.whiteColor,
@@ -246,16 +246,16 @@ class _AppWrapperState extends State<AppWrapper> {
             foregroundColor: ColorConstants.whiteColor,
           ),
           inputDecorationTheme: InputDecorationTheme(
-            hintStyle: TextStyle(color: Colors.white54),
+            hintStyle: TextStyle(color: ColorConstants.components_app_wrapper_index_tone),
             labelStyle: TextStyle(color: ColorConstants.whiteColor),
             enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.white54),
+              borderSide: BorderSide(color: ColorConstants.components_app_wrapper_index_tone),
             ),
             focusedBorder: UnderlineInputBorder(
               borderSide: BorderSide(color: ColorConstants.whiteColor),
             ),
           ),
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: ColorConstants.whiteColor),
           floatingActionButtonTheme: FloatingActionButtonThemeData(
             backgroundColor: ColorConstants.themeColor,
             foregroundColor: ColorConstants.nightBackgroundColor,

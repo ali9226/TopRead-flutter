@@ -1,3 +1,7 @@
+import 'package:app/config/layout_config.dart';
+import 'package:app/components/page_backdrop/index.dart';
+import 'package:app/components/page_backdrop/style.dart';
+import 'package:app/components/page_backdrop/widgets/decor_glow_spot.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app/config/font_config.dart';
@@ -72,12 +76,12 @@ class _ChangeNicknameState extends State<ChangeNickname> {
     /// 输入框下划线颜色。
     final Color borderColor = isDark
         ? ColorConstants.nightTextColor
-        : Colors.black.withValues(alpha: 0.2);
+        : ColorConstants.components_cute_mascot_index_tone_33222222;
 
     /// 提示文字颜色。
     final Color hintColor = isDark
-        ? Colors.grey.shade400
-        : Colors.grey.shade600;
+        ? ColorConstants.components_auth_page_style_tone
+        : ColorConstants.components_auth_page_style_tone_ff757575;
 
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
@@ -88,51 +92,27 @@ class _ChangeNicknameState extends State<ChangeNickname> {
             ? const SizedBox.shrink()
             : Stack(
                 children: <Widget>[
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: isDark
-                              ? Style.darkBackgroundGradient
-                              : Style.lightBackgroundGradient,
-                        ),
-                      ),
-                    ),
+                  PageBackdropGradient(
+                    colors: isDark
+                        ? PageBackdropStyle.night_setting_colors
+                        : Style.lightBackgroundGradient,
                   ),
-                  Positioned(
+                  DecorGlowSpot(
+                    size: Style.decorCircleOneSize,
                     top: Style.decorCircleOneTop,
                     right: Style.decorCircleOneRight,
-                    child: IgnorePointer(
-                      child: Container(
-                        width: Style.decorCircleOneSize,
-                        height: Style.decorCircleOneSize,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFFF8D02D).withValues(
-                            alpha: isDark
-                                ? Style.decorCircleOneDarkOpacity
-                                : Style.decorCircleOneLightOpacity,
-                          ),
-                        ),
-                      ),
+                    color: ColorConstants.themeColor.withValues(
+                      alpha: isDark
+                          ? Style.decorCircleOneDarkOpacity
+                          : Style.decorCircleOneLightOpacity,
                     ),
                   ),
-                  Positioned(
+                  DecorGlowSpot(
+                    size: Style.decorCircleTwoSize,
                     top: Style.decorCircleTwoTop,
                     left: Style.decorCircleTwoLeft,
-                    child: IgnorePointer(
-                      child: Container(
-                        width: Style.decorCircleTwoSize,
-                        height: Style.decorCircleTwoSize,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(
-                            0xFF67C23A,
-                          ).withValues(alpha: Style.decorCircleTwoOpacity),
-                        ),
-                      ),
+                    color: ColorConstants.successColor.withValues(
+                      alpha: Style.decorCircleTwoOpacity,
                     ),
                   ),
                   WindowContentLayout(
@@ -156,7 +136,7 @@ class _ChangeNicknameState extends State<ChangeNickname> {
                           isDark: isDark,
                           nickname: currentName,
                         ),
-                        const SizedBox(height: 30),
+                        const SizedBox(height: LayoutConfig.space_30),
 
                         /// 新昵称输入。
                         _NewNicknameSection(
@@ -192,13 +172,9 @@ class _ChangeNicknameState extends State<ChangeNickname> {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: <Color>[
-                              Colors.white.withValues(
-                                alpha: isDark ? 0.18 : 0.92,
-                              ),
-                              Colors.white.withValues(
-                                alpha: isDark ? 0.06 : 0.48,
-                              ),
-                              Colors.white.withValues(alpha: 0),
+                              ColorConstants.whiteColor.withValues(alpha: isDark ? 0.18 : 0.92),
+                              ColorConstants.whiteColor.withValues(alpha: isDark ? 0.06 : 0.48),
+                              ColorConstants.transparent_white,
                             ],
                           ),
                         ),
@@ -289,7 +265,7 @@ class _CurrentNicknameSection extends StatelessWidget {
 
     final Color borderColor = isDark
         ? ColorConstants.nightTextColor
-        : Colors.black.withValues(alpha: 0.2);
+        : ColorConstants.components_cute_mascot_index_tone_33222222;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,7 +274,7 @@ class _CurrentNicknameSection extends StatelessWidget {
         Row(
           children: <Widget>[
             SvgIcon(name: 'account', color: labelColor, width: 22, height: 22),
-            const SizedBox(width: 7),
+            const SizedBox(width: LayoutConfig.space_7),
             Text(
               context.tr('UserInfo.current_nickname_label'),
               style: TextStyle(
@@ -312,7 +288,10 @@ class _CurrentNicknameSection extends StatelessWidget {
 
         /// 昵称值（下划线样式）。
         Padding(
-          padding: const EdgeInsets.only(top: 14, bottom: 14),
+          padding: const EdgeInsets.only(
+            top: LayoutConfig.space_14,
+            bottom: LayoutConfig.space_14,
+          ),
           child: Text(
             nickname,
             style: TextStyle(
@@ -367,7 +346,7 @@ class _NewNicknameSection extends StatelessWidget {
         Row(
           children: <Widget>[
             SvgIcon(name: 'account', color: labelColor, width: 22, height: 22),
-            const SizedBox(width: 7),
+            const SizedBox(width: LayoutConfig.space_7),
             Expanded(
               child: Text(
                 context.tr('UserInfo.new_nickname_label'),
@@ -414,7 +393,9 @@ class _NewNicknameSection extends StatelessWidget {
                 width: 1,
               ),
             ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: LayoutConfig.space_14,
+            ),
             suffixIconConstraints: const BoxConstraints(
               minWidth: 0,
               minHeight: 0,
@@ -429,7 +410,7 @@ class _NewNicknameSection extends StatelessWidget {
                     onChanged();
                   },
                   child: Padding(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(LayoutConfig.space_8),
                     child: Icon(
                       Icons.close_rounded,
                       size: 18,

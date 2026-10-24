@@ -3,6 +3,7 @@
 import 'package:app/components/reader_action_icon/index.dart';
 import 'package:app/components/reader_bottom_action/style.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// TODO 底部等分操作项：相同图标尺寸、文字基线与完整点击区域，支持调用方保留点赞动画。
 class ReaderBottomAction extends StatelessWidget {
@@ -28,7 +29,7 @@ class ReaderBottomAction extends StatelessWidget {
       enabled: on_pressed != null,
       label: label,
       child: Material(
-        color: Colors.transparent,
+        color: ColorConstants.transparent,
         child: InkWell(
           onTap: on_pressed,
           borderRadius: BorderRadius.circular(ReaderBottomActionStyle.radius),

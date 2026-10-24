@@ -1,7 +1,9 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// TODO 作品编辑流程统一样式与常量。
 class WorkEditorStyle {
@@ -30,19 +32,19 @@ class WorkEditorStyle {
   static const double chapter_max_width = 800;
 
   /// TODO 页面水平留白。
-  static const double page_padding = 12;
+  static const double page_padding = LayoutConfig.space_12;
 
   /// TODO 表单卡片圆角。
-  static const double section_radius = 20;
+  static const double section_radius = LayoutConfig.radius_20;
 
   /// TODO 表单卡片内边距。
-  static const double section_padding = 18;
+  static const double section_padding = LayoutConfig.space_18;
 
   /// TODO 表单区块间距。
-  static const double section_spacing = 16;
+  static const double section_spacing = LayoutConfig.space_16;
 
   /// TODO 字段间距。
-  static const double field_spacing = 20;
+  static const double field_spacing = LayoutConfig.space_20;
 
   /// TODO 封面宽度。
   static const double cover_width = 116;
@@ -54,19 +56,19 @@ class WorkEditorStyle {
   static const double bottom_bar_min_height = 78;
 
   /// 共用编辑按钮保留原有视觉参数，集中维护两种篇幅的布局。
-  static const double bottom_bar_horizontal_padding = 16;
-  static const double bottom_bar_vertical_padding = 11;
+  static const double bottom_bar_horizontal_padding = LayoutConfig.space_16;
+  static const double bottom_bar_vertical_padding = LayoutConfig.space_11;
   static const double action_height = 52;
-  static const double action_radius = 16;
-  static const double action_spacing = 12;
+  static const double action_radius = LayoutConfig.radius_16;
+  static const double action_spacing = LayoutConfig.space_12;
   static const double action_font_size_cjk = 14;
   static const double action_font_size_alphabetic = 12.5;
-  static const Color action_foreground = Color(0xFF1A1A18);
-  static const double save_button_radius = 6;
+  static const Color action_foreground = ColorConstants.pages_author_center_widgets_creator_empty_state_tone;
+  static const double save_button_radius = LayoutConfig.radius_6;
   static const double save_button_font_size = 12;
   static const EdgeInsets save_button_padding = EdgeInsets.symmetric(
-    horizontal: 10,
-    vertical: 6,
+    horizontal: LayoutConfig.space_10,
+    vertical: LayoutConfig.space_6,
   );
   static const Duration step_animation_duration = Duration(milliseconds: 260);
   static const double publish_sheet_height_factor = .8;
@@ -106,12 +108,8 @@ class WorkEditorStyle {
   // ==================== 字重常量 ========================
 
   /// TODO 表单标题字重。
-  static final FontWeight section_title_weight = FontConfig.adjustedWeight(
-    FontWeight.w600,
-  );
+  static final FontWeight section_title_weight = FontConfig.adjustedWeight(FontWeight.w600);
 
   /// TODO 字段标题字重。
-  static final FontWeight field_label_weight = FontConfig.adjustedWeight(
-    FontWeight.w500,
-  );
+  static final FontWeight field_label_weight = FontConfig.adjustedWeight(FontWeight.w500);
 }

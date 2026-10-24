@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -17,6 +18,7 @@ import 'package:app/components/share_sheet/widgets/text_selection_poster_card.da
 import 'package:app/components/share_sheet/widgets/share_icon_item.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
+import 'package:app/config/color_config.dart';
 
 /// 段落选中文字的卡片预览弹窗。
 ///
@@ -181,7 +183,7 @@ class _TextSelectionPreviewSheetState extends State<TextSelectionPreviewSheet> {
   /// 构建弹窗标题。
   Widget _build_title(Color title_color) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: LayoutConfig.space_16),
       child: Text(
         easy.tr('share_sheet.card_preview_title'),
         style: TextStyle(
@@ -230,7 +232,10 @@ class _TextSelectionPreviewSheetState extends State<TextSelectionPreviewSheet> {
               child: SizedBox(
                 width: preview_width,
                 height: preview_height,
-                child: FittedBox(fit: BoxFit.contain, child: _build_card(index)),
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: _build_card(index),
+                ),
               ),
             );
           },
@@ -301,7 +306,7 @@ class _TextSelectionPreviewSheetState extends State<TextSelectionPreviewSheet> {
                   height: is_active
                       ? ShareSheetStyle.indicator_active_width
                       : ShareSheetStyle.indicator_size,
-                  padding: EdgeInsets.all(is_active ? 3 : 0),
+                  padding: EdgeInsets.all(is_active ? LayoutConfig.space_3 : 0),
                   decoration: BoxDecoration(
                     color: _gradient_colors[index].first,
                     shape: BoxShape.circle,
@@ -357,7 +362,7 @@ class _TextSelectionPreviewSheetState extends State<TextSelectionPreviewSheet> {
             return _build_share_icon_grid(share_list, cross_axis_count);
           }),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: LayoutConfig.space_16),
 
           /// 保存到相册按钮。
           _build_save_button(),
@@ -413,7 +418,7 @@ class _TextSelectionPreviewSheetState extends State<TextSelectionPreviewSheet> {
                     )
                     .toList(),
               ),
-            if (!is_last_row) const SizedBox(height: 15),
+            if (!is_last_row) const SizedBox(height: LayoutConfig.space_15),
           ],
         );
       }),
@@ -428,10 +433,10 @@ class _TextSelectionPreviewSheetState extends State<TextSelectionPreviewSheet> {
         name: item.represent,
         width: ShareSheetStyle.icon_inner_size,
         height: ShareSheetStyle.icon_inner_size,
-        color: widget.is_dark ? Colors.white : null,
+        color: widget.is_dark ? ColorConstants.whiteColor : null,
       ),
       label: item.title,
-      icon_color: widget.is_dark ? Colors.white : Colors.black,
+      icon_color: widget.is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor,
       is_dark: widget.is_dark,
       on_tap: () {
         // TODO 对接真实分享：使用 item.jump 作为分享链接
@@ -472,7 +477,7 @@ class _TextSelectionPreviewSheetState extends State<TextSelectionPreviewSheet> {
                       size: 18,
                       color: ShareSheetStyle.save_button_text_color,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: LayoutConfig.space_8),
                     Text(
                       easy.tr('share_sheet.save_to_album'),
                       style: TextStyle(
@@ -579,7 +584,7 @@ void showTextSelectionPreviewSheet({
 
   showModalBottomSheet(
     context: context,
-    backgroundColor: Colors.transparent,
+    backgroundColor: ColorConstants.transparent,
     isScrollControlled: true,
     builder: (BuildContext ctx) {
       return TextSelectionPreviewSheet(

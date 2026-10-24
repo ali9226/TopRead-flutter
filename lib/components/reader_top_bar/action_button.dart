@@ -11,6 +11,7 @@ class ReaderTopBarAction extends StatefulWidget {
     super.key,
     this.asset,
     this.icon,
+    this.icon_widget,
     required this.label,
     required this.color,
     required this.on_pressed,
@@ -18,9 +19,12 @@ class ReaderTopBarAction extends StatefulWidget {
     this.loading = false,
     this.reverse = false,
     this.elastic = true,
-  }) : assert(asset != null || icon != null);
+  }) : assert(asset != null || icon != null || icon_widget != null);
   final String? asset;
   final IconData? icon;
+
+  /// 允许作品类型精确复用既有多色 SVG，触控、加载和弹性动画仍由本组件负责。
+  final Widget? icon_widget;
   final String label;
   final Color color;
   final VoidCallback? on_pressed;
@@ -65,20 +69,22 @@ class _ReaderTopBarActionState extends State<ReaderTopBarAction>
 
   @override
   Widget build(BuildContext context) {
-    Widget icon = widget.icon != null
-        ? Icon(
-            widget.icon,
-            key: ValueKey(widget.icon),
-            size: ReaderTopBarStyle.icon,
-            color: widget.color,
-          )
-        : SvgPicture.asset(
-            'assets/svg/${widget.asset}.svg',
-            key: ValueKey(widget.asset),
-            width: ReaderTopBarStyle.icon,
-            height: ReaderTopBarStyle.icon,
-            colorFilter: ColorFilter.mode(widget.color, BlendMode.srcIn),
-          );
+    Widget icon =
+        widget.icon_widget ??
+        (widget.icon != null
+            ? Icon(
+                widget.icon,
+                key: ValueKey(widget.icon),
+                size: ReaderTopBarStyle.icon,
+                color: widget.color,
+              )
+            : SvgPicture.asset(
+                'assets/svg/${widget.asset}.svg',
+                key: ValueKey(widget.asset),
+                width: ReaderTopBarStyle.icon,
+                height: ReaderTopBarStyle.icon,
+                colorFilter: ColorFilter.mode(widget.color, BlendMode.srcIn),
+              ));
     if (widget.reverse) icon = RotatedBox(quarterTurns: 2, child: icon);
     return Semantics(
       toggled: widget.selected,

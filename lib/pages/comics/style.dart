@@ -11,17 +11,17 @@ import 'package:get/get.dart';
 
 /// 漫画整体设计参数：留白、节奏、阅读宽度及日夜色彩集中在这里管理。
 class ComicsStyle {
-  static const double page_padding = 20;
-  static const double small_gap = 8;
-  static const double gap = 16;
-  static const double large_gap = 24;
-  static const double radius = 20;
-  static const double cover_radius = 14;
+  static const double page_padding = LayoutConfig.space_20;
+  static const double small_gap = LayoutConfig.space_8;
+  static const double gap = LayoutConfig.space_16;
+  static const double large_gap = LayoutConfig.space_24;
+  static const double radius = LayoutConfig.radius_20;
+  static const double cover_radius = LayoutConfig.radius_14;
   static const double cover_ratio = 0.70;
   static const double grid_card_width = 158;
   static const double content_width = 1080;
   static const double reader_width = 920;
-  static const double touch_target = 48;
+  static const double touch_target = LayoutConfig.touch_target_size;
   static const double actions_width_cjk = 280;
   static const double actions_width_alphabetic = 330;
   static const double title_font_size_cjk = 28;
@@ -36,7 +36,9 @@ class ComicsStyle {
   static const int progress_delay_ms = 850;
   static const int max_images = 500;
   static const int max_image_bytes = 30 * 1024 * 1024;
-  static const Color reader_background = Color(0xFF0C0D10);
+  static const int thumbnail_max_pixels = 1024 * 1024;
+  static const Color reader_background =
+      ColorConstants.reader_background_ff0c0d10;
 
   static bool is_dark(BuildContext context) {
     // 显式订阅 Theme，切换日夜主题时所有依赖此样式的页面会即时重建。
@@ -75,7 +77,9 @@ class ComicsStyle {
     height: is_cjk(context) ? line_height_cjk : line_height_alphabetic,
     color: color ?? ink(context),
     fontWeight: FontConfig.adjustedWeight(
-      strong ? FontWeight.w500 : FontWeight.w400,
+      strong
+          ? FontConfig.adjustedWeight(FontWeight.w500)
+          : FontConfig.adjustedWeight(FontWeight.w400),
     ),
   );
 
@@ -126,20 +130,19 @@ class ComicsStyle {
   );
 }
 
-
 /// 瀑布流漫画卡片的设计参数：圆角、字阶、标签与封面信息条集中在这里管理。
 class ComicCardStyle {
   /// 卡片圆角，与首页推荐卡片共用同一设计令牌。
   static const double card_radius = LayoutConfig.card_radius;
 
   /// 卡片内容水平内边距。
-  static const double content_padding_h = 10;
+  static const double content_padding_h = LayoutConfig.space_10;
 
   /// 卡片内容顶部内边距。
-  static const double content_padding_top = 10;
+  static const double content_padding_top = LayoutConfig.space_10;
 
   /// 卡片内容底部内边距。
-  static const double content_padding_bottom = 12;
+  static const double content_padding_bottom = LayoutConfig.space_12;
 
   /// 标题字号（CJK）。
   static const double title_font_size_cjk = 15;
@@ -160,7 +163,7 @@ class ComicCardStyle {
   static const double title_letter_spacing_alphabetic = 0.2;
 
   /// 简介与标题的间距（CJK）。
-  static const double description_top_spacing_cjk = 6;
+  static const double description_top_spacing_cjk = LayoutConfig.space_6;
 
   /// 简介与标题的间距（拉丁语系）。
   static const double description_top_spacing_alphabetic = 5;
@@ -187,19 +190,19 @@ class ComicCardStyle {
   static const int max_tag_count = 2;
 
   /// 标签区与简介的间距。
-  static const double tag_top_spacing = 8;
+  static const double tag_top_spacing = LayoutConfig.space_8;
 
   /// 标签水平间距。
-  static const double tag_spacing = 6;
+  static const double tag_spacing = LayoutConfig.space_6;
 
   /// 标签换行间距。
-  static const double tag_run_spacing = 6;
+  static const double tag_run_spacing = LayoutConfig.space_6;
 
   /// 标签垂直内边距。
-  static const double tag_padding_v = 4;
+  static const double tag_padding_v = LayoutConfig.space_4;
 
   /// 标签圆角。
-  static const double tag_radius = 999;
+  static const double tag_radius = LayoutConfig.radius_pill;
 
   /// 标签字号（CJK）。
   static const double tag_font_size_cjk = 11;
@@ -208,7 +211,7 @@ class ComicCardStyle {
   static const double tag_font_size_alphabetic = 10;
 
   /// 标签水平内边距（CJK）。
-  static const double tag_padding_h_cjk = 8;
+  static const double tag_padding_h_cjk = LayoutConfig.space_8;
 
   /// 标签水平内边距（拉丁语系，单词更宽需更大留白）。
   static const double tag_padding_h_alphabetic = 10;
@@ -217,13 +220,23 @@ class ComicCardStyle {
   static const double cover_badge_font_size = 10;
 
   /// 封面角标内边距。
-  static const EdgeInsets cover_badge_padding = EdgeInsets.fromLTRB(8, 4, 8, 4);
+  static const EdgeInsets cover_badge_padding = EdgeInsets.fromLTRB(
+    LayoutConfig.space_8,
+    LayoutConfig.space_4,
+    LayoutConfig.space_8,
+    LayoutConfig.space_4,
+  );
 
   /// 封面角标外边距。
-  static const EdgeInsets cover_badge_margin = EdgeInsets.fromLTRB(8, 8, 0, 0);
+  static const EdgeInsets cover_badge_margin = EdgeInsets.fromLTRB(
+    LayoutConfig.space_8,
+    LayoutConfig.space_8,
+    0,
+    0,
+  );
 
   /// 封面角标圆角。
-  static const double cover_badge_radius = 999;
+  static const double cover_badge_radius = LayoutConfig.radius_pill;
 
   /// 封面角标背景不透明度。
   static const double cover_badge_background_opacity = 0.56;
@@ -232,10 +245,10 @@ class ComicCardStyle {
   static const double cover_meta_font_size = 11;
 
   /// 封面底部信息条水平内边距。
-  static const double cover_meta_padding_h = 12;
+  static const double cover_meta_padding_h = LayoutConfig.space_12;
 
   /// 封面底部信息条顶部渐变预留高度。
-  static const double cover_meta_padding_top = 32;
+  static const double cover_meta_padding_top = LayoutConfig.space_32;
 
   /// 封面底部信息条文字阴影不透明度。
   static const double cover_meta_shadow_opacity = 0.30;
@@ -247,10 +260,10 @@ class ComicCardStyle {
   static const double cover_gradient_bottom_opacity = 0.82;
 
   /// 网格列间水平间距，与首页小说瀑布流保持一致。
-  static const double grid_column_spacing = 8;
+  static const double grid_column_spacing = LayoutConfig.space_8;
 
   /// 网格行间垂直间距，与首页小说瀑布流保持一致。
-  static const double grid_item_spacing = 10;
+  static const double grid_item_spacing = LayoutConfig.space_10;
 
   /// 网格最小列数，与首页小说瀑布流保持一致。
   static const int grid_min_column_count = 2;
@@ -285,89 +298,37 @@ class ComicCardStyle {
   /// 按压后指针移动超过该距离则取消缩放，避免列表滚动时误触。
   static const double press_move_cancel_threshold = 10.0;
 
-  /// 骨架屏流光动画时长。
-  static const Duration skeleton_animation_duration = Duration(
-    milliseconds: 1200,
-  );
-
-  /// 骨架屏每列卡片数，决定骨架屏填充高度。
+  /// 骨架屏每列卡片数，决定首屏填充高度。
   static const int skeleton_row_count = 3;
 
-  /// 骨架屏行间延迟，制造波浪流光。
-  static const double skeleton_row_delay = 0.15;
+  /// 字形条位于真实文字行盒内，不使用整块行高填充。
+  static const double skeleton_ink_ratio = 0.68;
+  static const double skeleton_text_radius = LayoutConfig.radius_3;
+  static const double skeleton_title_trailing_ratio = 0.62;
+  static const double skeleton_description_trailing_ratio = 0.78;
 
-  /// 骨架屏列间延迟。
-  static const double skeleton_column_delay = 0.08;
-
-  /// 骨架屏标题条圆角。
-  static const double skeleton_title_radius = 4;
-
-  /// 骨架屏标题两行间距。
-  static const double skeleton_title_line_spacing = 4;
-
-  /// 骨架屏标题第二行宽度。
-  static const double skeleton_title_second_line_width = 80;
-
-  /// 骨架屏标题第一行流光延迟。
-  static const double skeleton_title_first_line_delay = 0.05;
-
-  /// 骨架屏标题第二行流光延迟。
-  static const double skeleton_title_second_line_delay = 0.08;
-
-  /// 骨架屏简介条圆角。
-  static const double skeleton_description_radius = 3;
-
-  /// 骨架屏简介两行间距。
-  static const double skeleton_description_line_spacing = 3;
-
-  /// 骨架屏简介第二行宽度。
-  static const double skeleton_description_second_line_width = 100;
-
-  /// 骨架屏简介第一行流光延迟。
-  static const double skeleton_description_first_line_delay = 0.11;
-
-  /// 骨架屏简介第二行流光延迟。
-  static const double skeleton_description_second_line_delay = 0.14;
-
-  /// 骨架屏标签条宽度。
+  /// 分类占位只决定未知标签的典型宽度；高度沿用真实标签字阶。
   static const double skeleton_tag_width = 44;
 
-  /// 骨架屏标签条高度。
-  static const double skeleton_tag_height = 18;
-
-  /// 骨架屏标签起始流光延迟。
-  static const double skeleton_tag_initial_delay = 0.17;
-
-  /// 骨架屏标签间隔流光延迟。
-  static const double skeleton_tag_interval_delay = 0.05;
-
-  /// 骨架屏浅色底色。
-  static const Color skeleton_light_base_color = Color(0xFFF0F1F5);
-
-  /// 骨架屏浅色高亮色。
-  static const Color skeleton_light_highlight_color = Color(0xFFF8F8F8);
-
-  /// 骨架屏深色底色。
-  static const Color skeleton_dark_base_color = Color(0xFF252836);
-
-  /// 骨架屏深色高亮色。
-  static const Color skeleton_dark_highlight_color = Color(0xFF2F3346);
-
   /// 卡片深色背景。
-  static const Color card_dark_bg = Color(0xFF171C28);
+  static const Color card_dark_bg =
+      ColorConstants.pages_home_widgets_tab_contents_recommend_tab_index_tone;
 
   /// 卡片浅色背景。
-  static const Color card_light_bg = Colors.white;
+  static const Color card_light_bg = ColorConstants.whiteColor;
 
   /// 深色模式标题色。
-  static const Color title_dark = Colors.white;
+  static const Color title_dark = ColorConstants.whiteColor;
 
   /// 浅色模式标题色。
-  static const Color title_light = Color(0xFF161C28);
+  static const Color title_light =
+      ColorConstants.components_recommend_book_card_index_tone;
 
   /// 深色模式简介色。
-  static final Color description_dark = Colors.white.withValues(alpha: 0.62);
+  static final Color description_dark =
+      ColorConstants.components_recommend_book_card_index_tone_9effffff;
 
   /// 浅色模式简介色。
-  static const Color description_light = Color(0xFF8B93A2);
+  static const Color description_light =
+      ColorConstants.components_recommend_book_card_index_tone_ff8b93a2;
 }

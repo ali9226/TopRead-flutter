@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
@@ -43,17 +44,13 @@ class StoryPreviewCard extends StatelessWidget {
   /// 构建上一篇提示（松开查看）。
   Widget _buildPreviousIndicator({required Color secondary_color}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40),
+      padding: const EdgeInsets.symmetric(vertical: LayoutConfig.space_40),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(
-              Icons.keyboard_arrow_down,
-              color: secondary_color,
-              size: 28,
-            ),
-            const SizedBox(height: 8),
+            Icon(Icons.keyboard_arrow_down, color: secondary_color, size: 28),
+            const SizedBox(height: LayoutConfig.space_8),
             Text(
               tr('short_story_read.release_to_view'),
               style: TextStyle(
@@ -62,7 +59,7 @@ class StoryPreviewCard extends StatelessWidget {
                 color: secondary_color,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: LayoutConfig.space_4),
             Text(
               item.title,
               style: TextStyle(
@@ -82,17 +79,13 @@ class StoryPreviewCard extends StatelessWidget {
   /// 构建下一篇提示（滑动查看下一篇）。
   Widget _buildNextIndicator({required Color secondary_color}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40),
+      padding: const EdgeInsets.symmetric(vertical: LayoutConfig.space_40),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(
-              Icons.keyboard_arrow_up,
-              color: secondary_color,
-              size: 28,
-            ),
-            const SizedBox(height: 8),
+            Icon(Icons.keyboard_arrow_up, color: secondary_color, size: 28),
+            const SizedBox(height: LayoutConfig.space_8),
             Text(
               tr('short_story_read.scroll_to_view_next'),
               style: TextStyle(
@@ -101,7 +94,7 @@ class StoryPreviewCard extends StatelessWidget {
                 color: secondary_color,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: LayoutConfig.space_4),
             Text(
               item.title,
               style: TextStyle(

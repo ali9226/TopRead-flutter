@@ -84,7 +84,7 @@ void main() {
       for (var seed = 0; seed < 32; seed++) {
         final state = TileQuestGenerator.generate(
           level: 2,
-          difficulty: 8,
+          difficulty: 10,
           seed: seed,
         );
         final barrier = state.expert_barrier!;
@@ -175,7 +175,7 @@ void main() {
   test(
     'the mandatory capacity chain is genuinely covered inside the main island',
     () {
-      for (final difficulty in [5, 8, 9, 10]) {
+      for (final difficulty in [10]) {
         for (var seed = 0; seed < 16; seed++) {
           final state = TileQuestGenerator.generate(
             level: 2,

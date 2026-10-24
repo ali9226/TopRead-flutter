@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:app/components/comment_list/style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 与真实评论项结构一致的骨架屏，带 shimmer 流光动画。
 ///
@@ -70,17 +71,11 @@ class _CommentSkeletonState extends State<CommentSkeleton>
             final double dx = _animation.value * slide_offset;
             return LinearGradient(
               colors: <Color>[
-                Colors.transparent,
-                Colors.white.withValues(
-                  alpha: CommentListStyle.shimmer_base_opacity,
-                ),
-                Colors.white.withValues(
-                  alpha: CommentListStyle.shimmer_peak_opacity,
-                ),
-                Colors.white.withValues(
-                  alpha: CommentListStyle.shimmer_base_opacity,
-                ),
-                Colors.transparent,
+                ColorConstants.transparent,
+                ColorConstants.whiteColor.withValues(alpha: CommentListStyle.shimmer_base_opacity),
+                ColorConstants.whiteColor.withValues(alpha: CommentListStyle.shimmer_peak_opacity),
+                ColorConstants.whiteColor.withValues(alpha: CommentListStyle.shimmer_base_opacity),
+                ColorConstants.transparent,
               ],
               stops: const <double>[0.0, 0.3, 0.5, 0.7, 1.0],
               begin: Alignment(

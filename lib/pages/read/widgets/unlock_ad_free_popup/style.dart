@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
@@ -12,7 +13,7 @@ class UnlockAdFreePopupStyle {
   // ========== 布局尺寸 ==========
 
   /// 弹窗顶部圆角半径，与底部弹窗风格统一。
-  static const double border_radius = 20;
+  static const double border_radius = LayoutConfig.radius_20;
 
   /// 顶部拖拽指示条宽度。
   static const double drag_handle_width = 40;
@@ -21,31 +22,31 @@ class UnlockAdFreePopupStyle {
   static const double drag_handle_height = 4;
 
   /// 拖拽指示条圆角半径。
-  static const double drag_handle_radius = 2;
+  static const double drag_handle_radius = LayoutConfig.radius_2;
 
   /// 弹窗顶部内边距（拖拽条与内容之间）。
-  static const double top_padding = 16;
+  static const double top_padding = LayoutConfig.space_16;
 
   /// 弹窗底部内边距（按钮下方留白）。
-  static const double bottom_padding = 32;
+  static const double bottom_padding = LayoutConfig.space_32;
 
   /// 弹窗内容区域水平内边距。
-  static const double content_horizontal_padding = 24;
+  static const double content_horizontal_padding = LayoutConfig.space_24;
 
   /// 数字与下方副标题的间距。
-  static const double number_subtitle_spacing = 4;
+  static const double number_subtitle_spacing = LayoutConfig.space_4;
 
   /// 副标题与描述文字的间距。
-  static const double subtitle_desc_spacing = 12;
+  static const double subtitle_desc_spacing = LayoutConfig.space_12;
 
   /// 描述文字与按钮的间距。
-  static const double desc_button_spacing = 24;
+  static const double desc_button_spacing = LayoutConfig.space_24;
 
   /// 按钮高度。
-  static const double button_height = 48;
+  static const double button_height = LayoutConfig.button_height;
 
   /// 按钮圆角半径（胶囊形状）。
-  static const double button_radius = 24;
+  static const double button_radius = LayoutConfig.radius_24;
 
   // ========== 字号 ==========
 
@@ -64,20 +65,16 @@ class UnlockAdFreePopupStyle {
   // ========== 字重 ==========
 
   /// 数字字重（加粗突出）。
-  static final FontWeight number_font_weight =
-      FontConfig.adjustedWeight(FontWeight.w700);
+  static final FontWeight number_font_weight = FontConfig.adjustedWeight(FontWeight.w700);
 
   /// 副标题字重。
-  static final FontWeight subtitle_font_weight =
-      FontConfig.adjustedWeight(FontWeight.w500);
+  static final FontWeight subtitle_font_weight = FontConfig.adjustedWeight(FontWeight.w500);
 
   /// 描述字重（常规，弱化视觉层级）。
-  static final FontWeight desc_font_weight =
-      FontConfig.adjustedWeight(FontWeight.w400);
+  static final FontWeight desc_font_weight = FontConfig.adjustedWeight(FontWeight.w400);
 
   /// 按钮字重。
-  static final FontWeight button_font_weight =
-      FontConfig.adjustedWeight(FontWeight.w600);
+  static final FontWeight button_font_weight = FontConfig.adjustedWeight(FontWeight.w600);
 
   // ========== 动画 ==========
 
@@ -122,5 +119,5 @@ class UnlockAdFreePopupStyle {
       ColorConstants.nightTextColor.withValues(alpha: 0.3);
 
   /// 遮罩层颜色（半透明黑，点击可关闭弹窗）。
-  static const Color barrier_color = Colors.black54;
+  static const Color barrier_color = ColorConstants.unlock_ad_free_popup_style_barrier_color;
 }

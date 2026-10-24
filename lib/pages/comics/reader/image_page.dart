@@ -2,6 +2,7 @@
 
 import 'package:app/models/comics.dart';
 import 'package:app/config/color_config.dart';
+import 'package:app/components/work_detail_skeleton/index.dart';
 import 'package:app/pages/comics/reader/logic.dart';
 import 'package:app/pages/comics/style.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -118,7 +119,7 @@ class _ComicReaderImageState extends State<ComicReaderImage> {
                   children: <Widget>[
                     const Icon(
                       Icons.broken_image_outlined,
-                      color: Colors.white54,
+                      color: ColorConstants.components_app_wrapper_index_tone,
                     ),
                     const SizedBox(height: ComicsStyle.small_gap),
                     TextButton.icon(
@@ -136,13 +137,7 @@ class _ComicReaderImageState extends State<ComicReaderImage> {
           : Stack(
               fit: StackFit.expand,
               children: <Widget>[
-                if (!_loaded)
-                  Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: ColorConstants.themeColor,
-                    ),
-                  ),
+                if (!_loaded) const ComicReaderSkeleton(),
                 if (_provider != null)
                   Image(
                     image: _provider!,
@@ -160,6 +155,29 @@ class _ComicReaderImageState extends State<ComicReaderImage> {
                   ),
               ],
             ),
+    ),
+  );
+}
+
+/// 请求章节和单张原图共用整幅画布占位；父级保留真实图片的宽高比例。
+/// 未获得图片尺寸时占满当前阅读视口，不预造分镜或虚构页数。
+class ComicReaderSkeleton extends StatelessWidget {
+  const ComicReaderSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: tr('comics.loading'),
+    child: ExcludeSemantics(
+      child: LayoutBuilder(
+        builder: (context, constraints) => SkeletonPulse(
+          is_dark: Theme.of(context).brightness == Brightness.dark,
+          child: SkeletonBlock(
+            key: const ValueKey('comic_reader_skeleton_canvas'),
+            height: constraints.maxHeight,
+            radius: 0,
+          ),
+        ),
+      ),
     ),
   );
 }

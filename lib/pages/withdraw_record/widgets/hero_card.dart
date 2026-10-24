@@ -40,11 +40,9 @@ class WithdrawRecordHeroCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: isDark
+            color: ColorConstants.shadowColor.withValues(alpha: isDark
                   ? TopUpRecordStyle.heroShadowDarkOpacity
-                  : TopUpRecordStyle.heroShadowLightOpacity,
-            ),
+                  : TopUpRecordStyle.heroShadowLightOpacity),
             blurRadius: TopUpRecordStyle.heroShadowBlur,
             offset: const Offset(0, TopUpRecordStyle.heroShadowOffsetY),
           ),

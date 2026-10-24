@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/pages/change_password/style.dart';
@@ -138,34 +139,34 @@ class PasswordStrengthBar extends StatelessWidget {
         /// 强度条。
         Expanded(
           child: Row(
-            children: List<Widget>.generate(
-              Style.strengthBarSegments,
-              (int index) {
-                final bool isActive = index < activeSegments;
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      right: index < Style.strengthBarSegments - 1
-                          ? Style.strengthBarSegmentGap
-                          : 0,
-                    ),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeOut,
-                      height: Style.strengthBarHeight,
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? activeColor
-                            : Style.strengthBarInactive(isDark: isDark),
-                        borderRadius: BorderRadius.circular(
-                          Style.strengthBarRadius,
-                        ),
+            children: List<Widget>.generate(Style.strengthBarSegments, (
+              int index,
+            ) {
+              final bool isActive = index < activeSegments;
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right:
+                        index < Style.strengthBarSegments - LayoutConfig.space_1
+                        ? Style.strengthBarSegmentGap
+                        : 0,
+                  ),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOut,
+                    height: Style.strengthBarHeight,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? activeColor
+                          : Style.strengthBarInactive(isDark: isDark),
+                      borderRadius: BorderRadius.circular(
+                        Style.strengthBarRadius,
                       ),
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            }),
           ),
         ),
 

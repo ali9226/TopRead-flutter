@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 顶部返回按钮组件。
 ///
@@ -22,12 +23,8 @@ class ReadBackButton extends StatelessWidget {
         ? BackButtonStyle.night_icon_color
         : BackButtonStyle.light_icon_color;
     final Color background_color = is_dark
-        ? Colors.white.withValues(
-            alpha: BackButtonStyle.night_background_opacity,
-          )
-        : Colors.black.withValues(
-            alpha: BackButtonStyle.light_background_opacity,
-          );
+        ? ColorConstants.whiteColor.withValues(alpha: BackButtonStyle.night_background_opacity)
+        : ColorConstants.lightTextColor.withValues(alpha: BackButtonStyle.light_background_opacity);
 
     return GestureDetector(
       onTap: () => AppRouter.back(),

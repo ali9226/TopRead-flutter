@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:app/pages/comics/reader/index.dart';
 import 'package:app/components/reader_top_bar/action_button.dart';
+import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/comics/reader/logic.dart';
 import 'package:app/pages/comics/reader/style.dart';
@@ -103,7 +104,7 @@ void main() {
     final background = tester
         .widget<Scaffold>(find.byType(Scaffold).first)
         .backgroundColor!;
-    expect(background, Colors.white);
+    expect(background, ColorConstants.whiteColor);
     final rendered = Color.alphaBlend(color, background);
     final lighter = rendered.computeLuminance() > background.computeLuminance()
         ? rendered.computeLuminance()
@@ -222,7 +223,7 @@ void main() {
                                   child: ColoredBox(
                                     color: dark
                                         ? ComicReaderStyle.canvas_background
-                                        : Colors.white,
+                                        : ColorConstants.whiteColor,
                                     child: sample_images.isNotEmpty
                                         ? SingleChildScrollView(
                                             child: Column(
@@ -240,7 +241,8 @@ void main() {
                                             child: Icon(
                                               Icons.landscape_outlined,
                                               size: 150,
-                                              color: Colors.black38,
+                                              color: ColorConstants
+                                                  .pages_customer_service_chat_widgets_message_bubble_tone,
                                             ),
                                           ),
                                   ),
@@ -348,8 +350,17 @@ void main() {
                 null,
                 'share',
               ]);
-              expect(top_controls[1].icon, Icons.favorite_border_rounded);
-              expect(top_controls[1].color, ColorConstants.dangerColor);
+              expect(top_controls[1].icon, isNull);
+              final favorite_icon = top_controls[1].icon_widget! as SvgIcon;
+              expect(favorite_icon.name, 'not_favorited');
+              expect(favorite_icon.width, 22);
+              expect(
+                favorite_icon.color,
+                ComicReaderStyle.top_favorite_icon_color(
+                  dark,
+                  collected: false,
+                ),
+              );
               for (final action in top_controls) {
                 await tester.tap(find.byWidget(action));
               }

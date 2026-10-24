@@ -1,4 +1,6 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// 首页 Tab 栏样式常量。
 class HomeTabBarStyle {
@@ -27,7 +29,7 @@ class HomeTabBarStyle {
   /// Tab 标签左侧内边距（CJK 语系）。
   ///
   /// 中文字符窄，16px 间距视觉舒适。
-  static const double tab_label_padding_left_cjk = 16.0;
+  static const double tab_label_padding_left_cjk = LayoutConfig.space_16;
 
   /// Tab 标签左侧内边距（非 CJK 语系）。
   ///
@@ -35,7 +37,7 @@ class HomeTabBarStyle {
   static const double tab_label_padding_left_alphabetic = 10.0;
 
   /// Tab 列表右侧预留宽度（CJK 语系）。
-  static const double tab_padding_right_cjk = 30.0;
+  static const double tab_padding_right_cjk = LayoutConfig.space_30;
 
   /// Tab 列表右侧预留宽度（非 CJK 语系）。
   ///
@@ -43,10 +45,10 @@ class HomeTabBarStyle {
   static const double tab_padding_right_alphabetic = 40.0;
 
   /// 未选中文字颜色（日间模式）。
-  static const Color unselected_light_color = Color(0xFF999999);
+  static const Color unselected_light_color = ColorConstants.customer_service_sheet_style_time_color_light;
 
   /// 未选中文字颜色（夜间模式）。
-  static const Color unselected_dark_color = Color(0xFF666666);
+  static const Color unselected_dark_color = ColorConstants.customer_service_sheet_style_time_color_dark;
 
   /// 渐变遮罩宽度。
   static const double gradient_width = 20.0;

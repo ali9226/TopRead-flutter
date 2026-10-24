@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -24,23 +25,26 @@ Future<void> showBottomTip(String message, {Duration? duration}) async {
     tag: 'bottom_tip',
     alignment: Alignment.bottomCenter,
     animationType: SmartAnimationType.scale,
-    maskColor: Colors.transparent,
+    maskColor: ColorConstants.transparent,
     usePenetrate: true,
     builder: (context) {
       final double screenWidth = MediaQuery.of(context).size.width;
 
       return Container(
         constraints: BoxConstraints(maxWidth: screenWidth * 0.85),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        padding: const EdgeInsets.symmetric(
+          vertical: LayoutConfig.space_10,
+          horizontal: LayoutConfig.space_20,
+        ),
         margin: const EdgeInsets.only(bottom: 150),
         decoration: BoxDecoration(
           color: isDark
-              ? ColorConstants.lightTextColor.withValues(alpha: 0.9)
-              : Colors.black.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(500),
+              ? ColorConstants.util_dialog_show_bottom_tip_tone
+              : ColorConstants.util_dialog_show_bottom_tip_tone_b3222222,
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_pill),
           boxShadow: const [
             BoxShadow(
-              color: Colors.black12,
+              color: ColorConstants.shadow_soft_1f,
               blurRadius: 100,
               offset: Offset(0, 2),
             ),
@@ -48,8 +52,8 @@ Future<void> showBottomTip(String message, {Duration? duration}) async {
         ),
         child: Text(
           message,
-          style: TextStyle(
-            color: isDark ? ColorConstants.whiteColor : Colors.white,
+          style: const TextStyle(
+            color: ColorConstants.whiteColor,
             fontSize: 15,
           ),
           textAlign: TextAlign.left,

@@ -3,6 +3,7 @@ import 'package:app/components/window_content_layout/index.dart';
 
 import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// 已发布编辑器加载态骨架屏。
 ///
@@ -48,11 +49,11 @@ class _SkeletonContentState extends State<SkeletonContent>
       animation: _controller,
       builder: (context, _) {
         final Color base = widget.is_dark
-            ? const Color(0xFF2A2A2A)
-            : const Color(0xFFE8E8E8);
+            ? ColorConstants.components_cute_mascot_index_tone_ff2a2a2a
+            : ColorConstants.pages_published_long_novel_editor_widgets_skeleton_content_tone;
         final Color highlight = widget.is_dark
-            ? const Color(0xFF3A3A3A)
-            : const Color(0xFFF5F5F5);
+            ? ColorConstants.components_cute_mascot_index_tone_ff3a3a3a
+            : ColorConstants.config_color_config_tone_fff5f5f5;
         final double t = _controller.value;
         final Gradient gradient = LinearGradient(
           begin: const Alignment(-1.0, 0.0),

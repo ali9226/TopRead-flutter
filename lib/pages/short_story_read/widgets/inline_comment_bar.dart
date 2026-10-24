@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -65,7 +66,8 @@ class InlineCommentBar extends StatelessWidget {
             child: Container(
               height: ShortStoryReadStyle.comment_input_height,
               padding: const EdgeInsets.symmetric(
-                horizontal: ShortStoryReadStyle.comment_input_horizontal_padding,
+                horizontal:
+                    ShortStoryReadStyle.comment_input_horizontal_padding,
               ),
               decoration: BoxDecoration(
                 color: input_bg_color,
@@ -81,25 +83,24 @@ class InlineCommentBar extends StatelessWidget {
                     'assets/svg/edit.svg',
                     width: 16,
                     height: 16,
-                    colorFilter:
-                        ColorFilter.mode(input_text_color, BlendMode.srcIn),
+                    colorFilter: ColorFilter.mode(
+                      input_text_color,
+                      BlendMode.srcIn,
+                    ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: LayoutConfig.space_8),
 
                   /// 输入框占位文字。
                   Text(
                     tr('short_story_read.comment_input_hint'),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: input_text_color,
-                    ),
+                    style: TextStyle(fontSize: 14, color: input_text_color),
                   ),
                 ],
               ),
             ),
           ),
         ),
-        const SizedBox(width: 20),
+        const SizedBox(width: LayoutConfig.space_20),
 
         /// 评论数（图标 + 数字）。
         GestureDetector(
@@ -110,21 +111,17 @@ class InlineCommentBar extends StatelessWidget {
                 'assets/svg/message_selected_no.svg',
                 width: 20,
                 height: 20,
-                colorFilter:
-                    ColorFilter.mode(secondary_color, BlendMode.srcIn),
+                colorFilter: ColorFilter.mode(secondary_color, BlendMode.srcIn),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: LayoutConfig.space_4),
               Text(
                 NumberFormatUtil.format_count(comment_count),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: secondary_color,
-                ),
+                style: TextStyle(fontSize: 12, color: secondary_color),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 20),
+        const SizedBox(width: LayoutConfig.space_20),
 
         /// 点赞数（图标 + 数字，已点赞时使用红色）。
         GestureDetector(
@@ -137,10 +134,12 @@ class InlineCommentBar extends StatelessWidget {
                 height: 20,
                 colorFilter: is_liked
                     ? ColorFilter.mode(
-                        ColorConstants.dangerColor, BlendMode.srcIn)
+                        ColorConstants.dangerColor,
+                        BlendMode.srcIn,
+                      )
                     : ColorFilter.mode(secondary_color, BlendMode.srcIn),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: LayoutConfig.space_4),
               Text(
                 NumberFormatUtil.format_count(like_count),
                 style: TextStyle(

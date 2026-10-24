@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'dart:async';
 import 'package:app/components/bottom_sheet_drag_handle/index.dart';
 import 'package:app/components/reader_theme_options/index.dart';
@@ -40,10 +41,10 @@ TextStyle _text(
               ? ComicReadingPanelStyle.text_cjk
               : ComicReadingPanelStyle.text_alphabetic),
     fontWeight: FontConfig.adjustedWeight(
-      title ? FontWeight.w500 : FontWeight.w400,
+      title ? FontConfig.adjustedWeight(FontWeight.w500) : FontConfig.adjustedWeight(FontWeight.w400),
     ),
     color: _dark(context)
-        ? (muted ? Colors.white70 : Colors.white)
+        ? (muted ? ColorConstants.components_reader_top_bar_style_tone_b3ffffff : ColorConstants.whiteColor)
         : (muted
               ? ComicReadingPanelStyle.light_muted
               : ComicReadingPanelStyle.light_ink),
@@ -55,7 +56,7 @@ Future<void> _show_panel(BuildContext context, Widget child) =>
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       constraints: const BoxConstraints(
         maxWidth: ComicReadingPanelStyle.max_width,
       ),
@@ -324,7 +325,7 @@ class _Panel extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(
                 ComicReadingPanelStyle.padding,
                 0,
-                8,
+                LayoutConfig.space_8,
                 0,
               ),
               child: Row(

@@ -53,20 +53,18 @@ class TopUpAmountSection extends StatelessWidget {
     return Container(
       padding: amountSectionPadding,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF171A27) : Colors.white,
+        color: isDark ? ColorConstants.pages_top_up_record_index_tone : ColorConstants.whiteColor,
         borderRadius: BorderRadius.circular(Style.cardRadius),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04),
+              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+              : ColorConstants.components_paragraph_comment_sheet_widgets_comment_item_tone,
         ),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: isDark
+            color: ColorConstants.shadowColor.withValues(alpha: isDark
                   ? Style.cardShadowDarkOpacity
-                  : Style.cardShadowLightOpacity,
-            ),
+                  : Style.cardShadowLightOpacity),
             blurRadius: Style.cardShadowBlur,
             offset: const Offset(0, Style.cardShadowOffsetY),
           ),
@@ -200,16 +198,14 @@ class TopUpAmountSection extends StatelessWidget {
                                       alpha: isDark ? 0.18 : 0.12,
                                     )
                                   : (isDark
-                                        ? const Color(0xFF121521)
-                                        : const Color(0xFFF8F8F4)),
+                                        ? ColorConstants.pages_top_up_widgets_top_up_amount_section_tone_ff121521
+                                        : ColorConstants.pages_top_up_widgets_top_up_amount_section_tone_fff8f8f4),
                               border: Border.all(
                                 color: selected
                                     ? Style.accentColor
                                     : (isDark
-                                          ? Colors.white.withValues(alpha: 0.06)
-                                          : Colors.black.withValues(
-                                              alpha: 0.05,
-                                            )),
+                                          ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+                                          : ColorConstants.components_home_top_search_entry_index_tone),
                               ),
                             ),
                             alignment: Alignment.center,

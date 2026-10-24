@@ -1,6 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:app/components/page_backdrop/index.dart';
+import 'package:app/components/page_backdrop/style.dart';
+import 'package:app/components/page_backdrop/widgets/decor_glow_spot.dart';
 import 'package:app/config/color_config.dart';
-import 'package:app/pages/change_password/style.dart';
+import 'package:flutter/material.dart';
+
+import '../style.dart';
 
 /// 修改密码页面背景装饰组件。
 ///
@@ -31,55 +35,31 @@ class BackgroundDecorations extends StatelessWidget {
     return Stack(
       children: <Widget>[
         /// 页面背景渐变。
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: isDark
-                    ? Style.darkBackgroundGradient
-                    : Style.lightBackgroundGradient,
-              ),
-            ),
-          ),
+        PageBackdropGradient(
+          colors: isDark
+              ? PageBackdropStyle.night_setting_colors
+              : Style.lightBackgroundGradient,
         ),
 
         /// 右上装饰光斑（主题色圆形，半透明）。
-        Positioned(
+        DecorGlowSpot(
+          size: Style.decorCircleOneSize,
           top: Style.decorCircleOneTop + safePaddingTop,
           right: Style.decorCircleOneRight,
-          child: IgnorePointer(
-            child: Container(
-              width: Style.decorCircleOneSize,
-              height: Style.decorCircleOneSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: ColorConstants.themeColor.withValues(
-                  alpha: isDark
-                      ? Style.decorCircleOneDarkOpacity
-                      : Style.decorCircleOneLightOpacity,
-                ),
-              ),
-            ),
+          color: ColorConstants.themeColor.withValues(
+            alpha: isDark
+                ? Style.decorCircleOneDarkOpacity
+                : Style.decorCircleOneLightOpacity,
           ),
         ),
 
         /// 左侧辅助光斑（绿色圆形，低透明度）。
-        Positioned(
+        DecorGlowSpot(
+          size: Style.decorCircleTwoSize,
           top: Style.decorCircleTwoTop + safePaddingTop,
           left: Style.decorCircleTwoLeft,
-          child: IgnorePointer(
-            child: Container(
-              width: Style.decorCircleTwoSize,
-              height: Style.decorCircleTwoSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: ColorConstants.successColor.withValues(
-                  alpha: Style.decorCircleTwoOpacity,
-                ),
-              ),
-            ),
+          color: ColorConstants.successColor.withValues(
+            alpha: Style.decorCircleTwoOpacity,
           ),
         ),
 

@@ -214,7 +214,7 @@ class _CatalogItemState extends State<CatalogItem>
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: LayoutConfig.page_horizontal_padding,
-        vertical: 4,
+        vertical: LayoutConfig.space_4,
       ),
       child: Listener(
         onPointerDown: widget.on_tap == null ? null : _on_pointer_down,
@@ -375,7 +375,7 @@ class _CatalogItemState extends State<CatalogItem>
         ),
 
         /// 间距。
-        const SizedBox(width: 10),
+        const SizedBox(width: LayoutConfig.space_10),
 
         /// 右侧封面图片。
         ClipRRect(
@@ -528,7 +528,7 @@ class _CatalogItemState extends State<CatalogItem>
           ),
         ),
 
-        const SizedBox(width: 8),
+        const SizedBox(width: LayoutConfig.space_8),
 
         /// 点赞数（图标 + 数字，乐观更新，无加载态）。
         Listener(
@@ -543,7 +543,7 @@ class _CatalogItemState extends State<CatalogItem>
             onTap: widget.on_like_tap == null ? null : _on_like_tap,
             behavior: HitTestBehavior.opaque,
             child: Padding(
-              padding: const EdgeInsets.only(left: 8),
+              padding: const EdgeInsets.only(left: LayoutConfig.space_8),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
@@ -606,11 +606,14 @@ class _CatalogItemState extends State<CatalogItem>
         /// 当前阅读标记。
         if (widget.is_current)
           Container(
-            margin: const EdgeInsets.only(left: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            margin: const EdgeInsets.only(left: LayoutConfig.space_8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: LayoutConfig.space_8,
+              vertical: LayoutConfig.space_3,
+            ),
             decoration: BoxDecoration(
               color: current_highlight_color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
             ),
             child: Text(
               '${tr('short_story_read.reading')} ${(widget.reading_progress * 100).round()}%',

@@ -48,6 +48,17 @@ class ReadDetail {
   /// 字数副标题文案。
   final String word_count_subtitle_text;
 
+  /// 新统计栏的纯数值与标签；为 null 时兼容旧调用方提供的拆分字段。
+  final String? reading_value_text;
+  final String? reading_label_text;
+
+  /// 字数统计与连载状态独立，不将 Completed 等状态当作统计标签。
+  final String? word_count_value_text;
+  final String? word_count_label_text;
+
+  /// 来自发布状态的独立文案，供标题下方元信息展示。
+  final String status_text;
+
   /// 标签列表。
   final List<String> tag_list;
 
@@ -59,6 +70,9 @@ class ReadDetail {
 
   /// 热门评论列表。
   final List<ReadComment> comment_list;
+
+  /// 服务端返回的书评总数，与页面预览的条数分开保存。
+  final int? comment_count;
 
   const ReadDetail({
     required this.story_id,
@@ -77,10 +91,16 @@ class ReadDetail {
     required this.word_count_major_text,
     required this.word_count_minor_text,
     required this.word_count_subtitle_text,
+    this.reading_value_text,
+    this.reading_label_text,
+    this.word_count_value_text,
+    this.word_count_label_text,
+    this.status_text = '',
     required this.tag_list,
     required this.intro_text,
     required this.chapter_title,
     required this.comment_list,
+    this.comment_count,
   });
 }
 

@@ -25,16 +25,16 @@ class DebugActionItem extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark
             ? ColorConstants.nightHighlightColor
-            : const Color(0xFFF8FAFD),
+            : ColorConstants.components_image_source_sheet_index_tone_fff8fafd,
         borderRadius: BorderRadius.circular(Style.itemRadius),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : const Color(0xFFE7ECF3),
+              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+              : ColorConstants.components_image_source_sheet_index_tone_ffe7ecf3,
         ),
       ),
       child: Material(
-        color: Colors.transparent,
+        color: ColorConstants.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(Style.itemRadius),
           onTap: onTap,
@@ -52,7 +52,7 @@ class DebugActionItem extends StatelessWidget {
                       fontSize: 15,
                       fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                       color: isDark
-                          ? Colors.white
+                          ? ColorConstants.whiteColor
                           : ColorConstants.lightTextColor,
                     ),
                   ),
@@ -71,7 +71,7 @@ class DebugActionItem extends StatelessWidget {
                     Icons.arrow_forward_ios_rounded,
                     size: 16,
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.38)
+                        ? ColorConstants.pages_read_widgets_read_directory_sheet_index_tone
                         : ColorConstants.lightTextColor.withValues(alpha: 0.22),
                   ),
               ],

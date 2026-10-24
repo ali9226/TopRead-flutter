@@ -543,7 +543,7 @@ class WithdrawLogic extends ChangeNotifier {
 
   Color cardBorderColor(bool isDark) {
     return isDark
-        ? const Color(0xFF8DB7FF).withValues(alpha: 0.16)
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.16)
         : ColorConstants.themeColor.withValues(alpha: 0.14);
   }
 }

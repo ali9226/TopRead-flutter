@@ -37,11 +37,14 @@ class ComicCommentsLogic extends ComicsController {
   ComicCommentsLogic({
     required this.comic_id,
     this.chapter_id,
+    this.sort,
+    this.page_size = ComicCommentsStyle.page_size,
     ComicCommentRequester? requester,
     Future<String?> Function()? token_reader,
     bool Function()? require_login,
     void Function(String)? feedback,
-  }) : _requester = requester ?? comics_comments_request,
+  }) : assert(page_size > 0),
+       _requester = requester ?? comics_comments_request,
        _token_reader =
            token_reader ?? (() => StorageUtil.getData(Constant.tokenKey)),
        _require_login = require_login ?? comics_require_login,
@@ -63,6 +66,12 @@ class ComicCommentsLogic extends ComicsController {
 
   final int comic_id;
   final int? chapter_id;
+
+  /// 详情预览由服务端按热度排序；普通评论页省略参数，保留原来的时间顺序。
+  final String? sort;
+
+  /// 主评论可按预览数量请求，回复线程继续使用完整评论页的分页大小。
+  final int page_size;
   final ComicCommentRequester _requester;
   final Future<String?> Function() _token_reader;
   final bool Function() _require_login;
@@ -164,7 +173,8 @@ class ComicCommentsLogic extends ComicsController {
       final data = await _requester('inquire', <String, dynamic>{
         ..._scope(),
         'page': next_page,
-        'page_size': ComicCommentsStyle.page_size,
+        'page_size': page_size,
+        if (sort != null) 'sort': sort,
       }, authorization_token: session.token);
       if (!_current(session) || request_id != _request_id) return;
       if (data['list'] is! List) {
@@ -186,9 +196,7 @@ class ComicCommentsLogic extends ComicsController {
       total = comics_int(data['total']);
       comment_count = comics_int(data['comment_count'] ?? data['total']);
       page = next_page;
-      has_more =
-          rows.length >= ComicCommentsStyle.page_size &&
-          page * ComicCommentsStyle.page_size < total;
+      has_more = rows.length >= page_size && page * page_size < total;
     } on _CommentSessionChanged {
       return;
     } catch (failure) {

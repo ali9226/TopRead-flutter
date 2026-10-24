@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'dart:async';
+import 'package:app/config/color_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -83,7 +84,10 @@ class ComicReaderBrightnessSession extends ChangeNotifier {
       _requested = null;
       if (_closed || target == null) return;
       try {
-        await channel.invokeMethod<void>('setBrightness', {'value': target});
+        await channel.invokeMethod<void>('setBrightness', {
+          'value': target,
+          'preview_color': ColorConstants.lightTextColor.toARGB32(),
+        });
       } on PlatformException {
         available = false;
         _notify();

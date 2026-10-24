@@ -20,6 +20,8 @@ class ReaderTopBar extends StatelessWidget {
     this.favorite_loading = false,
     this.loading = false,
     this.show_share = true,
+    this.favorite_icon,
+    this.share_icon,
   });
   final bool is_dark;
   final VoidCallback on_back;
@@ -30,6 +32,10 @@ class ReaderTopBar extends StatelessWidget {
   final bool favorite_loading;
   final bool loading;
   final bool show_share;
+
+  /// 漫画可复用短篇图形，其余调用方继续使用默认心形与单色分享。
+  final Widget? favorite_icon;
+  final Widget? share_icon;
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
@@ -78,7 +84,10 @@ class ReaderTopBar extends StatelessWidget {
                         ),
                 ),
                 ReaderTopBarAction(
-                  icon: favorited
+                  icon_widget: favorite_icon,
+                  icon: favorite_icon != null
+                      ? null
+                      : favorited
                       ? Icons.favorite_rounded
                       : Icons.favorite_border_rounded,
                   label: tr(favorited ? 'comics.collected' : 'comics.collect'),
@@ -90,6 +99,7 @@ class ReaderTopBar extends StatelessWidget {
                 if (show_share)
                   ReaderTopBarAction(
                     asset: 'share',
+                    icon_widget: share_icon,
                     label: tr('comics.share'),
                     color: ReaderTopBarStyle.secondary(is_dark),
                     loading: loading,

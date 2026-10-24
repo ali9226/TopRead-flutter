@@ -163,15 +163,15 @@ class MessageBubble extends StatelessWidget {
               if (is_uploading)
                 Positioned.fill(
                   child: ColoredBox(
-                    color: Colors.black.withValues(alpha: 0.38),
+                    color: ColorConstants.pages_customer_service_chat_widgets_message_bubble_tone,
                     child: Center(
                       child: SizedBox(
                         width: 34,
                         height: 34,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
-                          color: Colors.white,
-                          backgroundColor: Colors.white.withValues(alpha: 0.25),
+                          color: ColorConstants.whiteColor,
+                          backgroundColor: ColorConstants.pages_home_widgets_tab_bar_skeleton_index_tone,
                         ),
                       ),
                     ),
@@ -183,7 +183,7 @@ class MessageBubble extends StatelessWidget {
                   bottom: CustomerServiceChatStyle.image_time_inset,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.52),
+                      color: ColorConstants.pages_customer_service_chat_widgets_message_bubble_tone_85222222,
                       borderRadius: BorderRadius.circular(
                         CustomerServiceChatStyle.image_time_radius,
                       ),
@@ -201,7 +201,7 @@ class MessageBubble extends StatelessWidget {
                               CustomerServiceChatStyle.message_time_font_size,
                           fontWeight:
                               CustomerServiceChatStyle.message_time_font_weight,
-                          color: Colors.white,
+                          color: ColorConstants.whiteColor,
                           height: 1,
                         ),
                       ),

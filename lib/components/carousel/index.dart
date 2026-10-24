@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -144,14 +145,18 @@ class _CarouselState extends State<Carousel> {
                   final themeColor = ColorConstants.themeColor;
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 220),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: LayoutConfig.space_4,
+                    ),
                     width: active ? 18 : 6,
                     height: 6,
                     decoration: BoxDecoration(
                       color: active
                           ? themeColor
                           : themeColor.withValues(alpha: 0.28),
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(
+                        LayoutConfig.radius_pill,
+                      ),
                     ),
                   );
                 }),

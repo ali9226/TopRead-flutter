@@ -1,6 +1,5 @@
 package com.topread.novel
 
-import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -59,10 +58,10 @@ class ShortStoryNativeAdFactory(
      * 创建原生高级广告视图。
      *
      * 由 Google AdMob SDK 在广告加载成功后回调。
-     * 布局文件为 [R.layout.short_story_native_ad]，主题色通过 [applyTheme] 动态设置。
+     * 布局文件为 [R.layout.short_story_native_ad]，所有颜色均由 Flutter 色板传入。
      *
      * @param nativeAd AdMob 返回的广告数据对象。
-     * @param customOptions Flutter 端传入的自定义选项，包含 isDark（是否夜间模式）。
+     * @param customOptions Flutter 端传入的自定义选项，包含统一 ARGB palette。
      * @return 渲染完成的 [NativeAdView]。
      */
     override fun createNativeAd(
@@ -73,8 +72,8 @@ class ShortStoryNativeAdFactory(
             R.layout.short_story_native_ad,
             null,
         ) as NativeAdView
-        // 从 Flutter 端获取夜间模式标志。
-        val isDark = customOptions?.get("isDark") as? Boolean ?: false
+        val palette = NativeAdPalette(customOptions)
+        adView.setBackgroundColor(palette.color("overlay_background"))
         // 本地化广告归因文案，缺失时使用 Google 认可的默认值。
         val advertisementLabel =
             customOptions?.get("advertisementLabel") as? String ?: "Ad"
@@ -82,16 +81,11 @@ class ShortStoryNativeAdFactory(
         val slotId = customOptions?.get("slotId") as? String
         val cardWidth = (customOptions?.get("cardWidth") as? Number)?.toDouble()
         val layoutToken = (customOptions?.get("layoutToken") as? Number)?.toInt()
-        // 从 Flutter 端获取随机颜色
-        val tagColorRed = (customOptions?.get("tagColorRed") as? Number)?.toInt() ?: 255
-        val tagColorGreen = (customOptions?.get("tagColorGreen") as? Number)?.toInt() ?: 77
-        val tagColorBlue = (customOptions?.get("tagColorBlue") as? Number)?.toInt() ?: 77
-
         adView.findViewById<TextView>(R.id.ad_attribution).apply {
             text = advertisementLabel
-            setTextColor(Color.rgb(tagColorRed, tagColorGreen, tagColorBlue))
+            setTextColor(palette.color("overlay_tag"))
             (background as? android.graphics.drawable.GradientDrawable)?.setColor(
-                Color.argb(38, tagColorRed, tagColorGreen, tagColorBlue)
+                palette.color("overlay_tag_background")
             )
         }
 
@@ -115,11 +109,14 @@ class ShortStoryNativeAdFactory(
         bindOptionalText(advertiserView, nativeAd.advertiser)
         bindOptionalText(callToActionView, nativeAd.callToAction)
 
-        // 遮罩层统一使用半透明黑色
-        val overlayColor = Color.argb(204, 0, 0, 0)
-        headlineView.setTextColor(Color.WHITE)
-        advertiserView.setTextColor(Color.rgb(204, 204, 204))
-        adView.findViewById<View>(R.id.ad_overlay).setBackgroundColor(overlayColor)
+        // 遮罩与深色文字统一取自 Flutter lightTextColor，避免使用纯黑。
+        headlineView.setTextColor(palette.color("overlay_headline"))
+        advertiserView.setTextColor(palette.color("overlay_caption"))
+        callToActionView.setTextColor(palette.color("overlay_cta_text"))
+        (callToActionView.background as? android.graphics.drawable.GradientDrawable)
+            ?.setColor(palette.color("cta_background"))
+        adView.findViewById<View>(R.id.ad_overlay)
+            .setBackgroundColor(palette.color("overlay_scrim"))
 
         // 视频静音播放
         nativeAd.mediaContent?.videoController?.mute(true)

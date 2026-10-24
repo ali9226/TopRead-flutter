@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'tile_quest_tile_style.dart';
 import 'tile_surface_style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 静态牌、飞牌、洗牌与三消粒子共用的陶瓷牌材质。
 ///
@@ -190,7 +191,7 @@ class QuestTileSurface {
     canvas.save();
     canvas.translate(tile.left, tile.top);
     canvas.scale(tile.width, tile.height);
-    _blocked_edge_paint.color = Colors.white.withValues(alpha: amount);
+    _blocked_edge_paint.color = ColorConstants.whiteColor.withValues(alpha: amount);
     canvas.drawPath(_blocked_edge_path, _blocked_edge_paint);
     canvas.restore();
   }

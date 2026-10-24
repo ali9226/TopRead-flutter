@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app/config/layout_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 书架页样式常量。
 class Style {
@@ -9,22 +10,27 @@ class Style {
       LayoutConfig.page_horizontal_padding;
 
   /// 页面顶部额外留白。
-  static const double page_top_spacing = 16;
+  static const double page_top_spacing = LayoutConfig.space_16;
 
   /// 页面标题字号。
   static const double title_font_size = 24;
 
   /// 内容卡片圆角。
-  static const double card_radius = 24;
+  static const double card_radius = LayoutConfig.radius_24;
 
   /// 内容卡片内边距。
-  static const EdgeInsets card_padding = EdgeInsets.fromLTRB(18, 20, 18, 20);
+  static const EdgeInsets card_padding = EdgeInsets.fromLTRB(
+    LayoutConfig.space_18,
+    LayoutConfig.space_20,
+    LayoutConfig.space_18,
+    LayoutConfig.space_20,
+  );
 
   /// 标题与副标题间距。
-  static const double text_spacing = 8;
+  static const double text_spacing = LayoutConfig.space_8;
 
   /// 未登录占位顶部间距。
-  static const double no_login_top_spacing = 36;
+  static const double no_login_top_spacing = LayoutConfig.space_36;
 
   /// 已登录状态顶部间距。
   static const double logged_in_top_spacing = 0;
@@ -57,7 +63,7 @@ class Style {
   /// Tab 标签左侧内边距（CJK 语系）。
   ///
   /// 中文字符窄，16px 间距视觉舒适。
-  static const double tab_label_padding_left_cjk = 16.0;
+  static const double tab_label_padding_left_cjk = LayoutConfig.space_16;
 
   /// Tab 标签左侧内边距（非 CJK 语系）。
   ///
@@ -65,7 +71,7 @@ class Style {
   static const double tab_label_padding_left_alphabetic = 10.0;
 
   /// Tab 列表右侧预留宽度（CJK 语系）。
-  static const double tab_padding_right_cjk = 30.0;
+  static const double tab_padding_right_cjk = LayoutConfig.space_30;
 
   /// Tab 列表右侧预留宽度（非 CJK 语系）。
   ///
@@ -73,16 +79,18 @@ class Style {
   static const double tab_padding_right_alphabetic = 40.0;
 
   /// 未选中文字颜色（日间模式）。
-  static const Color unselected_light_color = Color(0xFF999999);
+  static const Color unselected_light_color = ColorConstants.customer_service_sheet_style_time_color_light;
 
   /// 未选中文字颜色（夜间模式）。
-  static const Color unselected_dark_color = Color(0xFF666666);
+  static const Color unselected_dark_color = ColorConstants.customer_service_sheet_style_time_color_dark;
 
   /// Tab 左右内边距。
-  static const EdgeInsets tab_label_padding = EdgeInsets.only(right: 24);
+  static const EdgeInsets tab_label_padding = EdgeInsets.only(
+    right: LayoutConfig.space_24,
+  );
 
   /// Tab 内容顶部间距。
-  static const double tab_view_top_spacing = 5;
+  static const double tab_view_top_spacing = LayoutConfig.space_5;
 
   /// Tab 内容底部间距。
   static const double tab_view_bottom_spacing = 0;
@@ -100,7 +108,8 @@ class Style {
   static const double tab_indicator_height = 3;
 
   /// Tab 指示条底部偏移，全局统一，修改请调整 [AuthorStyle.tab_indicator_bottom_offset]。
-  static const double tab_indicator_bottom_offset = AuthorStyle.tab_indicator_bottom_offset;
+  static const double tab_indicator_bottom_offset =
+      AuthorStyle.tab_indicator_bottom_offset;
 
   /// 渐变遮罩宽度。
   static const double gradient_width = 20.0;
@@ -115,25 +124,25 @@ class Style {
   static const double content_desc_height = 1.6;
 
   /// 内容卡片之间的纵向间距。
-  static const double content_card_spacing = 12;
+  static const double content_card_spacing = LayoutConfig.space_12;
 
   /// 内容卡片补充信息顶部间距。
-  static const double content_meta_top_spacing = 10;
+  static const double content_meta_top_spacing = LayoutConfig.space_10;
 
   /// 内容卡片补充信息字号。
   static const double content_meta_font_size = 12;
 
   /// 筛选栏与网格之间的间距。
-  static const double filter_bottom_spacing = 8;
+  static const double filter_bottom_spacing = LayoutConfig.space_8;
 
   /// 筛选项圆角。
-  static const double filter_radius = 14;
+  static const double filter_radius = LayoutConfig.radius_14;
 
   /// 筛选项横向内边距。
-  static const double filter_horizontal_padding = 16;
+  static const double filter_horizontal_padding = LayoutConfig.space_16;
 
   /// 筛选项纵向内边距。
-  static const double filter_vertical_padding = 8;
+  static const double filter_vertical_padding = LayoutConfig.space_8;
 
   /// 筛选项字号。
   static const double filter_font_size = 14;
@@ -142,34 +151,34 @@ class Style {
   static const double filter_unselected_font_size = 13;
 
   /// 筛选项未选中背景色（日间）。
-  static const Color filter_idle_background_light_color = Color(0xFFE8EDF7);
+  static const Color filter_idle_background_light_color = ColorConstants.filter_idle_light_bg;
 
   /// 筛选项未选中背景色（夜间）。
-  static const Color filter_idle_background_dark_color = Color(0xFF263247);
+  static const Color filter_idle_background_dark_color = ColorConstants.filter_idle_dark_bg;
 
   /// 网格横向间距。
-  static const double grid_cross_spacing = 14;
+  static const double grid_cross_spacing = LayoutConfig.space_14;
 
   /// 网格纵向间距。
-  static const double grid_main_spacing = 18;
+  static const double grid_main_spacing = LayoutConfig.space_18;
 
   /// 单个书籍卡片圆角。
-  static const double book_card_radius = 18;
+  static const double book_card_radius = LayoutConfig.radius_18;
 
   /// 封面圆角。
-  static const double cover_radius = 16;
+  static const double cover_radius = LayoutConfig.radius_16;
 
   /// 封面宽高比。
   static const double cover_aspect_ratio = 0.72;
 
   /// 书签圆角。
-  static const double tag_radius = 10;
+  static const double tag_radius = LayoutConfig.radius_10;
 
   /// 书签横向内边距。
-  static const double tag_horizontal_padding = 8;
+  static const double tag_horizontal_padding = LayoutConfig.space_8;
 
   /// 书签纵向内边距。
-  static const double tag_vertical_padding = 4;
+  static const double tag_vertical_padding = LayoutConfig.space_4;
 
   /// 书签字号。
   static const double tag_font_size = 10;
@@ -178,7 +187,7 @@ class Style {
   static const double tag_offset = 6;
 
   /// 标题顶部间距。
-  static const double book_title_top_spacing = 10;
+  static const double book_title_top_spacing = LayoutConfig.space_10;
 
   /// 标题字号。
   static const double book_title_font_size = 14;
@@ -190,7 +199,7 @@ class Style {
   static const double book_title_min_height = 38;
 
   /// 进度区域顶部间距。
-  static const double book_meta_top_spacing = 8;
+  static const double book_meta_top_spacing = LayoutConfig.space_8;
 
   /// 进度字号。
   static const double book_meta_font_size = 12;
@@ -199,13 +208,13 @@ class Style {
   static const double book_meta_line_height = 1.4;
 
   /// 单行标题布局中两行底部信息之间的间距。
-  static const double book_single_line_meta_gap = 2;
+  static const double book_single_line_meta_gap = LayoutConfig.space_2;
 
   /// 分类与阅读数分隔点两侧的间距。
-  static const double book_meta_separator_gap = 4;
+  static const double book_meta_separator_gap = LayoutConfig.space_4;
 
   /// 文字布局安全余量，避免不同平台的像素取整裁剪字形底部。
-  static const double book_text_layout_safety_padding = 2;
+  static const double book_text_layout_safety_padding = LayoutConfig.space_2;
 
   /// 根据当前系统文字缩放比例计算书籍卡片文字区域高度。
   ///
@@ -238,10 +247,10 @@ class Style {
   static const double book_meta_dot_spacing = 1.8;
 
   /// 详情三点和进度的间距。
-  static const double book_meta_icon_spacing = 6;
+  static const double book_meta_icon_spacing = LayoutConfig.space_6;
 
   /// 删除弹窗圆角。
-  static const double dialog_radius = 20;
+  static const double dialog_radius = LayoutConfig.radius_20;
 
   /// 删除弹窗标题字号。
   static const double dialog_title_font_size = 17;
@@ -253,7 +262,7 @@ class Style {
   static const double dialog_action_font_size = 15;
 
   /// 弹窗内容顶部间距。
-  static const double dialog_content_top_spacing = 10;
+  static const double dialog_content_top_spacing = LayoutConfig.space_10;
 
   /// 书籍内容默认列数。
   static const int compact_grid_count = 3;
@@ -277,7 +286,7 @@ class Style {
   static const double book_meta_skeleton_height = 12;
 
   /// 加载更多顶部间距。
-  static const double load_more_top_spacing = 22;
+  static const double load_more_top_spacing = LayoutConfig.space_22;
 
   /// 加载更多字号。
   static const double load_more_font_size = 14;
@@ -286,13 +295,13 @@ class Style {
   static const double load_more_icon_size = 14;
 
   /// 加载更多图标间距。
-  static const double load_more_icon_spacing = 4;
+  static const double load_more_icon_spacing = LayoutConfig.space_4;
 
   /// 距离底部多少像素时触发自动加载更多。
   static const double load_more_auto_trigger_distance = 180;
 
   /// 没有更多数据时，推荐瀑布流和提示文案之间的顶部间距。
-  static const double no_more_recommend_top_spacing = 20;
+  static const double no_more_recommend_top_spacing = LayoutConfig.space_20;
 
   /// 返回顶部按钮显示的滚动阈值。
   static const double back_to_top_visible_offset = 320;

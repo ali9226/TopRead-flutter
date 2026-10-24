@@ -282,7 +282,7 @@ class TileQuestValidator {
     }
     final geometry = TileQuestGeometry(state.tiles);
     if (state.level == 2 &&
-        state.difficulty >= TileQuestConfig.mandatory_tool_difficulty &&
+        state.difficulty >= TileQuestConfig.trap_difficulty &&
         state.expert_barrier == null) {
       invalid('Required tool barrier is missing');
     }
@@ -299,10 +299,6 @@ class TileQuestValidator {
         state.reserve.isEmpty;
     if ((state.status == TileQuestStatus.won) != complete ||
         (state.status == TileQuestStatus.lost) != (state.tray.length == 7) ||
-        (state.status == TileQuestStatus.won &&
-            state.level == 2 &&
-            state.difficulty >= TileQuestConfig.mandatory_tool_difficulty &&
-            state.tools_used == 0) ||
         (state.status == TileQuestStatus.won &&
             state.unlocked_level < (state.level + 1).clamp(1, 2))) {
       invalid('Inconsistent game status');

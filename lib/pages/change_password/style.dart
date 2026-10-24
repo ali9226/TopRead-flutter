@@ -12,17 +12,11 @@ class Style {
 
   /// 日间模式页面背景渐变色。
   static const List<Color> lightBackgroundGradient = <Color>[
-    Color(0xFFFFF8EE),
-    Color(0xFFFFF3E0),
-    Color(0xFFFFFFFF),
+    ColorConstants.pages_change_password_style_tone,
+    ColorConstants.pages_change_password_style_tone_fffff3e0,
+    ColorConstants.whiteColor,
   ];
 
-  /// 夜间模式页面背景渐变色。
-  static const List<Color> darkBackgroundGradient = <Color>[
-    Color(0xFF1A1D2C),
-    Color(0xFF12121C),
-    Color(0xFF0D0E14),
-  ];
 
   // ==================== 装饰光斑 ====================
 
@@ -56,10 +50,11 @@ class Style {
   // ==================== 页面布局 ====================
 
   /// 页面水平内边距。
-  static const double pageHorizontalPadding = LayoutConfig.page_horizontal_padding;
+  static const double pageHorizontalPadding =
+      LayoutConfig.page_horizontal_padding;
 
   /// 页面底部安全区内边距。
-  static const double pageBottomPadding = 28;
+  static const double pageBottomPadding = LayoutConfig.space_28;
 
   /// 顶部边缘淡出高度。
   static const double pageEdgeFadeHeight = 40;
@@ -70,7 +65,7 @@ class Style {
   static const double heroTopOffset = 16;
 
   /// 英雄区域底部间距。
-  static const double heroBottomSpacing = 20;
+  static const double heroBottomSpacing = LayoutConfig.space_20;
 
   /// 页面主标题字号。
   static const double heroTitleSize = 28;
@@ -103,25 +98,30 @@ class Style {
   // ==================== 表单卡片 ====================
 
   /// 表单卡片圆角。
-  static const double formCardRadius = 24;
+  static const double formCardRadius = LayoutConfig.radius_24;
 
   /// 表单卡片内边距。
-  static const EdgeInsets formCardPadding = EdgeInsets.fromLTRB(18, 20, 18, 20);
+  static const EdgeInsets formCardPadding = EdgeInsets.fromLTRB(
+    LayoutConfig.space_18,
+    LayoutConfig.space_20,
+    LayoutConfig.space_18,
+    LayoutConfig.space_20,
+  );
 
   /// 表单卡片间距。
-  static const double formCardSpacing = 16;
+  static const double formCardSpacing = LayoutConfig.space_16;
 
   /// 日间模式表单卡片背景色。
-  static const Color formCardLightBg = Color(0xFFFFFBF0);
+  static const Color formCardLightBg = ColorConstants.pages_bill_widgets_bill_record_card_tone_fffffbf0;
 
   /// 夜间模式表单卡片背景色。
-  static const Color formCardDarkBg = Color(0xFF1A1E2E);
+  static const Color formCardDarkBg = ColorConstants.pages_comics_detail_style_tone_ff1a1e2e;
 
   /// 日间模式表单卡片边框色。
-  static const Color formCardLightBorder = Color(0x1FBFA55A);
+  static const Color formCardLightBorder = ColorConstants.pages_change_password_style_tone_1fbfa55a;
 
   /// 夜间模式表单卡片边框色。
-  static const Color formCardDarkBorder = Color(0x228DB7FF);
+  static const Color formCardDarkBorder = ColorConstants.pages_user_info_input_style_tone_228db7ff;
 
   // ==================== 字段标签 ====================
 
@@ -132,21 +132,26 @@ class Style {
   static final FontWeight fieldLabelWeight = FontConfig.adjustedWeight(FontWeight.w500);
 
   /// 字段标签底部间距。
-  static const double fieldLabelBottomSpacing = 10;
+  static const double fieldLabelBottomSpacing = LayoutConfig.space_10;
 
   /// 字段标签左侧图标尺寸。
   static const double fieldLabelIconSize = 18;
 
   /// 字段标签左侧图标与文字间距。
-  static const double fieldLabelIconGap = 6;
+  static const double fieldLabelIconGap = LayoutConfig.space_6;
 
   // ==================== 输入框 ====================
 
   /// 输入框圆角。
-  static const double inputRadius = 14;
+  static const double inputRadius = LayoutConfig.radius_14;
 
   /// 输入框内边距。
-  static const EdgeInsets inputPadding = EdgeInsets.fromLTRB(14, 1, 2, 1);
+  static const EdgeInsets inputPadding = EdgeInsets.fromLTRB(
+    LayoutConfig.space_14,
+    LayoutConfig.space_1,
+    LayoutConfig.space_2,
+    LayoutConfig.space_1,
+  );
 
   /// 输入框高度。
   static const double inputHeight = 50;
@@ -158,7 +163,7 @@ class Style {
   static const double inputHintSize = 14;
 
   /// 输入框右侧图标尺寸。
-  static const double inputIconSize = 20;
+  static const double inputIconSize = LayoutConfig.icon_medium;
 
   // ==================== 密码强度条 ====================
 
@@ -166,13 +171,13 @@ class Style {
   static const double strengthBarHeight = 6;
 
   /// 密码强度条圆角。
-  static const double strengthBarRadius = 3;
+  static const double strengthBarRadius = LayoutConfig.radius_3;
 
   /// 密码强度条总段数。
   static const int strengthBarSegments = 4;
 
   /// 密码强度条段间距。
-  static const double strengthBarSegmentGap = 4;
+  static const double strengthBarSegmentGap = LayoutConfig.space_4;
 
   /// 密码强度标签字号。
   static const double strengthLabelSize = 12;
@@ -181,18 +186,23 @@ class Style {
   static final FontWeight strengthLabelWeight = FontConfig.adjustedWeight(FontWeight.w500);
 
   /// 密码强度标签与强度条间距。
-  static const double strengthLabelGap = 8;
+  static const double strengthLabelGap = LayoutConfig.space_8;
 
   /// 密码强度标签与色块间距。
-  static const double strengthLabelBarGap = 10;
+  static const double strengthLabelBarGap = LayoutConfig.space_10;
 
   // ==================== 密码小贴士卡片 ====================
 
   /// 小贴士卡片圆角。
-  static const double tipsCardRadius = 20;
+  static const double tipsCardRadius = LayoutConfig.radius_20;
 
   /// 小贴士卡片内边距。
-  static const EdgeInsets tipsCardPadding = EdgeInsets.fromLTRB(16, 16, 16, 16);
+  static const EdgeInsets tipsCardPadding = EdgeInsets.fromLTRB(
+    LayoutConfig.space_16,
+    LayoutConfig.space_16,
+    LayoutConfig.space_16,
+    LayoutConfig.space_16,
+  );
 
   /// 小贴士标题字号。
   static const double tipsTitleSize = 14;
@@ -207,10 +217,10 @@ class Style {
   static const double tipsItemHeight = 1.6;
 
   /// 小贴士内容项间距。
-  static const double tipsItemSpacing = 6;
+  static const double tipsItemSpacing = LayoutConfig.space_6;
 
   /// 小贴士标题与内容间距。
-  static const double tipsTitleBottomSpacing = 10;
+  static const double tipsTitleBottomSpacing = LayoutConfig.space_10;
 
   /// 小贴士右侧装饰宽度。
   static const double tipsDecorationWidth = 80;
@@ -224,7 +234,7 @@ class Style {
   static const double submitButtonHeight = 54;
 
   /// 提交按钮圆角。
-  static const double submitButtonRadius = 27;
+  static const double submitButtonRadius = LayoutConfig.radius_27;
 
   /// 提交按钮字号。
   static const double submitButtonFontSize = 17;
@@ -239,7 +249,7 @@ class Style {
   static const double submitLoadingStrokeWidth = 2.2;
 
   /// 提交按钮顶部间距。
-  static const double submitTopSpacing = 20;
+  static const double submitTopSpacing = LayoutConfig.space_20;
 
   // ==================== 吉祥物 ====================
 
@@ -253,7 +263,9 @@ class Style {
 
   /// 页面背景色。
   static Color backgroundColor({required bool isDark}) {
-    return isDark ? ColorConstants.nightBackgroundColor : const Color(0xFFFFF8EE);
+    return isDark
+        ? ColorConstants.nightBackgroundColor
+        : ColorConstants.pages_change_password_style_tone;
   }
 
   /// 标题颜色。
@@ -282,7 +294,7 @@ class Style {
   static List<BoxShadow> formCardShadow({required bool isDark}) {
     return <BoxShadow>[
       BoxShadow(
-        color: Colors.black.withValues(alpha: isDark ? 0.12 : 0.05),
+        color: ColorConstants.shadowColor.withValues(alpha: isDark ? 0.12 : 0.05),
         blurRadius: isDark ? 16 : 14,
         offset: const Offset(0, 6),
       ),
@@ -298,24 +310,24 @@ class Style {
 
   /// 字段标签图标颜色。
   static Color fieldLabelIconColor({required bool isDark}) {
-    return isDark ? const Color(0xFFFFD861) : ColorConstants.themeColor;
+    return isDark ? ColorConstants.pages_change_password_style_tone_ffffd861 : ColorConstants.themeColor;
   }
 
   /// 输入框背景色。
   static Color inputBackground({required bool isDark}) {
-    return isDark ? const Color(0xFF121A25) : const Color(0xFFFFFCF2);
+    return isDark ? ColorConstants.pages_change_password_style_tone_ff121a25 : ColorConstants.pages_change_password_style_tone_fffffcf2;
   }
 
   /// 输入框边框色。
   static Color inputBorder({required bool isDark}) {
     return isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : const Color(0xFFE8E0C8);
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+        : ColorConstants.pages_change_password_style_tone_ffe8e0c8;
   }
 
   /// 输入框聚焦边框色。
   static Color inputFocusBorder({required bool isDark}) {
-    return isDark ? const Color(0xFFFFD861) : ColorConstants.themeColor;
+    return isDark ? ColorConstants.pages_change_password_style_tone_ffffd861 : ColorConstants.themeColor;
   }
 
   /// 输入框文字颜色。
@@ -333,7 +345,7 @@ class Style {
   /// 输入框右侧图标颜色。
   static Color inputIconColor({required bool isDark}) {
     return isDark
-        ? Colors.white.withValues(alpha: 0.6)
+        ? ColorConstants.components_load_more_footer_index_tone
         : ColorConstants.hintColor;
   }
 
@@ -347,34 +359,34 @@ class Style {
   /// 密码强度条未激活段颜色。
   static Color strengthBarInactive({required bool isDark}) {
     return isDark
-        ? Colors.white.withValues(alpha: 0.12)
-        : const Color(0xFFE0E0E0);
+        ? ColorConstants.components_fixed_bottom_navigation_widgets_night_panel_decor_tone
+        : ColorConstants.customer_service_sheet_style_drag_bar_color_light;
   }
 
   /// 密码强度条弱颜色。
-  static const Color strengthWeak = Color(0xFFF56C6C);
+  static const Color strengthWeak = ColorConstants.dangerColor;
 
   /// 密码强度条一般颜色。
-  static const Color strengthFair = Color(0xFFFF9E3D);
+  static const Color strengthFair = ColorConstants.strength_fair_ffff9e3d;
 
   /// 密码强度条良好颜色。
-  static const Color strengthGood = Color(0xFF67C23A);
+  static const Color strengthGood = ColorConstants.successColor;
 
   /// 密码强度条强颜色。
-  static const Color strengthStrong = Color(0xFF409EFF);
+  static const Color strengthStrong = ColorConstants.strength_strong_ff409eff;
 
   /// 小贴士卡片背景色。
   static Color tipsCardBackground({required bool isDark}) {
     return isDark
-        ? const Color(0xFF1A1E2E).withValues(alpha: 0.8)
-        : const Color(0xFFFFF8EE).withValues(alpha: 0.9);
+        ? ColorConstants.pages_comics_detail_style_tone_ff1a1e2e.withValues(alpha: 0.8)
+        : ColorConstants.pages_change_password_style_tone.withValues(alpha: 0.9);
   }
 
   /// 小贴士卡片边框色。
   static Color tipsCardBorder({required bool isDark}) {
     return isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : const Color(0x1FBFA55A);
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+        : ColorConstants.pages_change_password_style_tone_1fbfa55a;
   }
 
   /// 小贴士标题颜色。
@@ -391,7 +403,7 @@ class Style {
 
   /// 小贴士勾选图标颜色。
   static Color tipsCheckColor({required bool isDark}) {
-    return isDark ? const Color(0xFFFFD861) : ColorConstants.themeColor;
+    return isDark ? ColorConstants.pages_change_password_style_tone_ffffd861 : ColorConstants.themeColor;
   }
 
   /// 提交按钮渐变色。
@@ -400,8 +412,8 @@ class Style {
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: isDark
-          ? const <Color>[Color(0xFFF6D76A), Color(0xFFE7BC3C)]
-          : const <Color>[Color(0xFFFFD861), Color(0xFFF4BD33)],
+          ? const <Color>[ColorConstants.pages_change_password_style_tone_fff6d76a, ColorConstants.gold_button_gradient_end]
+          : const <Color>[ColorConstants.pages_change_password_style_tone_ffffd861, ColorConstants.common_style_submit_button_style_tone],
     );
   }
 
@@ -409,7 +421,7 @@ class Style {
   static List<BoxShadow> submitButtonShadow({required bool isDark}) {
     return <BoxShadow>[
       BoxShadow(
-        color: (isDark ? const Color(0xFFF6D76A) : const Color(0xFFF4BD33))
+        color: (isDark ? ColorConstants.pages_change_password_style_tone_fff6d76a : ColorConstants.common_style_submit_button_style_tone)
             .withValues(alpha: 0.30),
         blurRadius: 18,
         offset: const Offset(0, 10),

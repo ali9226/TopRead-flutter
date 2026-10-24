@@ -9,6 +9,7 @@ import 'package:app/components/comment_list/widgets/comment_avatar.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/util/language_util/index.dart';
+import 'package:app/config/color_config.dart';
 
 /// 评论回复点击回调，同时返回被点击区域的真实布局上下文。
 typedef CommentReplyCallback =
@@ -139,7 +140,7 @@ class CommentItem extends StatelessWidget {
         key: target_key_builder?.call(comment.id),
         builder: (BuildContext target_context) {
           return Material(
-            color: Colors.transparent,
+            color: ColorConstants.transparent,
             child: InkWell(
               key: ValueKey<String>('comment_item_tap_${comment.id}'),
               onTap: is_disabled
@@ -242,7 +243,7 @@ class CommentItem extends StatelessWidget {
         key: target_key_builder?.call(reply.id),
         builder: (BuildContext target_context) {
           return Material(
-            color: Colors.transparent,
+            color: ColorConstants.transparent,
             child: InkWell(
               key: ValueKey<String>('comment_reply_tap_${reply.id}'),
               onTap: is_disabled ? null : () => on_reply(reply, target_context),
@@ -451,12 +452,8 @@ class CommentItem extends StatelessWidget {
       padding: const EdgeInsets.all(CommentListStyle.paragraph_quote_padding),
       decoration: BoxDecoration(
         color: is_dark
-            ? Colors.white.withValues(
-                alpha: CommentListStyle.paragraph_quote_bg_opacity_dark,
-              )
-            : Colors.black.withValues(
-                alpha: CommentListStyle.paragraph_quote_bg_opacity_light,
-              ),
+            ? ColorConstants.whiteColor.withValues(alpha: CommentListStyle.paragraph_quote_bg_opacity_dark)
+            : ColorConstants.lightTextColor.withValues(alpha: CommentListStyle.paragraph_quote_bg_opacity_light),
         borderRadius: BorderRadius.circular(
           CommentListStyle.paragraph_quote_radius,
         ),
@@ -808,7 +805,7 @@ class _HighlightWrapperState extends State<_HighlightWrapper>
         : CommentListStyle.highlight_light_color;
     _color_animation = ColorTween(
       begin: highlight_color,
-      end: Colors.transparent,
+      end: ColorConstants.transparent,
     ).animate(CurvedAnimation(parent: _controller!, curve: Curves.easeOut));
     _controller!.forward();
   }
@@ -828,7 +825,7 @@ class _HighlightWrapperState extends State<_HighlightWrapper>
       animation: _controller!,
       builder: (BuildContext context, Widget? child) {
         return ColoredBox(
-          color: _color_animation!.value ?? Colors.transparent,
+          color: _color_animation!.value ?? ColorConstants.transparent,
           child: child,
         );
       },

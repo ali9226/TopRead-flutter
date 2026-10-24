@@ -1,8 +1,9 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart' as flutter_html;
 import 'package:get/get.dart';
-import 'package:app/components/back_to_top_button/index.dart';
+import 'package:app/components/floating_back_to_top/index.dart';
 import 'package:app/components/floating_back_to_top/style.dart'
     as floating_back_to_top_style;
 import 'package:app/components/language_selection/index.dart';
@@ -16,6 +17,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'logic.dart';
 import 'style.dart';
+import 'package:app/components/page_backdrop/index.dart';
+import 'package:app/components/page_backdrop/widgets/decor_glow_spot.dart';
 
 /// image_text 页面。
 class ImageText extends StatefulWidget {
@@ -183,8 +186,8 @@ class _ImageTextState extends State<ImageText> {
   /// 构建文章页骨架屏。
   Widget _build_loading_skeleton({required bool is_dark}) {
     final Color bar_color = is_dark
-        ? Colors.white.withValues(alpha: 0.14)
-        : Colors.black.withValues(alpha: 0.08);
+        ? ColorConstants.components_back_to_top_button_style_tone_24ffffff
+        : ColorConstants.components_fixed_bottom_navigation_style_tone;
 
     return Padding(
       padding: Style.article_content_padding,
@@ -196,30 +199,32 @@ class _ImageTextState extends State<ImageText> {
             height: 32,
             decoration: BoxDecoration(
               color: bar_color,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(LayoutConfig.radius_10),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: LayoutConfig.space_10),
           Container(
             width: 220,
             height: 32,
             decoration: BoxDecoration(
               color: bar_color,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(LayoutConfig.radius_10),
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: LayoutConfig.space_22),
           ...List<Widget>.generate(10, (int index) {
             final double width_factor = index % 3 == 2 ? 0.72 : 1.0;
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: LayoutConfig.space_12),
               child: FractionallySizedBox(
                 widthFactor: width_factor,
                 child: Container(
                   height: 16,
                   decoration: BoxDecoration(
                     color: bar_color,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(
+                      LayoutConfig.radius_pill,
+                    ),
                   ),
                 ),
               ),
@@ -254,57 +259,33 @@ class _ImageTextState extends State<ImageText> {
           color: background_color,
           child: Stack(
             children: <Widget>[
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: is_dark
-                          ? const <Color>[
-                              Color(0xFF191C2A),
-                              Color(0xFF11131D),
-                              Color(0xFF0C0D14),
-                            ]
-                          : const <Color>[
-                              Color(0xFFF6F0D8),
-                              Color(0xFFF8F8F4),
-                              Color(0xFFFFFFFF),
-                            ],
-                    ),
-                  ),
+              PageBackdropGradient(
+                colors: is_dark
+                    ? const <Color>[
+                        ColorConstants.night_gradient_mid,
+                        ColorConstants.night_gradient_deep,
+                        ColorConstants.night_gradient_deepest,
+                      ]
+                    : const <Color>[
+                        ColorConstants.warm_page_gradient_start,
+                        ColorConstants.pages_top_up_widgets_top_up_amount_section_tone_fff8f8f4,
+                        ColorConstants.whiteColor,
+                      ],
+              ),
+              DecorGlowSpot(
+                size: Style.decor_circle_one_size,
+                top: Style.decor_circle_one_top,
+                right: Style.decor_circle_one_right,
+                color: Style.accent_color.withValues(
+                  alpha: Style.decor_circle_opacity,
                 ),
               ),
-              Positioned(
-                top: -40,
-                right: -24,
-                child: IgnorePointer(
-                  child: Container(
-                    width: Style.decor_circle_one_size,
-                    height: Style.decor_circle_one_size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Style.accent_color.withValues(
-                        alpha: Style.decor_circle_opacity,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 120,
-                left: -36,
-                child: IgnorePointer(
-                  child: Container(
-                    width: Style.decor_circle_two_size,
-                    height: Style.decor_circle_two_size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: ColorConstants.successColor.withValues(
-                        alpha: Style.decor_circle_opacity,
-                      ),
-                    ),
-                  ),
+              DecorGlowSpot(
+                size: Style.decor_circle_two_size,
+                top: Style.decor_circle_two_top,
+                left: Style.decor_circle_two_left,
+                color: ColorConstants.successColor.withValues(
+                  alpha: Style.decor_circle_opacity,
                 ),
               ),
               WindowContentLayout(
@@ -346,7 +327,7 @@ class _ImageTextState extends State<ImageText> {
                           padding: Style.article_content_padding,
                           child: flutter_html.Html(
                             data: detail?.content ?? '',
-                            onLinkTap: (String? url, _, __) async {
+                            onLinkTap: (String? url, _, _) async {
                               if (url == null || url.isEmpty) return;
                               final Uri uri = Uri.parse(url);
                               if (await canLaunchUrl(uri)) {
@@ -365,7 +346,7 @@ class _ImageTextState extends State<ImageText> {
                                 ),
                                 textAlign: TextAlign.start,
                                 color: is_dark
-                                    ? Colors.white.withValues(alpha: 0.95)
+                                    ? ColorConstants.pages_image_text_index_tone
                                     : ColorConstants.lightTextColor,
                                 margin: flutter_html.Margins.zero,
                                 padding: flutter_html.HtmlPaddings.zero,
@@ -397,7 +378,7 @@ class _ImageTextState extends State<ImageText> {
                 left: 0,
                 right: 0,
                 child: Material(
-                  color: Colors.transparent,
+                  color: ColorConstants.transparent,
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -417,37 +398,21 @@ class _ImageTextState extends State<ImageText> {
                   ),
                 ),
               ),
-              Positioned(
-                right:
-                    floating_back_to_top_style.FloatingBackToTopStyle.right +
-                    safe_padding.right,
-                bottom:
+              FloatingBackToTop(
+                show: show_back_to_top,
+                isDark: is_dark,
+                onTap: _scroll_to_top,
+                horizontalPadding: Style.page_horizontal_padding,
+                visibleBottom:
                     floating_back_to_top_style
                         .FloatingBackToTopStyle
                         .page_bottom +
                     safe_padding.bottom,
-                child: AnimatedSlide(
-                  duration: const Duration(
-                    milliseconds: Style.back_to_top_slide_duration_ms,
-                  ),
-                  curve: Curves.easeOutCubic,
-                  offset: show_back_to_top
-                      ? Offset.zero
-                      : const Offset(0, Style.back_to_top_hidden_offset_y),
-                  child: AnimatedOpacity(
-                    duration: const Duration(
-                      milliseconds: Style.back_to_top_opacity_duration_ms,
-                    ),
-                    opacity: show_back_to_top ? 1 : 0,
-                    child: IgnorePointer(
-                      ignoring: !show_back_to_top,
-                      child: BackToTopButton(
-                        isDark: is_dark,
-                        onTap: _scroll_to_top,
-                      ),
-                    ),
-                  ),
-                ),
+                hiddenBottom:
+                    floating_back_to_top_style
+                        .FloatingBackToTopStyle
+                        .hidden_offset +
+                    safe_padding.bottom,
               ),
             ],
           ),

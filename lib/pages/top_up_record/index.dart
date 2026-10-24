@@ -1,8 +1,9 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:app/components/back_to_top_button/index.dart';
+import 'package:app/components/floating_back_to_top/index.dart';
 import 'package:app/components/floating_back_to_top/style.dart'
     as floating_back_to_top_style;
 import 'package:app/components/language_selection/index.dart';
@@ -21,6 +22,9 @@ import 'widgets/bottom_action.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/hero_card.dart';
 import 'widgets/record_card.dart';
+import 'package:app/components/page_backdrop/index.dart';
+import 'package:app/components/page_backdrop/style.dart';
+import 'package:app/components/page_backdrop/widgets/decor_glow_spot.dart';
 
 /// 充值记录页面。
 ///
@@ -159,8 +163,10 @@ class _TopUpRecordState extends State<TopUpRecord> {
               );
 
         return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          backgroundColor: ColorConstants.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: LayoutConfig.space_24,
+          ),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               maxWidth: availableWidth,
@@ -169,7 +175,7 @@ class _TopUpRecordState extends State<TopUpRecord> {
             child: Container(
               padding: TopUpRecordStyle.qrDialogPadding,
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF171A27) : Colors.white,
+                color: isDark ? ColorConstants.pages_top_up_record_index_tone : ColorConstants.whiteColor,
                 borderRadius: BorderRadius.circular(
                   TopUpRecordStyle.qrDialogRadius,
                 ),
@@ -195,7 +201,7 @@ class _TopUpRecordState extends State<TopUpRecord> {
                         TopUpRecordStyle.qrDialogQrWrapPadding,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: ColorConstants.whiteColor,
                         borderRadius: BorderRadius.circular(
                           TopUpRecordStyle.qrDialogQrWrapRadius,
                         ),
@@ -203,7 +209,7 @@ class _TopUpRecordState extends State<TopUpRecord> {
                       child: QrImageView(
                         data: value,
                         size: qrSize,
-                        backgroundColor: Colors.white,
+                        backgroundColor: ColorConstants.whiteColor,
                       ),
                     ),
                     const SizedBox(
@@ -236,7 +242,9 @@ class _TopUpRecordState extends State<TopUpRecord> {
                             TopUpRecordStyle.qrDialogButtonHeight,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(
+                              LayoutConfig.radius_18,
+                            ),
                           ),
                         ),
                         child: Row(
@@ -248,7 +256,7 @@ class _TopUpRecordState extends State<TopUpRecord> {
                               height: 16,
                               color: ColorConstants.lightTextColor,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: LayoutConfig.space_8),
                             Text(easy.tr('constant.ok')),
                           ],
                         ),
@@ -291,53 +299,29 @@ class _TopUpRecordState extends State<TopUpRecord> {
           child: Stack(
             children: [
               // 第一层：页面基础渐变背景。
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: isDark
-                          ? TopUpRecordStyle.darkBackgroundGradient
-                          : TopUpRecordStyle.lightBackgroundGradient,
-                    ),
-                  ),
-                ),
+              PageBackdropGradient(
+                colors: isDark
+                    ? PageBackdropStyle.night_wallet_colors
+                    : TopUpRecordStyle.lightBackgroundGradient,
               ),
               // 第二层：右上装饰光斑，主要用于强化页面层次感。
-              Positioned(
+              DecorGlowSpot(
+                size: TopUpRecordStyle.decorCircleOneSize,
                 top: TopUpRecordStyle.decorCircleOneTop,
                 right: TopUpRecordStyle.decorCircleOneRight,
-                child: IgnorePointer(
-                  child: Container(
-                    width: TopUpRecordStyle.decorCircleOneSize,
-                    height: TopUpRecordStyle.decorCircleOneSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: ColorConstants.themeColor.withValues(
-                        alpha: isDark
-                            ? TopUpRecordStyle.decorCircleOneDarkOpacity
-                            : TopUpRecordStyle.decorCircleOneLightOpacity,
-                      ),
-                    ),
-                  ),
+                color: ColorConstants.themeColor.withValues(
+                  alpha: isDark
+                      ? TopUpRecordStyle.decorCircleOneDarkOpacity
+                      : TopUpRecordStyle.decorCircleOneLightOpacity,
                 ),
               ),
               // 第三层：左上辅助光斑，让顶部区域不要过于单薄。
-              Positioned(
+              DecorGlowSpot(
+                size: TopUpRecordStyle.decorCircleTwoSize,
                 top: TopUpRecordStyle.decorCircleTwoTop,
                 left: TopUpRecordStyle.decorCircleTwoLeft,
-                child: IgnorePointer(
-                  child: Container(
-                    width: TopUpRecordStyle.decorCircleTwoSize,
-                    height: TopUpRecordStyle.decorCircleTwoSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: ColorConstants.successColor.withValues(
-                        alpha: TopUpRecordStyle.decorCircleTwoOpacity,
-                      ),
-                    ),
-                  ),
+                color: ColorConstants.successColor.withValues(
+                  alpha: TopUpRecordStyle.decorCircleTwoOpacity,
                 ),
               ),
               // 第四层：真正的页面滚动内容。
@@ -424,7 +408,7 @@ class _TopUpRecordState extends State<TopUpRecord> {
                 left: 0,
                 right: 0,
                 child: Material(
-                  color: Colors.transparent,
+                  color: ColorConstants.transparent,
                   child: Container(
                     padding: const EdgeInsets.only(
                       bottom: TopUpRecordStyle.headerBottomFadeSpacing,
@@ -460,9 +444,7 @@ class _TopUpRecordState extends State<TopUpRecord> {
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Container(
-                      color: Colors.black.withValues(
-                        alpha: TopUpRecordStyle.loadingMaskOpacity,
-                      ),
+                      color: ColorConstants.lightTextColor.withValues(alpha: TopUpRecordStyle.loadingMaskOpacity),
                       alignment: Alignment.center,
                       child: Container(
                         padding: TopUpRecordStyle.loadingCardPadding,
@@ -482,40 +464,21 @@ class _TopUpRecordState extends State<TopUpRecord> {
 
               // 返回顶部按钮固定在右下角。
               // 按钮的显隐和点击行为都来自逻辑层，页面这里只负责摆放。
-              Positioned(
-                right:
-                    floating_back_to_top_style.FloatingBackToTopStyle.right +
-                    safePadding.right,
-                bottom:
+              FloatingBackToTop(
+                show: logic.showBackToTop,
+                isDark: isDark,
+                onTap: logic.scrollToTop,
+                horizontalPadding: TopUpRecordStyle.pageHorizontalPadding,
+                visibleBottom:
                     floating_back_to_top_style
                         .FloatingBackToTopStyle
                         .page_bottom +
                     safePadding.bottom,
-                child: AnimatedSlide(
-                  duration: const Duration(
-                    milliseconds: TopUpRecordStyle.backToTopSlideDurationMs,
-                  ),
-                  curve: Curves.easeOutCubic,
-                  offset: logic.showBackToTop
-                      ? Offset.zero
-                      : const Offset(
-                          0,
-                          TopUpRecordStyle.backToTopHiddenOffsetY,
-                        ),
-                  child: AnimatedOpacity(
-                    duration: const Duration(
-                      milliseconds: TopUpRecordStyle.backToTopOpacityDurationMs,
-                    ),
-                    opacity: logic.showBackToTop ? 1 : 0,
-                    child: IgnorePointer(
-                      ignoring: !logic.showBackToTop,
-                      child: BackToTopButton(
-                        isDark: isDark,
-                        onTap: logic.scrollToTop,
-                      ),
-                    ),
-                  ),
-                ),
+                hiddenBottom:
+                    floating_back_to_top_style
+                        .FloatingBackToTopStyle
+                        .hidden_offset +
+                    safePadding.bottom,
               ),
             ],
           ),

@@ -1,63 +1,62 @@
-import 'package:flutter/material.dart';
 import 'package:app/components/back_to_top_button/index.dart';
+import 'package:app/components/window_content_layout/index.dart';
+import 'package:app/config/layout_config.dart';
+import 'package:flutter/material.dart';
 
-/// 可复用的页面级“返回顶部”悬浮模块。
+/// 页面级回顶入口：以正文列的宽度和安全区定位，避免展开窗口后贴到屏幕边缘。
 ///
-/// 负责：
-/// 1. 统一管理右下角定位；
-/// 2. 统一管理显隐动画；
-/// 3. 统一接入 [BackToTopButton] 视觉样式。
+/// 放在 Stack 中。默认与页面公共左右边距对齐；Stack 本身已含正文边距时，
+/// 将 [horizontalPadding] 设为零，避免重复留白。
 class FloatingBackToTop extends StatelessWidget {
-  /// 当前是否显示。
-  final bool show;
-
-  /// 当前是否夜间模式。
-  final bool isDark;
-
-  /// 按钮点击回调。
-  final VoidCallback onTap;
-
-  /// 右侧偏移。
-  final double right;
-
-  /// 显示态底部偏移。
-  final double visibleBottom;
-
-  /// 隐藏态底部偏移。
-  final double hiddenBottom;
-
-  /// 定位动画时长。
-  final Duration positionDuration;
-
-  /// 透明度动画时长。
-  final Duration opacityDuration;
-
   const FloatingBackToTop({
     super.key,
     required this.show,
     required this.isDark,
     required this.onTap,
-    required this.right,
     required this.visibleBottom,
     required this.hiddenBottom,
+    this.horizontalPadding = LayoutConfig.page_horizontal_padding,
     this.positionDuration = const Duration(milliseconds: 220),
     this.opacityDuration = const Duration(milliseconds: 180),
-  });
+  }) : assert(horizontalPadding >= 0);
+
+  final bool show;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  /// 当前正文列内部的左右边距，不含安全区或居中内容列之外的空间。
+  final double horizontalPadding;
+  final double visibleBottom;
+  final double hiddenBottom;
+  final Duration positionDuration;
+  final Duration opacityDuration;
 
   @override
   Widget build(BuildContext context) {
+    final reduce_motion = MediaQuery.disableAnimationsOf(context);
     return AnimatedPositioned(
-      duration: positionDuration,
+      duration: reduce_motion ? Duration.zero : positionDuration,
       curve: Curves.easeOutCubic,
-      right: right,
+      left: 0,
+      right: 0,
       bottom: show ? visibleBottom : hiddenBottom,
       child: IgnorePointer(
         ignoring: !show,
-        child: AnimatedOpacity(
-          duration: opacityDuration,
-          curve: Curves.easeOutCubic,
-          opacity: show ? 1 : 0,
-          child: BackToTopButton(isDark: isDark, onTap: onTap),
+        child: WindowContentLayout(
+          expand_height: false,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+            child: Align(
+              alignment: Alignment.centerRight,
+              heightFactor: 1,
+              child: AnimatedOpacity(
+                duration: reduce_motion ? Duration.zero : opacityDuration,
+                curve: Curves.easeOutCubic,
+                opacity: show ? 1 : 0,
+                child: BackToTopButton(isDark: isDark, onTap: onTap),
+              ),
+            ),
+          ),
         ),
       ),
     );

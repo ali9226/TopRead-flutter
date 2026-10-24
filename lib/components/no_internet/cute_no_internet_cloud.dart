@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// 可爱的断网云朵组件。
 ///
@@ -78,8 +79,8 @@ class _CloudPainter extends CustomPainter {
 
     final Paint wifiPaint = Paint()
       ..color = isDark
-          ? const Color(0xFF6CA0DC).withValues(alpha: 0.6)
-          : const Color(0xFF4A90D9).withValues(alpha: 0.5)
+          ? ColorConstants.components_no_internet_cute_no_internet_cloud_tone_ff6ca0dc.withValues(alpha: 0.6)
+          : ColorConstants.components_no_internet_cute_no_internet_cloud_tone_ff4a90d9.withValues(alpha: 0.5)
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -103,8 +104,8 @@ class _CloudPainter extends CustomPainter {
     // Wi-Fi 中心小圆点。
     final Paint dotPaint = Paint()
       ..color = isDark
-          ? const Color(0xFF6CA0DC).withValues(alpha: 0.7)
-          : const Color(0xFF4A90D9).withValues(alpha: 0.6)
+          ? ColorConstants.components_no_internet_cute_no_internet_cloud_tone_ff6ca0dc.withValues(alpha: 0.7)
+          : ColorConstants.components_no_internet_cute_no_internet_cloud_tone_ff4a90d9.withValues(alpha: 0.6)
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(Offset(wifiX, wifiY + 4), 2.5, dotPaint);
@@ -112,8 +113,8 @@ class _CloudPainter extends CustomPainter {
     // 斜杠（表示断开）。
     final Paint slashPaint = Paint()
       ..color = isDark
-          ? const Color(0xFFFF6B6B).withValues(alpha: 0.7)
-          : const Color(0xFFE85D75).withValues(alpha: 0.6)
+          ? ColorConstants.components_no_internet_cute_no_internet_cloud_tone_ffff6b6b.withValues(alpha: 0.7)
+          : ColorConstants.tag_color_list_ffe85d75.withValues(alpha: 0.6)
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -131,8 +132,8 @@ class _CloudPainter extends CustomPainter {
   void _drawZzz(Canvas canvas, double cx, double cy) {
     final Paint zPaint = Paint()
       ..color = isDark
-          ? const Color(0xFF8B8B9E).withValues(alpha: 0.4)
-          : const Color(0xFF999999).withValues(alpha: 0.35)
+          ? ColorConstants.components_no_internet_cute_no_internet_cloud_tone_ff8b8b9e.withValues(alpha: 0.4)
+          : ColorConstants.customer_service_sheet_style_time_color_light.withValues(alpha: 0.35)
       ..style = PaintingStyle.fill;
 
     // 三个不同大小的 z，从左下到右上排列。
@@ -172,18 +173,18 @@ class _CloudPainter extends CustomPainter {
   void _drawCloudBody(Canvas canvas, double cx, double cy) {
     // 云朵主体颜色。
     final Color bodyColor = isDark
-        ? const Color(0xFF3A3D4A)
-        : const Color(0xFFF0F0F5);
+        ? ColorConstants.components_cute_mascot_index_tone
+        : ColorConstants.components_no_internet_cute_no_internet_cloud_tone_fff0f0f5;
 
     // 云朵高光颜色。
     final Color highlightColor = isDark
-        ? const Color(0xFF4A4D5A)
-        : const Color(0xFFFAFAFF);
+        ? ColorConstants.components_cute_mascot_index_tone_ff4a4d5a
+        : ColorConstants.components_no_internet_cute_no_internet_cloud_tone_fffafaff;
 
     // 云朵阴影颜色。
     final Color shadowColor = isDark
-        ? const Color(0xFF2A2D3A)
-        : const Color(0xFFE0E0E8);
+        ? ColorConstants.components_cute_mascot_index_tone_ff2a2d3a
+        : ColorConstants.components_no_internet_cute_no_internet_cloud_tone_ffe0e0e8;
 
     // 底部阴影（趴在桌上的感觉）。
     final Paint shadowPaint = Paint()
@@ -244,8 +245,8 @@ class _CloudPainter extends CustomPainter {
     // 闭着的眼睛（弯弯弧线）。
     final Paint eyePaint = Paint()
       ..color = isDark
-          ? const Color(0xFFE8E8EA).withValues(alpha: 0.8)
-          : const Color(0xFF4A4A4A).withValues(alpha: 0.7)
+          ? ColorConstants.components_category_filter_filter_popup_tone.withValues(alpha: 0.8)
+          : ColorConstants.components_cute_mascot_index_tone_ff4a4a4a.withValues(alpha: 0.7)
       ..strokeWidth = 2.2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -279,8 +280,8 @@ class _CloudPainter extends CustomPainter {
     // 小嘴（微微下撇的弧线）。
     final Paint mouthPaint = Paint()
       ..color = isDark
-          ? const Color(0xFFE8E8EA).withValues(alpha: 0.6)
-          : const Color(0xFF4A4A4A).withValues(alpha: 0.5)
+          ? ColorConstants.components_category_filter_filter_popup_tone.withValues(alpha: 0.6)
+          : ColorConstants.components_cute_mascot_index_tone_ff4a4a4a.withValues(alpha: 0.5)
       ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -304,8 +305,8 @@ class _CloudPainter extends CustomPainter {
   void _drawBlush(Canvas canvas, double cx, double cy) {
     final Paint blushPaint = Paint()
       ..color = isDark
-          ? const Color(0xFFFF9E80).withValues(alpha: 0.15)
-          : const Color(0xFFFFB3A0).withValues(alpha: 0.2)
+          ? ColorConstants.message_type_accent_color_list_ffff9e80.withValues(alpha: 0.15)
+          : ColorConstants.components_no_internet_cute_no_internet_cloud_tone_ffffb3a0.withValues(alpha: 0.2)
       ..style = PaintingStyle.fill;
 
     // 左腮红。

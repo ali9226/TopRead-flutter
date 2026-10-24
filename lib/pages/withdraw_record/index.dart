@@ -2,7 +2,7 @@ import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:app/components/back_to_top_button/index.dart';
+import 'package:app/components/floating_back_to_top/index.dart';
 import 'package:app/components/floating_back_to_top/style.dart'
     as floating_back_to_top_style;
 import 'package:app/components/language_selection/index.dart';
@@ -19,6 +19,9 @@ import 'widgets/bottom_action.dart';
 import 'widgets/empty_state.dart';
 import 'widgets/hero_card.dart';
 import 'widgets/record_card.dart';
+import 'package:app/components/page_backdrop/index.dart';
+import 'package:app/components/page_backdrop/style.dart';
+import 'package:app/components/page_backdrop/widgets/decor_glow_spot.dart';
 
 /// 提现记录页面。
 ///
@@ -124,55 +127,31 @@ class _WithdrawRecordState extends State<WithdrawRecord> {
           child: Stack(
             children: [
               /// 页面主背景渐变层。
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: isDark
-                          ? TopUpRecordStyle.darkBackgroundGradient
-                          : TopUpRecordStyle.lightBackgroundGradient,
-                    ),
-                  ),
-                ),
+              PageBackdropGradient(
+                colors: isDark
+                    ? PageBackdropStyle.night_wallet_colors
+                    : TopUpRecordStyle.lightBackgroundGradient,
               ),
 
               /// 右上装饰光斑。
-              Positioned(
+              DecorGlowSpot(
+                size: TopUpRecordStyle.decorCircleOneSize,
                 top: TopUpRecordStyle.decorCircleOneTop,
                 right: TopUpRecordStyle.decorCircleOneRight,
-                child: IgnorePointer(
-                  child: Container(
-                    width: TopUpRecordStyle.decorCircleOneSize,
-                    height: TopUpRecordStyle.decorCircleOneSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: ColorConstants.themeColor.withValues(
-                        alpha: isDark
-                            ? TopUpRecordStyle.decorCircleOneDarkOpacity
-                            : TopUpRecordStyle.decorCircleOneLightOpacity,
-                      ),
-                    ),
-                  ),
+                color: ColorConstants.themeColor.withValues(
+                  alpha: isDark
+                      ? TopUpRecordStyle.decorCircleOneDarkOpacity
+                      : TopUpRecordStyle.decorCircleOneLightOpacity,
                 ),
               ),
 
               /// 左侧辅助光斑。
-              Positioned(
+              DecorGlowSpot(
+                size: TopUpRecordStyle.decorCircleTwoSize,
                 top: TopUpRecordStyle.decorCircleTwoTop,
                 left: TopUpRecordStyle.decorCircleTwoLeft,
-                child: IgnorePointer(
-                  child: Container(
-                    width: TopUpRecordStyle.decorCircleTwoSize,
-                    height: TopUpRecordStyle.decorCircleTwoSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: ColorConstants.successColor.withValues(
-                        alpha: TopUpRecordStyle.decorCircleTwoOpacity,
-                      ),
-                    ),
-                  ),
+                color: ColorConstants.successColor.withValues(
+                  alpha: TopUpRecordStyle.decorCircleTwoOpacity,
                 ),
               ),
 
@@ -251,7 +230,7 @@ class _WithdrawRecordState extends State<WithdrawRecord> {
                 left: 0,
                 right: 0,
                 child: Material(
-                  color: Colors.transparent,
+                  color: ColorConstants.transparent,
                   child: Container(
                     padding: const EdgeInsets.only(
                       bottom: TopUpRecordStyle.headerBottomFadeSpacing,
@@ -284,9 +263,7 @@ class _WithdrawRecordState extends State<WithdrawRecord> {
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Container(
-                      color: Colors.black.withValues(
-                        alpha: TopUpRecordStyle.loadingMaskOpacity,
-                      ),
+                      color: ColorConstants.lightTextColor.withValues(alpha: TopUpRecordStyle.loadingMaskOpacity),
                       alignment: Alignment.center,
                       child: Container(
                         padding: TopUpRecordStyle.loadingCardPadding,
@@ -305,40 +282,21 @@ class _WithdrawRecordState extends State<WithdrawRecord> {
                 ),
 
               /// 右下角返回顶部按钮。
-              Positioned(
-                right:
-                    floating_back_to_top_style.FloatingBackToTopStyle.right +
-                    safePadding.right,
-                bottom:
+              FloatingBackToTop(
+                show: logic.showBackToTop,
+                isDark: isDark,
+                onTap: logic.scrollToTop,
+                horizontalPadding: TopUpRecordStyle.pageHorizontalPadding,
+                visibleBottom:
                     floating_back_to_top_style
                         .FloatingBackToTopStyle
                         .page_bottom +
                     safePadding.bottom,
-                child: AnimatedSlide(
-                  duration: const Duration(
-                    milliseconds: TopUpRecordStyle.backToTopSlideDurationMs,
-                  ),
-                  curve: Curves.easeOutCubic,
-                  offset: logic.showBackToTop
-                      ? Offset.zero
-                      : const Offset(
-                          0,
-                          TopUpRecordStyle.backToTopHiddenOffsetY,
-                        ),
-                  child: AnimatedOpacity(
-                    duration: const Duration(
-                      milliseconds: TopUpRecordStyle.backToTopOpacityDurationMs,
-                    ),
-                    opacity: logic.showBackToTop ? 1 : 0,
-                    child: IgnorePointer(
-                      ignoring: !logic.showBackToTop,
-                      child: BackToTopButton(
-                        isDark: isDark,
-                        onTap: logic.scrollToTop,
-                      ),
-                    ),
-                  ),
-                ),
+                hiddenBottom:
+                    floating_back_to_top_style
+                        .FloatingBackToTopStyle
+                        .hidden_offset +
+                    safePadding.bottom,
               ),
             ],
           ),

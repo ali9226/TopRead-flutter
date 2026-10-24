@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
@@ -107,12 +108,12 @@ class _SearchPageState extends State<SearchPage> {
 
   /// 标签颜色池。
   static const List<Color> _tag_color_pool = <Color>[
-    Color(0xFF2FBF9B),
-    Color(0xFF5F8BFF),
-    Color(0xFFF56C6C),
-    Color(0xFFFF9F5A),
-    Color(0xFF8B7CFF),
-    Color(0xFFE6A23C),
+    ColorConstants.native_advertiser,
+    ColorConstants.native_attribution,
+    ColorConstants.dangerColor,
+    ColorConstants.palette_orange,
+    ColorConstants.palette_violet,
+    ColorConstants.palette_amber,
   ];
 
   @override
@@ -434,7 +435,7 @@ class _SearchPageState extends State<SearchPage> {
             .toStringAsFixed(2)
             .replaceAll(RegExp(r'0+$'), '')
             .replaceAll(RegExp(r'\.$'), '');
-        meta_text = '${scoreText}分';
+        meta_text = '$scoreText分';
       }
 
       return BookListItem(
@@ -520,7 +521,7 @@ class _SearchPageState extends State<SearchPage> {
           : Style.light_page_background;
       final Color card_color = is_dark
           ? Style.dark_card_background
-          : Colors.white;
+          : ColorConstants.whiteColor;
       final Color primary_text_color = is_dark
           ? ColorConstants.whiteColor
           : ColorConstants.lightTextColor;
@@ -598,9 +599,7 @@ class _SearchPageState extends State<SearchPage> {
                           style: TextStyle(
                             color: primary_text_color,
                             fontSize: title_size,
-                            fontWeight: FontConfig.adjustedWeight(
-                              FontWeight.w500,
-                            ),
+                            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                           ),
                         ),
                         const SizedBox(height: Style.search_header_gap),
@@ -676,8 +675,9 @@ class _SearchPageState extends State<SearchPage> {
                                                       const TextSelection.collapsed(
                                                         offset: 0,
                                                       );
-                                                  if (_has_submitted)
+                                                  if (_has_submitted) {
                                                     _reset_search();
+                                                  }
                                                 },
                                                 child: Icon(
                                                   Icons.close_rounded,
@@ -700,9 +700,7 @@ class _SearchPageState extends State<SearchPage> {
                                           color: primary_text_color,
                                           fontSize:
                                               Style.search_input_font_size,
-                                          fontWeight: FontConfig.adjustedWeight(
-                                            FontWeight.w500,
-                                          ),
+                                          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                                         ),
                                       ),
                                       IgnorePointer(
@@ -724,9 +722,7 @@ class _SearchPageState extends State<SearchPage> {
                                                 fontSize: Style
                                                     .search_input_hint_font_size,
                                                 fontWeight:
-                                                    FontConfig.adjustedWeight(
-                                                      FontWeight.w400,
-                                                    ),
+                                                    FontConfig.adjustedWeight(FontWeight.w400),
                                               ),
                                             ),
                                           ),
@@ -746,7 +742,7 @@ class _SearchPageState extends State<SearchPage> {
                                           .search_submit_button_horizontal_padding,
                                     ),
                                     backgroundColor: ColorConstants.themeColor,
-                                    foregroundColor: Colors.black,
+                                    foregroundColor: ColorConstants.lightTextColor,
                                     elevation: Style.zero,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(
@@ -768,9 +764,7 @@ class _SearchPageState extends State<SearchPage> {
                                     easy.tr('search.submit'),
                                     style: TextStyle(
                                       fontSize: search_submit_button_text_size,
-                                      fontWeight: FontConfig.adjustedWeight(
-                                        FontWeight.w500,
-                                      ),
+                                      fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                                     ),
                                   ),
                                 ),
@@ -786,9 +780,7 @@ class _SearchPageState extends State<SearchPage> {
                             style: TextStyle(
                               color: primary_text_color,
                               fontSize: section_title_size,
-                              fontWeight: FontConfig.adjustedWeight(
-                                FontWeight.w500,
-                              ),
+                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                             ),
                           ),
                           const SizedBox(height: Style.section_title_top_gap),
@@ -810,10 +802,8 @@ class _SearchPageState extends State<SearchPage> {
                                     padding: chip_padding,
                                     decoration: BoxDecoration(
                                       color: is_dark
-                                          ? Colors.white.withValues(
-                                              alpha: Style
-                                                  .hot_keyword_dark_background_alpha,
-                                            )
+                                          ? ColorConstants.whiteColor.withValues(alpha: Style
+                                                  .hot_keyword_dark_background_alpha)
                                           : Style.hot_keyword_light_background,
                                       borderRadius: BorderRadius.circular(
                                         Style.chip_radius,
@@ -824,9 +814,7 @@ class _SearchPageState extends State<SearchPage> {
                                       style: TextStyle(
                                         color: primary_text_color,
                                         fontSize: hot_keyword_text_size,
-                                        fontWeight: FontConfig.adjustedWeight(
-                                          FontWeight.w400,
-                                        ),
+                                        fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                                       ),
                                     ),
                                   ),
@@ -841,9 +829,7 @@ class _SearchPageState extends State<SearchPage> {
                             style: TextStyle(
                               color: primary_text_color,
                               fontSize: section_title_size,
-                              fontWeight: FontConfig.adjustedWeight(
-                                FontWeight.w500,
-                              ),
+                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                             ),
                           ),
                           const SizedBox(height: Style.section_title_top_gap),
@@ -867,9 +853,7 @@ class _SearchPageState extends State<SearchPage> {
                             style: TextStyle(
                               color: primary_text_color,
                               fontSize: section_title_size,
-                              fontWeight: FontConfig.adjustedWeight(
-                                FontWeight.w500,
-                              ),
+                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                             ),
                           ),
                           const SizedBox(height: Style.section_title_top_gap),
@@ -928,9 +912,6 @@ class _SearchPageState extends State<SearchPage> {
                       show: _is_back_to_top_visible,
                       isDark: is_dark,
                       onTap: _scroll_to_top,
-                      right: floating_back_to_top_style
-                          .FloatingBackToTopStyle
-                          .right,
                       visibleBottom:
                           fixed_nav_style.Style.bar_height +
                           floating_back_to_top_style
@@ -958,7 +939,7 @@ class _SearchPageState extends State<SearchPage> {
   Widget _build_load_more_footer(bool is_dark) {
     if (_is_loading_more) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: LayoutConfig.space_16),
         child: Center(
           child: SizedBox(
             width: 24,
@@ -966,7 +947,7 @@ class _SearchPageState extends State<SearchPage> {
             child: CircularProgressIndicator(
               strokeWidth: 2,
               valueColor: AlwaysStoppedAnimation<Color>(
-                is_dark ? Colors.white54 : Colors.grey,
+                is_dark ? ColorConstants.components_app_wrapper_index_tone : ColorConstants.components_home_header_bar_index_tone,
               ),
             ),
           ),
@@ -976,12 +957,12 @@ class _SearchPageState extends State<SearchPage> {
 
     if (!_has_more) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: LayoutConfig.space_16),
         child: Center(
           child: Text(
             easy.tr('home.book_list_footer.no_more'),
             style: TextStyle(
-              color: is_dark ? Colors.white54 : Colors.grey,
+              color: is_dark ? ColorConstants.components_app_wrapper_index_tone : ColorConstants.components_home_header_bar_index_tone,
               fontSize: 14,
             ),
           ),
@@ -995,7 +976,7 @@ class _SearchPageState extends State<SearchPage> {
   Widget _build_empty_result(Color secondary_text_color) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 60),
+        padding: const EdgeInsets.symmetric(vertical: LayoutConfig.space_60),
         child: Column(
           children: <Widget>[
             Icon(
@@ -1003,7 +984,7 @@ class _SearchPageState extends State<SearchPage> {
               size: 64,
               color: secondary_text_color,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: LayoutConfig.space_16),
             Text(
               easy.tr('common.empty_data'),
               style: TextStyle(color: secondary_text_color, fontSize: 16),

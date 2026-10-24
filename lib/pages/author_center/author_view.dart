@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'dart:math' as math;
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/pages/long_novel_editor/index.dart';
@@ -316,7 +317,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
       final bool is_dark = _device_info.dark.value;
       final choice = await showModalBottomSheet<String>(
         context: context,
-        backgroundColor: Colors.transparent,
+        backgroundColor: ColorConstants.transparent,
         builder: (context) => _buildNovelTypeSheet(is_dark),
       );
       if (!mounted || choice == null) {
@@ -342,25 +343,32 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     return Container(
       decoration: BoxDecoration(
         color: AuthorStyle.surface(is_dark),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(LayoutConfig.radius_20),
+        ),
       ),
       child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              margin: const EdgeInsets.only(top: 12),
+              margin: const EdgeInsets.only(top: LayoutConfig.space_12),
               width: 40,
               height: 4,
               decoration: BoxDecoration(
                 color: AuthorStyle.secondary_text(
                   is_dark,
                 ).withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(LayoutConfig.radius_2),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+              padding: const EdgeInsets.fromLTRB(
+                LayoutConfig.space_24,
+                LayoutConfig.space_20,
+                LayoutConfig.space_24,
+                LayoutConfig.space_16,
+              ),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -381,7 +389,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
               subtitle: easy.tr('creator_center.long_novel_desc'),
               onTap: () => Navigator.pop(context, 'long'),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: LayoutConfig.space_12),
             _buildNovelTypeOption(
               is_dark: is_dark,
               iconName: 'short_story',
@@ -390,7 +398,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
               subtitle: easy.tr('creator_center.short_novel_desc'),
               onTap: () => Navigator.pop(context, 'short'),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: LayoutConfig.space_24),
           ],
         ),
       ),
@@ -406,15 +414,15 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     required VoidCallback onTap,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: LayoutConfig.space_24),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(LayoutConfig.space_16),
           decoration: BoxDecoration(
             border: Border.all(color: AuthorStyle.border(is_dark)),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
           ),
           child: Row(
             children: [
@@ -423,7 +431,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                 height: 48,
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: is_dark ? 0.20 : 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_12),
                 ),
                 child: Center(
                   child: SvgIcon(
@@ -434,7 +442,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: LayoutConfig.space_16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,7 +455,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                         color: AuthorStyle.primary_text(is_dark),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: LayoutConfig.space_4),
                     Text(
                       subtitle,
                       style: TextStyle(
@@ -647,7 +655,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       builder: (ctx) => _WorkActionSheet(
         work: work,
         is_dark: is_dark,
@@ -770,16 +778,18 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
             if (_loading_draft)
               Positioned.fill(
                 child: ColoredBox(
-                  color: Colors.black.withValues(alpha: .18),
+                  color: ColorConstants.pages_short_story_read_index_tone,
                   child: Center(
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 26,
-                        vertical: 22,
+                        horizontal: LayoutConfig.space_26,
+                        vertical: LayoutConfig.space_22,
                       ),
                       decoration: BoxDecoration(
                         color: AuthorStyle.surface(is_dark),
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(
+                          LayoutConfig.radius_18,
+                        ),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -792,7 +802,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                               strokeWidth: 2.5,
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: LayoutConfig.space_14),
                           Text(
                             easy.tr('creator_center.loading_work_chapters'),
                             style: TextStyle(
@@ -1028,28 +1038,35 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       builder: (BuildContext ctx) {
         return Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AuthorStyle.surface(is_dark),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(LayoutConfig.radius_26),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 10),
+              const SizedBox(height: LayoutConfig.space_10),
               Container(
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
                   color: AuthorStyle.border(is_dark),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+                padding: const EdgeInsets.fromLTRB(
+                  LayoutConfig.space_12,
+                  LayoutConfig.space_16,
+                  LayoutConfig.space_12,
+                  LayoutConfig.space_8,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -1058,9 +1075,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                         style: TextStyle(
                           color: AuthorStyle.primary_text(is_dark),
                           fontSize: 19,
-                          fontWeight: FontConfig.adjustedWeight(
-                            FontWeight.w500,
-                          ),
+                          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                         ),
                       ),
                     ),
@@ -1076,7 +1091,12 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+                padding: const EdgeInsets.fromLTRB(
+                  LayoutConfig.space_12,
+                  LayoutConfig.space_8,
+                  LayoutConfig.space_12,
+                  LayoutConfig.space_24,
+                ),
                 child: Column(
                   children: [
                     _guide_item(
@@ -1134,7 +1154,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
         ColorConstants.tagColorList[index % ColorConstants.tagColorList.length];
     final Color tag_bg = tag_color.withValues(alpha: 0.12);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: LayoutConfig.space_16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -1143,12 +1163,12 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
             height: 40,
             decoration: BoxDecoration(
               color: tag_bg,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(LayoutConfig.radius_12),
             ),
             alignment: Alignment.center,
             child: iconWidget ?? Icon(icon, color: tag_color, size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: LayoutConfig.space_12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1161,7 +1181,7 @@ class _AuthorViewState extends State<AuthorView> with TickerProviderStateMixin {
                     fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: LayoutConfig.space_4),
                 Text(
                   subtitle,
                   style: TextStyle(
@@ -1210,7 +1230,9 @@ class _WorkActionSheet extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AuthorStyle.surface(is_dark),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(LayoutConfig.radius_20),
+        ),
       ),
       child: SafeArea(
         child: Column(
@@ -1218,14 +1240,14 @@ class _WorkActionSheet extends StatelessWidget {
           children: <Widget>[
             /// 拖拽指示条。
             Container(
-              margin: const EdgeInsets.only(top: 12),
+              margin: const EdgeInsets.only(top: LayoutConfig.space_12),
               width: 40,
               height: 4,
               decoration: BoxDecoration(
                 color: AuthorStyle.secondary_text(
                   is_dark,
                 ).withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(LayoutConfig.radius_2),
               ),
             ),
 
@@ -1233,9 +1255,9 @@ class _WorkActionSheet extends StatelessWidget {
             Padding(
               padding: EdgeInsets.fromLTRB(
                 AuthorStyle.page_padding,
-                16,
+                LayoutConfig.space_16,
                 AuthorStyle.page_padding,
-                12,
+                LayoutConfig.space_12,
               ),
               child: Align(
                 alignment: Alignment.centerLeft,
@@ -1254,7 +1276,7 @@ class _WorkActionSheet extends StatelessWidget {
             _buildOption(
               context: context,
               iconName: 'book',
-              iconColor: const Color(0xFF5C9DFF),
+              iconColor: ColorConstants.tag_color_list,
               label: manage_label,
               onTap: () {
                 Navigator.pop(context);
@@ -1264,7 +1286,7 @@ class _WorkActionSheet extends StatelessWidget {
 
             /// 阅读已发布。
             if (on_read_published != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: LayoutConfig.space_8),
               _buildOption(
                 context: context,
                 iconName: 'book',
@@ -1279,7 +1301,7 @@ class _WorkActionSheet extends StatelessWidget {
 
             /// 下架作品。
             if (on_off_shelf != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: LayoutConfig.space_8),
               _buildOption(
                 context: context,
                 iconName: 'delete',
@@ -1294,7 +1316,7 @@ class _WorkActionSheet extends StatelessWidget {
 
             /// 删除。
             if (on_delete != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: LayoutConfig.space_8),
               _buildOption(
                 context: context,
                 iconName: 'delete',
@@ -1307,7 +1329,7 @@ class _WorkActionSheet extends StatelessWidget {
               ),
             ],
 
-            const SizedBox(height: 20),
+            const SizedBox(height: LayoutConfig.space_20),
           ],
         ),
       ),
@@ -1325,12 +1347,15 @@ class _WorkActionSheet extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: AuthorStyle.page_padding),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: LayoutConfig.space_14,
+            vertical: LayoutConfig.space_12,
+          ),
           decoration: BoxDecoration(
             border: Border.all(color: AuthorStyle.border(is_dark)),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
           ),
           child: Row(
             children: <Widget>[
@@ -1339,7 +1364,7 @@ class _WorkActionSheet extends StatelessWidget {
                 height: 40,
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: is_dark ? 0.20 : 0.15),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_10),
                 ),
                 child: Center(
                   child: SvgIcon(
@@ -1350,7 +1375,7 @@ class _WorkActionSheet extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: LayoutConfig.space_14),
               Expanded(
                 child: Text(
                   label,

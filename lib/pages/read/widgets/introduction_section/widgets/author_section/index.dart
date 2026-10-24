@@ -8,6 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/api/bookshelf.dart';
 import 'package:app/components/login_required_dialog/index.dart';
+import 'package:app/components/work_introduction_hero/style.dart';
 import 'package:app/pages/read/logic.dart';
 import 'package:app/services/bookshelf_sync_service.dart';
 import './style.dart';
@@ -56,67 +57,102 @@ class _ReadAuthorSectionState extends State<ReadAuthorSection> {
   @override
   void didUpdateWidget(ReadAuthorSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.detail.focus_on != widget.detail.focus_on) {
+    if (oldWidget.detail.author_id != widget.detail.author_id ||
+        oldWidget.detail.story_id != widget.detail.story_id ||
+        oldWidget.detail.focus_on != widget.detail.focus_on) {
       _is_focused = widget.detail.focus_on;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.hero) {
-      return LayoutBuilder(
-        builder: (context, constraints) => Row(
-          children: [
-            Expanded(
-              child: InkWell(
-                onTap: widget.on_author_tap,
-                child: Row(
-                  children: [
-                    _ReaderAuthorAvatar(
-                      is_dark: widget.is_dark,
-                      detail: widget.detail,
-                    ),
-                    const SizedBox(width: AuthorStyle.author_name_left_spacing),
-                    Expanded(
-                      child: _ReaderAuthorName(
-                        detail: widget.detail,
-                        is_dark: widget.is_dark,
-                        hero: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: AuthorStyle.follow_tag_left_spacing),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth:
-                    constraints.maxWidth * AuthorStyle.hero_follow_width_ratio,
-              ),
-              child: _build_follow_tag(),
-            ),
-          ],
-        ),
-      );
-    }
-    // 作者信息在封面区中部展示，使用最小宽度避免占满整行。
-    return Center(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          _ReaderAuthorAvatar(is_dark: widget.is_dark, detail: widget.detail),
-          const SizedBox(width: AuthorStyle.author_name_left_spacing),
-          Flexible(
-            child: _ReaderAuthorName(
-              detail: widget.detail,
-              is_dark: widget.is_dark,
+    final cjk = LanguageUtil.is_cjk_language(
+      Localizations.localeOf(context).languageCode,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scaler = MediaQuery.textScalerOf(context);
+        final name_painter = TextPainter(
+          text: TextSpan(
+            text: widget.detail.author_name,
+            style: TextStyle(
+              fontSize: cjk
+                  ? AuthorStyle.hero_name_size_cjk
+                  : AuthorStyle.hero_name_size_alphabetic,
+              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
             ),
           ),
-          const SizedBox(width: AuthorStyle.follow_tag_left_spacing),
-          _build_follow_tag(),
-        ],
-      ),
+          textDirection: Directionality.of(context),
+          textScaler: scaler,
+        )..layout();
+        final follow_painter = TextPainter(
+          text: TextSpan(
+            text: easy.tr(_is_focused ? 'read.followed' : 'read.follow'),
+            style: TextStyle(
+              fontSize: AuthorStyle.follow_tag_font_size,
+              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+            ),
+          ),
+          textDirection: Directionality.of(context),
+          textScaler: scaler,
+        )..layout();
+        final required_width =
+            AuthorStyle.author_avatar_size +
+            AuthorStyle.author_name_left_spacing +
+            name_painter.width +
+            AuthorStyle.follow_tag_left_spacing +
+            follow_painter.width +
+            AuthorStyle.follow_tag_horizontal_padding * 2;
+        final compact = constraints.maxWidth < required_width;
+        name_painter.dispose();
+        follow_painter.dispose();
+        final author = InkWell(
+          onTap: widget.on_author_tap,
+          child: Row(
+            children: [
+              _ReaderAuthorAvatar(
+                is_dark: widget.is_dark,
+                detail: widget.detail,
+              ),
+              const SizedBox(width: AuthorStyle.author_name_left_spacing),
+              Expanded(
+                child: _ReaderAuthorName(
+                  detail: widget.detail,
+                  is_dark: widget.is_dark,
+                  hero: widget.hero,
+                ),
+              ),
+            ],
+          ),
+        );
+        final follow = ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: compact
+                ? constraints.maxWidth
+                : constraints.maxWidth * AuthorStyle.hero_follow_width_ratio,
+          ),
+          child: _build_follow_tag(),
+        );
+        // 封面旁的窄列和大字号下将关注按钮另起一行，保留完整作者名。
+        if (compact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              author,
+              const SizedBox(height: AuthorStyle.follow_tag_top_spacing),
+              follow,
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: author),
+            const SizedBox(width: AuthorStyle.follow_tag_left_spacing),
+            follow,
+          ],
+        );
+      },
     );
   }
 
@@ -144,7 +180,7 @@ class _ReadAuthorSectionState extends State<ReadAuthorSection> {
           ),
           decoration: BoxDecoration(
             color: _is_focused
-                ? Colors.transparent
+                ? ColorConstants.transparent
                 : accent_color.withValues(
                     alpha: AuthorStyle.follow_tag_background_alpha,
                   ),
@@ -184,7 +220,7 @@ class _ReadAuthorSectionState extends State<ReadAuthorSection> {
     final bool is_logged_in = await showLoginRequiredDialog(
       title: easy.tr('short_story_read.login_required'),
     );
-    if (!is_logged_in) return;
+    if (!mounted || !is_logged_in || _is_loading) return;
 
     _is_loading = true;
 
@@ -290,8 +326,6 @@ class _ReaderAuthorName extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       detail.author_name,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
       style: TextStyle(
         color: hero || is_dark
             ? AuthorStyle.author_name_color_dark
@@ -302,8 +336,19 @@ class _ReaderAuthorName extends StatelessWidget {
                   )
                   ? AuthorStyle.hero_name_size_cjk
                   : AuthorStyle.hero_name_size_alphabetic)
-            : AuthorStyle.author_name_font_size,
+            : (LanguageUtil.is_cjk_language(
+                    Localizations.localeOf(context).languageCode,
+                  )
+                  ? AuthorStyle.author_name_size_cjk
+                  : AuthorStyle.author_name_size_alphabetic),
+        height:
+            LanguageUtil.is_cjk_language(
+              Localizations.localeOf(context).languageCode,
+            )
+            ? AuthorStyle.author_name_height_cjk
+            : AuthorStyle.author_name_height_alphabetic,
         fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+        shadows: hero ? WorkIntroductionHeroStyle.title_shadows : null,
       ),
     );
   }

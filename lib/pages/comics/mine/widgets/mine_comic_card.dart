@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/models/comics.dart';
@@ -29,17 +30,15 @@ class MineComicCard extends StatelessWidget {
     final bool is_dark = ComicsStyle.is_dark(context);
 
     /// 卡片底色与详情卡片同源。
-    final Color card_bg = is_dark
-        ? const Color(0xFF171C28)
-        : Colors.white;
+    final Color card_bg = is_dark ? ColorConstants.pages_home_widgets_tab_contents_recommend_tab_index_tone : ColorConstants.whiteColor;
 
     /// 标题颜色。
-    final Color title_color = is_dark ? Colors.white : const Color(0xFF161C28);
+    final Color title_color = is_dark ? ColorConstants.whiteColor : ColorConstants.components_recommend_book_card_index_tone;
 
     /// 次要信息颜色。
     final Color meta_color = is_dark
-        ? Colors.white.withValues(alpha: 0.62)
-        : const Color(0xFF8B93A2);
+        ? ColorConstants.components_recommend_book_card_index_tone_9effffff
+        : ColorConstants.components_recommend_book_card_index_tone_ff8b93a2;
 
     return Semantics(
       button: true,
@@ -62,6 +61,7 @@ class MineComicCard extends StatelessWidget {
             children: <Widget>[
               /// 封面 + 状态角标。
               _build_cover(context, is_dark),
+
               /// 文案区：标题 + 章节/状态元信息。
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -93,7 +93,7 @@ class MineComicCard extends StatelessWidget {
                         fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: LayoutConfig.space_6),
                     Text(
                       tr(
                         'comics.chapter_count',
@@ -135,10 +135,8 @@ class MineComicCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: <Widget>[
-                ComicImage(
-                  url: comic.cover_url,
-                  semantic_label: comic.title,
-                ),
+                ComicImage(url: comic.cover_url, semantic_label: comic.title),
+
                 /// 底部渐变让角标与标题区自然衔接。
                 Positioned(
                   left: 0,
@@ -151,10 +149,8 @@ class MineComicCard extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: <Color>[
-                          Colors.black.withValues(alpha: 0),
-                          Colors.black.withValues(
-                            alpha: ComicCardStyle.cover_gradient_bottom_opacity,
-                          ),
+                          ColorConstants.meta_color_00222222,
+                          ColorConstants.shadowColor.withValues(alpha: ComicCardStyle.cover_gradient_bottom_opacity),
                         ],
                       ),
                     ),
@@ -164,6 +160,7 @@ class MineComicCard extends StatelessWidget {
             ),
           ),
         ),
+
         /// 状态角标：编辑态卡片的主识别信息。
         Positioned(
           top: ComicsMineStyle.status_margin.top,

@@ -75,8 +75,8 @@ class LoadMoreFooter extends StatelessWidget {
             easy.tr('bookshelf.load_more.loading'),
             style: TextStyle(
               color: is_dark
-                  ? Colors.white.withValues(alpha: 0.6)
-                  : const Color(0xFF999999),
+                  ? ColorConstants.components_load_more_footer_index_tone
+                  : ColorConstants.customer_service_sheet_style_time_color_light,
               fontSize: LoadMoreFooterStyle.font_size,
               fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
             ),
@@ -103,8 +103,8 @@ class LoadMoreFooter extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: is_dark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : const Color(0xFFF2F3F5),
+                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff
+                  : ColorConstants.components_load_more_footer_index_tone_fff2f3f5,
               borderRadius: BorderRadius.circular(
                 LoadMoreFooterStyle.button_radius,
               ),
@@ -116,8 +116,8 @@ class LoadMoreFooter extends StatelessWidget {
                   easy.tr('bookshelf.load_more.button'),
                   style: TextStyle(
                     color: is_dark
-                        ? Colors.white.withValues(alpha: 0.75)
-                        : const Color(0xFF666666),
+                        ? ColorConstants.components_load_more_footer_index_tone_bfffffff
+                        : ColorConstants.customer_service_sheet_style_time_color_dark,
                     fontSize: LoadMoreFooterStyle.font_size,
                     fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                   ),
@@ -127,8 +127,8 @@ class LoadMoreFooter extends StatelessWidget {
                   Icons.keyboard_arrow_down,
                   size: LoadMoreFooterStyle.icon_size,
                   color: is_dark
-                      ? Colors.white.withValues(alpha: 0.5)
-                      : const Color(0xFF999999),
+                      ? ColorConstants.util_dialog_show_upgrade_dialog_tone_80ffffff
+                      : ColorConstants.customer_service_sheet_style_time_color_light,
                 ),
               ],
             ),
@@ -141,11 +141,11 @@ class LoadMoreFooter extends StatelessWidget {
   /// 没有更多状态：两侧装饰线 + 文案。
   Widget _build_no_more() {
     final Color line_color = is_dark
-        ? Colors.white.withValues(alpha: 0.12)
-        : const Color(0xFFE5E6EB);
+        ? ColorConstants.components_fixed_bottom_navigation_widgets_night_panel_decor_tone
+        : ColorConstants.components_load_more_footer_index_tone_ffe5e6eb;
     final Color text_color = is_dark
-        ? Colors.white.withValues(alpha: 0.35)
-        : const Color(0xFFBBBBBB);
+        ? ColorConstants.components_load_more_footer_index_tone_59ffffff
+        : ColorConstants.components_load_more_footer_index_tone_ffbbbbbb;
 
     return Padding(
       padding: const EdgeInsets.symmetric(

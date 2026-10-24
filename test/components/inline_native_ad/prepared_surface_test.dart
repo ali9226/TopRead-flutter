@@ -5,6 +5,7 @@ import 'package:app/components/shell_tab_host/widgets/shell_tab_pane.dart';
 import 'package:app/pages/short_story_read/widgets/native_ad_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/config/color_config.dart';
 
 /// 记录每一次真正获准挂载的构建，不能靠后一帧隐藏掩盖屏外首次挂载。
 class _SurfaceProbe {
@@ -265,7 +266,7 @@ void main() {
     await _frames(tester);
     navigator.currentState!.push(
       MaterialPageRoute<void>(
-        builder: (_) => const ColoredBox(color: Colors.black),
+        builder: (_) => const ColoredBox(color: ColorConstants.lightTextColor),
       ),
     );
     await tester.pumpAndSettle();

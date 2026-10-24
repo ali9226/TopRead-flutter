@@ -49,7 +49,7 @@ class BillBottomAction extends StatelessWidget {
             elevation: 0,
 
             /// 根据深浅色模式切换按钮底色。
-            backgroundColor: isDark ? const Color(0xFF171926) : Colors.white,
+            backgroundColor: isDark ? ColorConstants.nightHighlightColor : ColorConstants.whiteColor,
 
             /// 正常状态下的前景色，主要影响文字颜色。
             foregroundColor: isDark
@@ -59,7 +59,7 @@ class BillBottomAction extends StatelessWidget {
             /// 禁用态背景使用同一底色降透明处理，
             /// 保持层级还在，但让用户明显感知当前不可点击。
             disabledBackgroundColor:
-                (isDark ? const Color(0xFF171926) : Colors.white).withValues(
+                (isDark ? ColorConstants.nightHighlightColor : ColorConstants.whiteColor).withValues(
                   alpha: Style.actionButtonDisabledBackgroundOpacity,
                 ),
 
@@ -81,12 +81,8 @@ class BillBottomAction extends StatelessWidget {
                 /// 使用轻量描边把按钮从页面背景里提出来，
                 /// 但又不能太重，避免抢过账单卡片本身的视觉重点。
                 color: isDark
-                    ? Colors.white.withValues(
-                        alpha: Style.actionButtonBorderDarkOpacity,
-                      )
-                    : Colors.black.withValues(
-                        alpha: Style.actionButtonBorderLightOpacity,
-                      ),
+                    ? ColorConstants.whiteColor.withValues(alpha: Style.actionButtonBorderDarkOpacity)
+                    : ColorConstants.lightTextColor.withValues(alpha: Style.actionButtonBorderLightOpacity),
               ),
             ),
           ),

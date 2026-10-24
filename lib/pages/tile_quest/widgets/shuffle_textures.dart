@@ -7,6 +7,7 @@ import 'tile_assets.dart';
 import 'tile_skin.dart';
 import 'tile_surface.dart';
 import 'tile_surface_style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 当前场景持有的牌面和洗牌图集；与静态牌共用 Flutter 的解码缓存。
 ///
@@ -77,9 +78,7 @@ class QuestShuffleTextures extends ChangeNotifier {
     final amount = (blocked_amount ?? (blocked ? 1.0 : 0.0)).clamp(0.0, 1.0);
     final source = source_of(type, blocked: amount > 0);
     if (image != null && source != null) {
-      _tile_paint.color = Colors.white.withValues(
-        alpha: opacity.clamp(0.0, 1.0),
-      );
+      _tile_paint.color = ColorConstants.whiteColor.withValues(alpha: opacity.clamp(0.0, 1.0));
       canvas.drawImageRect(
         image,
         source,
@@ -89,7 +88,7 @@ class QuestShuffleTextures extends ChangeNotifier {
       if (amount > 0 && amount < 1) {
         final normal = source_of(type, blocked: false);
         if (normal != null) {
-          _tile_paint.color = Colors.white.withValues(
+          _tile_paint.color = ColorConstants.whiteColor.withValues(
             alpha: (opacity * (1 - amount)).clamp(0.0, 1.0),
           );
           canvas.drawImageRect(

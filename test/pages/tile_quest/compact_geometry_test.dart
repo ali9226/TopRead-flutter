@@ -135,9 +135,6 @@ void main() {
             expect(result.accepted, isTrue, reason: result.reason);
           }
           expect(engine.state.status, TileQuestStatus.won);
-          if (difficulty >= 5) {
-            expect(engine.state.tools_used, greaterThanOrEqualTo(1));
-          }
         }
       }
     },

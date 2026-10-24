@@ -1,7 +1,7 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
-import 'package:app/util/color_util.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/common_style/input_bar/style.dart';
@@ -13,7 +13,7 @@ class CustomerServiceChatStyle {
   CustomerServiceChatStyle._();
 
   /// 顶部导航栏高度。
-  static const double nav_bar_height = 52;
+  static const double nav_bar_height = LayoutConfig.navigation_bar_height;
 
   /// 顶部导航栏标题字号（CJK）。
   static const double nav_title_font_size_cjk = 17;
@@ -22,27 +22,25 @@ class CustomerServiceChatStyle {
   static const double nav_title_font_size_alphabetic = 16;
 
   /// 顶部导航栏标题字重。
-  static final FontWeight nav_title_font_weight = FontConfig.adjustedWeight(
-    FontWeight.w500,
-  );
+  static final FontWeight nav_title_font_weight = FontConfig.adjustedWeight(FontWeight.w500);
 
   /// 标题文字颜色（日间模式）。
   static final Color title_color_light = ColorConstants.lightTextColor;
 
   /// 标题文字颜色（夜间模式）。
-  static final Color title_color_dark = hexToColor("#EEEEEE");
+  static final Color title_color_dark = ColorConstants.components_reader_top_bar_style_tone_ffeeeeee;
 
   /// 导航栏背景色（日间模式）。
-  static final Color nav_bg_color_light = hexToColor("#FFFFFF");
+  static final Color nav_bg_color_light = ColorConstants.whiteColor;
 
   /// 导航栏背景色（夜间模式）。
   static Color get nav_bg_color_dark => InputBarStyle.bar_bg_dark;
 
   /// 页面背景色（日间模式）。
-  static final Color page_bg_color_light = hexToColor("#EDEDED");
+  static final Color page_bg_color_light = ColorConstants.customer_service_chat_style_page_bg_color_light;
 
   /// 页面背景色（夜间模式）。
-  static final Color page_bg_color_dark = hexToColor("#111111");
+  static final Color page_bg_color_dark = ColorConstants.customer_service_chat_style_page_bg_color_dark;
 
   /// 消息气泡 - 用户发送背景色。
   static final Color bubble_user_bg = ColorConstants.themeColor;
@@ -51,16 +49,16 @@ class CustomerServiceChatStyle {
   static final Color bubble_user_text = ColorConstants.lightTextColor;
 
   /// 消息气泡 - 管理员发送背景色（日间模式）。
-  static final Color bubble_admin_bg_light = hexToColor("#FFFFFF");
+  static final Color bubble_admin_bg_light = ColorConstants.whiteColor;
 
   /// 消息气泡 - 管理员发送背景色（夜间模式）。
-  static final Color bubble_admin_bg_dark = hexToColor("#262626");
+  static final Color bubble_admin_bg_dark = ColorConstants.customer_service_chat_style_bubble_admin_bg_dark;
 
   /// 消息气泡 - 管理员发送文字颜色（日间模式）。
   static final Color bubble_admin_text_light = ColorConstants.lightTextColor;
 
   /// 消息气泡 - 管理员发送文字颜色（夜间模式）。
-  static final Color bubble_admin_text_dark = hexToColor("#EEEEEE");
+  static final Color bubble_admin_text_dark = ColorConstants.components_reader_top_bar_style_tone_ffeeeeee;
 
   /// 消息气泡最大宽度比例（相对屏幕宽度）。
   static const double bubble_max_width_ratio = 0.72;
@@ -69,11 +67,11 @@ class CustomerServiceChatStyle {
   static const double bubble_max_width = 460;
 
   /// 消息气泡圆角。
-  static const double bubble_radius = 10;
+  static const double bubble_radius = LayoutConfig.radius_10;
 
   /// 消息气泡内边距。
-  static const double bubble_padding_h = 14;
-  static const double bubble_padding_v = 10;
+  static const double bubble_padding_h = LayoutConfig.space_14;
+  static const double bubble_padding_v = LayoutConfig.space_10;
 
   /// 消息文字字号（CJK）。
   static const double message_font_size_cjk = 15.5;
@@ -88,33 +86,29 @@ class CustomerServiceChatStyle {
   static const double message_line_height_alphabetic = 1.42;
 
   /// 消息文字字重。
-  static final FontWeight message_font_weight = FontConfig.adjustedWeight(
-    FontWeight.w400,
-  );
+  static final FontWeight message_font_weight = FontConfig.adjustedWeight(FontWeight.w400);
 
   /// 气泡内时间字号。
   static const double message_time_font_size = 10;
 
   /// 气泡内时间字重。
-  static final FontWeight message_time_font_weight = FontConfig.adjustedWeight(
-    FontWeight.w400,
-  );
+  static final FontWeight message_time_font_weight = FontConfig.adjustedWeight(FontWeight.w400);
 
   /// 消息内容与时间的垂直间距。
-  static const double message_time_spacing = 5;
+  static const double message_time_spacing = LayoutConfig.space_5;
 
   /// 图片消息时间标签距边缘的距离。
-  static const double image_time_inset = 6;
+  static const double image_time_inset = LayoutConfig.space_6;
 
   /// 图片消息时间标签内边距。
-  static const double image_time_padding_h = 5;
-  static const double image_time_padding_v = 3;
+  static const double image_time_padding_h = LayoutConfig.space_5;
+  static const double image_time_padding_v = LayoutConfig.space_3;
 
   /// 图片消息时间标签圆角。
-  static const double image_time_radius = 5;
+  static const double image_time_radius = LayoutConfig.radius_5;
 
   /// 消息间距。
-  static const double message_spacing = 14;
+  static const double message_spacing = LayoutConfig.space_14;
 
   /// 头像尺寸。
   static const double avatar_size = 36;
@@ -123,10 +117,10 @@ class CustomerServiceChatStyle {
   static const double admin_avatar_logo_size = 30;
 
   /// 头像圆角。
-  static const double avatar_radius = 18;
+  static const double avatar_radius = LayoutConfig.radius_18;
 
   /// 头像与气泡间距。
-  static const double avatar_bubble_spacing = 8;
+  static const double avatar_bubble_spacing = LayoutConfig.space_8;
 
   /// 气泡箭头宽度。
   static const double bubble_arrow_width = 7;
@@ -138,11 +132,11 @@ class CustomerServiceChatStyle {
   static const double bubble_arrow_top = 12;
 
   /// 气泡额外留白（左右两侧）。
-  static const double bubble_extra_padding = 60;
+  static const double bubble_extra_padding = LayoutConfig.space_60;
 
   /// 消息列表内边距。
-  static const double list_padding_h = 12;
-  static const double list_padding_v = 12;
+  static const double list_padding_h = LayoutConfig.space_12;
+  static const double list_padding_v = LayoutConfig.space_12;
 
   // ==================== 输入栏（引用 InputBarStyle） ====================
   //
@@ -171,10 +165,10 @@ class CustomerServiceChatStyle {
   static final Color input_text_color_light = ColorConstants.lightTextColor;
 
   /// 输入框文字颜色（夜间模式）。
-  static final Color input_text_color_dark = hexToColor("#EEEEEE");
+  static final Color input_text_color_dark = ColorConstants.components_reader_top_bar_style_tone_ffeeeeee;
 
   /// 输入框提示文字颜色。
-  static final Color input_hint_color = hexToColor("#999999");
+  static final Color input_hint_color = ColorConstants.customer_service_sheet_style_time_color_light;
 
   /// 输入框字号。
   static const double input_font_size_cjk = InputBarStyle.font_size_cjk;
@@ -256,25 +250,25 @@ class CustomerServiceChatStyle {
   static const double tool_icon_size = InputBarStyle.tool_icon_size;
 
   /// 功能按钮颜色（日间模式）。
-  static final Color tool_icon_color_light = hexToColor("#666666");
+  static final Color tool_icon_color_light = ColorConstants.customer_service_sheet_style_time_color_dark;
 
   /// 功能按钮颜色（夜间模式）。
-  static final Color tool_icon_color_dark = hexToColor("#C7C7CC");
+  static final Color tool_icon_color_dark = ColorConstants.customer_service_chat_style_tool_icon_color_dark;
 
   /// 功能按钮激活颜色。
   static final Color tool_icon_active_color = ColorConstants.themeColor;
 
   /// 输入栏组件之间的间距。
-  static const double input_action_spacing = 4;
+  static const double input_action_spacing = LayoutConfig.space_4;
 
   /// 表情面板每行数量。
   static const int emoji_columns = InputBarStyle.emoji_columns;
 
   /// 表情面板背景色（日间模式）。
-  static final Color emoji_panel_bg_light = hexToColor("#F7F7F7");
+  static final Color emoji_panel_bg_light = ColorConstants.customer_service_chat_style_emoji_panel_bg_light;
 
   /// 表情面板背景色（夜间模式）。
-  static final Color emoji_panel_bg_dark = hexToColor("#191919");
+  static final Color emoji_panel_bg_dark = ColorConstants.components_image_source_sheet_index_tone_ff191919;
 
   /// 表情面板默认高度。
   static const double emoji_panel_default_height = 268;
@@ -285,10 +279,10 @@ class CustomerServiceChatStyle {
   );
 
   /// 表情网格水平留白。
-  static const double emoji_panel_padding_h = 12;
+  static const double emoji_panel_padding_h = LayoutConfig.space_12;
 
   /// 表情网格顶部留白。
-  static const double emoji_panel_padding_top = 12;
+  static const double emoji_panel_padding_top = LayoutConfig.space_12;
 
   /// 单个表情的点击区域边长。
   static const double emoji_item_size = 44;
@@ -300,22 +294,22 @@ class CustomerServiceChatStyle {
   static const List<String> emoji_list = InputBarStyle.emoji_list;
 
   /// 分隔线颜色（日间模式）。
-  static final Color divider_color_light = hexToColor("#E0E0E0");
+  static final Color divider_color_light = ColorConstants.customer_service_sheet_style_drag_bar_color_light;
 
   /// 分隔线颜色（夜间模式）。
-  static final Color divider_color_dark = hexToColor("#2C2C2C");
+  static final Color divider_color_dark = ColorConstants.components_comment_list_widgets_comment_avatar_tone;
 
   /// 空状态提示文字字号。
   static const double empty_font_size = 14;
 
   /// 空状态提示文字颜色。
-  static final Color empty_text_color = hexToColor("#999999");
+  static final Color empty_text_color = ColorConstants.customer_service_sheet_style_time_color_light;
 
   /// 历史状态文字颜色（日间模式）。
-  static final Color history_text_color_light = hexToColor("#A0A0A0");
+  static final Color history_text_color_light = ColorConstants.customer_service_chat_style_history_text_color_light;
 
   /// 历史状态文字颜色（夜间模式）。
-  static final Color history_text_color_dark = hexToColor("#686868");
+  static final Color history_text_color_dark = ColorConstants.customer_service_chat_style_history_text_color_dark;
 
   /// 加载指示器颜色。
   static final Color loading_color = ColorConstants.themeColor;
@@ -345,10 +339,10 @@ class CustomerServiceChatStyle {
   static const double image_placeholder_size = 168;
 
   /// 图片消息圆角。
-  static const double image_radius = 9;
+  static const double image_radius = LayoutConfig.radius_9;
 
   /// 时间分割线文字颜色。
-  static final Color time_divider_color = hexToColor("#BBBBBB");
+  static final Color time_divider_color = ColorConstants.components_load_more_footer_index_tone_ffbbbbbb;
 
   /// 时间分割线文字字号。
   static const double time_divider_font_size = 11;

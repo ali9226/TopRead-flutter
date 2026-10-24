@@ -22,7 +22,7 @@ Future<String?> showCommentActions({
 }) async {
   final result = await showModalBottomSheet<String>(
     context: context,
-    backgroundColor: Colors.transparent,
+    backgroundColor: ColorConstants.transparent,
     builder: (menu_context) => _CommentActionsSheet(
       is_owner: is_owner,
       is_dark: is_dark,
@@ -54,7 +54,7 @@ class _CommentActionsSheet extends StatelessWidget {
     final Color bgColor = is_dark
         ? CommentActionsStyle.background_dark
         : CommentActionsStyle.background_light;
-    final Color textColor = is_dark ? Colors.white : Colors.black;
+    final Color textColor = is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor;
     final Color destructiveColor = ColorConstants.dangerColor;
     final Color separatorColor = is_dark
         ? CommentActionsStyle.separator_dark
@@ -142,7 +142,7 @@ class _CommentActionsSheet extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Material(
-          color: Colors.transparent,
+          color: ColorConstants.transparent,
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(CommentActionsStyle.button_radius),

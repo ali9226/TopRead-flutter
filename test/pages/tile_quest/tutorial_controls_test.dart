@@ -95,11 +95,15 @@ class _TutorialWork implements TileQuestWorkService {
     required int seed,
     required int unlocked_level,
     String? challenge_id,
+    int? layout_seed,
+    num? difficulty,
   }) async => TileQuestGenerator.generate(
     level: level,
     seed: seed,
     unlocked_level: unlocked_level,
     challenge_id: challenge_id,
+    layout_seed: layout_seed,
+    difficulty: difficulty,
   );
 
   @override

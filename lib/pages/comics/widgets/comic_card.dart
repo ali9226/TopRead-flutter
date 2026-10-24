@@ -216,9 +216,7 @@ class _ComicCardState extends State<ComicCard>
                             fontSize: title_font_size,
                             height: title_height,
                             letterSpacing: title_letter_spacing,
-                            fontWeight: FontConfig.adjustedWeight(
-                              FontWeight.w500,
-                            ),
+                            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                           ),
                         ),
 
@@ -234,9 +232,7 @@ class _ComicCardState extends State<ComicCard>
                               fontSize: description_font_size,
                               height: description_height,
                               letterSpacing: description_letter_spacing,
-                              fontWeight: FontConfig.adjustedWeight(
-                                FontWeight.w400,
-                              ),
+                              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                             ),
                           ),
                         ],
@@ -313,12 +309,8 @@ class _ComicCardState extends State<ComicCard>
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: <Color>[
-                          Colors.black.withValues(
-                            alpha: ComicCardStyle.cover_gradient_top_opacity,
-                          ),
-                          Colors.black.withValues(
-                            alpha: ComicCardStyle.cover_gradient_bottom_opacity,
-                          ),
+                          ColorConstants.shadowColor.withValues(alpha: ComicCardStyle.cover_gradient_top_opacity),
+                          ColorConstants.shadowColor.withValues(alpha: ComicCardStyle.cover_gradient_bottom_opacity),
                         ],
                       ),
                     ),
@@ -330,14 +322,12 @@ class _ComicCardState extends State<ComicCard>
                         },
                       ),
                       style: TextStyle(
-                        color: Colors.white,
+                        color: ColorConstants.whiteColor,
                         fontSize: ComicCardStyle.cover_meta_font_size,
                         fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                         shadows: <Shadow>[
                           Shadow(
-                            color: Colors.black.withValues(
-                              alpha: ComicCardStyle.cover_meta_shadow_opacity,
-                            ),
+                            color: ColorConstants.lightTextColor.withValues(alpha: ComicCardStyle.cover_meta_shadow_opacity),
                             blurRadius: 8,
                             offset: const Offset(0, 1),
                           ),
@@ -357,9 +347,7 @@ class _ComicCardState extends State<ComicCard>
           left: ComicCardStyle.cover_badge_margin.left,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: Colors.black.withValues(
-                alpha: ComicCardStyle.cover_badge_background_opacity,
-              ),
+              color: ColorConstants.lightTextColor.withValues(alpha: ComicCardStyle.cover_badge_background_opacity),
               borderRadius: BorderRadius.circular(
                 ComicCardStyle.cover_badge_radius,
               ),
@@ -373,7 +361,7 @@ class _ComicCardState extends State<ComicCard>
                       : 'comics.ongoing',
                 ),
                 style: TextStyle(
-                  color: Colors.white,
+                  color: ColorConstants.whiteColor,
                   fontSize: ComicCardStyle.cover_badge_font_size,
                   fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                 ),

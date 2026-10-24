@@ -883,6 +883,7 @@
     "restoring_progress": "Inapakia maendeleo ya kusoma",
     "intro_title": "Muhtasari",
     "more": "Zaidi",
+    "review_rating": "Ukadiriaji {rating} kati ya 5",
     "hot_review_title": "Maoni maarufu",
     "more_review": "Maoni zaidi",
     "reading_title": "Usomaji wa majaribio",
@@ -1250,6 +1251,9 @@
     "load_more": "Pakia zaidi"
   },
   "comics": {
+    "hot_comments": "Maoni maarufu",
+    "write_comment": "Andika maoni",
+    "comments_load_failed": "Imeshindikana kupakia maoni. Tafadhali jaribu tena.",
     "chapter_count": "Sura {count}",
     "language_count": "Lugha {count}",
     "page_count": "Kurasa {count}",

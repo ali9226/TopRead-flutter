@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
@@ -353,9 +354,9 @@ class _ComicEditorPageState extends State<ComicEditorPage> {
                     /// 底部安全区留白。
                     const SizedBox(height: ComicEditorStyle.section_spacing),
                     if (is_cjk)
-                      const SizedBox(height: 4)
+                      const SizedBox(height: LayoutConfig.space_4)
                     else
-                      const SizedBox(height: 8),
+                      const SizedBox(height: LayoutConfig.space_8),
                   ],
                 ),
               );
@@ -420,7 +421,7 @@ class _DraftBanner extends StatelessWidget {
       child: Row(
         children: <Widget>[
           const Icon(Icons.history_rounded, size: 20),
-          const SizedBox(width: 10),
+          const SizedBox(width: LayoutConfig.space_10),
           Expanded(
             child: Text(
               tr('comics.draft_restored'),
@@ -466,7 +467,7 @@ class _LockedBanner extends StatelessWidget {
       child: Row(
         children: <Widget>[
           const Icon(Icons.lock_outline_rounded, size: 20),
-          const SizedBox(width: 10),
+          const SizedBox(width: LayoutConfig.space_10),
           Expanded(
             child: Text(
               tr('comics.pending_locked'),

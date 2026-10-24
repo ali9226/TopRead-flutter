@@ -149,6 +149,9 @@ class ComicChapter {
   final int lock_version;
   final List<ComicImageData> images;
 
+  /// 目录接口只返回首张图片的元数据，避免为章节预览下载整章图片列表。
+  final ComicImageData? first_image;
+
   const ComicChapter({
     required this.id,
     required this.title,
@@ -156,6 +159,7 @@ class ComicChapter {
     required this.sort_order,
     required this.status,
     required this.images,
+    this.first_image,
     this.lock_version = 0,
     this.update_time = '',
   });
@@ -169,7 +173,16 @@ class ComicChapter {
     update_time: json['update_time']?.toString() ?? '',
     lock_version: comics_int(json['lock_version']),
     images: comics_list(json['images']).map(ComicImageData.from_json).toList(),
+    first_image: json['first_image'] is Map
+        ? ComicImageData.from_json(comics_map(json['first_image']))
+        : null,
   );
+
+  /// 新接口优先使用轻量首图；旧接口与作者预览仍可从有序图片列表取首张。
+  ComicImageData? get preview_image {
+    if (first_image?.image_url.trim().isNotEmpty ?? false) return first_image;
+    return images.isEmpty ? null : images.first;
+  }
 }
 
 /// 漫画详情包括所有可用翻译和当前语种目录。

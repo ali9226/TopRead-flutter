@@ -32,7 +32,7 @@ class LongChapterTile extends StatelessWidget {
         ? ColorConstants.themeColor
         : ColorConstants.lightTextColor;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: LayoutConfig.space_8),
       child: Material(
         color: active
             ? accent.withValues(alpha: dark ? .10 : .11)
@@ -42,7 +42,10 @@ class LongChapterTile extends StatelessWidget {
           onTap: ordering ? null : on_open,
           borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            padding: const EdgeInsets.symmetric(
+              horizontal: LayoutConfig.space_12,
+              vertical: LayoutConfig.space_14,
+            ),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(LayoutConfig.section_radius),
             ),
@@ -59,13 +62,11 @@ class LongChapterTile extends StatelessWidget {
                             color: active
                                 ? accent
                                 : AuthorStyle.secondary_text(dark),
-                            fontWeight: FontConfig.adjustedWeight(
-                              FontWeight.w500,
-                            ),
+                            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                           ),
                         ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: LayoutConfig.space_8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,12 +80,10 @@ class LongChapterTile extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14,
                           color: AuthorStyle.primary_text(dark),
-                          fontWeight: FontConfig.adjustedWeight(
-                            FontWeight.w500,
-                          ),
+                          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                         ),
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: LayoutConfig.space_5),
                       Text(
                         subtitle,
                         style: TextStyle(
@@ -110,7 +109,7 @@ class LongChapterTile extends StatelessWidget {
                     index: index,
                     enabled: on_open != null,
                     child: Padding(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(LayoutConfig.space_10),
                       child: Icon(
                         Icons.drag_handle_rounded,
                         color: AuthorStyle.secondary_text(dark),

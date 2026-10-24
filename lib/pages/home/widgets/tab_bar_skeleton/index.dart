@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:app/pages/home/widgets/tab_bar_skeleton/style.dart';
+import 'package:app/config/color_config.dart';
+import 'package:app/config/layout_config.dart';
 
 /// 首页 Tab 栏骨架屏组件。
 ///
@@ -39,18 +41,18 @@ class _TabBarSkeletonState extends State<TabBarSkeleton>
     final bool is_dark = widget.is_dark;
 
     final Color base_color = is_dark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.04);
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+        : ColorConstants.components_paragraph_comment_sheet_widgets_comment_item_tone;
 
     final Color shimmer_color = is_dark
-        ? Colors.white.withValues(alpha: 0.25)
-        : Colors.black.withValues(alpha: 0.15);
+        ? ColorConstants.pages_home_widgets_tab_bar_skeleton_index_tone
+        : ColorConstants.pages_home_widgets_tab_bar_skeleton_index_tone_26222222;
 
     return AnimatedBuilder(
       animation: _animation_controller,
       builder: (BuildContext context, Widget? child) {
         return Padding(
-          padding: const EdgeInsets.only(top: 10),
+          padding: const EdgeInsets.only(top: LayoutConfig.space_10),
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.only(

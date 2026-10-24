@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:app/pages/read/style.dart';
 import 'package:app/pages/read/widgets/reading_progress_mask/index.dart';
 import 'package:app/pages/read/widgets/reading_progress_text/index.dart';
-import 'package:app/pages/read/widgets/start_reading_pill/index.dart';
 import 'package:app/pages/read/widgets/navigation_bars/top/index.dart';
 import 'package:app/pages/read/widgets/navigation_bars/bottom/index.dart';
 import 'package:app/pages/read/widgets/auto_read_settings_button/index.dart';
@@ -146,15 +145,6 @@ class ReadPageOverlay extends StatelessWidget {
           is_dark: is_dark,
           reading_progress_percent: reading_progress_percent,
           has_started_reading: has_started_reading,
-        ),
-
-        /// 开始阅读胶囊。
-        ReadStartReadingPill(
-          is_dark: is_dark,
-          show_start_reading_pill: !has_started_reading,
-          bottom_pill_background_color: bottom_pill_background_color,
-          bottom_safe_area: bottom_safe_area,
-          on_tap: on_scroll_to_reading_section,
         ),
 
         /// 顶部导航栏。

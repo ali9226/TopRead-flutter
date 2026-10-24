@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:app/pages/work_editor/_shared/widgets/long_chapter_tile.dart';
@@ -7,6 +8,7 @@ import 'package:app/pages/work_editor/workspace/logic.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../logic.dart';
+import 'package:app/config/color_config.dart';
 
 /// 已发布长篇章节目录，参考新建长篇第三步弹窗风格。
 class PublishedChapterDirectory extends StatelessWidget {
@@ -36,7 +38,7 @@ class PublishedChapterDirectory extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: WorkEditorStyle.page_padding,
-              vertical: 8,
+              vertical: LayoutConfig.space_8,
             ),
             child: Row(
               children: [
@@ -65,7 +67,10 @@ class PublishedChapterDirectory extends StatelessWidget {
                           },
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: LayoutConfig.space_6,
+                        vertical: LayoutConfig.space_4,
+                      ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -76,7 +81,7 @@ class PublishedChapterDirectory extends StatelessWidget {
                                 : secondary.withValues(alpha: 0.4),
                             size: 13,
                           ),
-                          const SizedBox(height: 1),
+                          const SizedBox(height: LayoutConfig.space_1),
                           _Triangle(
                             direction: _TriangleDirection.down,
                             color: !model.descending
@@ -88,7 +93,7 @@ class PublishedChapterDirectory extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: LayoutConfig.space_4),
                 ],
                 GestureDetector(
                   onTap: model.locked || model.saved == null
@@ -105,7 +110,7 @@ class PublishedChapterDirectory extends StatelessWidget {
                       child: Icon(
                         Icons.add_rounded,
                         size: 18,
-                        color: Colors.black,
+                        color: ColorConstants.lightTextColor,
                       ),
                     ),
                   ),
@@ -118,10 +123,7 @@ class PublishedChapterDirectory extends StatelessWidget {
                 ? Center(
                     child: Text(
                       tr('creator_workspace.empty_chapters'),
-                      style: TextStyle(
-                        color: secondary,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: secondary, fontSize: 14),
                     ),
                   )
                 : model.ordering
@@ -133,8 +135,7 @@ class PublishedChapterDirectory extends StatelessWidget {
                     itemCount: rows.length,
                     onReorderItem: model.reorder,
                     proxyDecorator: (child, index, animation) => child,
-                    itemBuilder: (context, index) =>
-                        _row(rows[index], index),
+                    itemBuilder: (context, index) => _row(rows[index], index),
                   )
                 : ListView.builder(
                     key: const PageStorageKey('published_chapters'),
@@ -142,8 +143,7 @@ class PublishedChapterDirectory extends StatelessWidget {
                       horizontal: WorkEditorStyle.page_padding,
                     ),
                     itemCount: rows.length,
-                    itemBuilder: (context, index) =>
-                        _row(rows[index], index),
+                    itemBuilder: (context, index) => _row(rows[index], index),
                   ),
           ),
           _DirectoryFooter(
@@ -216,7 +216,12 @@ class _DirectoryFooter extends StatelessWidget {
       top: false,
       maintainBottomViewPadding: true,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+        padding: const EdgeInsets.fromLTRB(
+          LayoutConfig.space_12,
+          LayoutConfig.space_12,
+          LayoutConfig.space_12,
+          LayoutConfig.space_14,
+        ),
         child: Row(
           children: [
             Expanded(
@@ -237,8 +242,8 @@ class _DirectoryFooter extends StatelessWidget {
                   foregroundColor: AuthorStyle.primary_text(is_dark),
                   side: BorderSide(color: AuthorStyle.border(is_dark)),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
+                    horizontal: LayoutConfig.space_16,
+                    vertical: LayoutConfig.space_14,
                   ),
                   textStyle: TextStyle(
                     fontSize: is_cjk
@@ -250,14 +255,14 @@ class _DirectoryFooter extends StatelessWidget {
               ),
             ),
             if (on_cancel_order != null) ...[
-              const SizedBox(width: 8),
+              const SizedBox(width: LayoutConfig.space_8),
               IconButton(
                 tooltip: tr('common.cancel'),
                 onPressed: on_cancel_order,
                 icon: const Icon(Icons.refresh_rounded),
               ),
             ],
-            const SizedBox(width: 8),
+            const SizedBox(width: LayoutConfig.space_8),
             Expanded(
               child: FilledButton.icon(
                 onPressed: ordering ? null : on_new_chapter,
@@ -269,8 +274,10 @@ class _DirectoryFooter extends StatelessWidget {
                 ),
                 style: FilledButton.styleFrom(
                   backgroundColor: AuthorStyle.gold,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  foregroundColor: ColorConstants.lightTextColor,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: LayoutConfig.space_14,
+                  ),
                   textStyle: TextStyle(
                     fontSize: is_cjk
                         ? WorkEditorStyle.action_font_size_cjk

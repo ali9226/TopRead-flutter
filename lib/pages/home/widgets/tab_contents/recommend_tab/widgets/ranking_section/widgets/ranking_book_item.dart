@@ -40,22 +40,22 @@ class RankingBookItem extends StatelessWidget {
         ranking_index <= RankingSectionStyle.top_rank_count
         ? ColorConstants.resolveMessageTypeAccentColor(ranking_index - 1)
         : (is_dark
-              ? Colors.white.withValues(alpha: 0.74)
+              ? ColorConstants.util_dialog_show_message_tone
               : RankingSectionStyle.secondary_color_light);
 
     /// 书名文字颜色。
     final Color title_color = is_dark
-        ? Colors.white
+        ? ColorConstants.whiteColor
         : RankingSectionStyle.title_color_light;
 
     /// 分类文字颜色。
     final Color category_color = is_dark
-        ? Colors.white.withValues(alpha: 0.54)
+        ? ColorConstants.components_app_wrapper_index_tone
         : RankingSectionStyle.secondary_color_light;
 
     /// 热度文字颜色。
     final Color heat_color = is_dark
-        ? Colors.white.withValues(alpha: 0.54)
+        ? ColorConstants.components_app_wrapper_index_tone
         : RankingSectionStyle.secondary_color_light;
 
     /// 分类标签文本。

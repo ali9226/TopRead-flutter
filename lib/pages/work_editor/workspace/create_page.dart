@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -119,10 +120,10 @@ class _CreateWorkspacePageState extends State<CreateWorkspacePage> {
         ),
         body: WindowContentLayout(
           child: ListView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(LayoutConfig.space_20),
             children: [
               Text(tr('creator_workspace.create_hint')),
-              const SizedBox(height: 20),
+              const SizedBox(height: LayoutConfig.space_20),
               TextField(
                 controller: title,
                 enabled: !locked,
@@ -131,7 +132,7 @@ class _CreateWorkspacePageState extends State<CreateWorkspacePage> {
                   labelText: tr('creator_workspace.work_title'),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: LayoutConfig.space_16),
               SegmentedButton<int>(
                 segments: [
                   ButtonSegment(
@@ -150,7 +151,7 @@ class _CreateWorkspacePageState extends State<CreateWorkspacePage> {
                         type = v.first;
                       }),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: LayoutConfig.space_20),
               DropdownButtonFormField<int>(
                 // 重建状态并关闭旧菜单，避免已展开的下拉保留被撤销的中文选项。
                 key: ValueKey<String>(
@@ -174,10 +175,12 @@ class _CreateWorkspacePageState extends State<CreateWorkspacePage> {
               ),
               if (error != null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: LayoutConfig.space_16,
+                  ),
                   child: Text(error!),
                 ),
-              const SizedBox(height: 24),
+              const SizedBox(height: LayoutConfig.space_24),
               FilledButton(
                 onPressed: busy || language == null ? null : create,
                 child: Text(

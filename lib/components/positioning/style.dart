@@ -1,4 +1,6 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// 定位按钮样式常量。
 class PositioningStyle {
@@ -6,10 +8,10 @@ class PositioningStyle {
   static const double size = 44.0;
 
   /// 图标尺寸。
-  static const double icon_size = 20.0;
+  static const double icon_size = LayoutConfig.icon_medium;
 
   /// 圆角。
-  static const double border_radius = 22.0;
+  static const double border_radius = LayoutConfig.radius_22;
 
   /// 阴影偏移。
   static const Offset shadow_offset = Offset(0, 2);
@@ -27,16 +29,16 @@ class PositioningStyle {
   static const double shadow_opacity_dark = 0.3;
 
   /// 日间模式背景色。
-  static const Color bg_light = Colors.white;
+  static const Color bg_light = ColorConstants.whiteColor;
 
   /// 夜间模式背景色。
-  static const Color bg_dark = Color(0xFF252836);
+  static const Color bg_dark = ColorConstants.components_category_filter_index_tone;
 
   /// 日间模式默认图标颜色。
-  static const Color icon_color_light = Color(0xFF333333);
+  static const Color icon_color_light = ColorConstants.components_paragraph_comment_sheet_style_tone_ff333333;
 
   /// 夜间模式默认图标颜色。
-  static const Color icon_color_dark = Color(0xFFBBBBC0);
+  static const Color icon_color_dark = ColorConstants.components_category_filter_category_filter_bar_tone;
 
   /// 淡入淡出动画时长。
   static const Duration fade_duration = Duration(milliseconds: 200);

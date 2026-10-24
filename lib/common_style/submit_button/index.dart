@@ -1,3 +1,5 @@
+import 'package:app/config/color_config.dart';
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 
 import 'style.dart';
@@ -45,7 +47,9 @@ class CommonSubmitButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Gradient? bgGradient = CommonSubmitButtonStyle.gradient(isDark: isDark);
+    final Gradient? bgGradient = CommonSubmitButtonStyle.gradient(
+      isDark: isDark,
+    );
     final Color? bgColor = CommonSubmitButtonStyle.solidColor(isDark: isDark);
 
     return Container(
@@ -59,7 +63,7 @@ class CommonSubmitButton extends StatelessWidget {
         boxShadow: CommonSubmitButtonStyle.shadow(isDark: isDark),
       ),
       child: Material(
-        color: Colors.transparent,
+        color: ColorConstants.transparent,
         borderRadius: BorderRadius.circular(CommonSubmitButtonStyle.radius),
         child: InkWell(
           borderRadius: BorderRadius.circular(CommonSubmitButtonStyle.radius),
@@ -68,7 +72,9 @@ class CommonSubmitButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: bgColor,
               gradient: bgGradient,
-              borderRadius: BorderRadius.circular(CommonSubmitButtonStyle.radius),
+              borderRadius: BorderRadius.circular(
+                CommonSubmitButtonStyle.radius,
+              ),
             ),
             child: Center(
               child: loading
@@ -96,7 +102,7 @@ class CommonSubmitButton extends StatelessWidget {
                           ),
                         ),
                         if (suffix != null) ...<Widget>[
-                          const SizedBox(width: 6),
+                          const SizedBox(width: LayoutConfig.space_6),
                           suffix!,
                         ],
                       ],

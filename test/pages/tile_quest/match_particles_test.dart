@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'scene_probe.dart';
+import 'package:app/config/color_config.dart';
 
 Future<ui.Image> _asset_image() async {
   final data = await rootBundle.load(
@@ -191,7 +192,7 @@ void main() {
     final asset = await _asset_image();
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    canvas.drawColor(const Color(0xFF233F62), BlendMode.src);
+    canvas.drawColor(ColorConstants.test_pages_tile_quest_match_particles_test_tone, BlendMode.src);
     for (var index = 0; index < 4; index++) {
       canvas.save();
       canvas.translate(index * 160.0 + 48, 64);

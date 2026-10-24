@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
@@ -85,7 +86,7 @@ class _FocusTabContentState extends State<FocusTabContent>
               slivers: <Widget>[
                 if (is_initial_loading)
                   SliverPadding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: LayoutConfig.space_4),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate((
                         BuildContext context,
@@ -99,7 +100,7 @@ class _FocusTabContentState extends State<FocusTabContent>
                   SliverToBoxAdapter(child: _build_empty_state())
                 else ...<Widget>[
                   SliverPadding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: LayoutConfig.space_4),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate((
                         BuildContext context,
@@ -126,7 +127,6 @@ class _FocusTabContentState extends State<FocusTabContent>
             show: _is_back_to_top_visible,
             isDark: widget.is_dark,
             onTap: _scroll_to_top,
-            right: floating_back_to_top_style.FloatingBackToTopStyle.right,
             visibleBottom:
                 fixed_nav_style.Style.bar_height +
                 floating_back_to_top_style
@@ -199,8 +199,8 @@ class _FocusTabContentState extends State<FocusTabContent>
   /// 构建空状态。
   Widget _build_empty_state() {
     final Color text_color = widget.is_dark
-        ? Colors.white.withValues(alpha: 0.6)
-        : const Color(0xFF9BA3B1);
+        ? ColorConstants.components_load_more_footer_index_tone
+        : ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone;
 
     return Padding(
       padding: const EdgeInsets.only(top: 120),
@@ -221,7 +221,7 @@ class _FocusTabContentState extends State<FocusTabContent>
                 color: widget.accent_color,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: LayoutConfig.space_20),
             Text(
               easy.tr('bookshelf.empty.focus'),
               style: TextStyle(
@@ -291,43 +291,46 @@ class _FocusAuthorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     /// 标题文字颜色。
-    final Color title_color = is_dark ? Colors.white : const Color(0xFF1A1D26);
+    final Color title_color = is_dark ? ColorConstants.whiteColor : ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ff1a1d26;
 
     /// 副标题文字颜色。
     final Color subtitle_color = is_dark
-        ? Colors.white.withValues(alpha: 0.55)
-        : const Color(0xFF8E95A2);
+        ? ColorConstants.components_image_source_sheet_index_tone_8cffffff
+        : ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ff8e95a2;
 
     /// 卡片背景颜色。
     final Color card_background = is_dark
-        ? const Color(0xFF1C2030)
-        : Colors.white;
+        ? ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ff1c2030
+        : ColorConstants.whiteColor;
 
     /// 关注时间背景色。
     final Color time_badge_background = is_dark
-        ? Colors.white.withValues(alpha: 0.06)
-        : const Color(0xFFF2F4F8);
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+        : ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_fff2f4f8;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: LayoutConfig.space_10),
       child: GestureDetector(
         onLongPress: on_unfollow,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(
+            horizontal: LayoutConfig.space_16,
+            vertical: LayoutConfig.space_14,
+          ),
           decoration: BoxDecoration(
             color: card_background,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
             border: Border.all(
               color: is_dark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : const Color(0xFFE8ECF2),
+                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+                  : ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ffe8ecf2,
               width: 1,
             ),
           ),
           child: Row(
             children: <Widget>[
               _build_avatar(),
-              const SizedBox(width: 14),
+              const SizedBox(width: LayoutConfig.space_14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,7 +346,7 @@ class _FocusAuthorCard extends StatelessWidget {
                         height: 1.3,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: LayoutConfig.space_4),
                     Row(
                       children: <Widget>[
                         Icon(
@@ -351,7 +354,7 @@ class _FocusAuthorCard extends StatelessWidget {
                           size: 13,
                           color: subtitle_color,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: LayoutConfig.space_4),
                         Text(
                           easy.tr(
                             'bookshelf.focus.novel_count',
@@ -362,9 +365,7 @@ class _FocusAuthorCard extends StatelessWidget {
                           style: TextStyle(
                             color: subtitle_color,
                             fontSize: 13,
-                            fontWeight: FontConfig.adjustedWeight(
-                              FontWeight.w400,
-                            ),
+                            fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                             height: 1.2,
                           ),
                         ),
@@ -375,12 +376,12 @@ class _FocusAuthorCard extends StatelessWidget {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
+                  horizontal: LayoutConfig.space_10,
+                  vertical: LayoutConfig.space_5,
                 ),
                 decoration: BoxDecoration(
                   color: time_badge_background,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_20),
                 ),
                 child: Text(
                   _format_time(author_item.creation_time),
@@ -411,8 +412,8 @@ class _FocusAuthorCard extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(
             color: is_dark
-                ? Colors.white.withValues(alpha: 0.08)
-                : const Color(0xFFE8ECF2),
+                ? ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff
+                : ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ffe8ecf2,
             width: 1.5,
           ),
         ),
@@ -436,8 +437,8 @@ class _FocusAuthorCard extends StatelessWidget {
   /// 构建头像占位符。
   Widget _build_avatar_placeholder() {
     final Color placeholder_color = is_dark
-        ? const Color(0xFF252B3B)
-        : const Color(0xFFEFF1F5);
+        ? ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ff252b3b
+        : ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ffeff1f5;
 
     return Container(
       width: 48,
@@ -470,7 +471,7 @@ class _FocusAuthorCard extends StatelessWidget {
               ? author_item.author_name[0].toUpperCase()
               : '?',
           style: TextStyle(
-            color: Colors.white,
+            color: ColorConstants.whiteColor,
             fontSize: size * 0.38,
             fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
           ),
@@ -482,12 +483,12 @@ class _FocusAuthorCard extends StatelessWidget {
   /// 根据作者名称生成稳定的渐变色。
   List<Color> _get_avatar_gradient() {
     final List<List<Color>> palettes = <List<Color>>[
-      [const Color(0xFF6B8CFF), const Color(0xFF9B6BFF)],
-      [const Color(0xFFFF6B8C), const Color(0xFFFF9B6B)],
-      [const Color(0xFF6BCCAA), const Color(0xFF6BAAEE)],
-      [const Color(0xFFCC8B6B), const Color(0xFFCC6B8B)],
-      [const Color(0xFF8B6BCC), const Color(0xFF6BCCCB)],
-      [const Color(0xFFEE8B6B), const Color(0xFFEECB6B)],
+      [ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ff6b8cff, ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ff9b6bff],
+      [ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ffff6b8c, ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ffff9b6b],
+      [ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ff6bccaa, ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ff6baaee],
+      [ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ffcc8b6b, ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ffcc6b8b],
+      [ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ff8b6bcc, ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ff6bcccb],
+      [ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ffee8b6b, ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ffeecb6b],
     ];
 
     int hash = 0;
@@ -534,24 +535,27 @@ class _AuthorCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color block_color = is_dark
-        ? const Color(0xFF252B3B)
-        : const Color(0xFFEFF1F5);
+        ? ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ff252b3b
+        : ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ffeff1f5;
 
     final Color card_background = is_dark
-        ? const Color(0xFF1C2030)
-        : Colors.white;
+        ? ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ff1c2030
+        : ColorConstants.whiteColor;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: LayoutConfig.space_10),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(
+          horizontal: LayoutConfig.space_16,
+          vertical: LayoutConfig.space_14,
+        ),
         decoration: BoxDecoration(
           color: card_background,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
           border: Border.all(
             color: is_dark
-                ? Colors.white.withValues(alpha: 0.06)
-                : const Color(0xFFE8ECF2),
+                ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+                : ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone_ffe8ecf2,
             width: 1,
           ),
         ),
@@ -565,7 +569,7 @@ class _AuthorCardSkeleton extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: LayoutConfig.space_14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -575,16 +579,20 @@ class _AuthorCardSkeleton extends StatelessWidget {
                     width: 100,
                     decoration: BoxDecoration(
                       color: block_color,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(
+                        LayoutConfig.radius_8,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: LayoutConfig.space_8),
                   Container(
                     height: 13,
                     width: 72,
                     decoration: BoxDecoration(
                       color: block_color,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(
+                        LayoutConfig.radius_6,
+                      ),
                     ),
                   ),
                 ],
@@ -595,7 +603,7 @@ class _AuthorCardSkeleton extends StatelessWidget {
               width: 56,
               decoration: BoxDecoration(
                 color: block_color,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(LayoutConfig.radius_20),
               ),
             ),
           ],

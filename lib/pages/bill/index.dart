@@ -2,8 +2,6 @@ import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:app/components/floating_back_to_top/style.dart'
-    as floating_back_to_top_style;
 import 'package:app/config/color_config.dart';
 import 'package:app/config/theme.dart';
 import 'package:app/models/user_bill.dart';
@@ -218,8 +216,9 @@ class _BillState extends State<Bill> {
 
       /// 如果页面已经销毁，就不要再继续更新状态。
       if (!mounted ||
-          !_user_information.can_apply_authenticated_response(auth_revision))
+          !_user_information.can_apply_authenticated_response(auth_revision)) {
         return false;
+      }
 
       /// 请求失败时不改列表，避免下拉刷新把旧数据误清空；也不提示刷新成功。
       if (!billFetch.requestOk) {
@@ -423,20 +422,10 @@ class _BillState extends State<Bill> {
                 Positioned.fill(child: BillPageLoadingOverlay(isDark: isDark)),
 
               /// 右下角返回顶部按钮层。
-              Positioned(
-                right:
-                    floating_back_to_top_style.FloatingBackToTopStyle.right +
-                    safePadding.right,
-                bottom:
-                    floating_back_to_top_style
-                        .FloatingBackToTopStyle
-                        .page_bottom +
-                    safePadding.bottom,
-                child: BillPageBackToTop(
-                  isDark: isDark,
-                  visible: showBackToTop,
-                  onTap: scrollToTop,
-                ),
+              BillPageBackToTop(
+                isDark: isDark,
+                visible: showBackToTop,
+                onTap: scrollToTop,
               ),
             ],
           ),

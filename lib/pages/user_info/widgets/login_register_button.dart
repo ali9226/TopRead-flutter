@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -20,17 +21,17 @@ class LoginRegisterButton extends StatefulWidget {
 }
 
 class _LoginRegisterButtonState extends State<LoginRegisterButton> {
-  static const double _radius = 25;
+  static const double _radius = LayoutConfig.radius_25;
   static const double _splitSlantWidth = 22;
   static const double _registerWidthCompensation = -1;
-  static const double _textWidthSafetyPadding = 10;
+  static const double _textWidthSafetyPadding = LayoutConfig.space_10;
   static const double _loginTextVisualOffsetX = -6;
 
   /// CJK 语系：中文字符紧凑，使用较宽松的内边距。
-  static const double _leftOuterPaddingCjk = 24;
-  static const double _leftInnerPaddingCjk = 14;
-  static const double _rightOuterPaddingCjk = 24;
-  static const double _rightInnerPaddingCjk = 14;
+  static const double _leftOuterPaddingCjk = LayoutConfig.space_24;
+  static const double _leftInnerPaddingCjk = LayoutConfig.space_14;
+  static const double _rightOuterPaddingCjk = LayoutConfig.space_24;
+  static const double _rightInnerPaddingCjk = LayoutConfig.space_14;
   static const double _segmentMinWidthCjk = 88;
 
   /// 非 CJK 语系：英文字母更宽，缩减内边距避免按钮过宽。
@@ -115,7 +116,7 @@ class _LoginRegisterButtonState extends State<LoginRegisterButton> {
         borderRadius: BorderRadius.circular(_radius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.32 : 0.20),
+            color: ColorConstants.shadowColor.withValues(alpha: isDark ? 0.32 : 0.20),
             blurRadius: isDark ? 18 : 10,
             offset: const Offset(0, 8),
           ),
@@ -138,7 +139,7 @@ class _LoginRegisterButtonState extends State<LoginRegisterButton> {
                 SizedBox(
                   width: leftSegmentWidth,
                   child: Material(
-                    color: Colors.transparent,
+                    color: ColorConstants.transparent,
                     child: InkWell(
                       onTap: () {
                         run_navigation_action_once(
@@ -148,11 +149,11 @@ class _LoginRegisterButtonState extends State<LoginRegisterButton> {
                           },
                         );
                       },
-                      splashColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                      focusColor: Colors.transparent,
-                      overlayColor: WidgetStateProperty.all(Colors.transparent),
+                      splashColor: ColorConstants.transparent,
+                      highlightColor: ColorConstants.transparent,
+                      hoverColor: ColorConstants.transparent,
+                      focusColor: ColorConstants.transparent,
+                      overlayColor: WidgetStateProperty.all(ColorConstants.transparent),
                       child: Padding(
                         padding: EdgeInsets.only(
                           left: leftOuterPadding,
@@ -179,7 +180,7 @@ class _LoginRegisterButtonState extends State<LoginRegisterButton> {
                 SizedBox(
                   width: rightSegmentWidth,
                   child: Material(
-                    color: Colors.transparent,
+                    color: ColorConstants.transparent,
                     child: InkWell(
                       onTap: () {
                         run_navigation_action_once(
@@ -189,11 +190,11 @@ class _LoginRegisterButtonState extends State<LoginRegisterButton> {
                           },
                         );
                       },
-                      splashColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                      focusColor: Colors.transparent,
-                      overlayColor: WidgetStateProperty.all(Colors.transparent),
+                      splashColor: ColorConstants.transparent,
+                      highlightColor: ColorConstants.transparent,
+                      hoverColor: ColorConstants.transparent,
+                      focusColor: ColorConstants.transparent,
+                      overlayColor: WidgetStateProperty.all(ColorConstants.transparent),
                       child: Padding(
                         padding: EdgeInsets.only(
                           left: rightInnerPadding,
@@ -255,7 +256,7 @@ class _LoginRegisterButtonPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final RRect clipRRect = RRect.fromRectAndRadius(
       Offset.zero & size,
-      const Radius.circular(25),
+      const Radius.circular(LayoutConfig.radius_25),
     );
 
     canvas.save();
@@ -280,7 +281,7 @@ class _LoginRegisterButtonPainter extends CustomPainter {
       ..lineTo(splitX + 2, 0)
       ..close();
     final Paint dividerPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.08);
+      ..color = ColorConstants.components_fixed_bottom_navigation_style_tone;
     canvas.drawPath(dividerPath, dividerPaint);
 
     canvas.restore();

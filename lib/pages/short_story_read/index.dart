@@ -2,19 +2,13 @@
 
 import 'package:app/components/window_content_layout/index.dart';
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 
 import 'package:app/api/bookshelf.dart';
-import 'package:app/api/post_request.dart';
-import 'package:app/api/results_type.dart';
-import 'package:app/components/app_wrapper/utils/app_router.dart';
-import 'package:app/components/login_required_dialog/index.dart';
 import 'package:app/components/comment_list/index.dart';
 import 'package:app/components/paragraph_selection/actions.dart';
 import 'package:app/models/story_paragraph.dart';
@@ -26,45 +20,27 @@ import 'package:app/stores/user_information.dart';
 import 'package:app/stores/project_config_store.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/pages/short_story_read/logic.dart';
+import 'package:app/pages/short_story_read/story_pull_gesture.dart';
+import 'package:app/pages/short_story_read/story_native_ad_gate.dart';
+import 'package:app/pages/short_story_read/story_progress_keeper.dart';
+import 'package:app/pages/short_story_read/story_auto_read.dart';
+import 'package:app/pages/short_story_read/story_toolbar_actions.dart';
 import 'package:app/pages/short_story_read/style.dart';
 import 'package:app/pages/short_story_read/widgets/full_appbar.dart';
 import 'package:app/pages/short_story_read/widgets/bottom_comment_bar.dart';
-import 'package:app/pages/short_story_read/widgets/tag_list.dart';
-import 'package:app/pages/short_story_read/widgets/story_unlock_gate/index.dart';
 import 'package:app/pages/short_story_read/widgets/initialization_overlay.dart';
-import 'package:app/pages/short_story_read/widgets/story_scroll_metrics_observer.dart';
-import 'package:app/pages/short_story_read/utils/calculate_current_story_scroll_extent.dart';
-import 'package:app/pages/short_story_read/utils/resolve_story_native_ad_insert_index.dart';
+import 'package:app/pages/short_story_read/utils/reading_start_scroll_offset.dart';
 import 'package:app/pages/ranking_full_list/widgets/starfield_decoration.dart';
-import 'package:app/components/novel_cover/index.dart';
-import 'package:app/components/title_with_story_id/index.dart';
 import 'package:app/pages/short_story_read/widgets/skeleton_screen.dart';
-import 'package:app/pages/short_story_read/widgets/catalog/catalog_sheet.dart';
-import 'package:app/pages/short_story_read/widgets/reading_settings_sheet.dart';
-import 'package:app/pages/short_story_read/widgets/auto_read_settings_sheet.dart';
 import 'package:app/components/no_internet/index.dart';
-import 'package:app/components/viewport_resize_observer/index.dart';
-import 'package:app/components/share_sheet/index.dart';
 import 'package:app/components/share_sheet/widgets/text_selection_preview_sheet.dart';
 import 'package:app/components/inline_native_ad/index.dart';
 import 'package:app/components/inline_native_ad/scroll_offset_compensation.dart';
-import 'package:app/util/dialog/show_bottom_tip.dart';
-import 'package:app/services/bookshelf_sync_service.dart';
 import 'package:app/util/language_util/index.dart';
-import 'package:app/util/log_util.dart';
-import 'package:app/pages/short_story_read/utils/resolve_next_story_preview_content.dart';
-import 'package:app/util/native_ad_insert_index.dart';
-import 'package:app/pages/short_story_read/widgets/next_story_preview.dart';
-import 'package:app/pages/short_story_read/widgets/reader_overlay_layer.dart';
-import 'package:app/pages/short_story_read/widgets/previous_pull_header.dart';
-import 'package:app/config/font_config.dart';
+import 'package:app/pages/short_story_read/widgets/story_content_stack.dart';
 import 'package:app/config/ad_type_config.dart';
 import 'package:app/models/ad_config.dart';
-import 'package:app/models/ad_verify_result.dart';
-import 'package:app/util/rewarded_ad_util.dart';
 import 'package:app/util/ad_display_policy.dart';
-import 'package:app/util/percentage_probability.dart';
-import 'package:app/stores/ad_config_store.dart';
 import 'package:app/services/ad_impression_reporter.dart';
 
 /// 短篇小说阅读页面。
@@ -103,7 +79,12 @@ class ShortStoryReadPage extends StatefulWidget {
 }
 
 class _ShortStoryReadPageState extends State<ShortStoryReadPage>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
+    with TickerProviderStateMixin, WidgetsBindingObserver     implements
+    StoryPullGestureHost,
+    StoryNativeAdHost,
+    StoryProgressHost,
+    StoryToolbarHost,
+    StoryAutoReadHost {
   /// 设备信息仓库（用于获取当前主题模式）。
   final DeviceInfo device_info = Get.find<DeviceInfo>();
 
@@ -145,54 +126,20 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 翻页方向（true = 向上滑动（下一篇），false = 向下滑动（上一篇））。
   bool _is_slide_up = true;
 
-  /// 顶部下拉查看上一篇的原始拖拽距离。
-  ///
-  /// 这个值直接来自手指移动距离，不直接用于布局。
-  double _previous_pull_raw_offset = 0;
+  /// 上下拉切篇手势控制器（状态机与阻尼动画独立在 [StoryPullGestureController]）。
+  late final StoryPullGestureController _pull;
 
-  /// 顶部下拉查看上一篇的视觉位移距离。
-  ///
-  /// 这个值经过阻尼处理，直接绑定到正文 Transform，保证手指移动时页面持续跟随。
-  double _previous_pull_offset = 0;
+  /// 原生广告与激励门控决策器。
+  late final StoryNativeAdGate _ad_gate;
 
-  /// 顶部下拉查看上一篇的触发距离。
-  static const double _previous_pull_trigger_distance = 118.0;
+  /// 阅读进度保存与恢复器。
+  late final StoryProgressKeeper _progress;
 
-  /// 顶部下拉查看上一篇的最大视觉下拉距离。
-  static const double _previous_pull_max_distance = 230.0;
+  /// 工具栏与目录/设置/解锁动作处理器。
+  late final StoryToolbarActions _actions;
 
-  /// 顶部下拉手势是否已经接管当前拖拽。
-  bool _is_previous_pull_dragging = false;
-
-  /// 是否正在执行顶部下拉回弹动画。
-  bool _is_previous_pull_rebounding = false;
-
-  /// 顶部下拉回弹动画控制器。
-  late AnimationController _previous_pull_animation_controller;
-
-  /// 底部上拉查看下一篇的原始拖拽距离。
-  double _next_pull_raw_offset = 0;
-
-  /// 底部上拉查看下一篇的视觉位移距离。
-  double _next_pull_offset = 0;
-
-  /// 底部上拉查看下一篇的触发距离。
-  static const double _next_pull_trigger_distance = 138.0;
-
-  /// 底部上拉查看下一篇的最大视觉上拉比例。
-  ///
-  /// 这里不能用很小的固定值，否则下一篇正文预览最多只能露出几行。
-  /// 按屏幕高度计算，保证用户一直上拉不松手时，下一篇标题和正文能继续跟手上移。
-  static const double _next_pull_max_viewport_ratio = 0.82;
-
-  /// 底部上拉手势是否已经接管当前拖拽。
-  bool _is_next_pull_dragging = false;
-
-  /// 是否正在执行底部上拉回弹动画。
-  bool _is_next_pull_rebounding = false;
-
-  /// 底部上拉回弹动画控制器。
-  late AnimationController _next_pull_animation_controller;
+  /// 自动阅读引擎。
+  late final StoryAutoReadController _auto_read;
 
   /// 下一篇标题的定位 key，用来判断标题是否已经进入可视区域。
   final GlobalKey _next_story_title_key = GlobalKey();
@@ -205,14 +152,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 是否由进度条拖动触发的滚动（为 true 时跳过导航栏显隐逻辑）。
   bool _is_progress_scrolling = false;
 
-  /// 当前小说的广告概率是否已经完成一次性判断。
-  int? _ad_probability_generation;
 
-  /// 短篇小说视频广告概率是否命中（需要展示解锁门控）。
-  ///
-  /// true = 需要观看广告才能解锁，false = 免广告直接阅读全文。
-  /// 在小说初始化时根据 ads_short_story_video_ad_probability 掷骰子决定。
-  bool _is_video_ad_gate_required = true;
 
   /// FCM 推送评论导航监听器。
   Worker? _comment_navigation_worker;
@@ -223,17 +163,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 项目广告开关变更监听器。
   Worker? _ad_policy_worker;
 
-  /// 自动阅读滚动 Ticker（每帧调用，实现平滑滚动）。
-  Ticker? _auto_read_ticker;
 
-  /// 上一帧时间戳（用于计算每帧滚动距离）。
-  Duration? _auto_read_last_tick;
 
-  /// Ticker 是否正在执行滚动（用于区分 Ticker 滚动和用户手动滚动）。
-  bool _is_auto_read_ticking = false;
 
-  /// 自动阅读是否因应用进入后台而暂停。
-  bool _auto_read_paused_by_lifecycle = false;
 
   /// 阅读进度定时保存定时器。
   Timer? _progress_save_timer;
@@ -251,37 +183,12 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 当前是否正在恢复服务器阅读位置。
   bool _is_restoring_position = false;
 
-  /// 当前短篇的激励视频广告是否正在加载或展示。
-  bool _is_rewarded_ad_loading = false;
 
-  /// 当前小说是否命中原生高级广告展示概率。
-  bool _should_show_native_ad = false;
 
-  /// 当前小说的原生高级广告配置。
-  AdConfig? _native_ad_config;
 
-  /// 正在请求广告配置的逻辑代次集合，避免旧请求阻塞新小说。
-  final Set<int> _native_ad_config_loading_generations = <int>{};
 
-  /// 每篇独立的广告身份；解锁预览切换父布局时仍保留已准备的素材。
-  GlobalKey _native_ad_slot_key = GlobalKey();
 
-  /// 原生广告决策时的正文段落边界，解锁和政策变化不重新移动插位。
-  int? _native_ad_insert_index;
 
-  /// 正在保存进度的小说 ID；不同小说允许并行，同一小说按顺序提交。
-  final Set<int> _progress_save_in_flight_ids = <int>{};
-
-  /// 同一小说保存期间只保留最新进度快照，避免旧请求覆盖新进度。
-  final Map<
-    int,
-    ({int chapter_offset, double read_progress, bool notify_bookshelf})
-  >
-  _queued_progress_snapshots =
-      <
-        int,
-        ({int chapter_offset, double read_progress, bool notify_bookshelf})
-      >{};
 
   /// 当前逻辑实例的版本号，用于丢弃切换小说前发起的异步结果。
   int _logic_generation = 0;
@@ -293,6 +200,13 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   ///
   /// 阅读进度只计算当前篇，不把异步加载的下一篇预览算入总长度。
   final GlobalKey _current_story_end_key = GlobalKey();
+
+  /// 独立定位正文起点，不通过封面、标题或简介的估算高度进入阅读。
+  final GlobalKey _body_start_key = GlobalKey();
+
+  /// 续读快照只在正文区域更新，回看简介不会清空此前的阅读位置。
+  LastReadRecord? _resume_record;
+  final ValueNotifier<bool> _has_reading_history = ValueNotifier(false);
 
   /// 当前篇可用于阅读进度计算的最大滚动距离。
   double? _reading_progress_max_extent;
@@ -352,17 +266,12 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       duration: const Duration(milliseconds: 250),
     );
 
-    // 初始化顶部下拉回弹动画控制器。
-    _previous_pull_animation_controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 260),
-    );
-
-    // 初始化底部上拉回弹动画控制器。
-    _next_pull_animation_controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 260),
-    );
+    // 上下拉切篇手势控制器（自带回弹动画控制器）。
+    _pull = StoryPullGestureController(ticker: this, host: this);
+    _ad_gate = StoryNativeAdGate(host: this);
+    _progress = StoryProgressKeeper(host: this);
+    _actions = StoryToolbarActions(host: this);
+    _auto_read = StoryAutoReadController(ticker_provider: this, host: this);
 
     // 初始化逻辑层并开始加载数据。
     // 延迟到首帧之后执行，确保 context.locale 已就绪（iOS 上 initState 阶段可能未就绪）。
@@ -390,7 +299,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     // TODO 从消息页跳转时，自动打开评论区并定位到指定评论
     if (widget.initial_comment_id > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _on_comment_tap(scroll_to_comment_id: widget.initial_comment_id);
+        _actions.on_comment_tap(scroll_to_comment_id: widget.initial_comment_id);
       });
     }
 
@@ -401,7 +310,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       if (!mounted || comment_id <= 0) return;
       if (CommentNavigation.pending_novel_id.value != _logic.story_id) return;
       CommentNavigation.consume();
-      _on_comment_tap(scroll_to_comment_id: comment_id);
+      _actions.on_comment_tap(scroll_to_comment_id: comment_id);
     });
   }
 
@@ -410,27 +319,27 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     WidgetsBinding.instance.removeObserver(this);
     _progress_save_timer?.cancel();
     // 退出页面时保存一次阅读进度。
-    _save_current_progress_on_exit();
+    _progress.save_on_exit(logic: _logic, is_initialization_complete: _is_initialization_complete, has_user_engaged: _has_user_engaged);
     _logic.dispose(clear_catalog: true);
-    _auto_read_ticker?.dispose();
+    _auto_read.dispose();
     _comment_navigation_worker?.dispose();
     _bottom_bar_visibility_worker?.dispose();
     _ad_policy_worker?.dispose();
     _scroll_controller.removeListener(_on_scroll);
     _scroll_controller.dispose();
+    _has_reading_history.dispose();
     _bottom_bar_animation_controller.dispose();
     _page_transition_controller.dispose();
-    _previous_pull_animation_controller.dispose();
-    _next_pull_animation_controller.dispose();
+    _pull.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      if (_auto_read_paused_by_lifecycle && _logic.is_auto_reading.value) {
-        _auto_read_paused_by_lifecycle = false;
-        _begin_auto_read_ticker();
+      if (_auto_read.paused_by_lifecycle && _logic.is_auto_reading.value) {
+        _auto_read.paused_by_lifecycle = false;
+        _auto_read.begin_ticker();
       }
       return;
     }
@@ -439,14 +348,13 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      unawaited(_save_current_progress());
+      unawaited(_progress.save_current(logic: _logic, is_initialization_complete: _is_initialization_complete, has_user_engaged: _has_user_engaged));
     }
     if ((state == AppLifecycleState.hidden ||
             state == AppLifecycleState.paused) &&
         _logic.is_auto_reading.value) {
-      _auto_read_paused_by_lifecycle = true;
-      _auto_read_ticker?.stop();
-      _auto_read_last_tick = null;
+      _auto_read.paused_by_lifecycle = true;
+      _auto_read.pause_ticker();
     }
   }
 
@@ -455,7 +363,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     _progress_save_timer?.cancel();
     _progress_save_timer = Timer.periodic(
       const Duration(seconds: _progress_save_interval_seconds),
-      (_) => _save_current_progress(),
+      (_) => _progress.save_current(logic: _logic, is_initialization_complete: _is_initialization_complete, has_user_engaged: _has_user_engaged),
     );
   }
 
@@ -470,7 +378,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   ///
   /// 未解锁时只显示配置比例的正文，滚动到折叠处不能记为全文完成。
   double get _visible_story_progress_limit {
-    return (_logic.is_story_unlocked.value || !_is_video_ad_gate_required)
+    return (_logic.is_story_unlocked.value || !_ad_gate.is_video_ad_gate_required)
         ? 1.0
         : ShortStoryReadStyle.locked_content_preview_ratio;
   }
@@ -509,21 +417,25 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     }
 
     // 概率只在每篇小说初始化后判断一次，避免重建或配置通知造成重复掷骰。
-    _resolve_ad_probability_decisions(logic: logic, generation: generation);
-    if (_should_show_native_ad) {
+    _ad_gate.resolve_probability_decisions(generation: generation);
+    if (_ad_gate.should_show_native_ad) {
       // 后台请求并预加载广告，未完成前不占用正文空间。
-      unawaited(_load_native_ad_config(logic: logic, generation: generation));
+      unawaited(_ad_gate.load_native_ad_config(generation: generation));
     }
 
     if (restore_position && record != null) {
-      await _restore_last_read_position(
+      if (record.chapter_offset > 0 || record.read_progress > 0) {
+        _resume_record = record;
+        _has_reading_history.value = true;
+      }
+      await _progress.restore_last_position(
         logic: logic,
         generation: generation,
         attempt: attempt,
         record: record,
       );
     } else {
-      await _wait_for_story_layout(
+      await _progress.wait_for_story_layout(
         logic: logic,
         generation: generation,
         attempt: attempt,
@@ -551,341 +463,78 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   // ==================== 广告管理 ====================
 
-  /// 后台加载原生高级广告配置。
-  ///
-  /// 从 `redis/get.ads_ids` 本地缓存获取广告单元 ID，
-  /// 成功且广告商为谷歌 AdMob 时创建 NativeAdBanner 组件。
-  /// 加载失败不影响页面正常展示。
-  Future<void> _load_native_ad_config({
-    required ShortStoryReadLogic logic,
-    required int generation,
-  }) async {
-    const String log_prefix = '[NativeAdConfig]';
-    if (!AdDisplayPolicy.can_show_ads() ||
-        !_should_show_native_ad ||
-        _ad_probability_generation != generation ||
-        !_native_ad_config_loading_generations.add(generation)) {
-      return;
-    }
-    try {
-      logUtil(msg: '$log_prefix 开始读取本地广告配置, source_id=${logic.story_id}');
-
-      final AdConfig? ad_config = Get.isRegistered<AdConfigStore>()
-          ? Get.find<AdConfigStore>().select_google_config(
-              AdPlacement.short_story_native,
-            )
-          : null;
-
-      // 页面已切换或已销毁，丢弃结果。
-      if (_logic_generation != generation ||
-          !mounted ||
-          !AdDisplayPolicy.can_show_ads() ||
-          !_should_show_native_ad ||
-          _ad_probability_generation != generation) {
-        logUtil(msg: '$log_prefix 页面已切换或销毁，丢弃结果');
-        return;
-      }
-
-      if (ad_config == null) {
-        logUtil(msg: '$log_prefix 本地缓存没有可用配置，跳过', type: 'w');
-        _discard_native_ad_for_generation(generation);
-        return;
-      }
-      logUtil(
-        msg:
-            '$log_prefix 广告配置: '
-            'id=${ad_config.id}, '
-            'adsId=${ad_config.adsId}, '
-            'advertisers=${ad_config.advertisers}, '
-            'advertisersStr=${ad_config.advertisersStr}, '
-            'adsType=${ad_config.adsType}, '
-            'adsTypeStr=${ad_config.adsTypeStr}, '
-            'uuid=${ad_config.uuid}',
-      );
-
-      // advertisers=1 表示谷歌 AdMob，且 ads_id 必须有值。
-      if (ad_config.advertisers != AdTypeConfig.google_advertiser ||
-          ad_config.adsId.isEmpty) {
-        logUtil(
-          msg:
-              '$log_prefix 广告商不是谷歌或adsId为空，跳过: '
-              'advertisers=${ad_config.advertisers}, '
-              'adsId="${ad_config.adsId}"',
-          type: 'w',
-        );
-        _discard_native_ad_for_generation(generation);
-        return;
-      }
-
-      logUtil(msg: '$log_prefix 创建NativeAdBanner, adUnitId=${ad_config.adsId}');
-
-      setState(() {
-        _native_ad_config = ad_config;
-      });
-    } catch (e, stack_trace) {
-      logUtil(msg: '$log_prefix 广告配置加载异常: $e\n$stack_trace', type: 'e');
-      _discard_native_ad_for_generation(generation);
-    } finally {
-      _native_ad_config_loading_generations.remove(generation);
-    }
-  }
-
-  /// 为当前小说一次性判断原生广告和激励视频广告概率。
-  void _resolve_ad_probability_decisions({
-    required ShortStoryReadLogic logic,
-    required int generation,
-  }) {
-    if (_ad_probability_generation == generation) return;
-
-    // 配置尚未解析时保持待定，等 config_revision 通知后再判断；
-    // 明确关闭广告时才把当前小说固定为免广告。
-    if (!AdDisplayPolicy.can_show_ads() &&
-        !AdDisplayPolicy.is_config_resolved()) {
-      return;
-    }
-
-    _ad_probability_generation = generation;
-    _reset_native_ad_state();
-
-    if (!AdDisplayPolicy.can_show_ads()) {
-      _is_video_ad_gate_required = false;
-      return;
-    }
-
-    final current_config = Get.find<ProjectConfigStore>().current;
-    _is_video_ad_gate_required = PercentageProbability.is_hit(
-      current_config.ads_short_story_video_ad_probability,
-    );
-
-    final bool content_supports_native_ad = can_insert_native_ad(
-      logic.content.value,
-    );
-    final bool reader_has_not_started =
-        !_is_initialization_complete || !_has_user_engaged;
-    _should_show_native_ad =
-        content_supports_native_ad &&
-        reader_has_not_started &&
-        PercentageProbability.is_hit(
-          current_config.ads_short_story_show_interstitial_ads_probability,
-        );
-    if (_should_show_native_ad) {
-      _native_ad_insert_index = resolve_story_native_ad_insert_index(
-        content: logic.content.value,
-        is_unlocked:
-            logic.is_story_unlocked.value || !_is_video_ad_gate_required,
-        is_cjk: LanguageUtil.is_cjk_language(
-          Localizations.localeOf(context).languageCode,
-        ),
-      );
-    }
-    logUtil(
-      msg:
-          '[NativeAdConfig] 概率判断完成: '
-          'generation=$generation, '
-          'nativeProbability='
-          '${current_config.ads_short_story_show_interstitial_ads_probability}, '
-          'showNative=$_should_show_native_ad, '
-          'videoProbability=${current_config.ads_short_story_video_ad_probability}, '
-          'requireVideo=$_is_video_ad_gate_required',
-    );
-    if (mounted) setState(() {});
-  }
-
-  /// 清空当前原生广告配置，广告组件随正文重建自行释放素材与监听。
-  void _reset_native_ad_state() {
-    _should_show_native_ad = false;
-    _native_ad_config = null;
-    _native_ad_slot_key = GlobalKey();
-    _native_ad_insert_index = null;
-    _reading_progress_max_extent = null;
-  }
-
-  /// 当前广告配置不可用时移除广告位。
-  void _discard_native_ad_for_generation(int generation) {
-    if (!mounted || _logic_generation != generation) return;
-    setState(_reset_native_ad_state);
-  }
-
   /// 将远端广告平台开关同步到当前短篇的正文与广告位。
   void _on_ad_policy_changed() {
-    _logic.sync_ad_access_policy();
-    if (!AdDisplayPolicy.can_show_ads()) {
-      _is_rewarded_ad_loading = false;
-      _is_video_ad_gate_required = false;
-      _ad_probability_generation = _logic_generation;
-      if (mounted) setState(() => _reading_progress_max_extent = null);
-      return;
-    }
-
-    if (_logic.content.value.isNotEmpty) {
-      _resolve_ad_probability_decisions(
-        logic: _logic,
-        generation: _logic_generation,
-      );
-    }
-    if (_should_show_native_ad && _native_ad_config == null) {
-      unawaited(
-        _load_native_ad_config(logic: _logic, generation: _logic_generation),
-      );
-    }
-    if (mounted) setState(() {});
-  }
-
-  /// 退出页面时保存阅读进度。
-  void _save_current_progress_on_exit() {
-    if (!_is_initialization_complete || !_has_user_engaged) return;
-    unawaited(_save_progress_snapshot(_logic, notify_bookshelf: true));
-  }
-
-  /// 保存当前阅读进度到服务器。
-  Future<void> _save_current_progress() async {
-    if (!_is_initialization_complete || !_has_user_engaged) return;
-    await _save_progress_snapshot(_logic);
-  }
-
-  /// 保存指定逻辑实例对应的进度快照。
-  Future<void> _save_progress_snapshot(
-    ShortStoryReadLogic logic, {
-    bool notify_bookshelf = false,
-  }) async {
-    if (!_scroll_controller.hasClients || !user_information.isLoggedIn.value) {
-      return;
-    }
-
-    final int novel_id = logic.story_id;
-    final int novel_language_id =
-        int.tryParse(logic.story_data.value?.novel_language_id ?? '') ?? 0;
-    final previous_snapshot = _queued_progress_snapshots[novel_id];
-    _queued_progress_snapshots[novel_id] = (
-      chapter_offset: _scroll_controller.offset.round(),
-      read_progress: logic.reading_progress.value * 100,
-      notify_bookshelf:
-          notify_bookshelf || (previous_snapshot?.notify_bookshelf ?? false),
-    );
-    if (!_progress_save_in_flight_ids.add(novel_id)) return;
-
-    try {
-      while (_queued_progress_snapshots.containsKey(novel_id)) {
-        final snapshot = _queued_progress_snapshots.remove(novel_id)!;
-        try {
-          final bool saved = await save_read_progress(
-            novel_id: novel_id,
-            novel_language_id: novel_language_id > 0 ? novel_language_id : null,
-            chapter_offset: snapshot.chapter_offset,
-            read_progress: snapshot.read_progress,
-          );
-          if (saved && snapshot.notify_bookshelf) {
-            await BookshelfSyncService.history_changed();
-          }
-        } catch (_) {
-          // 保存失败不影响阅读；下一次定时保存会提交更新后的快照。
-        }
-      }
-    } finally {
-      _progress_save_in_flight_ids.remove(novel_id);
-    }
-  }
-
-  /// 根据真实加载结果和正文布局恢复上次阅读位置。
-  Future<void> _restore_last_read_position({
-    required ShortStoryReadLogic logic,
-    required int generation,
-    required int attempt,
-    required LastReadRecord record,
-  }) async {
-    final bool has_offset = record.chapter_offset > 0;
-    final bool has_progress = record.read_progress > 0;
-    await _wait_for_story_layout(
-      logic: logic,
-      generation: generation,
-      attempt: attempt,
-    );
-    if (!_is_current_initialization(logic, generation, attempt) ||
-        (!has_offset && !has_progress)) {
-      return;
-    }
-
-    _do_restore_position(record);
-  }
-
-  /// 等待正文真实挂载，并计算只属于当前篇的滚动范围。
-  Future<void> _wait_for_story_layout({
-    required ShortStoryReadLogic logic,
-    required int generation,
-    required int attempt,
-  }) async {
-    for (int frame = 0; frame < 12; frame++) {
-      await WidgetsBinding.instance.endOfFrame;
-      if (!_is_current_initialization(logic, generation, attempt)) return;
-
-      if (_scroll_controller.hasClients &&
-          _scroll_controller.position.hasContentDimensions &&
-          _current_story_end_key.currentContext != null) {
-        _reading_progress_max_extent = _calculate_current_story_extent();
-        return;
-      }
-    }
+    _ad_gate.on_policy_changed(sync_ad_access_policy: _logic.sync_ad_access_policy);
   }
 
   /// 计算正文末尾对齐可视区域底部时的真实滚动偏移。
   double _calculate_current_story_extent() {
-    return calculate_current_story_scroll_extent(
-      scroll_controller: _scroll_controller,
-      story_end_key: _current_story_end_key,
-    );
+    return _progress.calculate_story_extent();
   }
 
   /// 执行滚动位置恢复。
   void _do_restore_position(LastReadRecord record) {
-    if (!_scroll_controller.hasClients) return;
+    _progress.do_restore_position(logic: _logic, record: record);
+  }
 
-    final double max_extent =
-        _reading_progress_max_extent ?? _calculate_current_story_extent();
-    if (max_extent <= 0) return;
-    double target_offset = 0;
+  /// 仅在正文已到达阅读位置时保存用于主按钮的本地快照。
+  /// 服务器百分比仍沿用现有算法，简介展开和设备重排不改写其含义。
+  void _remember_body_reading_position() {
+    _progress.remember_body_reading_position(
+      logic: _logic,
+      is_initialization_complete: _is_initialization_complete,
+      has_user_engaged: _has_user_engaged,
+    );
+  }
 
-    // 优先使用百分比恢复，像素偏移在屏幕尺寸或字号变化后会失效。
-    if (record.read_progress > 0) {
-      final double visible_progress =
-          (record.read_progress / 100 / _visible_story_progress_limit).clamp(
-            0.0,
-            1.0,
+  /// 首次点击进入真实正文锚点；续读复用既有百分比/像素恢复算法。
+  Future<void> _on_read_story() async {
+    if (!_is_initialization_complete || !_scroll_controller.hasClients) return;
+    final logic = _logic;
+    final generation = _logic_generation;
+    final start_offset = reading_start_scroll_offset(
+      scroll_controller: _scroll_controller,
+      body_start_key: _body_start_key,
+    );
+    if (start_offset == null) return;
+    _has_user_engaged = true;
+    final record = _resume_record;
+    if (_has_reading_history.value && record != null) {
+      _do_restore_position(record);
+      // 旧记录可能落在简介内；按钮至少展示正文，不停留在封面或分类区域。
+      if (_scroll_controller.offset < start_offset) {
+        if (MediaQuery.disableAnimationsOf(context)) {
+          _scroll_controller.jumpTo(start_offset);
+        } else {
+          await _scroll_controller.animateTo(
+            start_offset,
+            duration: ShortStoryReadStyle.read_entry_duration,
+            curve: Curves.easeInOutCubic,
           );
-      target_offset = (visible_progress * max_extent).clamp(0.0, max_extent);
-    } else if (record.chapter_offset > 0) {
-      target_offset = record.chapter_offset
-          .clamp(0, max_extent.toInt())
-          .toDouble();
+        }
+      }
+    } else {
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _scroll_controller.jumpTo(start_offset);
+      } else {
+        await _scroll_controller.animateTo(
+          start_offset,
+          duration: ShortStoryReadStyle.read_entry_duration,
+          curve: Curves.easeInOutCubic,
+        );
+      }
     }
-
-    if (target_offset > 0) {
-      _is_restoring_position = true;
-      _scroll_controller.jumpTo(target_offset);
-      _logic.update_reading_progress(
-        target_offset,
-        max_extent,
-        max_progress: _visible_story_progress_limit,
-      );
-      _is_restoring_position = false;
-    }
+    if (!_is_current_logic(logic, generation)) return;
+    _logic.sync_scroll_offset(_scroll_controller.offset);
+    _remember_body_reading_position();
   }
 
   // ==================== 滚动相关 ====================
 
-  /// 停止自动阅读（停止 Ticker）。
-  void _stop_auto_read() {
-    _auto_read_paused_by_lifecycle = false;
-    if (_logic.is_auto_reading.value) {
-      _logic.is_auto_reading.value = false;
-      _auto_read_ticker?.stop();
-      _auto_read_ticker?.dispose();
-      _auto_read_ticker = null;
-    }
-  }
-
   /// 返回阅读区的自然滚动物理效果。
   ScrollPhysics get _reader_scroll_physics {
-    if (_previous_pull_offset > 0 || _next_pull_offset > 0) {
+    if (_pull.previous_pull_offset > 0 || _pull.next_pull_offset > 0) {
       return const NeverScrollableScrollPhysics();
     }
 
@@ -932,25 +581,25 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 复用长短篇共用的广告准备与挂载门禁，素材未就绪时正文保持连续。
   Widget? _build_native_ad_slot() {
-    final AdConfig? ad_config = _native_ad_config;
-    if (!_should_show_native_ad || ad_config == null) return null;
+    final AdConfig? ad_config = _ad_gate.native_ad_config;
+    if (!_ad_gate.should_show_native_ad || ad_config == null) return null;
 
     final int generation = _logic_generation;
     return ViewportAwareInlineNativeAdBanner(
       // 同一广告配置可以用于多篇小说，每篇都必须重新判断插入时机。
-      key: _native_ad_slot_key,
+      key: _ad_gate.native_ad_slot_key,
       scroll_controller: _scroll_controller,
       layout_revision: (
         _logic.body_font_size.value,
-        _logic.is_story_unlocked.value || !_is_video_ad_gate_required,
+        _logic.is_story_unlocked.value || !_ad_gate.is_video_ad_gate_required,
         _logic.content.value,
       ),
       is_enabled:
           AdDisplayPolicy.can_show_ads() && !_logic.is_story_unlocked.value,
       ad_unit_id: ad_config.adsId,
       uuid: ad_config.uuid,
-      on_unlock: _on_unlock_story_tap,
-      is_unlocking: _is_rewarded_ad_loading,
+      on_unlock: _actions.on_unlock_story_tap,
+      is_unlocking: _ad_gate.is_rewarded_ad_loading,
       badge_text_key: 'short_story_read.unlock',
       viewport_top_inset:
           ShortStoryReadStyle.appbar_height +
@@ -984,10 +633,10 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
     // 广告尺寸补偿属于程序滚动，不能误判为手动操作而停止自动阅读。
     if (_logic.is_auto_reading.value &&
-        !_is_auto_read_ticking &&
+        !_auto_read.is_ticking &&
         !_is_restoring_position &&
         !is_ad_compensation) {
-      _stop_auto_read();
+      _auto_read.stop();
     }
 
     if (is_ad_compensation) {
@@ -1006,6 +655,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         max_scroll_extent,
         max_progress: _visible_story_progress_limit,
       );
+      if (!is_ad_compensation && !_is_restoring_position) {
+        _remember_body_reading_position();
+      }
     }
 
     _schedule_next_story_overlay_update();
@@ -1056,7 +708,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   ///
   /// 切换导航栏和评论栏的显示/隐藏，同时停止自动阅读。
   void _on_content_tap() {
-    _stop_auto_read();
+    _auto_read.stop();
     if (_tap_started_with_selection || _is_paragraph_selection_active) {
       FocusManager.instance.primaryFocus?.unfocus();
       return;
@@ -1067,7 +719,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 记录选择状态，同时暂停自动阅读，避免选区随自动滚动移动。
   void _on_paragraph_selection_changed(bool active) {
     _is_paragraph_selection_active = active;
-    if (active) _stop_auto_read();
+    if (active) _auto_read.stop();
   }
 
   /// 选区输入、登录提示及详情弹窗由长短篇共用组件统一处理。
@@ -1075,7 +727,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     StoryParagraph paragraph,
     TextSelection selection,
   ) async {
-    _stop_auto_read();
+    _auto_read.stop();
     final action_logic = _logic;
     final generation = _logic_generation;
     final success = await _paragraph_actions.compose(
@@ -1100,7 +752,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 处理段落选中文字的分享操作。
   void _on_paragraph_share(StoryParagraph paragraph, TextSelection selection) {
-    _stop_auto_read();
+    _auto_read.stop();
     final String selected_text = selected_paragraph_text(
       paragraph.text,
       selection,
@@ -1122,7 +774,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     int comment_count,
     String? paragraph_id,
   ) {
-    _stop_auto_read();
+    _auto_read.stop();
     final int para_id = int.tryParse(paragraph_id ?? '') ?? 0;
     if (para_id <= 0) return;
     final ShortStoryReadLogic action_logic = _logic;
@@ -1173,374 +825,6 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   }
 
   // ==================== 按钮回调 ====================
-
-  /// 处理返回按钮点击。
-  void _on_back() {
-    AppRouter.pop();
-  }
-
-  /// 处理分享按钮点击。
-  ///
-  /// 弹出分享弹窗，传递当前小说的基本信息。
-  void _on_share() {
-    showShareSheet(
-      context: context,
-      novel_id: _logic.story_id,
-      novel_title: _logic.title,
-      novel_cover_url: _logic.story_data.value?.cover_url ?? '',
-      novel_intro: _logic.story_data.value?.introduction ?? '',
-      is_dark: device_info.dark.value,
-    );
-  }
-
-  /// 处理评论输入框点击。
-  ///
-  /// 弹窗关闭后若有新增评论，同步更新底部评论栏的数量。
-  Future<void> _on_comment_tap({int scroll_to_comment_id = 0}) async {
-    _stop_auto_read();
-    final ShortStoryReadLogic comment_logic = _logic;
-    final int? new_count = await showCommentSheet(
-      context: context,
-      novel_id: comment_logic.story_id,
-      on_close: () => Navigator.pop(context),
-      scroll_to_comment_id: scroll_to_comment_id,
-    );
-    if (new_count != null && mounted) {
-      comment_logic.update_comment_count(new_count);
-    }
-  }
-
-  /// 处理收藏按钮点击（带登录检查）。
-  ///
-  /// 未登录时弹出登录提示弹窗，已登录时调用收藏接口。
-  Future<void> _on_favorite_tap() async {
-    final bool is_logged_in = await showLoginRequiredDialog(
-      title: easy.tr('short_story_read.login_required'),
-    );
-    if (!is_logged_in) return;
-    final ShortStoryReadLogic action_logic = _logic;
-    final bool? is_favorited = await action_logic.toggle_favorite();
-    if (!mounted || is_favorited == null) return;
-    showBottomTip(
-      easy.tr(
-        is_favorited ? 'favorite.add_success' : 'favorite.remove_success',
-      ),
-    );
-  }
-
-  /// 处理底部栏点赞按钮点击（带登录检查）。
-  ///
-  /// 未登录时弹出登录提示弹窗，已登录时调用点赞接口。
-  Future<void> _on_like_tap() async {
-    final bool is_logged_in = await showLoginRequiredDialog(
-      title: easy.tr('short_story_read.login_required'),
-    );
-    if (!is_logged_in) return;
-    final ShortStoryReadLogic action_logic = _logic;
-    await action_logic.toggle_like();
-  }
-
-  /// 处理目录弹窗中卡片点赞（乐观更新）。
-  ///
-  /// 立即切换本地状态，然后静默发起请求。
-  /// 请求失败时回退状态，不显示任何提示。
-  void _on_catalog_like_tap(int story_id) async {
-    final bool is_logged_in = await showLoginRequiredDialog(
-      title: easy.tr('short_story_read.login_required'),
-    );
-    if (!is_logged_in) return;
-
-    final ShortStoryReadLogic action_logic = _logic;
-    final int catalog_index = action_logic.catalog_list.indexWhere(
-      (ShortStoryItem item) => item.id == story_id,
-    );
-    if (catalog_index < 0) return;
-
-    // 记录乐观更新前的状态，用于失败时回退。
-    final bool previous_catalog_status =
-        action_logic.catalog_list[catalog_index].is_liked;
-    final bool optimistic_status = !previous_catalog_status;
-
-    // 乐观更新：立即切换目录列表状态。
-    action_logic.sync_like_to_catalog(
-      story_id,
-      optimistic_status,
-      optimistic_status ? 1 : -1,
-    );
-
-    // 如果点赞的是当前阅读的小说，同步乐观更新正文页面数据。
-    bool previous_detail_status = false;
-    int previous_detail_count = 0;
-    final bool is_current_story =
-        story_id == action_logic.story_id &&
-        action_logic.story_data.value != null;
-    if (is_current_story) {
-      previous_detail_status = action_logic.story_data.value!.is_liked;
-      previous_detail_count = action_logic.story_data.value!.like_count;
-      final int next_detail_count = optimistic_status
-          ? previous_detail_count + 1
-          : (previous_detail_count > 0 ? previous_detail_count - 1 : 0);
-      action_logic.story_data.value = action_logic.story_data.value!.copyWith(
-        is_liked: optimistic_status,
-        like_count: next_detail_count < 0 ? 0 : next_detail_count,
-      );
-      action_logic.sync_current_story_cache();
-    }
-
-    // 回退用的 delta（撤销乐观更新的增量）。
-    final int revert_delta = optimistic_status ? -1 : 1;
-
-    // 静默发起请求。
-    try {
-      final ResultsType<Map<String, dynamic>> results =
-          await postRequest<Map<String, dynamic>>(
-            path: 'novel_like/click',
-            parameter: <String, dynamic>{'novel_id': story_id},
-            fromJson: (Map<String, dynamic> json) => json,
-          );
-
-      if (!results.status || results.content == null) {
-        // 请求失败，回退目录列表状态。
-        action_logic.sync_like_to_catalog(
-          story_id,
-          previous_catalog_status,
-          revert_delta,
-        );
-        // 回退正文页面数据。
-        if (is_current_story) {
-          action_logic.story_data.value = action_logic.story_data.value!
-              .copyWith(
-                is_liked: previous_detail_status,
-                like_count: previous_detail_count,
-              );
-          action_logic.sync_current_story_cache();
-        }
-        return;
-      }
-
-      // 以服务端状态为准，修正乐观更新。
-      final dynamic server_like = results.content!['like'];
-      final bool server_status = server_like == true || server_like == 1;
-      if (server_status != optimistic_status) {
-        action_logic.sync_like_to_catalog(
-          story_id,
-          server_status,
-          revert_delta,
-        );
-        if (is_current_story) {
-          action_logic.story_data.value = action_logic.story_data.value!
-              .copyWith(
-                is_liked: server_status,
-                like_count: previous_detail_count,
-              );
-          action_logic.sync_current_story_cache();
-        }
-      }
-    } catch (_) {
-      // 异常时回退目录列表状态。
-      action_logic.sync_like_to_catalog(
-        story_id,
-        previous_catalog_status,
-        revert_delta,
-      );
-      // 回退正文页面数据。
-      if (is_current_story) {
-        action_logic.story_data.value = action_logic.story_data.value!.copyWith(
-          is_liked: previous_detail_status,
-          like_count: previous_detail_count,
-        );
-        action_logic.sync_current_story_cache();
-      }
-    }
-  }
-
-  /// 处理目录按钮点击。
-  ///
-  /// 从底部弹出目录弹窗，使用预加载的目录数据（小说详情加载后立即请求）。
-  /// 点击某一项时跳转到对应小说的阅读页面。
-  void _on_catalog_tap() {
-    _stop_auto_read();
-    final ShortStoryReadLogic sheet_logic = _logic;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      enableDrag: true,
-      showDragHandle: false,
-      backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
-      builder: (BuildContext sheet_context) {
-        return CatalogSheet(
-          current_story_id: sheet_logic.story_id,
-          catalog_list: sheet_logic.catalog_list,
-          is_catalog_loading: sheet_logic.is_catalog_loading,
-          is_catalog_error: sheet_logic.is_catalog_error,
-          reading_progress: sheet_logic.reading_progress.value,
-          on_item_tap: (int story_id) {
-            Navigator.of(sheet_context).pop();
-            if (story_id == sheet_logic.story_id) return;
-            _switch_to_story(story_id);
-          },
-          on_like_tap: _on_catalog_like_tap,
-          on_close: () => Navigator.of(sheet_context).pop(),
-          on_reload: sheet_logic.reload_catalog,
-        );
-      },
-    );
-  }
-
-  /// 处理设置按钮点击。
-  ///
-  /// 从底部弹出阅读设置弹窗。
-  Future<void> _on_setting_tap() async {
-    bool should_start_auto_read = false;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      enableDrag: true,
-      showDragHandle: false,
-      backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
-      builder: (BuildContext sheet_context) {
-        return ReadingSettingsSheet(
-          logic: _logic,
-          on_close: () => Navigator.of(sheet_context).pop(),
-          on_decrease_font_size: () {
-            _change_body_font_size(_logic.decrease_font_size);
-          },
-          on_increase_font_size: () {
-            _change_body_font_size(_logic.increase_font_size);
-          },
-          on_auto_read: () {
-            should_start_auto_read = true;
-            Navigator.of(sheet_context).pop();
-          },
-        );
-      },
-    );
-    if (!mounted || !should_start_auto_read) return;
-    _start_auto_read();
-  }
-
-  /// 观看激励视频广告并解锁当前短篇的全部正文。
-  Future<void> _on_unlock_story_tap() async {
-    if (_is_rewarded_ad_loading || _logic.is_story_unlocked.value) return;
-
-    if (!AdDisplayPolicy.can_show_ads()) {
-      _logic.sync_ad_access_policy();
-      if (mounted) setState(() => _reading_progress_max_extent = null);
-      if (!AdDisplayPolicy.should_bypass_ads()) {
-        showBottomTip(easy.tr('short_story_read.ad_not_available'));
-      }
-      return;
-    }
-
-    _stop_auto_read();
-    final ShortStoryReadLogic action_logic = _logic;
-    final int action_generation = _logic_generation;
-
-    setState(() => _is_rewarded_ad_loading = true);
-    try {
-      // 从后端获取广告配置。
-      final adConfigResult = await postRequest<AdConfig>(
-        path: 'ads/short_story_read',
-        parameter: <String, dynamic>{'source_id': _logic.story_id},
-        showTips: false,
-        fromJson: (json) => AdConfig.fromJson(json),
-      );
-      if (!_is_current_logic(action_logic, action_generation)) return;
-
-      // 后端广告配置请求期间开关可能被远程更新，调用 SDK 前再次校验。
-      if (!AdDisplayPolicy.can_show_ads()) {
-        action_logic.sync_ad_access_policy();
-        if (mounted) setState(() => _reading_progress_max_extent = null);
-        return;
-      }
-
-      if (!adConfigResult.status || adConfigResult.content == null) {
-        showBottomTip(easy.tr('short_story_read.ad_not_available'));
-        return;
-      }
-
-      final AdConfig adConfig = adConfigResult.content!;
-      if (adConfig.advertisers != AdTypeConfig.google_advertiser ||
-          adConfig.adsId.isEmpty) {
-        showBottomTip(easy.tr('short_story_read.ad_not_available'));
-        return;
-      }
-
-      final GoogleRewardedAdResult result = await GoogleRewardedAdUtil.instance
-          .show_rewarded_ad(
-            adUnitId: adConfig.adsId,
-            custom_data: adConfig.uuid,
-            can_show: () => _is_current_logic(action_logic, action_generation),
-          );
-      if (!_is_current_logic(action_logic, action_generation)) return;
-
-      switch (result) {
-        case GoogleRewardedAdResult.disabled:
-          action_logic.sync_ad_access_policy();
-          _reading_progress_max_extent = null;
-          if (!AdDisplayPolicy.should_bypass_ads()) {
-            showBottomTip(easy.tr('short_story_read.ad_not_available'));
-          }
-          break;
-        case GoogleRewardedAdResult.rewarded:
-          // 广告播放完成，直接解锁全文（后台异步验证，不阻塞用户）。
-          unawaited(
-            postRequest<AdVerifyResult>(
-              path: 'novel_ads/search_results',
-              showTips: false,
-              parameter: {'uuid': adConfig.uuid},
-              fromJson: (json) => AdVerifyResult.fromJson(json),
-            ),
-          );
-          action_logic.unlock_current_story();
-          _has_user_engaged = true;
-          _reading_progress_max_extent = null;
-          _next_story_overlay_opacity = 0;
-          setState(() {});
-          await WidgetsBinding.instance.endOfFrame;
-          await WidgetsBinding.instance.endOfFrame;
-          if (!_is_current_logic(action_logic, action_generation) ||
-              !_scroll_controller.hasClients) {
-            return;
-          }
-          final double full_extent = _calculate_current_story_extent();
-          _reading_progress_max_extent = full_extent;
-          action_logic.update_reading_progress(
-            _scroll_controller.offset,
-            full_extent,
-          );
-          showBottomTip(easy.tr('short_story_read.content_unlocked'));
-          break;
-        case GoogleRewardedAdResult.dismissed:
-          showBottomTip(easy.tr('short_story_read.ad_not_completed'));
-          break;
-        case GoogleRewardedAdResult.load_failed:
-          showBottomTip(easy.tr('short_story_read.ad_load_failed'));
-          break;
-        case GoogleRewardedAdResult.consent_unavailable:
-          showBottomTip(easy.tr('short_story_read.ad_consent_unavailable'));
-          break;
-        case GoogleRewardedAdResult.show_failed:
-          showBottomTip(easy.tr('short_story_read.ad_show_failed'));
-          break;
-        case GoogleRewardedAdResult.unsupported:
-          showBottomTip(easy.tr('short_story_read.ad_unsupported'));
-          break;
-        case GoogleRewardedAdResult.busy:
-          showBottomTip(easy.tr('short_story_read.ad_in_progress'));
-          break;
-        case GoogleRewardedAdResult.cancelled:
-          break;
-      }
-    } finally {
-      // 旧篇请求结束时不能清除新篇激励广告的加载状态。
-      if (_is_current_logic(action_logic, action_generation)) {
-        setState(() => _is_rewarded_ad_loading = false);
-      }
-    }
-  }
 
   /// 修改字号后按修改前的阅读百分比恢复位置，避免正文突然跳段。
   void _change_body_font_size(VoidCallback change_font_size) {
@@ -1636,109 +920,6 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     _update_next_story_overlay_opacity();
   }
 
-  /// 开始自动阅读。
-  ///
-  /// 关闭弹窗后隐藏导航栏和底部栏，正文内容缓慢滚动到最底部。
-  /// 速度由 [_logic.auto_read_speed] 控制（0.0 最慢，1.0 最快）。
-  void _start_auto_read() {
-    if (_logic.is_auto_reading.value) return;
-
-    _has_user_engaged = true;
-    _logic.is_auto_reading.value = true;
-
-    // 隐藏导航栏和评论栏。
-    _logic.is_appbar_visible.value = false;
-    _logic.is_bottom_bar_visible.value = false;
-
-    _begin_auto_read_ticker();
-  }
-
-  /// 启动自动阅读 Ticker（每帧根据当前速度滚动）。
-  void _begin_auto_read_ticker() {
-    if (!mounted || !_logic.is_auto_reading.value) return;
-
-    _auto_read_last_tick = null;
-
-    _auto_read_ticker?.dispose();
-    _auto_read_ticker = createTicker((Duration elapsed) {
-      if (!_scroll_controller.hasClients || !_logic.is_auto_reading.value) {
-        _auto_read_ticker?.stop();
-        return;
-      }
-      if (_viewport_resize_progress != null) {
-        _auto_read_last_tick = elapsed;
-        return;
-      }
-
-      // 计算距上一帧的时间差（秒）。
-      final double delta_seconds;
-      if (_auto_read_last_tick == null) {
-        delta_seconds = 0;
-      } else {
-        delta_seconds =
-            (elapsed - _auto_read_last_tick!).inMicroseconds / 1000000.0;
-      }
-      _auto_read_last_tick = elapsed;
-
-      // 速度映射：0.0 → 20px/s，1.0 → 300px/s。
-      final double speed = _logic.auto_read_speed.value;
-      final double pixels_per_second = 20 + speed * 280;
-
-      final double current = _scroll_controller.offset;
-      final double max_extent =
-          _reading_progress_max_extent ?? _calculate_current_story_extent();
-      final double next = current + pixels_per_second * delta_seconds;
-
-      _is_auto_read_ticking = true;
-      if (next >= max_extent) {
-        _scroll_controller.jumpTo(max_extent);
-        _logic.is_auto_reading.value = false;
-        _logic.is_appbar_visible.value = true;
-        _logic.is_bottom_bar_visible.value = true;
-        _auto_read_ticker?.stop();
-      } else {
-        _scroll_controller.jumpTo(next);
-      }
-      _is_auto_read_ticking = false;
-    });
-
-    _auto_read_ticker?.start();
-  }
-
-  /// 显示自动阅读设置弹窗。
-  Future<void> _on_auto_read_settings_tap() async {
-    final ShortStoryReadLogic sheet_logic = _logic;
-    final bool should_resume = sheet_logic.is_auto_reading.value;
-    _auto_read_ticker?.stop();
-    _auto_read_last_tick = null;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      enableDrag: true,
-      showDragHandle: false,
-      backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
-      builder: (BuildContext sheet_context) {
-        return AutoReadSettingsSheet(
-          logic: _logic,
-          on_close: () => Navigator.of(sheet_context).pop(),
-          on_exit: () {
-            Navigator.of(sheet_context).pop();
-            _stop_auto_read();
-          },
-        );
-      },
-    );
-    if (!mounted ||
-        !should_resume ||
-        !identical(_logic, sheet_logic) ||
-        !sheet_logic.is_auto_reading.value) {
-      return;
-    }
-    _begin_auto_read_ticker();
-  }
-
   /// 处理上一篇按钮点击。
   void _on_previous_tap() {
     if (_is_transitioning) return;
@@ -1768,12 +949,12 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     _is_transitioning = true;
     FocusManager.instance.primaryFocus?.unfocus();
     _is_paragraph_selection_active = false;
-    _stop_auto_read();
+    _auto_read.stop();
     _is_slide_up = slide_up;
-    _is_previous_pull_rebounding = false;
-    _is_previous_pull_dragging = false;
-    _is_next_pull_rebounding = false;
-    _is_next_pull_dragging = false;
+    _pull.is_previous_pull_rebounding = false;
+    _pull.is_previous_pull_dragging = false;
+    _pull.is_next_pull_rebounding = false;
+    _pull.is_next_pull_dragging = false;
 
     // 隐藏导航栏和评论栏。
     if (_logic.is_appbar_visible.value) {
@@ -1787,7 +968,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     );
     final ShortStoryReadLogic previous_logic = _logic;
     if (_is_initialization_complete && _has_user_engaged) {
-      unawaited(_save_progress_snapshot(previous_logic));
+      unawaited(_progress.save_snapshot(previous_logic));
     }
 
     await _page_transition_controller.forward();
@@ -1807,18 +988,20 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     previous_logic.dispose();
 
     setState(() {
-      _previous_pull_raw_offset = 0;
-      _previous_pull_offset = 0;
-      _next_pull_raw_offset = 0;
-      _next_pull_offset = 0;
+      _pull.previous_pull_raw_offset = 0;
+      _pull.previous_pull_offset = 0;
+      _pull.next_pull_raw_offset = 0;
+      _pull.next_pull_offset = 0;
       _next_story_overlay_opacity = 0;
       _reading_progress_max_extent = null;
       _is_initialization_complete = false;
       _has_user_engaged = false;
-      _is_rewarded_ad_loading = false;
-      _ad_probability_generation = null;
-      _reset_native_ad_state();
-      _is_video_ad_gate_required = true;
+      _resume_record = null;
+      _has_reading_history.value = false;
+      _ad_gate.is_rewarded_ad_loading = false;
+      _ad_gate.mark_generation_pending();
+      _ad_gate.reset_native_state();
+      _ad_gate.is_video_ad_gate_required = true;
       _logic = next_logic;
       _logic_generation++;
     });
@@ -1921,8 +1104,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 当前是否允许从正文顶部下拉切换上一篇。
   bool get _can_pull_previous_story {
     if (_is_transitioning ||
-        _is_previous_pull_rebounding ||
-        _is_next_pull_rebounding) {
+        _pull.is_previous_pull_rebounding ||
+        _pull.is_next_pull_rebounding) {
       return false;
     }
     if (_logic.is_loading.value || _logic.is_error.value) return false;
@@ -1940,8 +1123,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 当前是否允许从正文底部上拉切换下一篇。
   bool get _can_pull_next_story {
     if (_is_transitioning ||
-        _is_previous_pull_rebounding ||
-        _is_next_pull_rebounding) {
+        _pull.is_previous_pull_rebounding ||
+        _pull.is_next_pull_rebounding) {
       return false;
     }
     if (_logic.is_loading.value || _logic.is_error.value) return false;
@@ -1994,140 +1177,194 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     return values[lang]?[key] ?? values['en']![key] ?? key;
   }
 
-  /// 把真实手指拖拽距离转换成视觉位移。
-  ///
-  /// 前半段基本跟手，超过触发阈值后增加阻尼，避免页面被拉得过远。
-  double _compute_previous_pull_visual_offset(double raw_offset) {
-    if (raw_offset <= 0) return 0;
-    if (raw_offset <= _previous_pull_trigger_distance) {
-      return raw_offset;
-    }
+  // ==================== [StoryNativeAdHost] ====================
 
-    final double extra = raw_offset - _previous_pull_trigger_distance;
-    final double resisted_extra = extra * 0.38;
-    return (_previous_pull_trigger_distance + resisted_extra).clamp(
-      0.0,
-      _previous_pull_max_distance,
-    );
+  @override
+  int get story_id => _logic.story_id;
+
+  @override
+  String get content => _logic.content.value;
+
+  @override
+  bool get is_story_unlocked => _logic.is_story_unlocked.value;
+
+  @override
+  int get reader_generation => _logic_generation;
+
+  @override
+  bool get is_initialization_complete => _is_initialization_complete;
+
+  @override
+  bool get has_user_engaged => _has_user_engaged;
+
+  @override
+  bool get is_cjk_language => LanguageUtil.is_cjk_language(
+    Localizations.localeOf(context).languageCode,
+  );
+
+  @override
+  void refresh_ui() {
+    if (mounted) setState(() {});
   }
 
-  /// 把底部真实上拉距离转换成视觉位移。
-  double _compute_next_pull_visual_offset(double raw_offset) {
-    if (raw_offset <= 0) return 0;
-    if (raw_offset <= _next_pull_trigger_distance) {
-      return raw_offset;
-    }
-
-    final double viewport_height = MediaQuery.sizeOf(context).height;
-    final double max_visual_offset =
-        (viewport_height * _next_pull_max_viewport_ratio).clamp(
-          _next_pull_trigger_distance,
-          viewport_height - 24.0,
-        );
-
-    final double extra = raw_offset - _next_pull_trigger_distance;
-
-    // 超过触发距离之后仍然保留一点阻尼，但不能阻尼过重；
-    // 否则用户继续上拉时，下一篇正文看起来还是被固定裁剪在几行。
-    final double resisted_extra = extra * 0.82;
-
-    return (_next_pull_trigger_distance + resisted_extra).clamp(
-      0.0,
-      max_visual_offset,
-    );
+  @override
+  void invalidate_progress_extent() {
+    _reading_progress_max_extent = null;
   }
 
-  /// 指针移动：在顶部向下拖拽切上一篇，在底部向上拖拽切下一篇。
-  void _on_reader_pointer_move(PointerMoveEvent event) {
-    if (_is_paragraph_selection_active || _is_paragraph_composer_open) return;
-    final double dy = event.delta.dy;
-    if (dy != 0) {
-      _has_user_engaged = true;
-    }
+  // ==================== [StoryAutoReadHost] ====================
+  // resolve_story_extent / mark_user_engaged 由 StoryProgressHost、
+  // StoryToolbarHost 的同名实现满足。
 
-    if (_is_previous_pull_dragging || _previous_pull_offset > 0) {
-      _handle_previous_pull_move(dy);
-      return;
-    }
+  @override
+  bool get is_viewport_resizing => _viewport_resize_progress != null;
 
-    if (_is_next_pull_dragging || _next_pull_offset > 0) {
-      _handle_next_pull_move(dy);
-      return;
-    }
+  // ==================== [StoryToolbarHost] ====================
 
-    if (_can_pull_previous_story && _is_reader_at_top && dy > 0) {
-      _handle_previous_pull_move(dy);
-      return;
-    }
+  @override
+  ShortStoryReadLogic get logic => _logic;
 
-    if (_can_pull_next_story && _is_reader_at_bottom && dy < 0) {
-      _handle_next_pull_move(dy);
-    }
+  @override
+  bool is_current_logic(ShortStoryReadLogic logic, int generation) =>
+      _is_current_logic(logic, generation);
+
+  @override
+  set is_rewarded_ad_loading(bool value) {
+    _ad_gate.is_rewarded_ad_loading = value;
   }
 
-  /// 顶部下拉上一篇的拖拽处理。
-  void _handle_previous_pull_move(double dy) {
-    if (!_can_pull_previous_story && _previous_pull_offset <= 0) return;
+  @override
+  bool get is_rewarded_ad_loading => _ad_gate.is_rewarded_ad_loading;
 
-    _stop_auto_read();
-    _previous_pull_animation_controller.stop();
-    _is_previous_pull_rebounding = false;
+  @override
+  void start_auto_read() => _auto_read.start();
 
-    final double next_raw = (_previous_pull_raw_offset + dy).clamp(
-      0.0,
-      _previous_pull_max_distance * 2.2,
-    );
-    final double next_visual = _compute_previous_pull_visual_offset(next_raw);
-
-    setState(() {
-      // 一旦进入顶部下拉手势，在本次按压释放前都保持手势态。
-      // 否则用户拉出提示后又推回 0，再继续下拉时容易被普通滚动接管。
-      _is_previous_pull_dragging = true;
-      _previous_pull_raw_offset = next_raw;
-      _previous_pull_offset = next_visual;
-    });
+  @override
+  void change_body_font_size(VoidCallback mutation) {
+    _change_body_font_size(mutation);
   }
 
-  /// 底部上拉下一篇的拖拽处理。
-  void _handle_next_pull_move(double dy) {
-    if (!_can_pull_next_story && _next_pull_offset <= 0) return;
+  @override
+  void open_story(int story_id) {
+    _switch_to_story(story_id);
+  }
 
-    _stop_auto_read();
-    _next_pull_animation_controller.stop();
-    _is_next_pull_rebounding = false;
+  @override
+  void reset_next_story_overlay() {
+    _next_story_overlay_opacity = 0;
+  }
 
-    // dy < 0 表示手指向上拖动，所以用 -dy 转为正数距离。
-    final double viewport_height = MediaQuery.sizeOf(context).height;
-    final double next_raw = (_next_pull_raw_offset - dy).clamp(
-      0.0,
-      viewport_height * 1.35,
-    );
-    final double next_visual = _compute_next_pull_visual_offset(next_raw);
+  @override
+  double calculate_story_extent() => _calculate_current_story_extent();
 
-    setState(() {
-      // 一旦进入底部上拉手势，在本次按压释放前都保持手势态。
-      // 这样用户上拉看到提示后推回去，再继续上拉，仍然可以重新出现提示并触发下一篇。
-      _is_next_pull_dragging = true;
-      _next_pull_raw_offset = next_raw;
-      _next_pull_offset = next_visual;
-    });
+  // ==================== [StoryProgressHost] ====================
+
+  @override
+  ScrollController get scroll_controller => _scroll_controller;
+
+  @override
+  GlobalKey get story_end_key => _current_story_end_key;
+
+  @override
+  double get visible_progress_limit => _visible_story_progress_limit;
+
+  @override
+  bool is_current_initialization(
+    ShortStoryReadLogic logic,
+    int generation,
+    int attempt,
+  ) =>
+      _is_current_initialization(logic, generation, attempt);
+
+  @override
+  set is_restoring_position(bool value) {
+    _is_restoring_position = value;
+  }
+
+  @override
+  BuildContext get host_context => context;
+
+  @override
+  double resolve_story_extent() {
+    return _reading_progress_max_extent ?? _calculate_current_story_extent();
+  }
+
+  @override
+  void cache_story_extent(double extent) {
+    _reading_progress_max_extent = extent;
+  }
+
+  // ==================== [StoryPullGestureHost] ====================
+
+  @override
+  bool get is_selection_active => _is_paragraph_selection_active;
+
+  @override
+  bool get is_composer_open => _is_paragraph_composer_open;
+
+  @override
+  bool get can_pull_previous_story => _can_pull_previous_story;
+
+  @override
+  bool get can_pull_next_story => _can_pull_next_story;
+
+  @override
+  bool get is_reader_at_top => _is_reader_at_top;
+
+  @override
+  bool get is_reader_at_bottom => _is_reader_at_bottom;
+
+  @override
+  double get viewport_height => MediaQuery.sizeOf(context).height;
+
+  @override
+  bool get host_mounted => mounted;
+
+  @override
+  int? get previous_story_id => _logic.previous_story_id;
+
+  @override
+  int? get next_story_id => _logic.next_story_id;
+
+  @override
+  void stop_auto_read() => _auto_read.stop();
+
+  @override
+  void switch_to_story(int story_id, {required bool slide_up}) {
+    _switch_to_story(story_id, slide_up: slide_up);
+  }
+
+  @override
+  void on_pull_offsets_changed() => setState(() {});
+
+  @override
+  void schedule_next_story_overlay_update() {
     _schedule_next_story_overlay_update();
+  }
+
+  @override
+  void sync_next_preview_scroll_position() {
     _sync_next_preview_scroll_position();
+  }
+
+  @override
+  void mark_user_engaged() {
+    _has_user_engaged = true;
   }
 
   /// 底部上拉时，同步滚动位置到新的内容底部。
   ///
-  /// 下一篇正文预览的高度会随着 `_next_pull_offset` 增加。
+  /// 下一篇正文预览的高度会随着 `_pull.next_pull_offset` 增加。
   /// 如果只增高底部内容，但不调整 SingleChildScrollView 内部 offset，
   /// 新增出来的正文会长在屏幕下方，用户看到的仍然只有最开始那几行。
   ///
   /// 放到 post frame 是为了等本轮 setState 完成布局，拿到最新 maxScrollExtent。
   void _sync_next_preview_scroll_position() {
-    if (!_is_next_pull_dragging || _next_pull_offset <= 0) return;
+    if (!_pull.is_next_pull_dragging || _pull.next_pull_offset <= 0) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scroll_controller.hasClients) return;
-      if (!_is_next_pull_dragging || _next_pull_offset <= 0) return;
+      if (!_pull.is_next_pull_dragging || _pull.next_pull_offset <= 0) return;
 
       final ScrollPosition position = _scroll_controller.position;
       final double max_extent = position.maxScrollExtent;
@@ -2140,144 +1377,6 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     });
   }
 
-  /// 指针释放/取消：距离足够切换，否则回弹。
-  void _on_reader_pointer_end(PointerEvent event) {
-    if (_is_previous_pull_dragging || _previous_pull_offset > 0) {
-      _is_previous_pull_dragging = false;
-      _finish_previous_pull_gesture();
-      return;
-    }
-
-    if (_is_next_pull_dragging || _next_pull_offset > 0) {
-      _is_next_pull_dragging = false;
-      _finish_next_pull_gesture();
-    }
-  }
-
-  /// 顶部下拉手势结束：距离足够则切换上一篇，不够则回弹。
-  void _finish_previous_pull_gesture() {
-    if (_previous_pull_offset >= _previous_pull_trigger_distance) {
-      final int? previous_id = _logic.previous_story_id;
-      if (previous_id == null) {
-        _animate_previous_pull_back();
-        return;
-      }
-      _switch_to_story(previous_id, slide_up: false);
-      return;
-    }
-
-    _animate_previous_pull_back();
-  }
-
-  /// 底部上拉手势结束：距离足够则切换下一篇，不够则回弹。
-  void _finish_next_pull_gesture() {
-    if (_next_pull_offset >= _next_pull_trigger_distance) {
-      final int? next_id = _logic.next_story_id;
-      if (next_id == null) {
-        _animate_next_pull_back();
-        return;
-      }
-      _switch_to_story(next_id, slide_up: true);
-      return;
-    }
-
-    _animate_next_pull_back();
-  }
-
-  /// 轻微下拉时回弹到当前小说顶部。
-  void _animate_previous_pull_back() {
-    if (_previous_pull_offset <= 0 || _is_previous_pull_rebounding) return;
-
-    _previous_pull_animation_controller.stop();
-    _previous_pull_animation_controller.reset();
-    _is_previous_pull_rebounding = true;
-
-    final double begin_visual = _previous_pull_offset;
-    final Animation<double> animation =
-        Tween<double>(begin: begin_visual, end: 0).animate(
-          CurvedAnimation(
-            parent: _previous_pull_animation_controller,
-            curve: Curves.easeOutCubic,
-          ),
-        );
-
-    void listener() {
-      if (!mounted) return;
-      setState(() {
-        _previous_pull_offset = animation.value;
-        _previous_pull_raw_offset = animation.value;
-      });
-    }
-
-    void status_listener(AnimationStatus status) {
-      if (status != AnimationStatus.completed &&
-          status != AnimationStatus.dismissed) {
-        return;
-      }
-      animation.removeListener(listener);
-      _previous_pull_animation_controller.removeStatusListener(status_listener);
-      if (!mounted) return;
-      setState(() {
-        _previous_pull_raw_offset = 0;
-        _previous_pull_offset = 0;
-        _is_previous_pull_dragging = false;
-        _is_previous_pull_rebounding = false;
-      });
-    }
-
-    animation.addListener(listener);
-    _previous_pull_animation_controller.addStatusListener(status_listener);
-    _previous_pull_animation_controller.forward();
-  }
-
-  /// 轻微上拉时回弹到当前小说底部。
-  void _animate_next_pull_back() {
-    if (_next_pull_offset <= 0 || _is_next_pull_rebounding) return;
-
-    _next_pull_animation_controller.stop();
-    _next_pull_animation_controller.reset();
-    _is_next_pull_rebounding = true;
-
-    final double begin_visual = _next_pull_offset;
-    final Animation<double> animation =
-        Tween<double>(begin: begin_visual, end: 0).animate(
-          CurvedAnimation(
-            parent: _next_pull_animation_controller,
-            curve: Curves.easeOutCubic,
-          ),
-        );
-
-    void listener() {
-      if (!mounted) return;
-      setState(() {
-        _next_pull_offset = animation.value;
-        _next_pull_raw_offset = animation.value;
-      });
-      _schedule_next_story_overlay_update();
-    }
-
-    void status_listener(AnimationStatus status) {
-      if (status != AnimationStatus.completed &&
-          status != AnimationStatus.dismissed) {
-        return;
-      }
-      animation.removeListener(listener);
-      _next_pull_animation_controller.removeStatusListener(status_listener);
-      if (!mounted) return;
-      setState(() {
-        _next_pull_raw_offset = 0;
-        _next_pull_offset = 0;
-        _is_next_pull_dragging = false;
-        _is_next_pull_rebounding = false;
-      });
-      _schedule_next_story_overlay_update();
-    }
-
-    animation.addListener(listener);
-    _next_pull_animation_controller.addStatusListener(status_listener);
-    _next_pull_animation_controller.forward();
-  }
-
   /// 构建顶部下拉查看上一篇提示。
   /// 替换封面成功回调：同步本地详情与缓存并刷新封面展示。
   void _on_cover_replaced(String cover_url, int cover_width, int cover_height) {
@@ -2288,124 +1387,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     );
   }
 
-  Widget _buildPreviousPullHeader({
-    required bool is_dark,
-    required double status_bar_height,
-  }) {
-    return PreviousPullHeader(
-      is_dark: is_dark,
-      status_bar_height: status_bar_height,
-      pull_offset: _previous_pull_offset,
-      trigger_distance: _previous_pull_trigger_distance,
-      previous_title: _logic.previous_story_item?.title ?? '',
-      localized_texts: <String, String>{
-        'pull_down_view': _readerText('pull_down_view'),
-        'release_view': _readerText('release_view'),
-      },
-    );
-  }
 
-  /// 构建贯穿屏幕底部的下一篇渐变遮罩和固定提示。
-  Widget _buildNextStoryBottomOverlay({
-    required bool is_dark,
-    required Color bg_color,
-    required double bottom_padding,
-    required double overlay_opacity,
-    required double next_pull_hint_opacity,
-    required bool next_pull_ready,
-  }) {
-    final Color text_color = is_dark
-        ? ShortStoryReadStyle.secondary_dark_color
-        : ShortStoryReadStyle.secondary_light_color;
-
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: bottom_padding + 132,
-      child: IgnorePointer(
-        child: AnimatedOpacity(
-          opacity: overlay_opacity,
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: <Color>[
-                  bg_color,
-                  bg_color.withValues(alpha: 0.94),
-                  bg_color.withValues(alpha: 0.62),
-                  bg_color.withValues(alpha: 0.0),
-                ],
-                stops: const <double>[0.0, 0.42, 0.72, 1.0],
-              ),
-            ),
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: EdgeInsets.only(bottom: bottom_padding + 14),
-                child: AnimatedOpacity(
-                  opacity: next_pull_hint_opacity,
-                  duration: const Duration(milliseconds: 90),
-                  curve: Curves.easeOut,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: is_dark
-                          ? Colors.black.withValues(alpha: 0.18)
-                          : Colors.white.withValues(alpha: 0.42),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: is_dark
-                            ? Colors.white.withValues(alpha: 0.08)
-                            : Colors.black.withValues(alpha: 0.05),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Text(
-                          _readerText('view_next'),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontConfig.adjustedWeight(
-                              FontWeight.w500,
-                            ),
-                            color: text_color,
-                            height: 1.2,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        AnimatedRotation(
-                          turns: next_pull_ready ? 0.25 : -0.25,
-                          duration: const Duration(milliseconds: 160),
-                          curve: Curves.easeOutCubic,
-                          child: SvgPicture.asset(
-                            'assets/svg/right.svg',
-                            width: 13,
-                            height: 13,
-                            colorFilter: ColorFilter.mode(
-                              text_color,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   // ==================== UI 构建 ====================
 
@@ -2465,424 +1447,106 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 构建主要内容区域。
   ///
-  /// 包含背景装饰、可滚动的正文内容、完整导航栏和底部评论栏。
+  /// 渲染树全部收敛在 [StoryContentStack]，这里只组装主题/状态/回调三组参数。
   Widget _buildContent({
     required bool is_dark,
     required double status_bar_height,
   }) {
-    /// 尺寸回调必须属于创建该阅读树时的小说，避免切篇后回写旧范围。
-    final int generation = _logic_generation;
-
-    /// 页面背景色。
-    final Color bg_color = is_dark
-        ? ShortStoryReadStyle.bg_dark_color
-        : ShortStoryReadStyle.bg_light_color;
-
-    /// 标题文字颜色。
-    final Color title_color = is_dark
-        ? ShortStoryReadStyle.title_dark_color
-        : ShortStoryReadStyle.title_light_color;
-
-    /// 当前语种是否为 CJK。
     final bool is_cjk = LanguageUtil.is_cjk_language(
       Localizations.localeOf(context).languageCode,
     );
-
-    /// 标题字号（CJK 语系字号稍大）。
-    final double title_font_size = is_cjk ? 22.0 : 20.0;
-
-    /// 标签列表。
-    final List<String> tags = _logic.category_list;
-
-    /// 底部安全区域高度。
+    final Color bg_color = is_dark
+        ? ShortStoryReadStyle.bg_dark_color
+        : ShortStoryReadStyle.bg_light_color;
     final double bottom_padding = MediaQuery.viewPaddingOf(context).bottom;
 
-    /// 是否需要在正文底部展示下一篇预览。
-    final bool has_next_preview = _logic.next_story_item != null;
+    /// 尺寸回调必须属于创建该阅读树时的小说，避免切篇后回写旧范围。
+    final int generation = _logic_generation;
 
-    /// 有下一篇预览时，底部不要再保留过大的普通正文留白。
-    ///
-    /// 这样用户读完正文后，能直接看到下一篇的标题和分类，
-    /// 简介只在可视区域底部露出一点点；继续上拉时再逐步展开。
-    final double scroll_bottom_padding =
-        (has_next_preview ? 18.0 : ShortStoryReadStyle.page_bottom_padding) +
-        bottom_padding;
-
-    final double next_pull_hint_opacity = ((_next_pull_offset - 22.0) / 96.0)
-        .clamp(0.0, 1.0);
-    final bool next_pull_ready =
-        _next_pull_offset >= _next_pull_trigger_distance;
-
-    /// 下一篇的预览文字。
-    ///
-    /// 优先使用目录数据中已有的简介，避免正文预加载未完成或失败时
-    /// 只显示下一篇标题而预览区域为空。
-    final String next_story_preview_content =
-        resolve_next_story_preview_content(
-          description: _logic.next_story_item?.description ?? '',
-          preloaded_content: _logic.next_story_content.value,
-        );
-
-    // 下一篇简介预览不能用固定高度。
-    // 默认稳定展示数行简介；一旦用户上拉，它的可见高度就按真实上拉距离增长。
-    final double next_preview_line_height = is_cjk
-        ? ShortStoryReadStyle.body_height_cjk
-        : ShortStoryReadStyle.body_height_alphabetic;
-    final int next_preview_visible_line_count = is_cjk
-        ? ShortStoryReadStyle.next_preview_visible_line_count_cjk
-        : ShortStoryReadStyle.next_preview_visible_line_count_alphabetic;
-    final double next_preview_body_height =
-        (_logic.body_font_size.value *
-            next_preview_line_height *
-            next_preview_visible_line_count) +
-        bottom_padding +
-        _next_pull_offset;
-    final int next_preview_max_lines = math.max(
-      next_preview_visible_line_count,
-      (next_preview_body_height /
-                  (_logic.body_font_size.value * next_preview_line_height))
-              .ceil() +
-          ShortStoryReadStyle.next_preview_overflow_buffer_line_count,
-    );
-
-    final bool show_next_bottom_overlay =
-        has_next_preview && _next_story_overlay_opacity > 0.01;
-
-    /// 就绪广告只在尚未读到的段落边界安排，卡片进入视口后首次挂载。
-    final Widget? native_ad_slot = _build_native_ad_slot();
-
-    if (has_next_preview) {
-      _schedule_next_story_overlay_update();
-    }
-
-    return Stack(
-      children: <Widget>[
-        /// 背景装饰（底层）。
-        StarfieldDecoration(is_dark: is_dark),
-        WindowContentLayout(
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              /// 顶部下拉查看上一篇提示（露出在当前页面背后）。
-              _buildPreviousPullHeader(
-                is_dark: is_dark,
-                status_bar_height: status_bar_height,
-              ),
-
-              /// 正文内容（可滚动，点击切换导航栏显隐，翻页时滑动消失）。
-              AnimatedBuilder(
-                animation: _page_transition_controller,
-                builder: (BuildContext context, Widget? child) {
-                  /// 翻页动画进度（0.0 = 原位，1.0 = 完全滑出屏幕）。
-                  final double progress = _page_transition_controller.value;
-
-                  /// 根据方向决定偏移量（向上或向下滑出屏幕）。
-                  final double transition_offset_y = _is_slide_up
-                      ? -progress * MediaQuery.sizeOf(context).height
-                      : progress * MediaQuery.sizeOf(context).height;
-                  // 注意：底部上拉时不能再把整个 SingleChildScrollView 视口整体上移。
-                  //
-                  // 旧写法是：transition_offset_y + _previous_pull_offset - _next_pull_offset。
-                  // 这会移动“已经被视口裁剪后的画面”，而不是移动滚动内容本身；
-                  // 结果就是下一篇正文预览看起来永远只露出最初那几行。
-                  //
-                  // 底部下一篇的露出改由 `_sync_next_preview_scroll_position()`
-                  // 在预览高度变化后把内部滚动位置同步到新的 maxScrollExtent，
-                  // 这样真正移动的是滚动内容，下一篇正文能按上拉距离持续露出。
-                  final double offset_y =
-                      transition_offset_y + _previous_pull_offset;
-
-                  return Transform.translate(
-                    offset: Offset(0, offset_y),
-                    child: child,
-                  );
-                },
-                child: Listener(
-                  behavior: HitTestBehavior.translucent,
-                  onPointerDown: (_) {
-                    _tap_started_with_selection =
-                        _is_paragraph_selection_active;
-                  },
-                  onPointerMove: _on_reader_pointer_move,
-                  onPointerUp: _on_reader_pointer_end,
-                  onPointerCancel: _on_reader_pointer_end,
-                  child: GestureDetector(
-                    onTap: _on_content_tap,
-                    behavior: HitTestBehavior.translucent,
-                    child: ViewportResizeObserver(
-                      on_resize_start: _on_viewport_resize_start,
-                      on_resize_end: _on_viewport_resize_end,
-                      child: StoryScrollMetricsObserver(
-                        scroll_controller: _scroll_controller,
-                        story_end_key: _current_story_end_key,
-                        on_layout_pending: () {
-                          if (generation == _logic_generation) {
-                            _reading_progress_max_extent = null;
-                          }
-                        },
-                        on_extent_changed: (extent) =>
-                            _on_current_story_extent_changed(
-                              extent,
-                              generation,
-                            ),
-                        child: SingleChildScrollView(
-                          controller: _scroll_controller,
-                          physics: _reader_scroll_physics,
-                          padding: EdgeInsets.fromLTRB(
-                            ShortStoryReadStyle.page_horizontal_padding,
-                            status_bar_height +
-                                ShortStoryReadStyle.appbar_height +
-                                16,
-                            ShortStoryReadStyle.page_horizontal_padding,
-                            scroll_bottom_padding,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              /// TODO 标题单独避让局部系统区，多行超高标题也适用，正文仍保持完整可读宽度。
-                              WindowReservedRegionPadding(
-                                mode: WindowReservedRegionPaddingMode.heading,
-                                child:
-                                    (_logic
-                                            .story_data
-                                            .value
-                                            ?.cover_url
-                                            .isNotEmpty ==
-                                        true)
-                                    ? Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: <Widget>[
-                                          NovelCover(
-                                            image_url: _logic
-                                                .story_data
-                                                .value!
-                                                .cover_url,
-                                            width: 48,
-                                            height: 64,
-                                            border_radius: 6,
-                                            is_dark: is_dark,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: TitleWithStoryId(
-                                              title: _logic.title,
-                                              story_id: _logic.story_id,
-                                              on_cover_replaced:
-                                                  _on_cover_replaced,
-                                              title_style: TextStyle(
-                                                fontSize: title_font_size,
-                                                fontWeight:
-                                                    FontConfig.adjustedWeight(
-                                                      FontWeight.w500,
-                                                    ),
-                                                color: title_color,
-                                                height: 1.4,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    : TitleWithStoryId(
-                                        title: _logic.title,
-                                        story_id: _logic.story_id,
-                                        on_cover_replaced: _on_cover_replaced,
-                                        title_style: TextStyle(
-                                          fontSize: title_font_size,
-                                          fontWeight: FontConfig.adjustedWeight(
-                                            FontWeight.w500,
-                                          ),
-                                          color: title_color,
-                                          height: 1.4,
-                                        ),
-                                      ),
-                              ),
-                              const SizedBox(height: 12),
-
-                              /// 标签列表。
-                              if (tags.isNotEmpty) ...[
-                                TagList(
-                                  tags: tags,
-                                  is_dark: is_dark,
-                                  story_id: _logic.story_id,
-                                  is_cjk: is_cjk,
-                                ),
-                                const SizedBox(height: 24),
-                              ],
-
-                              /// 正文内容。
-                              StoryUnlockGate(
-                                key: ValueKey(_logic.story_id),
-                                content: _logic.content.value,
-                                is_dark: is_dark,
-                                is_loading: _logic.is_content_loading.value,
-                                is_unlocked:
-                                    _logic.is_story_unlocked.value ||
-                                    !_is_video_ad_gate_required,
-                                is_unlocking: _is_rewarded_ad_loading,
-                                font_size: _logic.body_font_size.value,
-                                on_unlock: _on_unlock_story_tap,
-                                native_ad_widget: native_ad_slot,
-                                native_ad_insert_index: _native_ad_insert_index,
-                                paragraph_anchors: _logic.paragraph_anchors
-                                    .toList(),
-                                on_paragraph_comment:
-                                    Get.find<ProjectConfigStore>()
-                                        .current
-                                        .is_comment_enabled
-                                    ? _on_paragraph_comment
-                                    : null,
-                                on_paragraph_share:
-                                    Get.find<ProjectConfigStore>()
-                                        .current
-                                        .is_share_enabled
-                                    ? _on_paragraph_share
-                                    : null,
-                                on_selection_changed:
-                                    _on_paragraph_selection_changed,
-                                on_content_tap: _on_content_tap,
-                                on_comment_count_tap: _on_comment_count_tap,
-                              ),
-
-                              /// 当前篇正文结束位置，用于准确计算进度和恢复位置。
-                              SizedBox(key: _current_story_end_key, height: 0),
-
-                              /// 下一篇小说预览（固定显示在正文下方）。
-                              if (has_next_preview)
-                                NextStoryPreview(
-                                  next_story: _logic.next_story_item!,
-                                  body_font_size: _logic.body_font_size.value,
-                                  is_dark: is_dark,
-                                  is_cjk: is_cjk,
-                                  title_font_size: title_font_size,
-                                  title_color: title_color,
-                                  body_color: is_dark
-                                      ? ShortStoryReadStyle.body_dark_color
-                                      : ShortStoryReadStyle.body_light_color,
-                                  secondary_color: is_dark
-                                      ? ShortStoryReadStyle.secondary_dark_color
-                                      : ShortStoryReadStyle
-                                            .secondary_light_color,
-                                  preview_body_height: next_preview_body_height,
-                                  preview_max_lines: next_preview_max_lines,
-                                  preview_line_height: next_preview_line_height,
-                                  preview_content: next_story_preview_content,
-                                  title_key: _next_story_title_key,
-                                  reader_text: _readerText,
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              /// 底部下一篇渐变遮罩。
-              ///
-              /// 放在 Stack 层级里，而不是正文安全区域内部，保证渐变可以贯穿到屏幕底部；
-              /// 文案和箭头固定在安全区域内的底部。
-              if (show_next_bottom_overlay)
-                _buildNextStoryBottomOverlay(
-                  is_dark: is_dark,
-                  bg_color: bg_color,
-                  bottom_padding: bottom_padding,
-                  overlay_opacity: _next_story_overlay_opacity,
-                  next_pull_hint_opacity: next_pull_hint_opacity,
-                  next_pull_ready: next_pull_ready,
-                ),
-            ],
-          ),
-        ),
-
-        /// 覆盖层（导航栏+评论栏+浮动按钮+渐变遮罩）。
-        ReaderOverlayLayer(
-          is_dark: is_dark,
-          status_bar_height: status_bar_height,
-          bottom_padding: bottom_padding,
-          bg_color: bg_color,
-          is_appbar_visible: _logic.is_appbar_visible.value,
-          bottom_bar_slide_animation: _bottom_bar_slide_animation,
-          floating_button_fade_animation: _floating_button_fade_animation,
-          show_floating_button: _has_floating_button,
-          show_progress_bar: !_logic.is_loading.value && !_logic.is_error.value,
-          catalog_loaded:
-              !_logic.is_catalog_loading.value &&
-              _logic.catalog_list.isNotEmpty,
-          is_favorited: _logic.is_favorited,
-          is_favorite_loading: _logic.is_favorite_loading.value,
-          comment_count: _logic.comment_count,
-          like_count: _logic.like_count,
-          is_liked: _logic.is_liked,
-          is_like_loading: _logic.is_like_loading.value,
-          reading_progress: _logic.reading_progress.value,
-          has_previous: _logic.has_previous_story,
-          has_next: _logic.has_next_story,
-          is_bottom_bar_visible: _logic.is_bottom_bar_visible.value,
-          is_auto_reading: _logic.is_auto_reading.value,
-          on_back: _on_back,
-          on_favorite_tap: _on_favorite_tap,
-          on_share: _on_share,
-          on_catalog_tap: _on_catalog_tap,
-          on_comment_tap: _on_comment_tap,
-          on_like_tap: _on_like_tap,
-          on_setting_tap: _on_setting_tap,
-          on_previous_tap: _on_previous_tap,
-          on_next_tap: _on_next_tap,
-          on_progress_changed: _on_progress_changed,
-          on_progress_change_end: _on_progress_change_end,
-          on_scroll_to_bottom: _showNextStory,
-          on_auto_read_settings_tap: _on_auto_read_settings_tap,
-        ),
-      ],
+    return StoryContentStack(
+      status_bar_height: status_bar_height,
+      bottom_padding: bottom_padding,
+      theme: StoryContentTheme(
+        is_dark: is_dark,
+        is_cjk: is_cjk,
+        bg_color: bg_color,
+        title_color: is_dark
+            ? ShortStoryReadStyle.title_dark_color
+            : ShortStoryReadStyle.title_light_color,
+        title_font_size: is_cjk ? 22.0 : 20.0,
+      ),
+      state: StoryContentState(
+        logic: _logic,
+        generation: _logic_generation,
+        scroll_controller: _scroll_controller,
+        reader_scroll_physics: _reader_scroll_physics,
+        page_transition_controller: _page_transition_controller,
+        bottom_bar_slide_animation: _bottom_bar_slide_animation,
+        floating_button_fade_animation: _floating_button_fade_animation,
+        is_slide_up: _is_slide_up,
+        previous_pull_offset: _pull.previous_pull_offset,
+        next_pull_offset: _pull.next_pull_offset,
+        next_story_overlay_opacity: _next_story_overlay_opacity,
+        body_start_key: _body_start_key,
+        story_end_key: _current_story_end_key,
+        next_story_title_key: _next_story_title_key,
+        has_reading_history: _has_reading_history,
+        is_paragraph_selection_active: _is_paragraph_selection_active,
+        is_video_ad_gate_required: _ad_gate.is_video_ad_gate_required,
+        is_rewarded_ad_loading: _ad_gate.is_rewarded_ad_loading,
+        native_ad_slot: _build_native_ad_slot(),
+        native_ad_insert_index: _ad_gate.native_ad_insert_index,
+        show_floating_button: _has_floating_button,
+      ),
+      actions: StoryContentActions(
+        on_content_tap: _on_content_tap,
+        on_pointer_down: () {
+          _tap_started_with_selection = _is_paragraph_selection_active;
+        },
+        on_pointer_move: _pull.on_reader_pointer_move,
+        on_pointer_end: _pull.on_reader_pointer_end,
+        on_viewport_resize_start: _on_viewport_resize_start,
+        on_viewport_resize_end: _on_viewport_resize_end,
+        on_layout_pending: () {
+          if (generation == _logic_generation) {
+            _reading_progress_max_extent = null;
+          }
+        },
+        on_extent_changed: _on_current_story_extent_changed,
+        on_read_story: _on_read_story,
+        on_cover_replaced: _on_cover_replaced,
+        on_back: _actions.on_back,
+        on_favorite: _actions.on_favorite_tap,
+        on_share: _actions.on_share,
+        on_comment: _actions.on_comment_tap,
+        on_paragraph_comment: _on_paragraph_comment,
+        on_paragraph_share: _on_paragraph_share,
+        on_paragraph_selection_changed: _on_paragraph_selection_changed,
+        on_comment_count_tap: _on_comment_count_tap,
+        on_unlock: _actions.on_unlock_story_tap,
+        on_previous_tap: _on_previous_tap,
+        on_next_tap: _on_next_tap,
+        on_progress_changed: _on_progress_changed,
+        on_progress_change_end: _on_progress_change_end,
+        on_scroll_to_bottom: _showNextStory,
+        on_auto_read_settings_tap: _auto_read.on_settings_tap,
+        on_catalog_tap: _actions.on_catalog_tap,
+        on_like_tap: _actions.on_like_tap,
+        on_setting_tap: _actions.on_setting_tap,
+        schedule_next_story_overlay_update: _schedule_next_story_overlay_update,
+        reader_text: _readerText,
+      ),
     );
   }
 
-  /// 构建骨架屏（加载状态）。
-  ///
-  /// 包含背景装饰、骨架屏内容和完整导航栏。
+
+  /// 首次加载直接使用真实海报导航位置，避免旧导航与安全区重复叠加。
   Widget _buildSkeleton({
     required bool is_dark,
     required double status_bar_height,
-  }) {
-    return Stack(
-      children: <Widget>[
-        /// 背景装饰。
-        StarfieldDecoration(is_dark: is_dark),
-        WindowContentLayout(
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              /// 骨架屏内容（位于导航栏下方）。
-              Padding(
-                padding: EdgeInsets.only(
-                  top: status_bar_height + ShortStoryReadStyle.appbar_height,
-                ),
-                child: SkeletonScreen(is_dark: is_dark),
-              ),
-            ],
-          ),
-        ),
-
-        /// 顶部导航栏（加载中右侧显示骨架屏）。
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: FullAppbar(
-            is_dark: is_dark,
-            on_back: _on_back,
-            on_favorite_tap: _on_favorite_tap,
-            on_share: _on_share,
-            is_favorited: _logic.is_favorited,
-            status_bar_height: status_bar_height,
-            is_loading: true,
-          ),
-        ),
-      ],
-    );
-  }
+  }) => WindowContentLayout(
+    child: SkeletonScreen(is_dark: is_dark, on_back: _actions.on_back),
+  );
 
   /// 构建错误状态。
   ///
@@ -2917,9 +1581,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
           right: 0,
           child: FullAppbar(
             is_dark: is_dark,
-            on_back: _on_back,
-            on_favorite_tap: _on_favorite_tap,
-            on_share: _on_share,
+            on_back: _actions.on_back,
+            on_favorite_tap: _actions.on_favorite_tap,
+            on_share: _actions.on_share,
             is_favorited: _logic.is_favorited,
             status_bar_height: status_bar_height,
           ),

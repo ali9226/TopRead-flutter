@@ -29,7 +29,7 @@ class PageBackgroundDecor extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: is_dark
-                      ? const Color(0xFFFFD45A).withValues(alpha: 0.13)
+                      ? ColorConstants.message_type_accent_color_list.withValues(alpha: 0.13)
                       : ColorConstants.themeColor.withValues(alpha: 0.10),
                 ),
               ),
@@ -43,7 +43,7 @@ class PageBackgroundDecor extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: is_dark
-                      ? const Color(0xFF8DB7FF).withValues(alpha: 0.12)
+                      ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.12)
                       : ColorConstants.themeColor.withValues(alpha: 0.06),
                 ),
               ),

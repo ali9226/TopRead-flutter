@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/pages/comics/style.dart';
 import 'package:app/config/color_config.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -23,7 +24,7 @@ class ComicsEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(
-      vertical: 72,
+      vertical: LayoutConfig.space_72,
       horizontal: ComicsStyle.page_padding,
     ),
     child: Column(

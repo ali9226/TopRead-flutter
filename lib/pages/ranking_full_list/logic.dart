@@ -24,7 +24,7 @@ class RankingFullListLogic {
   /// 根据顶部 Tab 下标返回区分色。
   static Color resolve_tab_accent_color(int index) {
     if (index == 0) {
-      return const Color(0xFF8DB7FF);
+      return ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff;
     }
 
     if (index == 1) {
@@ -32,7 +32,7 @@ class RankingFullListLogic {
     }
 
     if (index == 2) {
-      return const Color(0xFF7ED9B1);
+      return ColorConstants.pages_bookshelf_logic_tone;
     }
 
     return ColorConstants.resolveMessageTypeAccentColor(index);

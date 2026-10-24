@@ -6,6 +6,7 @@ import 'package:app/models/story_item.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/widgets/ranking_section/index.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/widgets/ranking_section/style.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/widgets/ranking_section/widgets/ranking_section_skeleton.dart';
+import 'package:app/config/color_config.dart';
 
 void main() {
   testWidgets('完整榜单加载态复用公共骨架并保持固定高度', (WidgetTester tester) async {
@@ -20,7 +21,7 @@ void main() {
               sub_tab_id_list: <int>[],
               all_ranking_data: <List<StoryItem>>[],
               is_dark: false,
-              panel_bg: Colors.white,
+              panel_bg: ColorConstants.whiteColor,
               language_code: 'zh',
               is_loading: true,
             ),

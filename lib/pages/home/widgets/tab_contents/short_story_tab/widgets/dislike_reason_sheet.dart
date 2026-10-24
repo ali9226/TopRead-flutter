@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:get/get.dart';
@@ -67,21 +68,20 @@ class _DislikeReasonSheetState extends State<DislikeReasonSheet>
       duration: const Duration(milliseconds: 300),
     );
 
-    _sheet_slide_animation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _sheet_animation_controller,
-      curve: Curves.easeOutCubic,
-    ));
+    _sheet_slide_animation =
+        Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _sheet_animation_controller,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
-    _overlay_fade_animation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _sheet_animation_controller,
-      curve: Curves.easeOut,
-    ));
+    _overlay_fade_animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _sheet_animation_controller,
+        curve: Curves.easeOut,
+      ),
+    );
 
     _sheet_animation_controller.forward();
   }
@@ -205,8 +205,9 @@ class _DislikeReasonSheetState extends State<DislikeReasonSheet>
               child: GestureDetector(
                 onTap: _dismiss,
                 child: Container(
-                  color: ShortStoryTabStyle.dislike_overlay_color
-                      .withValues(alpha: _overlay_fade_animation.value * 0.4),
+                  color: ShortStoryTabStyle.dislike_overlay_color.withValues(
+                    alpha: _overlay_fade_animation.value * 0.4,
+                  ),
                 ),
               ),
             ),
@@ -226,7 +227,7 @@ class _DislikeReasonSheetState extends State<DislikeReasonSheet>
                     child: Material(
                       color: bg_color,
                       borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
+                        top: Radius.circular(LayoutConfig.radius_16),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -234,26 +235,33 @@ class _DislikeReasonSheetState extends State<DislikeReasonSheet>
                           Padding(
                             padding: const EdgeInsets.only(
                               top: ShortStoryTabStyle.dislike_popup_top_padding,
-                              bottom: 8,
+                              bottom: LayoutConfig.space_8,
                             ),
                             child: Container(
-                              width: ShortStoryTabStyle.dislike_popup_drag_handle_width,
-                              height: ShortStoryTabStyle.dislike_popup_drag_handle_height,
+                              width: ShortStoryTabStyle
+                                  .dislike_popup_drag_handle_width,
+                              height: ShortStoryTabStyle
+                                  .dislike_popup_drag_handle_height,
                               decoration: BoxDecoration(
                                 color: drag_handle_color,
                                 borderRadius: BorderRadius.circular(
-                                  ShortStoryTabStyle.dislike_popup_drag_handle_height / 2,
+                                  ShortStoryTabStyle
+                                          .dislike_popup_drag_handle_height /
+                                      LayoutConfig.radius_2,
                                 ),
                               ),
                             ),
                           ),
 
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 20),
+                            padding: const EdgeInsets.only(
+                              bottom: LayoutConfig.space_20,
+                            ),
                             child: Text(
                               easy.tr('dislike_sheet.title'),
                               style: TextStyle(
-                                fontSize: ShortStoryTabStyle.dislike_popup_title_font_size,
+                                fontSize: ShortStoryTabStyle
+                                    .dislike_popup_title_font_size,
                                 fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                                 color: option_text,
                               ),
@@ -261,10 +269,13 @@ class _DislikeReasonSheetState extends State<DislikeReasonSheet>
                           ),
 
                           Padding(
-                            padding: ShortStoryTabStyle.dislike_popup_content_padding,
+                            padding: ShortStoryTabStyle
+                                .dislike_popup_content_padding,
                             child: Wrap(
-                              spacing: ShortStoryTabStyle.dislike_popup_option_column_spacing,
-                              runSpacing: ShortStoryTabStyle.dislike_popup_option_row_spacing,
+                              spacing: ShortStoryTabStyle
+                                  .dislike_popup_option_column_spacing,
+                              runSpacing: ShortStoryTabStyle
+                                  .dislike_popup_option_row_spacing,
                               children: List<Widget>.generate(
                                 dislike_list.length,
                                 (int index) {
@@ -280,8 +291,10 @@ class _DislikeReasonSheetState extends State<DislikeReasonSheet>
 
                           Padding(
                             padding: EdgeInsets.only(
-                              top: ShortStoryTabStyle.dislike_popup_hint_top_spacing,
-                              bottom: ShortStoryTabStyle.dislike_popup_bottom_safe,
+                              top: ShortStoryTabStyle
+                                  .dislike_popup_hint_top_spacing,
+                              bottom:
+                                  ShortStoryTabStyle.dislike_popup_bottom_safe,
                             ),
                             child: GestureDetector(
                               onTap: () {
@@ -297,7 +310,8 @@ class _DislikeReasonSheetState extends State<DislikeReasonSheet>
                                   Text(
                                     easy.tr('dislike_sheet.hint'),
                                     style: TextStyle(
-                                      fontSize: ShortStoryTabStyle.dislike_popup_hint_font_size,
+                                      fontSize: ShortStoryTabStyle
+                                          .dislike_popup_hint_font_size,
                                       color: hint_text,
                                     ),
                                   ),
@@ -331,7 +345,10 @@ class _DislikeReasonSheetState extends State<DislikeReasonSheet>
   }) {
     final double screen_width = MediaQuery.of(context).size.width;
     final double option_width =
-        (screen_width - 40 - ShortStoryTabStyle.dislike_popup_option_column_spacing) / 2;
+        (screen_width -
+            40 -
+            ShortStoryTabStyle.dislike_popup_option_column_spacing) /
+        2;
 
     return GestureDetector(
       onTap: () {

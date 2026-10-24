@@ -284,11 +284,34 @@ class TileQuestEngine {
     final random = Random(
       seed ?? before.seed ^ before.matched_count ^ before.tray.length * 997,
     );
-    final types = [for (final tile in board) tile.type]..shuffle(random);
-    final by_id = {
-      for (var index = 0; index < board.length; index++)
-        board[index].id: types[index],
-    };
+    // 暗坑图案的库存必须留在「暗坑首牌的遮挡祖先」池内：洗牌只在池内
+    // 重排，洗牌后暗坑激活时外援为零的容量前提仍然成立。
+    final forced_pool = <int>{};
+    if (before.expert_barrier != null) {
+      final graph = TileQuestGeometry(before.tiles);
+      final pending = [before.expert_barrier!.front_ids.first];
+      final visited = {before.expert_barrier!.front_ids.first};
+      while (pending.isNotEmpty) {
+        final id = pending.removeLast();
+        for (final upper in graph.blockers[id]!) {
+          if (locked_ids.contains(upper)) continue;
+          if (visited.add(upper)) pending.add(upper);
+        }
+      }
+      forced_pool.addAll(visited);
+    }
+    final by_id = <int, int>{};
+    for (final in_forced in [true, false]) {
+      final pool = [
+        for (final tile in board)
+          if (forced_pool.contains(tile.id) == in_forced) tile,
+      ];
+      if (pool.isEmpty) continue;
+      final types = [for (final tile in pool) tile.type]..shuffle(random);
+      for (var index = 0; index < pool.length; index++) {
+        by_id[pool[index].id] = types[index];
+      }
+    }
     final tiles = [
       for (final tile in before.tiles)
         tile.is_removed || locked_ids.contains(tile.id)

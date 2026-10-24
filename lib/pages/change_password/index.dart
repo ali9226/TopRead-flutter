@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
@@ -255,7 +256,7 @@ class _ChangePasswordState extends State<ChangePassword> {
 
                         /// 导航栏占位（由 Positioned 的 LanguageSelection 处理）。
                         const SizedBox.shrink(),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: LayoutConfig.space_8),
 
                         /// 英雄区域（标题 + 副标题 + 猫咪吉祥物）。
                         HeroSection(
@@ -264,7 +265,7 @@ class _ChangePasswordState extends State<ChangePassword> {
                         ),
 
                         /// 表单卡片（新密码 + 强度条 + 确认密码）。
-                        const SizedBox(height: 4),
+                        const SizedBox(height: LayoutConfig.space_4),
                         PasswordFormCard(
                           newPasswordController: _newPasswordController,
                           confirmPasswordController: _confirmPasswordController,

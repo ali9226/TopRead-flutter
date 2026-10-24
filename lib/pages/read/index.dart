@@ -1,6 +1,5 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
-import 'package:app/components/window_content_layout/index.dart';
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -8,54 +7,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
-import 'package:app/api/ad_free.dart';
 import 'package:app/api/bookshelf.dart';
-import 'package:app/api/results_type.dart';
-import 'package:app/config/ad_type_config.dart';
 import 'package:app/config/color_config.dart';
-import 'package:app/models/ad_config.dart';
 import 'package:app/models/paragraph_text_selection.dart';
-import 'package:app/util/log_util.dart';
-import 'package:app/util/rewarded_ad_util.dart';
-import 'package:app/components/page_top_gradient_overlay/index.dart';
-import 'package:app/components/viewport_resize_observer/index.dart';
 import 'package:app/pages/read/utils/scroll_utils.dart';
-import 'package:app/pages/ranking_full_list/widgets/starfield_decoration.dart';
-import 'package:app/pages/read/widgets/main_list/index.dart';
-import 'package:app/pages/read/widgets/start_reading_pill/index.dart';
-import 'package:app/pages/read/widgets/reading_progress_mask/index.dart';
-import 'package:app/pages/read/widgets/reading_progress_text/index.dart';
-import 'package:app/pages/read/widgets/skeleton/index.dart';
-import 'package:app/pages/read/widgets/skeleton/content_skeleton.dart';
-import 'package:app/pages/read/widgets/navigation_bars/top/index.dart';
-import 'package:app/pages/read/widgets/navigation_bars/bottom/index.dart';
-import 'package:app/pages/read/widgets/read_directory_sheet/index.dart';
 import 'package:app/pages/read/widgets/reading_settings_sheet/index.dart';
 import 'package:app/pages/read/widgets/auto_read_settings_sheet/index.dart';
-import 'package:app/pages/read/widgets/auto_read_settings_button/index.dart';
 import 'package:app/stores/comment_navigation.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/stores/read_ad_free_store.dart';
+import 'package:app/pages/read/read_ad_unlock_controller.dart';
+import 'package:app/pages/read/reading_auto_read.dart';
+import 'package:app/pages/read/reading_chapter_anchor.dart';
+import 'package:app/pages/read/reading_chapter_jump.dart';
+import 'package:app/pages/read/reading_native_ad_gate.dart';
+import 'package:app/pages/read/widgets/reading_page_shell.dart';
+import 'package:app/pages/read/reading_scroll_progress.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/stores/project_config_store.dart';
-import 'package:app/stores/ad_config_store.dart';
 import 'package:app/services/bookshelf_sync_service.dart';
-import 'package:app/services/ad_impression_reporter.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/util/ad_display_policy.dart';
-import 'package:app/util/percentage_probability.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
 import 'package:app/components/login_required_dialog/index.dart';
-import 'package:app/components/inline_native_ad/scroll_offset_compensation.dart';
 import 'package:app/components/comment_list/index.dart';
 import 'package:app/components/share_sheet/index.dart';
 import 'package:app/components/share_sheet/widgets/text_selection_preview_sheet.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
-import 'package:app/pages/read/widgets/unlock_ad_free_popup/index.dart';
-import 'package:app/pages/read/utils/calculate_ad_free_expire_time.dart';
-import 'package:app/pages/read/utils/can_process_read_ads.dart';
-import 'package:app/pages/read/widgets/rewarded_ad_loading_overlay/index.dart';
 
 import 'package:app/components/paragraph_selection/actions.dart';
 
@@ -89,7 +68,14 @@ class ReadPage extends StatefulWidget {
 }
 
 class _ReadPageState extends State<ReadPage>
-    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin
+    implements
+    ReadAdUnlockHost,
+    AutoReadHost,
+    ChapterAnchorHost,
+    ScrollProgressHost,
+    ReadingNativeAdHost,
+    ChapterJumpHost {
   /// 页面逻辑层，用于承载页面数据组装与业务判断。
   late final Logic logic;
 
@@ -107,6 +93,18 @@ class _ReadPageState extends State<ReadPage>
 
   /// 是否已经进入正文阅读状态，用于控制底部胶囊与进度条显隐。
   bool has_started_reading = false;
+
+  /// 已存在历史或本次已经进入正文；回滚简介不会清除续读状态。
+  final ValueNotifier<bool> _has_reading_history_notifier = ValueNotifier(
+    false,
+  );
+
+  /// 最近一次真实正文位置，避免回看简介后主按钮把用户送回第一章。
+  ({int index, double progress, String? chapter_id}) _resume_target = (
+    index: 0,
+    progress: 0,
+    chapter_id: null,
+  );
 
   /// 长短篇共用的弹窗入口与当前选择状态；选区建立后暂停自动阅读。
   final ParagraphActions _paragraph_actions = ParagraphActions();
@@ -140,16 +138,8 @@ class _ReadPageState extends State<ReadPage>
 
   // ==================== 广告相关状态 ====================
 
-  /// 当前小说唯一的原生广告配置，所有命中概率的章节共同复用。
-  AdConfig? _native_ad_config;
 
-  /// 当前小说是否正在请求原生广告配置。
-  bool _is_native_ad_config_loading = false;
 
-  /// 当前小说是否已经请求过原生广告配置。
-  ///
-  /// 无论接口成功或失败，整个阅读页面生命周期内都只请求一次。
-  bool _has_requested_native_ad_config = false;
 
   /// 是否进入正文区域的展示通知器。
   final ValueNotifier<bool> _has_started_reading_notifier = ValueNotifier<bool>(
@@ -174,32 +164,13 @@ class _ReadPageState extends State<ReadPage>
   /// 正文区块是否已经贴近顶部，用于控制翻页点击区域是否生效。
   bool is_reading_section_at_top = false;
 
-  /// 自动阅读 Ticker。
-  Ticker? _auto_read_ticker;
 
-  /// 自动阅读上一帧时间戳。
-  Duration? _auto_read_last_tick;
 
-  /// 自动阅读是否正在等待下一章完成拼接。
-  bool _is_auto_read_waiting_for_chapter = false;
 
   /// 是否正在执行程序化滚动（点击翻页），此时不触发导航栏显隐。
   bool _is_programmatic_scroll = false;
 
-  /// 当前是否存在滚动活动。
-  ///
-  /// 上一章/下一章拼接会修改 ListView 内容高度，尤其上一章插入后还需要 jumpTo 修正偏移。
-  /// 如果这个动作发生在拖动/惯性滚动过程中，会打断当前滚动手势，表现为"卡一下"。
-  /// 因此滚动活动未结束前只做缓存预取，不直接拼接正文列表。
-  bool _is_scroll_activity_active = false;
 
-  /// 等待当前滚动活动结束的任务。
-  Completer<void>? _scroll_idle_completer;
-
-  /// 页面侧章节事务版本。
-  ///
-  /// 连续跳章时只有最后一次事务可以执行最终定位和清理状态。
-  int _chapter_transaction_generation = 0;
 
   /// 是否正在执行章节窗口重建与精确定位。
   bool _is_chapter_transaction_active = false;
@@ -216,53 +187,27 @@ class _ReadPageState extends State<ReadPage>
   /// 用户是否有过真实阅读行为（滚动过内容）。
   bool _has_user_engaged = false;
 
-  /// 已触发过解锁免广告弹窗判断的章节索引集合。
-  ///
-  /// 同一章节在重建、拼接和跳转时不会重复触发弹窗判断。
-  final Set<int> _unlock_popup_evaluated_chapters = <int>{};
+  /// 免广告权益与激励解锁控制器。
+  late final ReadAdUnlockController _ad_unlock;
 
-  /// 延迟展示的解锁免广告弹窗的目标时长（小时）。
-  ///
-  /// 当弹窗触发时如果"看视频免广告"提示文字正在屏幕内展示，
-  /// 则延迟弹窗到用户停止滚动后再展示，避免弹窗与提示文字同时出现。
-  int? _pending_unlock_duration_hours;
+  /// 自动阅读引擎。
+  late final ReadingAutoReadController _auto_read;
 
-  /// 延迟弹窗的最小等待时间。
-  ///
-  /// 确保弹窗不在提示文字刚出现时就弹出，给用户足够阅读时间。
-  Timer? _unlock_popup_defer_timer;
+  /// 章节锚点与滚动恢复协调器。
+  late final ReadingChapterAnchor _anchor;
 
-  // ==================== 免广告状态 ====================
+  /// 原生广告门控（配置拉取与章节概率）。
+  late final ReadingNativeAdGate _native_ad;
 
-  /// 当前设备是否在免广告期内。
-  ///
-  /// 进入页面时通过接口查询，看视频广告后实时更新。
-  /// 为 true 时跳过所有原生高级广告的展示。
-  bool _is_ad_free = false;
+  /// 章节跳转事务与服务器进度恢复。
+  late final ReadingChapterJump _jump;
 
-  /// 首次设备免广告状态是否已经完成查询。
-  ///
-  /// 在返回前暂停原生广告和免时长弹窗逻辑，避免有效期内误展示。
-  bool _is_ad_free_status_ready = false;
-
-  /// 免广告到期时间展示通知器。
-  ///
-  /// 每个章节底部的续时入口直接监听该值，不依赖整个章节列表重建。
-  final ValueNotifier<DateTime?> _ad_free_expire_time_notifier =
-      ValueNotifier<DateTime?>(null);
+  /// 滚动进度识别与章节预取器。
+  late final ReadingScrollProgress _scroll_progress;
 
   /// 长篇权益在整个应用共享，页面退出后奖励校验仍可继续。
   late final ReadAdFreeStore _ad_free_store;
   Worker? _ad_free_state_worker;
-
-  /// 当前页面是否正在准备或展示激励视频。
-  bool _is_rewarded_ad_loading = false;
-
-  /// 主题背景色透明度，统一控制底部胶囊背景在夜间模式下的层次。
-  static const double _night_bottom_pill_background_alpha = 0.92;
-
-  /// 主题背景色透明度，统一控制底部胶囊背景在日间模式下的层次。
-  static const double _light_bottom_pill_background_alpha = 0.92;
 
   // ==================== 生命周期 ====================
 
@@ -279,9 +224,13 @@ class _ReadPageState extends State<ReadPage>
         Logic(story_id: widget.story_id, story_title: widget.story_title);
     // 确保进入页面时导航栏处于关闭状态。
     logic.show_navigation.value = false;
-    logic.wait_until_chapter_mutation_allowed = _wait_until_scroll_idle;
-    logic.preserve_chapter_anchor = _preserve_chapter_anchor;
-    logic.on_chapter_loaded = _on_chapter_loaded;
+    _anchor = ReadingChapterAnchor(host: this);
+    _native_ad = ReadingNativeAdGate(host: this);
+    _jump = ReadingChapterJump(host: this);
+    _scroll_progress = ReadingScrollProgress(host: this);
+    logic.wait_until_chapter_mutation_allowed = _anchor.wait_until_scroll_idle;
+    logic.preserve_chapter_anchor = _anchor.preserve_chapter_anchor;
+    logic.on_chapter_loaded = _native_ad.on_chapter_loaded;
 
     // 路由参数非法时回退首页，避免渲染异常状态页面。
     if (!logic.has_valid_story_id) {
@@ -292,28 +241,37 @@ class _ReadPageState extends State<ReadPage>
     }
 
     // 注册滚动监听，驱动阅读进度、底部胶囊和翻页区域状态更新。
-    scroll_controller.addListener(_handle_scroll);
+    scroll_controller.addListener(_scroll_progress.handle_scroll);
 
     // 进入页面时请求接口，有阅读进度时静默加载目标章节。
-    _initialization_future = _init_with_progress_restore();
+    _initialization_future = _jump.init_with_progress_restore();
 
     // 权益按设备与认证用户共享，切换小说不会重新创建奖励生命周期。
     _ad_free_store = Get.isRegistered<ReadAdFreeStore>()
         ? Get.find<ReadAdFreeStore>()
         : Get.put(ReadAdFreeStore(), permanent: true);
+    _ad_unlock = ReadAdUnlockController(
+      host: this,
+      ad_free_store: _ad_free_store,
+    );
+    _auto_read = ReadingAutoReadController(
+      host: this,
+      logic: logic,
+      ticker_provider: this,
+    );
     _ad_free_state_worker = ever(
       _ad_free_store.state_revision,
-      (_) => _apply_shared_ad_free_state(),
+      (_) => _ad_unlock.apply_shared_ad_free_state(),
     );
-    _apply_shared_ad_free_state();
+    _ad_unlock.apply_shared_ad_free_state();
     unawaited(_ad_free_store.refresh());
 
     // 项目配置异步到达或更新时统一同步正文广告状态。
     _ad_policy_worker = ever(
       Get.find<ProjectConfigStore>().config_revision,
-      (_) => _sync_ad_policy(),
+      (_) => _native_ad.sync_ad_policy(),
     );
-    _sync_ad_policy();
+    _native_ad.sync_ad_policy();
 
     // 从消息页跳转时，等待阅读页初始化完成后再打开评论区，避免两个路由动画
     // 与初始进度定位同时执行。
@@ -341,578 +299,6 @@ class _ReadPageState extends State<ReadPage>
 
   // ==================== 广告管理 ====================
 
-  /// 后台加载原生高级广告配置。
-  ///
-  /// 从 `redis/get.ads_ids` 本地缓存获取长篇正文专用广告单元 ID。
-  ///
-  /// [source_id] 使用路由传入的长篇小说 ID。整个小说阅读页面生命周期内
-  /// 只选择一次，命中概率的不同章节共同复用返回的广告配置。
-  /// 加载失败不影响页面正常展示。
-  Future<void> _load_native_ad_config() async {
-    const String log_prefix = '[ReadNativeAdConfig]';
-    if (!_can_process_read_ads) {
-      logUtil(msg: '$log_prefix 免广告状态未就绪或仍在有效期，跳过加载');
-      return;
-    }
-    if (!AdDisplayPolicy.can_show_ads()) {
-      logUtil(msg: '$log_prefix can_show_ads=false，跳过加载广告配置', type: 'w');
-      return;
-    }
-    if (_has_requested_native_ad_config) {
-      logUtil(
-        msg:
-            '$log_prefix 已请求过广告配置, '
-            'native_ad_config=${_native_ad_config != null}, '
-            'adsId=${_native_ad_config?.adsId}',
-      );
-      return;
-    }
-    _has_requested_native_ad_config = true;
-    _is_native_ad_config_loading = true;
-    if (mounted) setState(() {});
-    try {
-      logUtil(msg: '$log_prefix 开始读取本地广告配置, source_id=${widget.story_id}');
-
-      final AdConfig? ad_config = Get.isRegistered<AdConfigStore>()
-          ? Get.find<AdConfigStore>().select_google_config(
-              AdPlacement.long_story_native,
-            )
-          : null;
-
-      if (!mounted) return;
-
-      if (ad_config == null) {
-        logUtil(msg: '$log_prefix 本地缓存没有可用配置，跳过', type: 'w');
-        return;
-      }
-
-      // 请求期间可能刚获得免广告时长，此时不再挂载原生广告。
-      if (!_can_process_read_ads) {
-        _has_requested_native_ad_config = false;
-        logUtil(msg: '$log_prefix 请求返回时已在免广告期，丢弃本次配置');
-        return;
-      }
-
-      logUtil(
-        msg:
-            '$log_prefix 广告配置详情: '
-            'advertisers=${ad_config.advertisers}, '
-            'adsId="${ad_config.adsId}", '
-            'adsType=${ad_config.adsType}, '
-            'uuid="${ad_config.uuid}", '
-            'id=${ad_config.id}',
-      );
-
-      // advertisers=1 表示谷歌 AdMob，且 ads_id 必须有值。
-      if (ad_config.advertisers != AdTypeConfig.google_advertiser ||
-          ad_config.adsId.isEmpty) {
-        logUtil(
-          msg:
-              '$log_prefix 广告商不是谷歌或adsId为空，跳过: '
-              'advertisers=${ad_config.advertisers} (期望1), '
-              'adsId="${ad_config.adsId}" (期望非空)',
-          type: 'w',
-        );
-        return;
-      }
-
-      logUtil(
-        msg:
-            '$log_prefix 广告配置加载成功, '
-            'adsType=${ad_config.adsType}, '
-            'adUnitId=${ad_config.adsId}',
-      );
-
-      _native_ad_config = ad_config;
-    } catch (e, stack_trace) {
-      logUtil(msg: '$log_prefix 广告配置加载异常: $e\n$stack_trace', type: 'e');
-    } finally {
-      _is_native_ad_config_loading = false;
-      if (mounted) setState(() {});
-    }
-  }
-
-  /// 在 AdMob 确认原生广告产生真实展示后记录一次长篇小说广告统计。
-  Future<void> _record_native_ad_impression() async {
-    final AdConfig? ad_config = _native_ad_config;
-    if (ad_config == null || ad_config.adsId.isEmpty) return;
-    await AdImpressionReporter.report(
-      ad_config: ad_config,
-      placement: AdPlacement.long_story_native,
-      source_id: widget.story_id,
-    );
-  }
-
-  /// 章节正文进入阅读窗口时完成该章唯一一次广告概率判断。
-  ///
-  /// 同时触发解锁免广告弹窗的概率判断（非第一章且非首次阅读章节）。
-  /// 当设备处于免广告期内时，跳过所有广告相关逻辑。
-  void _on_chapter_loaded(int chapter_index) {
-    const String log_prefix = '[ReadNativeAd]';
-
-    // 免广告状态未就绪或仍在有效期时，跳过所有广告和弹窗逻辑。
-    if (!_can_process_read_ads) {
-      logUtil(msg: '$log_prefix 当前禁止阅读广告，跳过章节 $chapter_index');
-      return;
-    }
-
-    if (!AdDisplayPolicy.can_show_ads()) {
-      final ProjectConfigStore? store = Get.isRegistered<ProjectConfigStore>()
-          ? Get.find<ProjectConfigStore>()
-          : null;
-      logUtil(
-        msg:
-            '$log_prefix can_show_ads=false, '
-            'config_loaded=${store?.is_config_loaded.value}, '
-            'ads_switch=${store?.current.ads_switch}, '
-            'is_ads_enabled=${store?.current.is_ads_enabled}',
-        type: 'w',
-      );
-      return;
-    }
-
-    final ProjectConfigStore config_store = Get.find<ProjectConfigStore>();
-    if (!config_store.is_config_loaded.value) {
-      logUtil(msg: '$log_prefix config未加载完成，跳过章节 $chapter_index', type: 'w');
-      return;
-    }
-
-    final bool should_show = logic.resolve_chapter_native_ad_decision(
-      chapter_index: chapter_index,
-      probability:
-          config_store.current.ads_read_show_interstitial_ads_probability,
-    );
-    if (!should_show) {
-      logUtil(
-        msg:
-            '$log_prefix 概率未命中, chapter=$chapter_index, '
-            'probability=${config_store.current.ads_read_show_interstitial_ads_probability}',
-      );
-    } else {
-      logUtil(
-        msg:
-            '$log_prefix 概率命中, chapter=$chapter_index, '
-            'probability=${config_store.current.ads_read_show_interstitial_ads_probability}, '
-            'native_ad_config=${_native_ad_config != null}, '
-            'is_loading=$_is_native_ad_config_loading, '
-            'has_requested=$_has_requested_native_ad_config',
-      );
-      if (mounted) setState(() {});
-      unawaited(_load_native_ad_config());
-    }
-
-    // 触发解锁免广告弹窗概率判断。
-    _maybe_show_unlock_popup(chapter_index, config_store);
-  }
-
-  /// 判断是否展示解锁免广告时长弹窗。
-  ///
-  /// 规则：
-  /// - 第一章（index == 0）不触发，用户刚开始阅读时不做打扰。
-  /// - 恢复进度自动跳转到的章节不触发，避免刚进入页面就弹窗。
-  /// - 同一章节只触发一次判断，避免重复弹窗。
-  /// - 按优先级依次判断：6小时 → 3小时 → 1小时，命中即展示，不继续判断。
-  /// - 如果当前章节的"看视频免广告"提示文字可能在屏幕内，
-  ///   则延迟弹窗到用户停止滚动后再展示，避免弹窗与提示文字同时出现。
-  void _maybe_show_unlock_popup(
-    int chapter_index,
-    ProjectConfigStore config_store,
-  ) {
-    // 免广告状态未就绪或已在有效期时禁止弹窗。
-    if (!_can_process_read_ads) return;
-
-    // 第一章不触发，用户刚开始阅读时不做打扰。
-    if (chapter_index <= 0) return;
-
-    // 恢复进度跳转到的章节不触发，避免刚进入页面就弹窗。
-    if (_is_restoring_progress) return;
-
-    // 已有延迟弹窗待展示时跳过，避免多次触发。
-    if (_pending_unlock_duration_hours != null) return;
-
-    // 同一章节只判断一次，避免重复弹窗。
-    if (!_unlock_popup_evaluated_chapters.add(chapter_index)) return;
-
-    final int six_hour_probability =
-        config_store.current.read_ads_unlock_six_hour;
-    final int three_hour_probability =
-        config_store.current.read_ads_unlock_three_hour;
-    final int an_hour_probability =
-        config_store.current.read_ads_unlock_an_hour;
-
-    // 所有概率均为 0 时跳过，不做任何弹窗判断。
-    if (six_hour_probability <= 0 &&
-        three_hour_probability <= 0 &&
-        an_hour_probability <= 0) {
-      return;
-    }
-
-    // 按优先级依次判断：6小时 → 3小时 → 1小时，命中即停。
-    int? hit_duration_hours;
-    if (six_hour_probability > 0 &&
-        PercentageProbability.is_hit(six_hour_probability)) {
-      logUtil(
-        msg:
-            '[ReadUnlockPopup] 命中6小时免广告, chapter=$chapter_index, '
-            'probability=$six_hour_probability',
-      );
-      hit_duration_hours = 6;
-    } else if (three_hour_probability > 0 &&
-        PercentageProbability.is_hit(three_hour_probability)) {
-      logUtil(
-        msg:
-            '[ReadUnlockPopup] 命中3小时免广告, chapter=$chapter_index, '
-            'probability=$three_hour_probability',
-      );
-      hit_duration_hours = 3;
-    } else if (an_hour_probability > 0 &&
-        PercentageProbability.is_hit(an_hour_probability)) {
-      logUtil(
-        msg:
-            '[ReadUnlockPopup] 命中60分钟免广告, chapter=$chapter_index, '
-            'probability=$an_hour_probability',
-      );
-      hit_duration_hours = 1;
-    }
-
-    if (hit_duration_hours == null) return;
-
-    // 检查当前章节是否可能展示"看视频免广告"提示文字。
-    // 如果提示文字可能在屏幕内，延迟弹窗到用户停止滚动后再展示，
-    // 避免弹窗与提示文字同时出现影响阅读体验。
-    final int video_ad_probability =
-        config_store.current.ads_read_video_ad_probability;
-    if (video_ad_probability > 0) {
-      _pending_unlock_duration_hours = hit_duration_hours;
-      _unlock_popup_defer_timer?.cancel();
-      _unlock_popup_defer_timer = Timer(const Duration(seconds: 2), () {});
-      logUtil(
-        msg:
-            '[ReadUnlockPopup] 延迟弹窗(提示文字可能可见), '
-            'chapter=$chapter_index, hours=$hit_duration_hours',
-      );
-      return;
-    }
-
-    // 提示文字概率为 0（不展示提示文字），直接弹窗。
-    _show_unlock_popup(hit_duration_hours);
-  }
-
-  /// 展示解锁免广告弹窗。
-  ///
-  /// [duration_hours] 免广告时长（小时），决定倒计时动画的终点数字。
-  /// 弹窗内点击"立即解锁"按钮时，自动调用后端接口叠加对应时长。
-  void _show_unlock_popup(int duration_hours) {
-    if (!_can_process_read_ads) return;
-    final bool is_dark = device_info.theme.value == ThemeMode.dark;
-    final int duration_minutes = duration_hours * 60;
-    UnlockAdFreePopup.show(
-      context: context,
-      is_dark: is_dark,
-      duration_hours: duration_hours,
-      on_tap: () => unawaited(_unlock_ad_free(duration_minutes)),
-    );
-  }
-
-  /// 尝试展示延迟的解锁免广告弹窗。
-  ///
-  /// 在用户停止滚动时调用。如果延迟等待时间（2秒）已过，
-  /// 说明用户已停止滚动，此时展示弹窗不会打断阅读。
-  void _try_show_deferred_unlock_popup() {
-    if (!_can_process_read_ads) {
-      _clear_pending_unlock_popup();
-      return;
-    }
-    final int? duration_hours = _pending_unlock_duration_hours;
-    if (duration_hours == null) return;
-    // 延迟定时器仍在计时中，说明用户刚触发延迟，暂不展示。
-    if (_unlock_popup_defer_timer != null &&
-        _unlock_popup_defer_timer!.isActive) {
-      return;
-    }
-    // 定时器已到期，清除待展示状态并展示弹窗。
-    _pending_unlock_duration_hours = null;
-    _show_unlock_popup(duration_hours);
-  }
-
-  /// 清理尚未展示的免时长弹窗任务。
-  ///
-  /// 一旦确认设备已在免广告有效期内，延迟弹窗也必须同步撤销。
-  void _clear_pending_unlock_popup() {
-    _pending_unlock_duration_hours = null;
-    _unlock_popup_defer_timer?.cancel();
-    _unlock_popup_defer_timer = null;
-  }
-
-  /// 同步共享权益到当前页面，保持既有广告插槽和阅读位置补偿机制。
-  void _apply_shared_ad_free_state() {
-    if (!mounted) return;
-    final bool is_active = _ad_free_store.is_ad_free;
-    final DateTime? expire_time = is_active ? _ad_free_store.expire_time : null;
-    if (is_active) _clear_pending_unlock_popup();
-    setState(() {
-      _is_ad_free = is_active;
-      _is_ad_free_status_ready = _ad_free_store.is_status_ready;
-    });
-    _ad_free_expire_time_notifier.value = expire_time;
-    _sync_ad_policy();
-  }
-
-  /// 当前身份的服务器状态未确认或免广告有效时，屏蔽所有长篇阅读广告。
-  bool get _can_process_read_ads => can_process_read_ads(
-    is_ad_free_status_ready: _is_ad_free_status_ready,
-    is_ad_free: _is_ad_free,
-  );
-
-  /// 点击"看视频免30分钟广告"提示时调用。
-  ///
-  /// 请求后端接口，播放视频广告后叠加30分钟免广告时长。
-  /// 成功后更新本地免广告状态，后续章节不再展示原生广告。
-  void _on_video_ad_hint_tap() {
-    unawaited(_unlock_ad_free(30));
-  }
-
-  /// 请求广告配置、展示激励视频并乐观解锁免广告时长。
-  ///
-  /// [duration_minutes] 免广告分钟数，可选值：30/60/180/360。
-  /// 后端准备接口不会提前发放奖励。只有Google Mobile Ads SDK返回
-  /// [GoogleRewardedAdResult.rewarded] 后才在当前页面立即叠加时长，并在后台
-  /// 静默等待Google SSV回调完成最终确认。
-  Future<void> _unlock_ad_free(int duration_minutes) async {
-    if (_is_rewarded_ad_loading) return;
-
-    if (!AdDisplayPolicy.can_show_ads()) {
-      if (!AdDisplayPolicy.should_bypass_ads()) {
-        showBottomTip(easy.tr('read.ad_not_available'));
-      }
-      return;
-    }
-
-    setState(() => _is_rewarded_ad_loading = true);
-    try {
-      logUtil(msg: '[ReadAdFree] 准备激励视频: duration=${duration_minutes}min');
-      final AdFreeRequestIdentity? identity = await _ad_free_store
-          .capture_reward_identity();
-      if (!mounted || identity == null) return;
-      final ResultsType<UnlockAdFreeResult> result = await unlock_ad_free_time(
-        duration_minutes: duration_minutes,
-        novel_id: widget.story_id,
-        identity: identity,
-      );
-      if (!mounted || !_ad_free_store.is_identity_current(identity)) return;
-
-      if (!result.status || result.content == null) {
-        logUtil(msg: '[ReadAdFree] 获取广告配置失败: ${result.message}', type: 'w');
-        showBottomTip(easy.tr('read.ad_not_available'));
-        return;
-      }
-
-      // 后端请求期间广告开关可能被远程更新，调用SDK前再次校验。
-      if (!AdDisplayPolicy.can_show_ads()) return;
-
-      final UnlockAdFreeResult unlock_result = result.content!;
-      final DateTime reward_status_received_at = DateTime.now();
-      final AdConfig? ad_config = unlock_result.ad_config;
-      final int reward_duration_minutes = resolve_ad_free_reward_duration(
-        requested_duration_minutes: duration_minutes,
-        response_duration_minutes: unlock_result.duration_minutes,
-      );
-      if (unlock_result.duration_minutes <= 0) {
-        logUtil(
-          msg:
-              '[ReadAdFree] 接口未返回duration_minutes，使用请求时长兼容: '
-              '${duration_minutes}min',
-          type: 'w',
-        );
-      }
-      final bool is_valid_config =
-          ad_config != null &&
-          ad_config.advertisers == AdTypeConfig.google_advertiser &&
-          ad_config.adsId.isNotEmpty &&
-          ad_config.uuid.isNotEmpty &&
-          unlock_result.ad_free_status?.user_id == identity.user_id &&
-          unlock_result.ad_free_status?.device_token == identity.device_token &&
-          reward_duration_minutes == duration_minutes;
-      if (!is_valid_config) {
-        logUtil(
-          msg:
-              '[ReadAdFree] 广告配置无效: '
-              'advertisers=${ad_config?.advertisers}, '
-              'adsId=${ad_config?.adsId}, uuid=${ad_config?.uuid}, '
-              'responseDuration=${unlock_result.duration_minutes}, '
-              'rewardDuration=$reward_duration_minutes',
-          type: 'w',
-        );
-        showBottomTip(easy.tr('read.ad_not_available'));
-        return;
-      }
-      final AdConfig rewarded_ad_config = ad_config;
-
-      final GoogleRewardedAdResult ad_result = await GoogleRewardedAdUtil
-          .instance
-          .show_rewarded_ad(
-            adUnitId: rewarded_ad_config.adsId,
-            custom_data: rewarded_ad_config.uuid,
-            can_show: () =>
-                mounted && _ad_free_store.is_identity_current(identity),
-          );
-      // 广告已经完整观看时先持久化奖励；退出小说页面不应丢失该次观看。
-      final bool reward_recorded = ad_result == GoogleRewardedAdResult.rewarded
-          ? await _ad_free_store.record_reward(
-              identity: identity,
-              uuid: rewarded_ad_config.uuid,
-              duration_minutes: reward_duration_minutes,
-              server_status: unlock_result.ad_free_status,
-              server_status_received_at: reward_status_received_at,
-            )
-          : false;
-      if (!mounted || !_ad_free_store.is_identity_current(identity)) return;
-
-      switch (ad_result) {
-        case GoogleRewardedAdResult.disabled:
-          _sync_ad_policy();
-          if (!AdDisplayPolicy.should_bypass_ads()) {
-            showBottomTip(easy.tr('read.ad_not_available'));
-          }
-          break;
-        case GoogleRewardedAdResult.rewarded:
-          if (reward_recorded) {
-            showBottomTip(easy.tr('read.ad_free_activated'));
-          }
-          break;
-        case GoogleRewardedAdResult.dismissed:
-          showBottomTip(easy.tr('read.ad_not_completed'));
-          break;
-        case GoogleRewardedAdResult.load_failed:
-          showBottomTip(easy.tr('read.ad_load_failed'));
-          break;
-        case GoogleRewardedAdResult.consent_unavailable:
-          showBottomTip(easy.tr('read.ad_consent_unavailable'));
-          break;
-        case GoogleRewardedAdResult.show_failed:
-          showBottomTip(easy.tr('read.ad_show_failed'));
-          break;
-        case GoogleRewardedAdResult.unsupported:
-          showBottomTip(easy.tr('read.ad_unsupported'));
-          break;
-        case GoogleRewardedAdResult.busy:
-          showBottomTip(easy.tr('read.ad_in_progress'));
-          break;
-        case GoogleRewardedAdResult.cancelled:
-          break;
-      }
-    } catch (e, stack_trace) {
-      logUtil(msg: '[ReadAdFree] 激励视频流程异常: $e\n$stack_trace', type: 'e');
-      if (mounted) showBottomTip(easy.tr('read.ad_not_available'));
-    } finally {
-      if (mounted) {
-        setState(() => _is_rewarded_ad_loading = false);
-      }
-    }
-  }
-
-  /// 为项目配置到达前已经加载的章节补齐一次性概率判断。
-  Set<int> _resolve_loaded_chapter_native_ad_decisions() {
-    if (!AdDisplayPolicy.can_show_ads()) return <int>{};
-
-    final int probability = Get.find<ProjectConfigStore>()
-        .current
-        .ads_read_show_interstitial_ads_probability;
-    final Set<int> native_ad_chapter_indexes = <int>{};
-    for (final int chapter_index in logic.loaded_chapter_indexes) {
-      final bool should_show = logic.resolve_chapter_native_ad_decision(
-        chapter_index: chapter_index,
-        probability: probability,
-      );
-      if (should_show) native_ad_chapter_indexes.add(chapter_index);
-    }
-    return native_ad_chapter_indexes;
-  }
-
-  /// 按公共平台策略同步长篇正文广告状态。
-  void _sync_ad_policy() {
-    const String log_prefix = '[ReadNativeAd]';
-    if (!_can_process_read_ads) {
-      logUtil(
-        msg:
-            '$log_prefix _sync_ad_policy: 跳过广告, '
-            'status_ready=$_is_ad_free_status_ready, is_ad_free=$_is_ad_free',
-      );
-      if (mounted) setState(() {});
-      return;
-    }
-    if (!AdDisplayPolicy.can_show_ads()) {
-      logUtil(
-        msg: '$log_prefix _sync_ad_policy: can_show_ads=false',
-        type: 'w',
-      );
-      if (mounted) setState(() {});
-      return;
-    }
-    final Set<int> native_ad_chapter_indexes =
-        _resolve_loaded_chapter_native_ad_decisions();
-    logUtil(
-      msg:
-          '$log_prefix _sync_ad_policy: 命中章节数=${native_ad_chapter_indexes.length}, '
-          'indexes=$native_ad_chapter_indexes',
-    );
-    if (native_ad_chapter_indexes.isNotEmpty) {
-      unawaited(_load_native_ad_config());
-    }
-    if (mounted) setState(() {});
-  }
-
-  /// 初始化页面，有阅读进度时静默加载目标章节。
-  ///
-  /// 流程：
-  /// 1. 先查询阅读记录
-  /// 2. 有进度 → 设置 _is_restoring_progress，阻止展示第一章内容
-  /// 3. fetch_info 加载章节列表
-  /// 4. 立即 jump_to_chapter 到目标章节
-  /// 5. 滚动到保存的位置
-  /// 6. 清除 _is_restoring_progress
-  Future<void> _init_with_progress_restore() async {
-    _is_restoring_progress = true;
-
-    final Future<void> info_future = logic.fetch_info();
-    final Future<LastReadRecord?> record_future =
-        user_information.isLoggedIn.value
-        ? get_last_read_record(novel_id: widget.story_id)
-        : Future<LastReadRecord?>.value();
-
-    final LastReadRecord? record = await record_future;
-    await info_future;
-    if (!mounted) return;
-
-    final bool has_progress =
-        record != null && (record.chapter_id > 0 || record.read_progress > 0);
-
-    if (has_progress && logic.chapter_list.isNotEmpty) {
-      showBottomTip(easy.tr('read.restoring_progress'));
-      final int target_index = _resolve_restore_chapter_index(record);
-      final double restore_chapter_progress = _resolve_restore_chapter_progress(
-        record: record,
-        target_chapter_index: target_index,
-      );
-
-      await _execute_chapter_jump(
-        target_index,
-        chapter_progress_percent: restore_chapter_progress,
-        mark_user_engaged: false,
-      );
-    } else {
-      _has_stable_progress = logic.chapter_list.isNotEmpty;
-      _set_reading_progress(0);
-      _set_has_started_reading(false);
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _is_restoring_progress = false;
-    });
-    _start_progress_save_timer();
-  }
-
   /// 等待阅读页初始化完成后打开路由指定的评论。
   Future<void> _open_initial_comment_after_ready() async {
     await _initialization_future;
@@ -922,202 +308,28 @@ class _ReadPageState extends State<ReadPage>
     await _open_comment_sheet(scroll_to_comment_id: widget.initial_comment_id);
   }
 
-  /// 执行一次完整章节跳转事务。
-  ///
-  /// 章节窗口重建、目标布局与精确定位全部完成后才撤下骨架屏。连续操作时
-  /// 通过页面版本和 Logic 版本双重校验，旧任务不会覆盖最后一次选择。
-  Future<void> _execute_chapter_jump(
-    int target_index, {
-    double chapter_progress_percent = 0,
-    bool mark_user_engaged = true,
-  }) async {
-    if (target_index < 0 || target_index >= logic.chapter_list.length) return;
-
-    needs_restore_scroll_position = false;
-    final int transaction = ++_chapter_transaction_generation;
-    _is_chapter_transaction_active = true;
-    logic.is_switching_chapter.value = true;
-    int? logic_generation;
-    try {
-      logic_generation = await logic.jump_to_chapter(target_index);
-      if (!mounted ||
-          transaction != _chapter_transaction_generation ||
-          logic_generation == null) {
-        return;
-      }
-
-      await _wait_until_reading_layout_ready(target_index);
-      if (!mounted || transaction != _chapter_transaction_generation) return;
-
-      await _scroll_to_chapter_progress(
-        target_index,
-        chapter_progress_percent: chapter_progress_percent,
-      );
-      if (!mounted || transaction != _chapter_transaction_generation) return;
-
-      _cached_chapter_progress = chapter_progress_percent.clamp(0.0, 100.0);
-      logic.update_chapter_progress(_cached_chapter_progress);
-      _set_reading_progress(
-        logic.calculate_total_progress_percent_for_chapter(
-          chapter_index: target_index,
-          chapter_progress_percent: _cached_chapter_progress,
-        ),
-      );
-      _set_has_started_reading(
-        target_index > 0 ||
-            chapter_progress_percent > Style.scroll_offset_epsilon ||
-            _is_first_chapter_title_past_start_threshold(),
-      );
-      _has_stable_progress = true;
-      if (mark_user_engaged) {
-        _has_user_engaged = true;
-      }
-
-      await WidgetsBinding.instance.endOfFrame;
-      if (scroll_controller.hasClients) {
-        logic.sync_scroll_offset(scroll_controller.offset);
-      }
-    } finally {
-      if (logic_generation != null) {
-        logic.complete_chapter_jump(logic_generation);
-      }
-      if (transaction == _chapter_transaction_generation) {
-        _is_chapter_transaction_active = false;
-        logic.is_switching_chapter.value = false;
-        _try_restore_pending_viewport_change();
-        // 若跳章窗口中的上一章曾短暂加载失败，结束事务后立即检查并补齐
-        // 顶部缺口，不要求用户先在列表顶端反复触发无位移的过度滚动。
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _handle_scroll();
-          }
-        });
-      }
-    }
-  }
-
-  /// 从阅读记录中解析需要恢复到的章节索引。
-  ///
-  /// 优先使用后端返回的 chapter_id 精确匹配章节数据库 id。
-  /// 只有完全没有章节记录时，才使用全书阅读百分比推算。
-  int _resolve_restore_chapter_index(LastReadRecord record) {
-    if (record.chapter_id > 0) {
-      // chapter_id 是后端保存的数据库 id，直接按数据库 id 匹配。
-      final int? db_id_index = _find_chapter_index_by_db_id(record.chapter_id);
-      if (db_id_index != null) {
-        return db_id_index;
-      }
-
-      // 数据库 id 匹配失败时，尝试将 chapter_id 视为 chapter_no 兼容旧数据。
-      final int? chapter_no_index = _find_chapter_index_by_chapter_no(
-        record.chapter_id,
-      );
-      if (chapter_no_index != null) {
-        return chapter_no_index;
-      }
-    }
-
-    if (record.read_progress <= 0) {
-      return 0;
-    }
-
-    int target_index = logic.find_chapter_index_by_progress(
-      record.read_progress,
-    );
-    if (record.chapter_offset < 20 && target_index > 0) {
-      target_index--;
-    }
-    return target_index.clamp(0, logic.chapter_list.length - 1);
-  }
-
-  /// 按章节数据库 id 查找目录索引。
-  int? _find_chapter_index_by_db_id(int chapter_id) {
-    for (int i = 0; i < logic.chapter_list.length; i++) {
-      final int current_chapter_id =
-          int.tryParse(logic.chapter_list[i].id) ?? 0;
-      if (current_chapter_id == chapter_id) {
-        return i;
-      }
-    }
-    return null;
-  }
-
-  /// 按章节序号查找目录索引。
-  int? _find_chapter_index_by_chapter_no(int chapter_no) {
-    for (int i = 0; i < logic.chapter_list.length; i++) {
-      if (logic.chapter_list[i].chapter_no == chapter_no) {
-        return i;
-      }
-    }
-    return null;
-  }
-
-  /// 从阅读记录中解析章节内恢复百分比。
-  ///
-  /// chapter_offset 是后端保存的章节内百分比；缺失时才用全书百分比反推。
-  double _resolve_restore_chapter_progress({
-    required LastReadRecord record,
-    required int target_chapter_index,
-  }) {
-    if (record.chapter_offset > 0) {
-      return record.chapter_offset.toDouble().clamp(0.0, 100.0);
-    }
-
-    return logic.calculate_chapter_progress_percent(
-      reading_progress_percent: record.read_progress,
-      chapter_index: target_chapter_index,
-    );
-  }
-
-  /// 等待目标章节完成布局。
-  ///
-  /// 跳章会先重建阅读窗口，下一帧 Flutter 才能拿到章节标题的位置。
-  /// 这里等到目标标题已有上下文，或者达到最大尝试次数后放行。
-  Future<void> _wait_until_reading_layout_ready(
-    int target_chapter_index,
-  ) async {
-    int wait_count = 0;
-    while (mounted && wait_count < Style.restore_layout_max_attempts) {
-      final bool has_scroll_metrics =
-          scroll_controller.hasClients &&
-          scroll_controller.position.maxScrollExtent >
-              Style.scroll_offset_epsilon;
-      final bool has_chapter_context =
-          logic.get_chapter_key(target_chapter_index).currentContext != null;
-      if (has_scroll_metrics && has_chapter_context) {
-        return;
-      }
-
-      await WidgetsBinding.instance.endOfFrame;
-      wait_count++;
-    }
-  }
-
   // ==================== 销毁 ====================
 
   @override
   void dispose() {
     _progress_save_timer?.cancel();
-    _unlock_popup_defer_timer?.cancel();
+    _ad_unlock.dispose();
     _ad_free_state_worker?.dispose();
     // 退出页面时保存一次阅读进度。
     _save_current_progress_on_exit();
-    _auto_read_ticker?.dispose();
+    _auto_read.dispose();
     _comment_navigation_worker?.dispose();
     _error_worker?.dispose();
     _ad_policy_worker?.dispose();
     logic.wait_until_chapter_mutation_allowed = null;
     logic.preserve_chapter_anchor = null;
     logic.on_chapter_loaded = null;
-    final Completer<void>? idle_completer = _scroll_idle_completer;
-    if (idle_completer != null && !idle_completer.isCompleted) {
-      idle_completer.complete();
-    }
+    _anchor.notify_scroll_activity_ended();
     _reading_progress_notifier.dispose();
     _has_started_reading_notifier.dispose();
-    _ad_free_expire_time_notifier.dispose();
+    _has_reading_history_notifier.dispose();
     WidgetsBinding.instance.removeObserver(this);
-    scroll_controller.removeListener(_handle_scroll);
+    scroll_controller.removeListener(_scroll_progress.handle_scroll);
     logic.onClose();
     super.dispose();
   }
@@ -1151,7 +363,7 @@ class _ReadPageState extends State<ReadPage>
         _is_chapter_transaction_active) {
       return;
     }
-    unawaited(_restore_scroll_position_after_layout());
+    unawaited(_anchor.restore_scroll_position_after_layout());
   }
 
   /// 启动阅读进度定时保存定时器。
@@ -1206,289 +418,6 @@ class _ReadPageState extends State<ReadPage>
     }
   }
 
-  /// 按当前记录的位置或比例恢复滚动位置，避免主题切换或横竖屏切换后阅读位置重置。
-  Future<void> _restore_scroll_position_after_layout() async {
-    if (!mounted ||
-        !needs_restore_scroll_position ||
-        _is_chapter_transaction_active) {
-      return;
-    }
-
-    final int transaction = ++_chapter_transaction_generation;
-    _is_chapter_transaction_active = true;
-    try {
-      await _wait_until_reading_layout_ready(pending_restore_chapter_index);
-      if (!mounted ||
-          !needs_restore_scroll_position ||
-          transaction != _chapter_transaction_generation) {
-        return;
-      }
-
-      await _scroll_to_chapter_progress(
-        pending_restore_chapter_index,
-        chapter_progress_percent: pending_restore_chapter_progress,
-      );
-      if (transaction == _chapter_transaction_generation) {
-        needs_restore_scroll_position = false;
-      }
-    } finally {
-      if (transaction == _chapter_transaction_generation) {
-        _is_chapter_transaction_active = false;
-      }
-    }
-  }
-
-  /// 获取指定章节标题当前在屏幕上的全局位置。
-  ///
-  /// [chapter_index] 章节在目录中的索引。
-  /// 返回标题顶部距离屏幕顶部的距离；如果标题尚未渲染，则返回 null。
-  double? _get_chapter_title_global_top(int chapter_index) {
-    final BuildContext? chapter_context = logic
-        .get_chapter_key(chapter_index)
-        .currentContext;
-    if (chapter_context == null) {
-      return null;
-    }
-
-    final RenderObject? render_object = chapter_context.findRenderObject();
-    if (render_object is! RenderBox || !render_object.hasSize) {
-      return null;
-    }
-
-    return render_object.localToGlobal(Offset.zero).dy;
-  }
-
-  /// 计算指定章节标题滚动到“可视区域顶部 + 指定距离”时需要到达的滚动偏移量。
-  ///
-  /// [chapter_index] 章节在目录中的索引。
-  /// [top_offset] 标题距离可视区域顶部的目标距离。
-  /// 返回目标滚动偏移量；如果章节标题尚未渲染或列表不可滚动，则返回 null。
-  double? _get_chapter_title_target_scroll_offset(
-    int chapter_index, {
-    required double top_offset,
-  }) {
-    if (!scroll_controller.hasClients) {
-      return null;
-    }
-
-    final double? chapter_title_top = _get_chapter_title_global_top(
-      chapter_index,
-    );
-    if (chapter_title_top == null) {
-      return null;
-    }
-
-    final double screen_top_inset = MediaQuery.viewPaddingOf(context).top;
-    final double target_global_top = screen_top_inset + top_offset;
-    final double target_offset =
-        scroll_controller.offset + chapter_title_top - target_global_top;
-
-    return target_offset.clamp(0.0, scroll_controller.position.maxScrollExtent);
-  }
-
-  /// 判断第一章标题是否已经进入可视区域底部 20 像素以内。
-  ///
-  /// 该条件用于控制“上滑开始阅读”胶囊淡出；当标题继续向上滚动时仍保持淡出。
-  bool _is_first_chapter_title_past_start_threshold() {
-    final double? first_title_top = _get_chapter_title_global_top(0);
-    if (first_title_top == null) {
-      return true;
-    }
-
-    final double viewport_height = MediaQuery.sizeOf(context).height;
-    final double trigger_top =
-        viewport_height - Style.first_chapter_title_bottom_trigger_distance;
-    return first_title_top <= trigger_top;
-  }
-
-  /// 等待章节标题完成布局，并返回其 BuildContext。
-  ///
-  /// [chapter_index] 章节在目录中的索引。
-  /// 若当前帧还没有拿到标题上下文，会最多等待两个布局机会，避免点击胶囊时因为刚刷新而定位失败。
-  Future<BuildContext?> _wait_for_chapter_title_context(
-    int chapter_index,
-  ) async {
-    final GlobalKey chapter_key = logic.get_chapter_key(chapter_index);
-    BuildContext? chapter_context = chapter_key.currentContext;
-    if (chapter_context != null) {
-      return chapter_context;
-    }
-
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) {
-      return null;
-    }
-    chapter_context = chapter_key.currentContext;
-    if (chapter_context != null) {
-      return chapter_context;
-    }
-
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) {
-      return null;
-    }
-    return chapter_key.currentContext;
-  }
-
-  /// 将指定章节标题平滑滚动到可视区域顶部下方指定距离。
-  ///
-  /// [chapter_index] 章节在目录中的索引。
-  /// [top_offset] 标题距离可视区域顶部的目标距离。
-  Future<void> _scroll_to_chapter_title_with_top_offset(
-    int chapter_index, {
-    required double top_offset,
-  }) async {
-    if (!scroll_controller.hasClients || !mounted) {
-      return;
-    }
-
-    final BuildContext? chapter_context = await _wait_for_chapter_title_context(
-      chapter_index,
-    );
-    if (chapter_context == null || !mounted || !scroll_controller.hasClients) {
-      return;
-    }
-
-    final double? target_offset = _get_chapter_title_target_scroll_offset(
-      chapter_index,
-      top_offset: top_offset,
-    );
-    if (target_offset == null) {
-      return;
-    }
-
-    await scroll_controller.animateTo(
-      target_offset,
-      duration: Duration(
-        milliseconds: Style.scroll_to_reading_section_duration_ms,
-      ),
-      curve: Curves.easeInOutCubic,
-    );
-    if (mounted) {
-      _handle_scroll();
-    }
-  }
-
-  /// 滚动到指定章节内的百分比位置。
-  ///
-  /// [chapter_index] 目标章节索引。
-  /// [chapter_progress_percent] 章节内百分比，取值 0 到 100。
-  /// 该方法使用当前章节标题和下一章标题的真实渲染位置计算章节高度，
-  /// 避免把整个页面 maxScrollExtent 当作单章高度造成恢复位置漂移。
-  Future<void> _scroll_to_chapter_progress(
-    int chapter_index, {
-    required double chapter_progress_percent,
-  }) async {
-    if (!scroll_controller.hasClients || !mounted) {
-      return;
-    }
-
-    final BuildContext? chapter_context = await _wait_for_chapter_title_context(
-      chapter_index,
-    );
-    if (chapter_context == null || !mounted || !scroll_controller.hasClients) {
-      return;
-    }
-
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted || !scroll_controller.hasClients) {
-      return;
-    }
-
-    final double? chapter_start_offset =
-        _get_chapter_title_target_scroll_offset(
-          chapter_index,
-          top_offset: Style.chapter_progress_restore_top_offset,
-        );
-    if (chapter_start_offset == null) {
-      await _scroll_to_chapter_title_with_top_offset(
-        chapter_index,
-        top_offset: Style.chapter_progress_restore_top_offset,
-      );
-      return;
-    }
-
-    final double max_extent = scroll_controller.position.maxScrollExtent;
-    double chapter_end_offset = max_extent;
-    final int next_chapter_index = chapter_index + 1;
-    if (next_chapter_index <= logic.loaded_chapter_index) {
-      final double? next_chapter_start_offset =
-          _get_chapter_title_target_scroll_offset(
-            next_chapter_index,
-            top_offset: Style.chapter_progress_restore_top_offset,
-          );
-      if (next_chapter_start_offset != null &&
-          next_chapter_start_offset > chapter_start_offset) {
-        chapter_end_offset = next_chapter_start_offset;
-      }
-    }
-
-    final double chapter_scroll_extent =
-        (chapter_end_offset - chapter_start_offset).clamp(0.0, max_extent);
-    final double progress_ratio =
-        chapter_progress_percent.clamp(0.0, 100.0) / 100;
-    final double target_offset =
-        (chapter_start_offset + chapter_scroll_extent * progress_ratio).clamp(
-          0.0,
-          max_extent,
-        );
-
-    scroll_controller.jumpTo(target_offset);
-    logic.sync_scroll_offset(target_offset);
-
-    if (chapter_index >= 0 && chapter_index < logic.chapter_list.length) {
-      logic.current_chapter_index.value = chapter_index;
-      logic.current_chapter_db_id =
-          int.tryParse(logic.chapter_list[chapter_index].id) ?? 0;
-    }
-  }
-
-  /// 基于真实章节标题位置计算当前章节内阅读百分比。
-  ///
-  /// 优先使用布局位置而不是全书字数反推，可以让定时保存的 chapter_offset
-  /// 和恢复时使用的章节内百分比保持同一种坐标系。
-  double? _calculate_current_chapter_progress_from_layout(int chapter_index) {
-    if (!scroll_controller.hasClients || !mounted) {
-      return null;
-    }
-
-    final double? chapter_start_offset =
-        _get_chapter_title_target_scroll_offset(
-          chapter_index,
-          top_offset: Style.chapter_progress_restore_top_offset,
-        );
-    if (chapter_start_offset == null) {
-      return null;
-    }
-
-    final double max_extent = scroll_controller.position.maxScrollExtent;
-    double chapter_end_offset = max_extent;
-    final int next_chapter_index = chapter_index + 1;
-    if (next_chapter_index <= logic.loaded_chapter_index) {
-      final double? next_chapter_start_offset =
-          _get_chapter_title_target_scroll_offset(
-            next_chapter_index,
-            top_offset: Style.chapter_progress_restore_top_offset,
-          );
-      if (next_chapter_start_offset != null &&
-          next_chapter_start_offset > chapter_start_offset) {
-        chapter_end_offset = next_chapter_start_offset;
-      }
-    }
-
-    final double chapter_scroll_extent =
-        chapter_end_offset - chapter_start_offset;
-    if (chapter_scroll_extent <= Style.scroll_offset_epsilon) {
-      return 0;
-    }
-
-    final double progress_ratio =
-        ((scroll_controller.offset - chapter_start_offset) /
-                chapter_scroll_extent)
-            .clamp(0.0, 1.0);
-    return progress_ratio * 100;
-  }
-
   /// 下拉刷新小说详情和当前第一章正文内容。
   Future<void> _refresh_novel_content() async {
     logic.show_navigation.value = false;
@@ -1502,62 +431,7 @@ class _ReadPageState extends State<ReadPage>
       return;
     }
 
-    _handle_scroll();
-  }
-
-  /// 等待主列表完全停止拖动或惯性滚动。
-  Future<void> _wait_until_scroll_idle() {
-    if (!_is_scroll_activity_active) {
-      return Future<void>.value();
-    }
-
-    final Completer<void> completer = _scroll_idle_completer ??=
-        Completer<void>();
-    return completer.future;
-  }
-
-  /// 在插入上一章时保持原列表顶部章节的屏幕坐标不变。
-  Future<void> _preserve_chapter_anchor(
-    VoidCallback mutation,
-    int anchor_chapter_index,
-  ) async {
-    if (!mounted || !scroll_controller.hasClients) {
-      mutation();
-      return;
-    }
-
-    final double old_offset = scroll_controller.offset;
-    final double old_max_extent = scroll_controller.position.maxScrollExtent;
-    final double? old_anchor_top = _get_chapter_title_global_top(
-      anchor_chapter_index,
-    );
-
-    mutation();
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted || !scroll_controller.hasClients) return;
-
-    final double? new_anchor_top = _get_chapter_title_global_top(
-      anchor_chapter_index,
-    );
-    final double fallback_delta =
-        scroll_controller.position.maxScrollExtent - old_max_extent;
-    final double anchor_delta = old_anchor_top != null && new_anchor_top != null
-        ? new_anchor_top - old_anchor_top
-        : fallback_delta;
-    if (anchor_delta.abs() <= Style.scroll_offset_epsilon) return;
-
-    final ScrollPosition position = scroll_controller.position;
-    final double target_offset = (old_offset + anchor_delta).clamp(
-      position.minScrollExtent,
-      position.maxScrollExtent,
-    );
-    _is_programmatic_scroll = true;
-    try {
-      position.jumpTo(target_offset);
-      logic.sync_scroll_offset(target_offset);
-    } finally {
-      _is_programmatic_scroll = false;
-    }
+    _scroll_progress.handle_scroll();
   }
 
   /// 更新阅读进度并仅通知依赖进度的小组件。
@@ -1573,200 +447,24 @@ class _ReadPageState extends State<ReadPage>
   /// 更新是否进入正文，并仅通知底部阅读辅助层。
   void _set_has_started_reading(bool value) {
     has_started_reading = value;
+    if (value) {
+      _has_reading_history_notifier.value = true;
+      _resume_target = (
+        index: logic.current_chapter_index.value,
+        progress: _cached_chapter_progress,
+        chapter_id:
+            logic.current_chapter_index.value >= 0 &&
+                logic.current_chapter_index.value < logic.chapter_list.length
+            ? logic.chapter_list[logic.current_chapter_index.value].id
+            : null,
+      );
+    }
     if (_has_started_reading_notifier.value != value) {
       _has_started_reading_notifier.value = value;
     }
   }
 
-  bool _handle_main_scroll_notification(ScrollNotification notification) {
-    if (notification.depth != 0) {
-      return false;
-    }
-
-    if (notification is ScrollStartNotification) {
-      _is_scroll_activity_active = true;
-    }
-
-    if (notification is UserScrollNotification &&
-        notification.direction != ScrollDirection.idle) {
-      _has_user_engaged = true;
-      if (logic.is_auto_reading.value) {
-        _stop_auto_read();
-      }
-    }
-
-    if (notification is ScrollEndNotification ||
-        (notification is UserScrollNotification &&
-            notification.direction == ScrollDirection.idle)) {
-      _is_scroll_activity_active = false;
-      final Completer<void>? idle_completer = _scroll_idle_completer;
-      _scroll_idle_completer = null;
-      if (idle_completer != null && !idle_completer.isCompleted) {
-        idle_completer.complete();
-      }
-
-      // 滚动完全结束后再检查是否需要拼接上一章/下一章，避免在手指拖动或惯性滚动中改列表高度。
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _handle_scroll();
-        }
-      });
-
-      // 滚动停止后尝试展示延迟的解锁免广告弹窗，避免滚动过程中弹窗打断阅读。
-      _try_show_deferred_unlock_popup();
-    }
-
-    return false;
-  }
-
   // ==================== 滚动处理 ====================
-
-  void _handle_scroll() {
-    if (!scroll_controller.hasClients || !mounted) {
-      return;
-    }
-
-    if (needs_restore_scroll_position ||
-        _is_chapter_transaction_active ||
-        _is_restoring_progress ||
-        logic.is_jumping_chapter.value) {
-      return;
-    }
-
-    final double next_scroll_offset = scroll_controller.offset;
-
-    // 广告高度补偿只更新方向基准，下一次手动滚动不能累计补偿位移。
-    if (is_native_ad_scroll_compensating(scroll_controller.position)) {
-      logic.sync_scroll_offset(next_scroll_offset);
-    } else if (!_is_programmatic_scroll && !logic.is_auto_reading.value) {
-      // 滚动方向检测：自动显示/隐藏导航栏（程序化滚动时不触发）。
-      logic.on_scroll(next_scroll_offset);
-    }
-
-    final double viewport_dimension =
-        scroll_controller.position.viewportDimension;
-    final double max_scroll_extent = scroll_controller.position.maxScrollExtent;
-
-    // 计算 reading_section_offset，即正文区块距离顶部的绝对偏移量
-    double reading_section_offset = 0;
-    final BuildContext? reading_context = reading_section_key.currentContext;
-    if (reading_context != null) {
-      final RenderObject? render_object = reading_context.findRenderObject();
-      if (render_object is RenderBox && render_object.hasSize) {
-        final double reading_section_top = render_object
-            .localToGlobal(Offset.zero)
-            .dy;
-        final double screen_top_inset = MediaQuery.viewPaddingOf(context).top;
-        reading_section_offset =
-            next_scroll_offset + reading_section_top - screen_top_inset;
-      }
-    }
-
-    // 先识别当前章节，再计算章节内进度，避免章节边界处使用上一章索引计算新位置。
-    final double chapter_detection_line =
-        MediaQuery.viewPaddingOf(context).top +
-        Style.current_chapter_detection_top_offset;
-    for (
-      int i = logic.loaded_chapter_index;
-      i >= logic.min_loaded_chapter_index;
-      i--
-    ) {
-      final BuildContext? chapter_context = logic
-          .get_chapter_key(i)
-          .currentContext;
-      final RenderObject? render_object = chapter_context?.findRenderObject();
-      if (render_object is! RenderBox || !render_object.hasSize) continue;
-
-      final double top = render_object.localToGlobal(Offset.zero).dy;
-      if (top <= chapter_detection_line) {
-        logic.current_chapter_index.value = i;
-        if (i >= 0 && i < logic.chapter_list.length) {
-          logic.current_chapter_db_id =
-              int.tryParse(logic.chapter_list[i].id) ?? 0;
-        }
-        break;
-      }
-    }
-
-    final bool is_near_top =
-        next_scroll_offset < Style.reading_start_near_top_threshold;
-    final bool is_on_first_chapter = logic.current_chapter_index.value == 0;
-    final bool next_has_started_reading = (is_near_top && is_on_first_chapter)
-        ? false
-        : _is_first_chapter_title_past_start_threshold();
-
-    final double? layout_progress =
-        _calculate_current_chapter_progress_from_layout(
-          logic.current_chapter_index.value,
-        );
-    if (layout_progress != null) {
-      _cached_chapter_progress = layout_progress;
-      logic.update_chapter_progress(_cached_chapter_progress);
-      _has_stable_progress = true;
-    }
-
-    // 使用基于章节的逻辑计算全书进度。
-    final double next_reading_progress_percent = logic
-        .calculate_reading_progress(
-          next_scroll_offset,
-          max_scroll_extent,
-          reading_section_offset: reading_section_offset,
-        );
-    final bool next_is_reading_section_at_top =
-        ScrollUtils.is_reading_section_at_top(
-          reading_section_key: reading_section_key,
-          context: context,
-        );
-
-    // 提前预取/准备上一章。
-    //
-    // 关键点：这里不再要求 !_is_scroll_activity_active。
-    // load_prev_chapter 内部会先请求正文并写入缓存；如果当前仍在拖动/惯性滚动，
-    // 它会等待 idle 后再 prepend 到 reading_items 并修正 offset。
-    // 这样既能提前 2 屏以上拿到内容，又不会在滚动过程中改列表高度导致卡顿。
-    final double prev_prefetch_distance =
-        (viewport_dimension * Style.chapter_prefetch_viewport_multiplier).clamp(
-          Style.load_prev_chapter_threshold,
-          double.infinity,
-        );
-    final bool can_prepare_prev =
-        !logic.is_switching_chapter.value &&
-        next_is_reading_section_at_top &&
-        next_scroll_offset < reading_section_offset + prev_prefetch_distance &&
-        logic.min_loaded_chapter_index > 0 &&
-        !logic.is_loading_prev;
-
-    if (can_prepare_prev) {
-      unawaited(logic.load_prev_chapter());
-    }
-
-    // 提前预取/准备下一章。
-    //
-    // 同样允许在滚动活动期间触发：网络/磁盘读取会提前发生，
-    // 但真正 append 到正文列表会由 Logic 等到滚动 idle 后执行。
-    final double next_prefetch_distance =
-        (viewport_dimension * Style.chapter_prefetch_viewport_multiplier).clamp(
-          Style.load_next_chapter_threshold,
-          double.infinity,
-        );
-    if (max_scroll_extent - next_scroll_offset < next_prefetch_distance &&
-        !logic.is_loading_next) {
-      unawaited(logic.load_next_chapter());
-    }
-
-    if (next_has_started_reading && !_is_scroll_activity_active) {
-      unawaited(
-        logic.ensure_next_chapter_appended_after(
-          logic.current_chapter_index.value,
-        ),
-      );
-    }
-
-    _set_has_started_reading(next_has_started_reading);
-    _set_reading_progress(next_reading_progress_percent);
-    last_viewport_dimension = viewport_dimension;
-    is_reading_section_at_top = next_is_reading_section_at_top;
-  }
 
   /// 处理正文三段式点击。
   ///
@@ -1783,7 +481,7 @@ class _ReadPageState extends State<ReadPage>
     }
 
     if (logic.is_auto_reading.value) {
-      _stop_auto_read();
+      _auto_read.stop();
     }
     if (logic.show_navigation.value) {
       logic.toggle_navigation();
@@ -1815,7 +513,7 @@ class _ReadPageState extends State<ReadPage>
         '${item.chapter_id}:${item.body_content_hash}:${item.start_offset}';
     if (active) {
       _selected_paragraphs.add(key);
-      _stop_auto_read();
+      _auto_read.stop();
     } else {
       _selected_paragraphs.remove(key);
     }
@@ -1826,7 +524,7 @@ class _ReadPageState extends State<ReadPage>
     ReadingContentItem item,
     TextSelection selection,
   ) async {
-    _stop_auto_read();
+    _auto_read.stop();
     logic.show_navigation.value = false;
     final success = await _paragraph_actions.compose(
       context: context,
@@ -1853,7 +551,7 @@ class _ReadPageState extends State<ReadPage>
 
   /// 处理段落选中文字的分享操作。
   void _on_paragraph_share(ReadingContentItem item, TextSelection selection) {
-    _stop_auto_read();
+    _auto_read.stop();
     logic.show_navigation.value = false;
     final String selected_text = selected_paragraph_text(item.text, selection);
     if (selected_text.trim().isEmpty) return;
@@ -1875,7 +573,7 @@ class _ReadPageState extends State<ReadPage>
     if (anchor == null) return;
     final int para_id = int.tryParse(anchor.id) ?? 0;
     if (para_id <= 0) return;
-    _stop_auto_read();
+    _auto_read.stop();
     logic.show_navigation.value = false;
     unawaited(
       showCommentSheet(
@@ -1940,13 +638,50 @@ class _ReadPageState extends State<ReadPage>
 
   /// 自动滚动到正文阅读位置，方便用户快速从封面区域进入正文区域。
   Future<void> _scroll_to_reading_section() async {
+    // 连续点击复用正在进行的定位，避免动画被后一次操作打断或覆盖续读位置。
+    if (!mounted ||
+        logic.is_loading.value ||
+        _is_restoring_progress ||
+        _is_chapter_transaction_active ||
+        _is_programmatic_scroll) {
+      return;
+    }
     final double? previous_offset = scroll_controller.hasClients
         ? scroll_controller.offset
         : null;
-    await _scroll_to_chapter_title_with_top_offset(
-      0,
-      top_offset: Style.chapter_title_top_target_offset,
-    );
+    if (_has_reading_history_notifier.value && logic.chapter_list.isNotEmpty) {
+      // 刷新目录后优先按章节身份恢复；目录变短时仍保证落在有效章节。
+      final matched_index = _resume_target.chapter_id == null
+          ? -1
+          : logic.chapter_list.indexWhere(
+              (chapter) => chapter.id == _resume_target.chapter_id,
+            );
+      final target_index = matched_index >= 0
+          ? matched_index
+          : _resume_target.index.clamp(0, logic.chapter_list.length - 1);
+      // 历史正文位置独立于当前简介区域的滚动进度，续读不会重新开始。
+      await _jump.execute_chapter_jump(
+        target_index,
+        chapter_progress_percent: _resume_target.progress,
+        animate_scroll: true,
+        reuse_loaded_chapter: true,
+      );
+    } else {
+      // 首次阅读同样保留现有正文；程序滚动不参与手势方向检测。
+      _is_programmatic_scroll = true;
+      logic.show_navigation.value = false;
+      try {
+        await _anchor.scroll_to_chapter_title_with_top_offset(
+          0,
+          top_offset: Style.chapter_title_top_target_offset,
+        );
+      } finally {
+        _is_programmatic_scroll = false;
+        if (mounted && scroll_controller.hasClients) {
+          logic.sync_scroll_offset(scroll_controller.offset);
+        }
+      }
+    }
     if (mounted &&
         previous_offset != null &&
         scroll_controller.hasClients &&
@@ -1964,7 +699,7 @@ class _ReadPageState extends State<ReadPage>
       isScrollControlled: true,
       enableDrag: true,
       showDragHandle: false,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
       builder: (BuildContext sheet_context) {
         return ReadSettingsSheet(
@@ -1980,7 +715,7 @@ class _ReadPageState extends State<ReadPage>
           on_close: () => Navigator.of(sheet_context).pop(),
           on_auto_read: () {
             Navigator.of(sheet_context).pop();
-            _start_auto_read();
+            _auto_read.start(mark_user_engaged: () => _has_user_engaged = true);
           },
         );
       },
@@ -1998,114 +733,14 @@ class _ReadPageState extends State<ReadPage>
     mutation();
 
     try {
-      await _wait_until_reading_layout_ready(chapter_index);
+      await _anchor.wait_until_reading_layout_ready(chapter_index);
       if (!mounted) return;
-      await _scroll_to_chapter_progress(
+      await _anchor.scroll_to_chapter_progress(
         chapter_index,
         chapter_progress_percent: chapter_progress,
       );
     } finally {
       _is_chapter_transaction_active = false;
-    }
-  }
-
-  /// 开始自动阅读。
-  void _start_auto_read() {
-    if (logic.is_auto_reading.value) return;
-
-    // 自动阅读由用户主动开启，后续 Ticker 的 jumpTo 不会产生手势通知。
-    _has_user_engaged = true;
-    logic.is_auto_reading.value = true;
-    logic.show_navigation.value = false;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _begin_auto_read_ticker();
-    });
-  }
-
-  /// 停止自动阅读。
-  void _stop_auto_read() {
-    _is_auto_read_waiting_for_chapter = false;
-    if (logic.is_auto_reading.value) {
-      logic.is_auto_reading.value = false;
-      _auto_read_ticker?.stop();
-      _auto_read_ticker?.dispose();
-      _auto_read_ticker = null;
-    }
-  }
-
-  /// 启动自动阅读 Ticker（每帧根据当前速度滚动）。
-  void _begin_auto_read_ticker() {
-    if (!mounted || !logic.is_auto_reading.value) return;
-
-    _auto_read_last_tick = null;
-
-    _auto_read_ticker?.dispose();
-    _auto_read_ticker = createTicker((Duration elapsed) {
-      if (!scroll_controller.hasClients || !logic.is_auto_reading.value) {
-        _auto_read_ticker?.stop();
-        return;
-      }
-      // 折叠/展开、切章和字号重排期间的maxScrollExtent仍在变化。
-      // 等锚点恢复后继续，不能把暂时夹到新边界的旧offset当成真正读到章末。
-      if (needs_restore_scroll_position || _is_chapter_transaction_active) {
-        _auto_read_last_tick = elapsed;
-        return;
-      }
-
-      final double delta_seconds;
-      if (_auto_read_last_tick == null) {
-        delta_seconds = 0;
-      } else {
-        delta_seconds =
-            (elapsed - _auto_read_last_tick!).inMicroseconds / 1000000.0;
-      }
-      _auto_read_last_tick = elapsed;
-
-      // 速度映射：0.0 → 20px/s，1.0 → 300px/s。
-      final double speed = logic.auto_read_speed.value;
-      final double pixels_per_second = 20 + speed * 280;
-
-      final double current = scroll_controller.offset;
-      final double max_extent = scroll_controller.position.maxScrollExtent;
-      final double next = current + pixels_per_second * delta_seconds;
-
-      if (next >= max_extent) {
-        scroll_controller.jumpTo(max_extent);
-        _auto_read_ticker?.stop();
-        if (logic.loaded_chapter_index < logic.chapter_list.length - 1) {
-          unawaited(_resume_auto_read_after_next_chapter());
-        } else {
-          logic.is_auto_reading.value = false;
-        }
-      } else {
-        scroll_controller.jumpTo(next);
-      }
-    });
-
-    _auto_read_ticker?.start();
-  }
-
-  /// 自动阅读到达当前窗口底部后等待下一章，并在布局完成后继续。
-  Future<void> _resume_auto_read_after_next_chapter() async {
-    if (_is_auto_read_waiting_for_chapter || !logic.is_auto_reading.value) {
-      return;
-    }
-
-    _is_auto_read_waiting_for_chapter = true;
-    try {
-      await logic.load_next_chapter();
-      await WidgetsBinding.instance.endOfFrame;
-      if (!mounted || !logic.is_auto_reading.value) return;
-      if (scroll_controller.hasClients &&
-          scroll_controller.offset <
-              scroll_controller.position.maxScrollExtent) {
-        _begin_auto_read_ticker();
-      } else {
-        logic.is_auto_reading.value = false;
-      }
-    } finally {
-      _is_auto_read_waiting_for_chapter = false;
     }
   }
 
@@ -2116,7 +751,7 @@ class _ReadPageState extends State<ReadPage>
       isScrollControlled: true,
       enableDrag: true,
       showDragHandle: false,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
       builder: (BuildContext sheet_context) {
         return AutoReadSettingsSheet(
@@ -2124,7 +759,7 @@ class _ReadPageState extends State<ReadPage>
           on_close: () => Navigator.of(sheet_context).pop(),
           on_exit: () {
             Navigator.of(sheet_context).pop();
-            _stop_auto_read();
+            _auto_read.stop();
           },
         );
       },
@@ -2175,6 +810,148 @@ class _ReadPageState extends State<ReadPage>
     );
   }
 
+  // ==================== [ChapterJumpHost] ====================
+
+  @override
+  set is_restoring_progress(bool value) {
+    _is_restoring_progress = value;
+    // 恢复标记变化决定骨架屏是否撤下，必须同步重建。
+    if (mounted) setState(() {});
+  }
+
+  @override
+  set has_reading_history(bool value) {
+    _has_reading_history_notifier.value = value;
+  }
+
+  @override
+  void start_progress_save_timer() {
+    _start_progress_save_timer();
+  }
+
+  @override
+  void try_restore_pending_viewport_change() {
+    _try_restore_pending_viewport_change();
+  }
+
+  @override
+  void on_jump_settled() {
+    _scroll_progress.handle_scroll();
+  }
+
+  @override
+  Future<void> open_comment_sheet({int scroll_to_comment_id = 0}) {
+    return _open_comment_sheet(scroll_to_comment_id: scroll_to_comment_id);
+  }
+
+  // ==================== [ReadingNativeAdHost] ====================
+
+  @override
+  bool get can_process_ads_now => _ad_unlock.can_process_ads_now;
+
+  @override
+  void maybe_show_unlock_popup(int chapter_index) {
+    final config_store = Get.find<ProjectConfigStore>();
+    _ad_unlock.maybe_show_unlock_popup(
+      chapter_index: chapter_index,
+      six_hour: config_store.current.read_ads_unlock_six_hour,
+      three_hour: config_store.current.read_ads_unlock_three_hour,
+      an_hour: config_store.current.read_ads_unlock_an_hour,
+      video_ad_probability: config_store.current.ads_read_video_ad_probability,
+    );
+  }
+
+  // ==================== [ScrollProgressHost] ====================
+
+  @override
+  ReadingChapterAnchor get anchor => _anchor;
+
+  // reading_section_key / last_viewport_dimension / is_reading_section_at_top
+  // 均为同名公开字段，自动满足 ScrollProgressHost 的 get/set。
+
+  @override
+  double get cached_chapter_progress => _cached_chapter_progress;
+
+  @override
+  set cached_chapter_progress(double value) {
+    _cached_chapter_progress = value;
+  }
+
+  @override
+  set has_stable_progress(bool value) {
+    _has_stable_progress = value;
+  }
+
+  @override
+  set has_user_engaged(bool value) {
+    _has_user_engaged = value;
+  }
+
+  @override
+  bool get is_programmatic_scroll => _is_programmatic_scroll;
+
+  @override
+  void set_reading_progress(double progress_percent) {
+    _set_reading_progress(progress_percent);
+  }
+
+  @override
+  void set_has_started_reading(bool value) {
+    _set_has_started_reading(value);
+  }
+
+  @override
+  void stop_auto_read() => _auto_read.stop();
+
+  @override
+  void try_show_deferred_unlock_popup() {
+    _ad_unlock.try_show_deferred_unlock_popup();
+  }
+
+  // ==================== [ChapterAnchorHost] ====================
+
+  @override
+  bool get is_chapter_transaction_active => _is_chapter_transaction_active;
+
+  @override
+  set is_chapter_transaction_active(bool value) {
+    _is_chapter_transaction_active = value;
+  }
+
+  @override
+  set is_programmatic_scroll(bool value) {
+    _is_programmatic_scroll = value;
+  }
+
+  @override
+  void on_scroll_settled() {
+    _scroll_progress.handle_scroll();
+  }
+
+  // ==================== [AutoReadHost] ====================
+
+  // ==================== [ReadAdUnlockHost] ====================
+
+  @override
+  bool get host_mounted => mounted;
+
+  @override
+  int get novel_id => widget.story_id;
+
+  @override
+  bool get is_restoring_progress => _is_restoring_progress;
+
+  @override
+  BuildContext get host_context => context;
+
+  @override
+  void refresh_ui() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void sync_ad_policy() => _native_ad.sync_ad_policy();
+
   @override
   Widget build(BuildContext context) {
     if (!logic.has_valid_story_id) {
@@ -2185,330 +962,94 @@ class _ReadPageState extends State<ReadPage>
       // 读取字号以触发 Obx 重建（字号变化时需要刷新正文）。
       logic.body_font_size.value;
 
-      // 当前主题是否为夜间模式，后续所有配色都基于该布尔值计算。
       final bool is_dark = device_info.theme.value == ThemeMode.dark;
-      // 页面背景色根据主题切换，保证正文与顶部信息在双主题下可读。
       final Color background_color = is_dark
           ? Style.dark_background_color
           : Style.light_background_color;
-      // 底部胶囊背景色按主题设置半透明值，确保覆盖文本时不过分抢眼。
-      final Color bottom_pill_background_color = is_dark
-          ? Style.dark_navigation_bar_color.withValues(
-              alpha: _night_bottom_pill_background_alpha,
-            )
-          : Style.light_navigation_bar_color.withValues(
-              alpha: _light_bottom_pill_background_alpha,
-            );
-      // 状态栏高度用于计算顶部列表安全区。
-      final double status_bar_height = MediaQuery.viewPaddingOf(context).top;
-      // 组装页面展示详情数据。
-      final ReadDetail detail = logic.build_detail();
-      // 组装正文内容项。
-      final List<ReadingContentItem> reading_items = logic
-          .build_reading_items();
       // 免广告状态未就绪或仍在有效期时，所有阅读页广告保持屏蔽。
-      final bool suppress_read_ads = !_can_process_read_ads;
-      // 首次接口尚未返回时只展示骨架屏；阅读记录恢复阶段让正文在骨架层下
-      // 正常参与布局，完成精确定位后再撤下覆盖层。
-      if (logic.is_loading.value) {
-        return Scaffold(
-          resizeToAvoidBottomInset: false,
-          backgroundColor: background_color,
-          body: WindowContentLayout(child: ReadSkeleton(is_dark: is_dark)),
-        );
-      }
+      final bool suppress_read_ads = !_ad_unlock.can_process_ads_now;
 
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        color: background_color,
-        child: Scaffold(
-          resizeToAvoidBottomInset: false,
-          backgroundColor: Colors.transparent,
-          body: Stack(
-            children: <Widget>[
-              StarfieldDecoration(is_dark: is_dark),
-              WindowContentLayout(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // 主内容滚动组件。
-                    NotificationListener<ScrollNotification>(
-                      onNotification: _handle_main_scroll_notification,
-                      child: RefreshIndicator(
-                        color: ColorConstants.themeColor,
-                        displacement: Style.refresh_indicator_displacement,
-                        notificationPredicate:
-                            (ScrollNotification notification) {
-                              return notification.depth == 0 &&
-                                  logic.should_show_introduction &&
-                                  !has_started_reading &&
-                                  !logic.show_navigation.value;
-                            },
-                        onRefresh: _refresh_novel_content,
-                        child: ViewportResizeObserver(
-                          on_resize_start: _on_viewport_resize_start,
-                          on_resize_end: _on_viewport_resize_end,
-                          child: ReadMainList(
-                            logic: logic,
-                            scroll_controller: scroll_controller,
-                            status_bar_height: status_bar_height,
-                            is_dark: is_dark,
-                            detail: detail,
-                            on_read: _scroll_to_reading_section,
-                            on_favorite: _toggle_novel_favorite,
-                            favorited: logic.is_favorited.value,
-                            favorite_loading: logic.is_favorite_loading.value,
-                            on_back: () => AppRouter.back(),
-                            on_share:
-                                Get.find<ProjectConfigStore>()
-                                    .current
-                                    .is_share_enabled
-                                ? () => _show_novel_share(detail, is_dark)
-                                : null,
-                            reading_items: reading_items,
-                            reading_section_key: reading_section_key,
-                            on_reading_tap_down: _handle_reading_tap_down,
-                            on_paragraph_comment: _on_paragraph_comment,
-                            on_paragraph_comments: _on_paragraph_comments,
-                            on_paragraph_share: _on_paragraph_share,
-                            on_paragraph_selection_changed:
-                                _on_paragraph_selection_changed,
-                            // 关闭广告保留已提交插位的身份，由插位安全回收上方高度。
-                            native_ad_config: _native_ad_config,
-                            is_native_ad_config_loading:
-                                _is_native_ad_config_loading,
-                            native_ads_enabled:
-                                !suppress_read_ads &&
-                                AdDisplayPolicy.can_show_ads(),
-                            on_native_ad_impression: () {
-                              unawaited(_record_native_ad_impression());
-                            },
-                            ads_read_video_ad_probability: suppress_read_ads
-                                ? 0
-                                : Get.find<ProjectConfigStore>()
-                                      .current
-                                      .ads_read_video_ad_probability,
-                            ad_free_expire_time_listenable:
-                                _ad_free_expire_time_notifier,
-                            on_video_ad_hint_tap: _on_video_ad_hint_tap,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // 封面头图使用自己的深色渐变；进入正文后才启用原来的状态栏遮罩。
-              ValueListenableBuilder<bool>(
-                valueListenable: _has_started_reading_notifier,
-                builder: (context, has_started, _) =>
-                    has_started || !logic.should_show_introduction
-                    ? PageTopGradientOverlay(background_color: background_color)
-                    : const SizedBox.shrink(),
-              ),
-              WindowContentLayout(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // 滚动过程中仅重建这些轻量阅读辅助层，不触发正文树重建。
-                    ValueListenableBuilder<bool>(
-                      valueListenable: _has_started_reading_notifier,
-                      builder:
-                          (
-                            BuildContext context,
-                            bool has_started,
-                            Widget? child,
-                          ) {
-                            return Positioned(
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              child: IgnorePointer(
-                                child: AnimatedOpacity(
-                                  duration: Duration(
-                                    milliseconds: Style
-                                        .progress_mask_animation_duration_ms,
-                                  ),
-                                  opacity: has_started ? 1 : 0,
-                                  child: child,
-                                ),
-                              ),
-                            );
-                          },
-                      child: ReadingProgressMask(is_dark: is_dark),
-                    ),
-                    ValueListenableBuilder<bool>(
-                      valueListenable: _has_started_reading_notifier,
-                      builder:
-                          (
-                            BuildContext context,
-                            bool has_started,
-                            Widget? child,
-                          ) {
-                            return ValueListenableBuilder<double>(
-                              valueListenable: _reading_progress_notifier,
-                              builder:
-                                  (
-                                    BuildContext context,
-                                    double progress,
-                                    Widget? child,
-                                  ) {
-                                    return ReadingProgressText(
-                                      is_dark: is_dark,
-                                      reading_progress_percent: progress,
-                                      has_started_reading: has_started,
-                                    );
-                                  },
-                            );
-                          },
-                    ),
-                    ValueListenableBuilder<bool>(
-                      valueListenable: _has_started_reading_notifier,
-                      builder:
-                          (
-                            BuildContext context,
-                            bool has_started,
-                            Widget? child,
-                          ) {
-                            return ReadStartReadingPill(
-                              is_dark: is_dark,
-                              show_start_reading_pill: !has_started,
-                              bottom_pill_background_color:
-                                  bottom_pill_background_color,
-                              bottom_safe_area: MediaQuery.viewPaddingOf(
-                                context,
-                              ).bottom,
-                              on_tap: _scroll_to_reading_section,
-                            );
-                          },
-                    ),
-                  ],
-                ),
-              ),
-              // 顶部导航栏
-              ReadTopBar(
-                is_dark: is_dark,
-                show: logic.show_navigation.value,
-                on_back: () => AppRouter.back(),
-                on_favorite_tap: _toggle_novel_favorite,
-                on_share: () => _show_novel_share(detail, is_dark),
-                is_favorited: logic.is_favorited.value,
-                is_favorite_loading: logic.is_favorite_loading.value,
-              ),
-              // 底部导航栏的进度由独立通知器驱动，正文不参与重建。
-              ValueListenableBuilder<double>(
-                valueListenable: _reading_progress_notifier,
-                builder:
-                    (
-                      BuildContext context,
-                      double progress_percent,
-                      Widget? child,
-                    ) {
-                      return ReadBottomBar(
-                        is_dark: is_dark,
-                        show: logic.show_navigation.value,
-                        progress: progress_percent / 100,
-                        chapter_list: logic.chapter_list,
-                        chapter_index_for_progress: (double value) {
-                          return logic.find_chapter_index_by_progress(
-                            value * 100,
-                          );
-                        },
-                        on_progress_changed_end: (double value) async {
-                          final double target_percent = value * 100;
-                          final int target_index = logic
-                              .find_chapter_index_by_progress(target_percent);
-                          final double chapter_progress = logic
-                              .calculate_chapter_progress_percent(
-                                reading_progress_percent: target_percent,
-                                chapter_index: target_index,
-                              );
-                          await _execute_chapter_jump(
-                            target_index,
-                            chapter_progress_percent: chapter_progress,
-                          );
-                        },
-                        on_prev_chapter: () async {
-                          await _execute_chapter_jump(
-                            logic.current_chapter_index.value - 1,
-                          );
-                        },
-                        on_next_chapter: () async {
-                          await _execute_chapter_jump(
-                            logic.current_chapter_index.value + 1,
-                          );
-                        },
-                        is_first_chapter: logic.is_first_chapter,
-                        is_last_chapter: logic.is_last_chapter,
-                        on_catalog_tap: () {
-                          logic.show_navigation.value = false;
-                          ReadDirectorySheet.show(
-                            context: context,
-                            logic: logic,
-                            is_dark: is_dark,
-                            current_chapter_progress_percent:
-                                _cached_chapter_progress,
-                            on_chapter_tap: (int index) {
-                              unawaited(_execute_chapter_jump(index));
-                            },
-                          );
-                        },
-                        on_setting_tap: _showSettingsSheet,
-                        comment_count: logic.comment_count,
-                        on_comment_tap: () => _open_comment_sheet(),
-                        is_liked: logic.is_liked.value,
-                        like_count: logic.like_count.value,
-                        is_like_loading: logic.is_like_loading.value,
-                        on_like_tap: () async {
-                          final bool is_logged_in =
-                              await showLoginRequiredDialog(
-                                title: easy.tr(
-                                  'short_story_read.login_required',
-                                ),
-                              );
-                          if (!is_logged_in) return;
-                          unawaited(logic.toggle_like());
-                        },
-                      );
-                    },
-              ),
-              WindowContentLayout(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // 自动阅读设置浮动按钮（自动阅读时显示在底部居中）。
-                    if (logic.is_auto_reading.value)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: MediaQuery.viewPaddingOf(context).bottom + 16,
-                        child: Center(
-                          child: AutoReadSettingsButton(
-                            is_dark: is_dark,
-                            on_tap: _on_auto_read_settings_tap,
-                          ),
-                        ),
-                      ),
-                    // 初始进度恢复或目录跳转时，用骨架覆盖已经参与布局的正文及
-                    // 所有交互层；目标位置稳定后一次性显现，避免进度和导航穿透。
-                    if (_is_restoring_progress ||
-                        logic.is_jumping_chapter.value)
-                      Positioned.fill(
-                        child: Container(
-                          color: background_color,
-                          child: ReadContentSkeleton(is_dark: is_dark),
-                        ),
-                      ),
-                    // 激励视频准备期间显示转圈并吸收点击，防止重复触发。
-                    if (_is_rewarded_ad_loading)
-                      Positioned.fill(
-                        child: RewardedAdLoadingOverlay(is_dark: is_dark),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+      return ReadingPageShell(
+        theme: ReadingPageTheme(
+          is_dark: is_dark,
+          background_color: background_color,
+          status_bar_height: MediaQuery.viewPaddingOf(context).top,
+        ),
+        state: ReadingPageState(
+          logic: logic,
+          detail: logic.build_detail(),
+          reading_items: logic.build_reading_items(),
+          reading_section_key: reading_section_key,
+          has_started_reading: _has_started_reading_notifier,
+          reading_progress: _reading_progress_notifier,
+          has_reading_history: _has_reading_history_notifier,
+          ad_free_expire_time: _ad_unlock.expire_time_notifier,
+          is_restoring_progress: _is_restoring_progress,
+          cached_chapter_progress: _cached_chapter_progress,
+          native_ad_config: _native_ad.native_ad_config,
+          is_native_ad_config_loading: _native_ad.is_config_loading,
+          native_ads_enabled:
+              !suppress_read_ads && AdDisplayPolicy.can_show_ads(),
+          is_rewarded_ad_loading: _ad_unlock.is_rewarded_ad_loading,
+        ),
+        actions: ReadingPageActions(
+          on_back: () => AppRouter.back(),
+          on_refresh: _refresh_novel_content,
+          on_read: _scroll_to_reading_section,
+          on_open_comments: () => _open_comment_sheet(),
+          on_favorite: _toggle_novel_favorite,
+          on_share: Get.find<ProjectConfigStore>().current.is_share_enabled
+              ? () => _show_novel_share(logic.build_detail(), is_dark)
+              : null,
+          on_native_ad_impression: () {
+            unawaited(_native_ad.record_native_ad_impression());
+          },
+          on_video_ad_hint_tap: _ad_unlock.on_video_ad_hint_tap,
+          on_reading_tap_down: _handle_reading_tap_down,
+          on_paragraph_comment: _on_paragraph_comment,
+          on_paragraph_comments: _on_paragraph_comments,
+          on_paragraph_share: _on_paragraph_share,
+          on_paragraph_selection_changed: _on_paragraph_selection_changed,
+          on_viewport_resize_start: _on_viewport_resize_start,
+          on_viewport_resize_end: _on_viewport_resize_end,
+          on_scroll_notification:
+              _scroll_progress.handle_main_scroll_notification,
+          on_progress_jump: (double target_percent) async {
+            final int target_index = logic.find_chapter_index_by_progress(
+              target_percent,
+            );
+            final double chapter_progress = logic
+                .calculate_chapter_progress_percent(
+                  reading_progress_percent: target_percent,
+                  chapter_index: target_index,
+                );
+            await _jump.execute_chapter_jump(
+              target_index,
+              chapter_progress_percent: chapter_progress,
+            );
+          },
+          on_prev_chapter: () async {
+            await _jump.execute_chapter_jump(
+              logic.current_chapter_index.value - 1,
+            );
+          },
+          on_next_chapter: () async {
+            await _jump.execute_chapter_jump(
+              logic.current_chapter_index.value + 1,
+            );
+          },
+          on_catalog_chapter_tap: (int index) {
+            unawaited(_jump.execute_chapter_jump(index));
+          },
+          on_setting_tap: _showSettingsSheet,
+          on_like_tap: () async {
+            final bool is_logged_in = await showLoginRequiredDialog(
+              title: easy.tr('short_story_read.login_required'),
+            );
+            if (!is_logged_in) return;
+            unawaited(logic.toggle_like());
+          },
+          on_auto_read_settings_tap: _on_auto_read_settings_tap,
         ),
       );
     });

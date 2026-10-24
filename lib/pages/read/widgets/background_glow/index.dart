@@ -22,12 +22,8 @@ class ReadBackgroundGlow extends StatelessWidget {
     );
     // 第二层辅助光斑在夜间偏冷色、日间偏暖色，强化顶部层次感。
     final Color second_glow_color = is_dark
-        ? const Color(
-            0xFF8DB7FF,
-          ).withValues(alpha: BackgroundGlowStyle.top_glow_two_night_alpha)
-        : const Color(
-            0xFFFFC76A,
-          ).withValues(alpha: BackgroundGlowStyle.top_glow_two_light_alpha);
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: BackgroundGlowStyle.top_glow_two_night_alpha)
+        : ColorConstants.message_type_accent_color_list_ffffc76a.withValues(alpha: BackgroundGlowStyle.top_glow_two_light_alpha);
 
     return Stack(
       children: <Widget>[

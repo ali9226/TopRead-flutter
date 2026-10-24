@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:easy_localization/easy_localization.dart' hide TextDirection;
@@ -8,6 +9,7 @@ import 'package:app/models/preference.dart';
 import 'package:app/components/category_filter/category_filter_bar.dart';
 import 'package:app/components/category_filter/filter_popup.dart';
 import 'package:app/components/category_filter/logic.dart';
+import 'package:app/config/color_config.dart';
 
 /// 分类筛选组件。
 ///
@@ -81,7 +83,7 @@ class _CategoryFilterState extends State<CategoryFilter> {
       initial_category_id: widget.initial_category_id,
       external_category_list: widget.categories,
     );
-    
+
     // 如果有初始分类 id，在首帧后滚动到对应位置
     if (widget.initial_category_id != null && widget.initial_category_id! > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -128,18 +130,27 @@ class _CategoryFilterState extends State<CategoryFilter> {
     final RenderBox? tag_box = tag_context.findRenderObject() as RenderBox?;
     if (tag_box == null || !tag_box.attached) return;
 
-    final RenderObject? viewport_object =
-        _category_scroll_controller.position.context.storageContext.findRenderObject();
-    if (viewport_object == null || viewport_object is! RenderBox || !viewport_object.attached) return;
+    final RenderObject? viewport_object = _category_scroll_controller
+        .position
+        .context
+        .storageContext
+        .findRenderObject();
+    if (viewport_object == null ||
+        viewport_object is! RenderBox ||
+        !viewport_object.attached)
+      return;
 
     final double tag_screen_x = tag_box.localToGlobal(Offset.zero).dx;
     final double list_screen_x = viewport_object.localToGlobal(Offset.zero).dx;
-    final double tag_content_x = tag_screen_x - list_screen_x + _category_scroll_controller.offset;
+    final double tag_content_x =
+        tag_screen_x - list_screen_x + _category_scroll_controller.offset;
     final double tag_width = tag_box.size.width;
     final double viewport_width = viewport_object.size.width;
 
-    final double target_offset = tag_content_x - (viewport_width - tag_width) / 2;
-    final double max_offset = _category_scroll_controller.position.maxScrollExtent;
+    final double target_offset =
+        tag_content_x - (viewport_width - tag_width) / 2;
+    final double max_offset =
+        _category_scroll_controller.position.maxScrollExtent;
     final double safe_offset = target_offset.clamp(0.0, max_offset);
 
     _category_scroll_controller.animateTo(
@@ -160,35 +171,44 @@ class _CategoryFilterState extends State<CategoryFilter> {
       context: context,
       barrierDismissible: true,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      barrierColor: Colors.transparent,
+      barrierColor: ColorConstants.transparent,
       transitionDuration: Duration.zero,
-      pageBuilder: (BuildContext buildContext, Animation<double> animation,
-          Animation<double> secondaryAnimation) {
-        return CategoryFilterPopup(
-          temp_selected_id: _logic.temp_selected_id,
-          category_list: _logic.category_list,
-          is_dark: is_dark,
-          on_toggle_category: (int item_id) {
-            _logic.toggle_popup_category(item_id);
+      pageBuilder:
+          (
+            BuildContext buildContext,
+            Animation<double> animation,
+            Animation<double> secondaryAnimation,
+          ) {
+            return CategoryFilterPopup(
+              temp_selected_id: _logic.temp_selected_id,
+              category_list: _logic.category_list,
+              is_dark: is_dark,
+              on_toggle_category: (int item_id) {
+                _logic.toggle_popup_category(item_id);
+              },
+              on_clear: () {
+                _logic.clear_popup_selection();
+              },
+              on_confirm: () {
+                _logic.confirm_popup_selection();
+                widget.on_category_changed(_logic.selected_category_id.value);
+              },
+              on_close: () {
+                Navigator.of(buildContext).pop();
+              },
+              scroll_controller: _popup_scroll_controller,
+              language_code: context.locale.languageCode,
+            );
           },
-          on_clear: () {
-            _logic.clear_popup_selection();
+      transitionBuilder:
+          (
+            BuildContext context,
+            Animation<double> animation,
+            Animation<double> secondaryAnimation,
+            Widget child,
+          ) {
+            return child;
           },
-          on_confirm: () {
-            _logic.confirm_popup_selection();
-            widget.on_category_changed(_logic.selected_category_id.value);
-          },
-          on_close: () {
-            Navigator.of(buildContext).pop();
-          },
-          scroll_controller: _popup_scroll_controller,
-          language_code: context.locale.languageCode,
-        );
-      },
-      transitionBuilder: (BuildContext context, Animation<double> animation,
-          Animation<double> secondaryAnimation, Widget child) {
-        return child;
-      },
     ).then((_) {
       _logic.close_filter_popup();
 
@@ -213,7 +233,8 @@ class _CategoryFilterState extends State<CategoryFilter> {
 
       /// 检测语种切换，标签文字宽度变化后需要重新滚动到选中项。
       final String language_code = context.locale.languageCode;
-      if (language_code != _last_language_code && _last_language_code.isNotEmpty) {
+      if (language_code != _last_language_code &&
+          _last_language_code.isNotEmpty) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scroll_to_selected_category();
         });
@@ -261,12 +282,16 @@ class _CategoryFilterState extends State<CategoryFilter> {
   /// 在 redis/get 接口请求期间展示，模拟真实标签栏的布局，
   /// 包含多个横向排列的圆角色块和右侧箭头占位，带闪烁动画。
   Widget _build_skeleton_bar(bool is_dark) {
-    final Color shimmer_base = is_dark ? const Color(0xFF252836) : const Color(0xFFF0F1F5);
-    final Color shimmer_highlight = is_dark ? const Color(0xFF2E3145) : const Color(0xFFF8F8FA);
+    final Color shimmer_base = is_dark
+        ? ColorConstants.components_category_filter_index_tone
+        : ColorConstants.components_category_filter_index_tone_fff0f1f5;
+    final Color shimmer_highlight = is_dark
+        ? ColorConstants.components_category_filter_index_tone_ff2e3145
+        : ColorConstants.components_category_filter_index_tone_fff8f8fa;
     final double bar_height = is_dark ? 30.0 : 28.0;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 7.0),
+      padding: const EdgeInsets.only(bottom: LayoutConfig.space_7),
       child: SizedBox(
         height: bar_height,
         child: Row(
@@ -275,12 +300,15 @@ class _CategoryFilterState extends State<CategoryFilter> {
             Expanded(
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.only(left: 16.0, right: 26.0),
+                padding: const EdgeInsets.only(
+                  left: LayoutConfig.space_16,
+                  right: LayoutConfig.space_26,
+                ),
                 itemCount: 6,
                 physics: const NeverScrollableScrollPhysics(),
                 itemBuilder: (BuildContext context, int index) {
                   return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
+                    padding: const EdgeInsets.only(right: LayoutConfig.space_8),
                     child: _SkeletonTag(
                       width: 56.0 + (index % 3) * 16.0,
                       height: bar_height - 4,
@@ -301,7 +329,7 @@ class _CategoryFilterState extends State<CategoryFilter> {
                 height: 14,
                 decoration: BoxDecoration(
                   color: shimmer_base,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_2),
                 ),
               ),
             ),
@@ -369,7 +397,7 @@ class _SkeletonTagState extends State<_SkeletonTag>
           width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
             gradient: LinearGradient(
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,

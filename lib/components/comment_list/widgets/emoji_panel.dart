@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:app/components/comment_list/style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 评论区表情选择面板。
 ///
@@ -68,7 +69,7 @@ class CommentEmojiPanel extends StatelessWidget {
                   itemBuilder: (BuildContext context, int index) {
                     final String emoji = CommentListStyle.emoji_list[index];
                     return Material(
-                      color: Colors.transparent,
+                      color: ColorConstants.transparent,
                       child: InkWell(
                         onTap: () => on_emoji_selected(emoji),
                         borderRadius: BorderRadius.circular(

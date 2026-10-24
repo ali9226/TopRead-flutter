@@ -6,6 +6,7 @@ import 'package:app/pages/comics/reader/logic.dart';
 import 'package:app/services/comics_progress/service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 ComicReading reading(
   int id, {
@@ -215,7 +216,7 @@ void main() {
                   itemCount: 3,
                   itemExtentBuilder: (index, _) => logic.image_height(index),
                   itemBuilder: (_, index) => ColoredBox(
-                    color: index.isEven ? Colors.white : Colors.grey,
+                    color: index.isEven ? ColorConstants.whiteColor : ColorConstants.components_home_header_bar_index_tone,
                   ),
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 400)),

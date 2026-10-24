@@ -1,65 +1,67 @@
-import 'package:easy_localization/easy_localization.dart' as easy;
-import 'package:flutter/material.dart';
-import 'package:app/config/color_config.dart';
-import 'package:app/config/font_config.dart';
 import 'package:app/pages/read/logic.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/comment_item/index.dart';
+import 'package:flutter/material.dart';
 
-/// 阅读页评论列表组件。
-///
-/// 展示小说的热门书评列表。
+import 'empty_review.dart';
+import 'review_heading.dart';
+import 'style.dart';
+
+/// 封面下的书评预览：标题、读者署名和正文在同一纸面上连续排版。
 class ReadCommentSection extends StatelessWidget {
-  /// 当前是否为夜间主题。
-  final bool is_dark;
-
-  /// 评论数据列表。
-  final List<ReadComment> comment_list;
-
   const ReadCommentSection({
     super.key,
     required this.is_dark,
     required this.comment_list,
+    this.comment_count,
+    this.on_view_all,
   });
+  final bool is_dark;
+  final List<ReadComment> comment_list;
+
+  /// 服务端真实总数；未提供时不把预览条数伪装成总数。
+  final int? comment_count;
+
+  /// 打开已有评论面板，阅读完整列表或发表评论。
+  final VoidCallback? on_view_all;
 
   @override
   Widget build(BuildContext context) {
-    final Color title_color = is_dark
-        ? ColorConstants.whiteColor
-        : ColorConstants.lightTextColor;
-
-    final Color empty_text_color = is_dark
-        ? ColorConstants.whiteColor.withValues(alpha: 0.48)
-        : const Color(0xFF8D7D68);
-
+    // 只有提供完整列表入口才限制预览数量，独立使用时不吞掉传入数据。
+    final visible_comments = on_view_all == null
+        ? comment_list
+        : comment_list.take(CommentStyle.preview_limit).toList();
     return Column(
+      key: const ValueKey('read_comments_section'),
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          easy.tr('read.hot_review_title'),
-          style: TextStyle(
-            color: title_color,
-            fontSize: 16,
-            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-          ),
+      children: [
+        Divider(
+          height: CommentStyle.rule_width,
+          thickness: CommentStyle.rule_width,
+          color: CommentStyle.rule(is_dark),
         ),
-        const SizedBox(height: 14),
-        if (comment_list.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              easy.tr('comment.empty'),
-              style: TextStyle(
-                color: empty_text_color,
-                fontSize: 13,
-                height: 1.5,
-                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-              ),
+        const SizedBox(height: CommentStyle.heading_top_gap),
+        ReadReviewHeading(
+          is_dark: is_dark,
+          comment_count: comment_count,
+          on_view_all: on_view_all,
+        ),
+        const SizedBox(height: CommentStyle.heading_bottom_gap),
+        // 详情接口可能只返回总数；已有书评时保留完整列表入口，不误报无人评论。
+        if (visible_comments.isEmpty && (comment_count ?? 0) <= 0)
+          ReadEmptyReview(is_dark: is_dark, on_comment: on_view_all),
+        for (var index = 0; index < visible_comments.length; index++) ...[
+          if (index > 0)
+            Divider(
+              height: CommentStyle.rule_width,
+              thickness: CommentStyle.rule_width,
+              color: CommentStyle.rule(is_dark),
             ),
+          ReadCommentItem(
+            key: ValueKey((visible_comments[index].user_id, index)),
+            is_dark: is_dark,
+            comment: visible_comments[index],
           ),
-        ...comment_list.map(
-          (ReadComment comment) =>
-              ReadCommentItem(is_dark: is_dark, comment: comment),
-        ),
+        ],
       ],
     );
   }

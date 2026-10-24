@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app/config/layout_config.dart';
+import 'package:app/config/color_config.dart';
 
 /// Tab 占位块样式常量。
 ///
@@ -11,16 +12,16 @@ class TabPlaceholderStyle {
   // ==================== 列表样式 ====================
 
   /// 列表水平内边距。
-  static const double list_horizontal_padding = 12;
+  static const double list_horizontal_padding = LayoutConfig.space_12;
 
   /// 列表顶部内边距。
-  static const double list_top_padding = 10;
+  static const double list_top_padding = LayoutConfig.space_10;
 
   /// 列表底部内边距。
-  static const double list_bottom_padding = 20;
+  static const double list_bottom_padding = LayoutConfig.space_20;
 
   /// 卡片间距。
-  static const double card_spacing = 10;
+  static const double card_spacing = LayoutConfig.space_10;
 
   // ==================== 卡片样式 ====================
 
@@ -28,10 +29,10 @@ class TabPlaceholderStyle {
   static const double card_radius = LayoutConfig.card_radius;
 
   /// 卡片水平内边距。
-  static const double card_horizontal_padding = 16;
+  static const double card_horizontal_padding = LayoutConfig.space_16;
 
   /// 卡片垂直内边距。
-  static const double card_vertical_padding = 14;
+  static const double card_vertical_padding = LayoutConfig.space_14;
 
   // ==================== 序号样式 ====================
 
@@ -42,7 +43,7 @@ class TabPlaceholderStyle {
   static const double number_font_size = 18;
 
   /// 序号与内容间距。
-  static const double number_content_gap = 14;
+  static const double number_content_gap = LayoutConfig.space_14;
 
   // ==================== 骨架条样式 ====================
 
@@ -62,34 +63,34 @@ class TabPlaceholderStyle {
   static const double subtitle_bar_width = 100;
 
   /// 标题与副标题间距。
-  static const double title_subtitle_gap = 10;
+  static const double title_subtitle_gap = LayoutConfig.space_10;
 
   /// 骨架条圆角。
-  static const double bar_radius = 999;
+  static const double bar_radius = LayoutConfig.radius_pill;
 
   // ==================== 颜色（日间） ====================
 
   /// 卡片背景色（日间）。
-  static const Color card_bg_light = Colors.white;
+  static const Color card_bg_light = ColorConstants.whiteColor;
 
   /// 卡片背景色（夜间）。
-  static const Color card_bg_dark = Color(0xFF171C28);
+  static const Color card_bg_dark = ColorConstants.pages_home_widgets_tab_contents_recommend_tab_index_tone;
 
   /// 骨架条颜色（日间）。
-  static const Color skeleton_light = Color(0xFFE9EDF4);
+  static const Color skeleton_light = ColorConstants.skeleton_light_base;
 
   /// 骨架条颜色（夜间）。
-  static const Color skeleton_dark = Color(0xFF222A39);
+  static const Color skeleton_dark = ColorConstants.skeleton_dark_base;
 
   /// 序号文字颜色（日间）。
-  static const Color number_light = Color(0xFFCCCCCC);
+  static const Color number_light = ColorConstants.native_overlay_caption;
 
   /// 序号文字颜色（夜间）。
-  static const Color number_dark = Color(0xFF555566);
+  static const Color number_dark = ColorConstants.number_dark_ff555566;
 
   /// 分隔线颜色（日间）。
-  static const Color divider_light = Color(0xFFF0F0F0);
+  static const Color divider_light = ColorConstants.components_comment_list_widgets_comment_avatar_tone_fff0f0f0;
 
   /// 分隔线颜色（夜间）。
-  static const Color divider_dark = Color(0xFF2A2F3D);
+  static const Color divider_dark = ColorConstants.divider_dark_ff2a2f3d;
 }

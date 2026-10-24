@@ -77,9 +77,7 @@ class CommentHeader extends StatelessWidget {
                               ? CommentListStyle.header_title_font_size_cjk
                               : CommentListStyle
                                     .header_title_font_size_alphabetic,
-                          fontWeight: FontConfig.adjustedWeight(
-                            FontWeight.w500,
-                          ),
+                          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                           color: title_color,
                         ),
                       ),

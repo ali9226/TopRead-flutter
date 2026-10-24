@@ -76,9 +76,7 @@ class ReadStartReadingPill extends StatelessWidget {
                   ),
                   boxShadow: <BoxShadow>[
                     BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: StartReadingPillStyle.bottom_pill_shadow_alpha,
-                      ),
+                      color: ColorConstants.shadowColor.withValues(alpha: StartReadingPillStyle.bottom_pill_shadow_alpha),
                       blurRadius:
                           StartReadingPillStyle.bottom_pill_shadow_blur_radius,
                       offset: StartReadingPillStyle.bottom_pill_shadow_offset,

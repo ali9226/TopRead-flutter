@@ -11,6 +11,7 @@ import 'package:app/pages/read/logic.dart';
 import 'package:app/pages/read/utils/chapter_cache.dart';
 import 'package:app/pages/read/widgets/navigation_bars/bottom/index.dart';
 import 'package:app/pages/read/widgets/reading_settings_sheet/index.dart';
+import 'package:app/pages/read/widgets/start_reading_pill/index.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/project_config_store.dart';
 import 'package:app/stores/read_ad_free_store.dart';
@@ -165,6 +166,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 16));
     }
     expect(logic.is_loading.value, isFalse);
+    // 页面只保留头部的主阅读入口，悬浮开始胶囊不再占据内容上方的触控层。
+    expect(find.byType(ReadStartReadingPill), findsNothing);
     expect(logic.loaded_chapter_index, 2);
     final scroll = logic.scroll_controller;
     scroll.jumpTo(scroll.position.maxScrollExtent * .93);

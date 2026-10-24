@@ -1,9 +1,11 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:app/config/color_config.dart';
 
 /// 三个作品分类共用的空状态，使用 empty.svg 图标。
 class CreatorEmptyState extends StatelessWidget {
@@ -38,7 +40,7 @@ class CreatorEmptyState extends StatelessWidget {
               height: 80,
               colorFilter: ColorFilter.mode(icon_color, BlendMode.srcIn),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: LayoutConfig.space_16),
             Text(
               _title,
               textAlign: TextAlign.center,
@@ -49,7 +51,7 @@ class CreatorEmptyState extends StatelessWidget {
                 fontWeight: AuthorStyle.emphasis_weight,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: LayoutConfig.space_6),
             Text(
               _subtitle,
               textAlign: TextAlign.center,
@@ -60,7 +62,7 @@ class CreatorEmptyState extends StatelessWidget {
                 fontWeight: AuthorStyle.body_weight,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: LayoutConfig.space_20),
             FilledButton.icon(
               onPressed: on_create_work,
               icon: const Icon(Icons.add_rounded, size: 18),
@@ -68,11 +70,11 @@ class CreatorEmptyState extends StatelessWidget {
               style: FilledButton.styleFrom(
                 minimumSize: const Size(120, 40),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 10,
+                  horizontal: LayoutConfig.space_18,
+                  vertical: LayoutConfig.space_10,
                 ),
                 backgroundColor: AuthorStyle.gold,
-                foregroundColor: const Color(0xFF1A1A18),
+                foregroundColor: ColorConstants.pages_author_center_widgets_creator_empty_state_tone,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(
                     AuthorStyle.header_action_radius,

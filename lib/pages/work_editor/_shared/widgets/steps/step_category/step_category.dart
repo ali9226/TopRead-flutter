@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/common_style/selection_chip/index.dart';
 import 'package:app/models/preference.dart';
 import 'package:app/pages/author_center/author_style.dart';
@@ -178,7 +179,7 @@ class StepCategory extends StatelessWidget {
                 maxLines: 1,
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: LayoutConfig.space_8),
             Text(
               easy.tr(hint_key),
               style: TextStyle(
@@ -187,7 +188,7 @@ class StepCategory extends StatelessWidget {
               ),
             ),
             if (is_category) ...<Widget>[
-              const SizedBox(width: 8),
+              const SizedBox(width: LayoutConfig.space_8),
               Text(
                 easy
                     .tr('creator_center.category_selected_count')

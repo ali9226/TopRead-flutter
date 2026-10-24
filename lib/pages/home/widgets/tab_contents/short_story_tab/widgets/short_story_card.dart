@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'dart:async';
 import 'package:app/config/font_config.dart';
 
@@ -99,35 +100,42 @@ class _ShortStoryCardState extends State<ShortStoryCard>
     _scale_animation_controller = AnimationController(
       vsync: this,
       duration: const Duration(
-          milliseconds: ShortStoryTabStyle.long_press_scale_duration_ms),
+        milliseconds: ShortStoryTabStyle.long_press_scale_duration_ms,
+      ),
     );
 
-    _scale_animation = Tween<double>(
-      begin: 1.0,
-      end: ShortStoryTabStyle.long_press_scale,
-    ).animate(CurvedAnimation(
-      parent: _scale_animation_controller,
-      curve: Curves.easeOutCubic,
-    ));
+    _scale_animation =
+        Tween<double>(
+          begin: 1.0,
+          end: ShortStoryTabStyle.long_press_scale,
+        ).animate(
+          CurvedAnimation(
+            parent: _scale_animation_controller,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     /// 点赞弹跳动画：1.0 → 1.3 → 1.0。
     _like_animation_controller = AnimationController(
       vsync: this,
       duration: const Duration(
-          milliseconds: ShortStoryTabStyle.like_bounce_duration_ms),
+        milliseconds: ShortStoryTabStyle.like_bounce_duration_ms,
+      ),
     );
 
     _like_scale_animation = TweenSequence<double>(<TweenSequenceItem<double>>[
       TweenSequenceItem<double>(
         tween: Tween<double>(
-                begin: 1.0, end: ShortStoryTabStyle.like_bounce_scale)
-            .chain(CurveTween(curve: Curves.easeOutCubic)),
+          begin: 1.0,
+          end: ShortStoryTabStyle.like_bounce_scale,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)),
         weight: 50,
       ),
       TweenSequenceItem<double>(
         tween: Tween<double>(
-                begin: ShortStoryTabStyle.like_bounce_scale, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeInCubic)),
+          begin: ShortStoryTabStyle.like_bounce_scale,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeInCubic)),
         weight: 50,
       ),
     ]).animate(_like_animation_controller);
@@ -204,6 +212,7 @@ class _ShortStoryCardState extends State<ShortStoryCard>
   void _on_long_press_triggered() {
     if (_is_pointer_down && !_long_press_fired) {
       _long_press_fired = true;
+
       /// 保持缩小状态，同时触发回调显示弹窗。
       widget.on_long_press?.call();
     }
@@ -232,7 +241,9 @@ class _ShortStoryCardState extends State<ShortStoryCard>
   @override
   Widget build(BuildContext context) {
     /// 语种适配。
-    final bool is_cjk = LanguageUtil.is_cjk_language(context.locale.languageCode);
+    final bool is_cjk = LanguageUtil.is_cjk_language(
+      context.locale.languageCode,
+    );
     final double title_font_size = is_cjk
         ? ShortStoryTabStyle.card_title_font_size_cjk
         : ShortStoryTabStyle.card_title_font_size_alphabetic;
@@ -277,19 +288,21 @@ class _ShortStoryCardState extends State<ShortStoryCard>
         : ShortStoryTabStyle.card_desc_light_text;
 
     /// 波纹颜色（主题色浅色系）。
-    final Color ripple_color =
-        ColorConstants.themeColor.withValues(alpha: 0.12);
+    final Color ripple_color = ColorConstants.themeColor.withValues(
+      alpha: 0.12,
+    );
 
     /// 高亮颜色（主题色更浅）。
-    final Color highlight_color =
-        ColorConstants.themeColor.withValues(alpha: 0.06);
+    final Color highlight_color = ColorConstants.themeColor.withValues(
+      alpha: 0.06,
+    );
 
     /// 点赞图标和文字颜色（已点赞用 dangerColor，未点赞用默认色）。
     final Color like_icon_color = widget.story_item.is_liked
         ? ColorConstants.dangerColor
         : (widget.is_dark
-            ? ShortStoryTabStyle.card_like_dark_text
-            : ShortStoryTabStyle.card_like_light_text);
+              ? ShortStoryTabStyle.card_like_dark_text
+              : ShortStoryTabStyle.card_like_light_text);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -302,8 +315,9 @@ class _ShortStoryCardState extends State<ShortStoryCard>
         onPointerCancel: _on_pointer_cancel,
         child: Material(
           color: card_bg,
-          borderRadius:
-              BorderRadius.circular(ShortStoryTabStyle.card_border_radius),
+          borderRadius: BorderRadius.circular(
+            ShortStoryTabStyle.card_border_radius,
+          ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: widget.on_tap,
@@ -334,7 +348,10 @@ class _ShortStoryCardState extends State<ShortStoryCard>
                         fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                         color: title_color,
                         height: title_height,
-                        letterSpacing: is_cjk ? null : ShortStoryTabStyle.card_title_letter_spacing_alphabetic,
+                        letterSpacing: is_cjk
+                            ? null
+                            : ShortStoryTabStyle
+                                  .card_title_letter_spacing_alphabetic,
                       ),
                     ),
 
@@ -366,24 +383,28 @@ class _ShortStoryCardState extends State<ShortStoryCard>
                               (int index) {
                                 /// 从 tagColorList 随机取色，作为标签背景色。
                                 final Color tag_color =
-                                    ColorConstants.tagColorList[
-                                        (widget.story_item.id * 7 +
-                                                index * 3) %
-                                            ColorConstants
-                                                .tagColorList.length];
+                                    ColorConstants.tagColorList[(widget
+                                                    .story_item
+                                                    .id *
+                                                7 +
+                                            index * 3) %
+                                        ColorConstants.tagColorList.length];
+
                                 /// 背景色使用浅色系。
-                                final Color tag_bg =
-                                    tag_color.withValues(alpha: 0.12);
+                                final Color tag_bg = tag_color.withValues(
+                                  alpha: 0.12,
+                                );
                                 return Container(
                                   padding: EdgeInsets.symmetric(
-                                      horizontal: tag_horizontal_padding,
-                                      vertical: ShortStoryTabStyle
-                                          .card_tag_vertical_padding),
+                                    horizontal: tag_horizontal_padding,
+                                    vertical: ShortStoryTabStyle
+                                        .card_tag_vertical_padding,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: tag_bg,
                                     borderRadius: BorderRadius.circular(
-                                        ShortStoryTabStyle
-                                            .card_tag_border_radius),
+                                      ShortStoryTabStyle.card_tag_border_radius,
+                                    ),
                                   ),
                                   child: Text(
                                     widget.story_item.tags[index],
@@ -414,7 +435,9 @@ class _ShortStoryCardState extends State<ShortStoryCard>
                             behavior: HitTestBehavior.opaque,
                             onTap: _on_like_tap,
                             child: Padding(
-                              padding: const EdgeInsets.only(left: 8),
+                              padding: const EdgeInsets.only(
+                                left: LayoutConfig.space_8,
+                              ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: <Widget>[
@@ -422,11 +445,11 @@ class _ShortStoryCardState extends State<ShortStoryCard>
                                     animation: _like_scale_animation,
                                     builder:
                                         (BuildContext context, Widget? child) {
-                                      return Transform.scale(
-                                        scale: _like_scale_animation.value,
-                                        child: child,
-                                      );
-                                    },
+                                          return Transform.scale(
+                                            scale: _like_scale_animation.value,
+                                            child: child,
+                                          );
+                                        },
                                     child: widget.is_like_loading
                                         ? SizedBox(
                                             width: 10,
@@ -448,10 +471,12 @@ class _ShortStoryCardState extends State<ShortStoryCard>
                                           ),
                                   ),
                                   const SizedBox(
-                                      width: ShortStoryTabStyle.card_like_gap),
+                                    width: ShortStoryTabStyle.card_like_gap,
+                                  ),
                                   Text(
                                     _format_like_count(
-                                        widget.story_item.like_count),
+                                      widget.story_item.like_count,
+                                    ),
                                     style: TextStyle(
                                       fontSize: ShortStoryTabStyle
                                           .card_like_font_size,
@@ -478,12 +503,14 @@ class _ShortStoryCardState extends State<ShortStoryCard>
   /// 格式化点赞数显示。
   String _format_like_count(int count) {
     if (count >= 10000) {
-      return 'number_unit.ten_thousand'
-          .tr(namedArgs: {'count': (count / 10000).toStringAsFixed(1)});
+      return 'number_unit.ten_thousand'.tr(
+        namedArgs: {'count': (count / 10000).toStringAsFixed(1)},
+      );
     }
     if (count >= 1000) {
-      return 'number_unit.thousand'
-          .tr(namedArgs: {'count': (count / 1000).toStringAsFixed(1)});
+      return 'number_unit.thousand'.tr(
+        namedArgs: {'count': (count / 1000).toStringAsFixed(1)},
+      );
     }
     return count.toString();
   }
@@ -503,7 +530,9 @@ class _ShortStoryCardState extends State<ShortStoryCard>
       fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
       color: desc_color,
       height: desc_height,
-      letterSpacing: is_cjk ? null : ShortStoryTabStyle.card_desc_letter_spacing_alphabetic,
+      letterSpacing: is_cjk
+          ? null
+          : ShortStoryTabStyle.card_desc_letter_spacing_alphabetic,
     );
 
     /// 无封面时：纯简介文字。
@@ -519,6 +548,7 @@ class _ShortStoryCardState extends State<ShortStoryCard>
     /// 有封面时：左侧简介，右侧封面。
     /// 封面高度 = 简介字号 * 行高 * 3行。
     final double cover_height = desc_font_size * desc_height * desc_max_lines;
+
     /// 封面宽度 = 高度 * (100/75)（100:75 横向比例）。
     final double cover_width = cover_height * (100 / 75);
 
@@ -536,7 +566,7 @@ class _ShortStoryCardState extends State<ShortStoryCard>
         ),
 
         /// 间距。
-        const SizedBox(width: 10),
+        const SizedBox(width: LayoutConfig.space_10),
 
         /// 右侧封面图片。
         ClipRRect(

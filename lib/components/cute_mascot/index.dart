@@ -1,4 +1,6 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// 可爱猫咪吉祥物组件。
 ///
@@ -15,28 +17,18 @@ class CuteMascot extends StatelessWidget {
   /// 当前是否为夜间模式。
   final bool isDark;
 
-  const CuteMascot({
-    super.key,
-    required this.isCovering,
-    required this.isDark,
-  });
+  const CuteMascot({super.key, required this.isCovering, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
-      tween: Tween<double>(
-        begin: 0.0,
-        end: isCovering ? 1.0 : 0.0,
-      ),
+      tween: Tween<double>(begin: 0.0, end: isCovering ? 1.0 : 0.0),
       duration: const Duration(milliseconds: 350),
       curve: Curves.easeOutBack,
       builder: (BuildContext context, double coverValue, Widget? child) {
         return CustomPaint(
           size: const Size(140, 140),
-          painter: _CatPainter(
-            coverProgress: coverValue,
-            isDark: isDark,
-          ),
+          painter: _CatPainter(coverProgress: coverValue, isDark: isDark),
         );
       },
     );
@@ -55,10 +47,7 @@ class _CatPainter extends CustomPainter {
   /// 是否为夜间模式。
   final bool isDark;
 
-  _CatPainter({
-    required this.coverProgress,
-    required this.isDark,
-  });
+  _CatPainter({required this.coverProgress, required this.isDark});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -76,34 +65,42 @@ class _CatPainter extends CustomPainter {
   }
 
   void _drawBook(
-      Canvas canvas, double cx, double cy, double width, double height) {
+    Canvas canvas,
+    double cx,
+    double cy,
+    double width,
+    double height,
+  ) {
     final Paint bookPaint = Paint()
-      ..color = isDark ? const Color(0xFF3A3D4A) : const Color(0xFF8B7355)
+      ..color = isDark ? ColorConstants.components_cute_mascot_index_tone : ColorConstants.components_cute_mascot_index_tone_ff8b7355
       ..style = PaintingStyle.fill;
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(center: Offset(cx, cy), width: width, height: height),
-        const Radius.circular(4),
+        const Radius.circular(LayoutConfig.radius_4),
       ),
       bookPaint,
     );
 
     final Paint pagePaint = Paint()
-      ..color = isDark ? const Color(0xFF2A2D3A) : const Color(0xFFF5F0E8)
+      ..color = isDark ? ColorConstants.components_cute_mascot_index_tone_ff2a2d3a : ColorConstants.components_cute_mascot_index_tone_fff5f0e8
       ..style = PaintingStyle.fill;
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
-            center: Offset(cx, cy - 2), width: width - 8, height: height - 6),
-        const Radius.circular(2),
+          center: Offset(cx, cy - 2),
+          width: width - 8,
+          height: height - 6,
+        ),
+        const Radius.circular(LayoutConfig.radius_2),
       ),
       pagePaint,
     );
 
     final Paint spinePaint = Paint()
-      ..color = isDark ? const Color(0xFF4A4D5A) : const Color(0xFFD4C8B0)
+      ..color = isDark ? ColorConstants.components_cute_mascot_index_tone_ff4a4d5a : ColorConstants.components_cute_mascot_index_tone_ffd4c8b0
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
@@ -116,7 +113,7 @@ class _CatPainter extends CustomPainter {
 
   void _drawBody(Canvas canvas, double cx, double cy) {
     final Paint bodyPaint = Paint()
-      ..color = isDark ? const Color(0xFF3A3A3A) : const Color(0xFF4A4A4A)
+      ..color = isDark ? ColorConstants.components_cute_mascot_index_tone_ff3a3a3a : ColorConstants.components_cute_mascot_index_tone_ff4a4a4a
       ..style = PaintingStyle.fill;
 
     canvas.drawOval(
@@ -125,7 +122,7 @@ class _CatPainter extends CustomPainter {
     );
 
     final Paint bellyPaint = Paint()
-      ..color = isDark ? const Color(0xFF5A5A5A) : const Color(0xFF6A6A6A)
+      ..color = isDark ? ColorConstants.components_cute_mascot_index_tone_ff5a5a5a : ColorConstants.components_cute_mascot_index_tone_ff6a6a6a
       ..style = PaintingStyle.fill;
 
     canvas.drawOval(
@@ -136,7 +133,7 @@ class _CatPainter extends CustomPainter {
 
   void _drawHead(Canvas canvas, double cx, double cy) {
     final Paint headPaint = Paint()
-      ..color = isDark ? const Color(0xFF3A3A3A) : const Color(0xFF4A4A4A)
+      ..color = isDark ? ColorConstants.components_cute_mascot_index_tone_ff3a3a3a : ColorConstants.components_cute_mascot_index_tone_ff4a4a4a
       ..style = PaintingStyle.fill;
 
     canvas.drawOval(
@@ -145,7 +142,7 @@ class _CatPainter extends CustomPainter {
     );
 
     final Paint facePaint = Paint()
-      ..color = isDark ? const Color(0xFF5A5A5A) : const Color(0xFF6A6A6A)
+      ..color = isDark ? ColorConstants.components_cute_mascot_index_tone_ff5a5a5a : ColorConstants.components_cute_mascot_index_tone_ff6a6a6a
       ..style = PaintingStyle.fill;
 
     canvas.drawOval(
@@ -156,11 +153,11 @@ class _CatPainter extends CustomPainter {
 
   void _drawEars(Canvas canvas, double cx, double cy) {
     final Paint earPaint = Paint()
-      ..color = isDark ? const Color(0xFF3A3A3A) : const Color(0xFF4A4A4A)
+      ..color = isDark ? ColorConstants.components_cute_mascot_index_tone_ff3a3a3a : ColorConstants.components_cute_mascot_index_tone_ff4a4a4a
       ..style = PaintingStyle.fill;
 
     final Paint innerEarPaint = Paint()
-      ..color = isDark ? const Color(0xFF6A4A4A) : const Color(0xFF8B6B6B)
+      ..color = isDark ? ColorConstants.components_cute_mascot_index_tone_ff6a4a4a : ColorConstants.components_cute_mascot_index_tone_ff8b6b6b
       ..style = PaintingStyle.fill;
 
     canvas.drawPath(
@@ -201,53 +198,60 @@ class _CatPainter extends CustomPainter {
     final double eyeOpacity = 1.0 - coverProgress * 0.8;
 
     final Paint eyeWhitePaint = Paint()
-      ..color = Colors.white.withValues(alpha: eyeOpacity)
+      ..color = ColorConstants.whiteColor.withValues(alpha: eyeOpacity)
       ..style = PaintingStyle.fill;
 
     final Paint eyePupilPaint = Paint()
       ..color = Color.lerp(
-        isDark ? const Color(0xFF1A1A1A) : const Color(0xFF2A2A2A),
-        isDark ? const Color(0xFF3A3A3A) : const Color(0xFF4A4A4A),
+        isDark ? ColorConstants.components_cute_mascot_index_tone_ff1a1a1a : ColorConstants.components_cute_mascot_index_tone_ff2a2a2a,
+        isDark ? ColorConstants.components_cute_mascot_index_tone_ff3a3a3a : ColorConstants.components_cute_mascot_index_tone_ff4a4a4a,
         coverProgress,
       )!
       ..style = PaintingStyle.fill;
 
     final Paint highlightPaint = Paint()
-      ..color = Colors.white.withValues(alpha: eyeOpacity * 0.9)
+      ..color = ColorConstants.whiteColor.withValues(alpha: eyeOpacity * 0.9)
       ..style = PaintingStyle.fill;
 
     canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx - 10, cy - 4), width: 14, height: 14),
-        eyeWhitePaint);
+      Rect.fromCenter(center: Offset(cx - 10, cy - 4), width: 14, height: 14),
+      eyeWhitePaint,
+    );
     canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx - 10, cy - 3), width: 8, height: 8),
-        eyePupilPaint);
+      Rect.fromCenter(center: Offset(cx - 10, cy - 3), width: 8, height: 8),
+      eyePupilPaint,
+    );
     canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx - 8, cy - 5), width: 3, height: 3),
-        highlightPaint);
+      Rect.fromCenter(center: Offset(cx - 8, cy - 5), width: 3, height: 3),
+      highlightPaint,
+    );
 
     canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx + 10, cy - 4), width: 14, height: 14),
-        eyeWhitePaint);
+      Rect.fromCenter(center: Offset(cx + 10, cy - 4), width: 14, height: 14),
+      eyeWhitePaint,
+    );
     canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx + 10, cy - 3), width: 8, height: 8),
-        eyePupilPaint);
+      Rect.fromCenter(center: Offset(cx + 10, cy - 3), width: 8, height: 8),
+      eyePupilPaint,
+    );
     canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx + 12, cy - 5), width: 3, height: 3),
-        highlightPaint);
+      Rect.fromCenter(center: Offset(cx + 12, cy - 5), width: 3, height: 3),
+      highlightPaint,
+    );
   }
 
   void _drawNoseAndMouth(Canvas canvas, double cx, double cy) {
     final Paint nosePaint = Paint()
-      ..color = isDark ? const Color(0xFFE8A0A0) : const Color(0xFFE89090)
+      ..color = isDark ? ColorConstants.components_cute_mascot_index_tone_ffe8a0a0 : ColorConstants.components_cute_mascot_index_tone_ffe89090
       ..style = PaintingStyle.fill;
 
     canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx, cy + 4), width: 6, height: 4),
-        nosePaint);
+      Rect.fromCenter(center: Offset(cx, cy + 4), width: 6, height: 4),
+      nosePaint,
+    );
 
     final Paint mouthPaint = Paint()
-      ..color = isDark ? const Color(0xFF8A7A7A) : const Color(0xFF7A6A6A)
+      ..color = isDark ? ColorConstants.components_cute_mascot_index_tone_ff8a7a7a : ColorConstants.components_cute_mascot_index_tone_ff7a6a6a
       ..strokeWidth = 1.2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -269,33 +273,43 @@ class _CatPainter extends CustomPainter {
   void _drawWhiskers(Canvas canvas, double cx, double cy) {
     final Paint whiskerPaint = Paint()
       ..color = isDark
-          ? Colors.white.withValues(alpha: 0.3)
-          : Colors.black.withValues(alpha: 0.2)
+          ? ColorConstants.components_authorized_login_apple_review_index_tone_4cffffff
+          : ColorConstants.components_cute_mascot_index_tone_33222222
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
+    canvas.drawLine(Offset(cx - 18, cy), Offset(cx - 36, cy - 4), whiskerPaint);
     canvas.drawLine(
-        Offset(cx - 18, cy), Offset(cx - 36, cy - 4), whiskerPaint);
+      Offset(cx - 18, cy + 4),
+      Offset(cx - 36, cy + 4),
+      whiskerPaint,
+    );
     canvas.drawLine(
-        Offset(cx - 18, cy + 4), Offset(cx - 36, cy + 4), whiskerPaint);
+      Offset(cx - 18, cy + 8),
+      Offset(cx - 36, cy + 12),
+      whiskerPaint,
+    );
+    canvas.drawLine(Offset(cx + 18, cy), Offset(cx + 36, cy - 4), whiskerPaint);
     canvas.drawLine(
-        Offset(cx - 18, cy + 8), Offset(cx - 36, cy + 12), whiskerPaint);
+      Offset(cx + 18, cy + 4),
+      Offset(cx + 36, cy + 4),
+      whiskerPaint,
+    );
     canvas.drawLine(
-        Offset(cx + 18, cy), Offset(cx + 36, cy - 4), whiskerPaint);
-    canvas.drawLine(
-        Offset(cx + 18, cy + 4), Offset(cx + 36, cy + 4), whiskerPaint);
-    canvas.drawLine(
-        Offset(cx + 18, cy + 8), Offset(cx + 36, cy + 12), whiskerPaint);
+      Offset(cx + 18, cy + 8),
+      Offset(cx + 36, cy + 12),
+      whiskerPaint,
+    );
   }
 
   void _drawPaws(Canvas canvas, double cx, double cy) {
     final Paint pawPaint = Paint()
-      ..color = isDark ? const Color(0xFF3A3A3A) : const Color(0xFF4A4A4A)
+      ..color = isDark ? ColorConstants.components_cute_mascot_index_tone_ff3a3a3a : ColorConstants.components_cute_mascot_index_tone_ff4a4a4a
       ..style = PaintingStyle.fill;
 
     final Paint pawPadPaint = Paint()
-      ..color = isDark ? const Color(0xFF6A5A5A) : const Color(0xFF8B7A7A)
+      ..color = isDark ? ColorConstants.components_cute_mascot_index_tone_ff6a5a5a : ColorConstants.components_cute_mascot_index_tone_ff8b7a7a
       ..style = PaintingStyle.fill;
 
     final double leftPawX = cx - 26 + coverProgress * 16;
@@ -304,22 +318,34 @@ class _CatPainter extends CustomPainter {
     final double rightPawY = cy + 14 - coverProgress * 22;
 
     canvas.drawOval(
-        Rect.fromCenter(
-            center: Offset(leftPawX, leftPawY), width: 14, height: 10),
-        pawPaint);
+      Rect.fromCenter(
+        center: Offset(leftPawX, leftPawY),
+        width: 14,
+        height: 10,
+      ),
+      pawPaint,
+    );
     canvas.drawOval(
-        Rect.fromCenter(
-            center: Offset(leftPawX, leftPawY), width: 8, height: 6),
-        pawPadPaint);
+      Rect.fromCenter(center: Offset(leftPawX, leftPawY), width: 8, height: 6),
+      pawPadPaint,
+    );
 
     canvas.drawOval(
-        Rect.fromCenter(
-            center: Offset(rightPawX, rightPawY), width: 14, height: 10),
-        pawPaint);
+      Rect.fromCenter(
+        center: Offset(rightPawX, rightPawY),
+        width: 14,
+        height: 10,
+      ),
+      pawPaint,
+    );
     canvas.drawOval(
-        Rect.fromCenter(
-            center: Offset(rightPawX, rightPawY), width: 8, height: 6),
-        pawPadPaint);
+      Rect.fromCenter(
+        center: Offset(rightPawX, rightPawY),
+        width: 8,
+        height: 6,
+      ),
+      pawPadPaint,
+    );
   }
 
   @override

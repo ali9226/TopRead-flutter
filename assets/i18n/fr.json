@@ -914,6 +914,7 @@
     "restoring_progress": "Chargement de la progression",
     "intro_title": "Introduction",
     "more": "Plus",
+    "review_rating": "Note : {rating} sur 5",
     "hot_review_title": "Avis populaires",
     "more_review": "Plus d’avis",
     "reading_title": "Lecture de démonstration",
@@ -1282,6 +1283,9 @@
     "load_more": "Afficher plus"
   },
   "comics": {
+    "hot_comments": "Commentaires populaires",
+    "write_comment": "Écrire un commentaire",
+    "comments_load_failed": "Impossible de charger les commentaires. Réessayez.",
     "chapter_count": "{count} chapitres",
     "language_count": "{count} langues",
     "page_count": "{count} pages",

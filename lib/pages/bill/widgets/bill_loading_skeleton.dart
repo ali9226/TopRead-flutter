@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../style.dart';
+import 'package:app/config/color_config.dart';
+import 'package:app/config/layout_config.dart';
 
 /// 账单页骨架屏。
 ///
@@ -30,13 +32,13 @@ class BillLoadingSkeleton extends StatelessWidget {
           padding: Style.billCardPadding,
           decoration: BoxDecoration(
             /// 骨架卡片底色。
-            color: isDark ? const Color(0xFF171926) : Colors.white,
+            color: isDark ? ColorConstants.nightHighlightColor : ColorConstants.whiteColor,
             borderRadius: BorderRadius.circular(Style.billCardRadius),
             border: Border.all(
               /// 用轻描边维持卡片边界。
               color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.black.withValues(alpha: 0.04),
+                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff
+                  : ColorConstants.components_paragraph_comment_sheet_widgets_comment_item_tone,
             ),
           ),
           child: Column(
@@ -105,11 +107,11 @@ class _BillSkeletonBar extends StatelessWidget {
           /// 骨架条颜色故意比真实文字更弱，
           /// 让用户知道这里只是占位而不是可阅读内容。
           color: isDark
-              ? Colors.white.withValues(alpha: 0.07)
-              : Colors.black.withValues(alpha: 0.06),
+              ? ColorConstants.pages_bill_widgets_bill_loading_skeleton_tone
+              : ColorConstants.components_share_sheet_widgets_share_poster_card_tone_f222222,
 
           /// 用大圆角做成胶囊形态，骨架观感会更柔和。
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_pill),
         ),
       ),
     );

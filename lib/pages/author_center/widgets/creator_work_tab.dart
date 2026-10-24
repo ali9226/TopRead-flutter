@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 // ignore_for_file: non_constant_identifier_names
 
@@ -188,7 +189,6 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
               show: _show_back_to_top,
               isDark: widget.is_dark,
               onTap: _scroll_to_top,
-              right: floating_back_to_top_style.FloatingBackToTopStyle.right,
               visibleBottom:
                   floating_back_to_top_style
                       .FloatingBackToTopStyle
@@ -402,7 +402,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
                 Padding(
                   padding: const EdgeInsets.only(
                     top: AuthorStyle.list_header_top_spacing,
-                    bottom: 30,
+                    bottom: LayoutConfig.space_30,
                   ),
                   child: _build_list_header(),
                 ),
@@ -427,7 +427,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
                 Padding(
                   padding: const EdgeInsets.only(
                     top: AuthorStyle.list_header_top_spacing,
-                    bottom: 30,
+                    bottom: LayoutConfig.space_30,
                   ),
                   child: _build_list_header(),
                 ),
@@ -453,7 +453,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
         SliverToBoxAdapter(
           child: _constrain_content(
             Padding(
-              padding: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.only(top: LayoutConfig.space_12),
               child: _build_error_notice(refresh_error, on_retry: _refresh),
             ),
           ),
@@ -485,7 +485,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
         child: _constrain_content(
           Padding(
             padding: EdgeInsets.only(
-              top: 16,
+              top: LayoutConfig.space_16,
               bottom:
                   AuthorStyle.list_bottom_spacing +
                   MediaQuery.paddingOf(context).bottom,
@@ -561,7 +561,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
                   fontWeight: AuthorStyle.title_weight,
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: LayoutConfig.space_3),
               Text(
                 easy.tr('creator_center.sort_by_recent'),
                 maxLines: 2,
@@ -575,7 +575,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
             ],
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: LayoutConfig.space_12),
         Builder(
           builder: (context) {
             final Color tag_color =
@@ -584,7 +584,10 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
             final Color tag_bg = tag_color.withValues(alpha: 0.12);
             return Container(
               constraints: const BoxConstraints(minWidth: 34),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                horizontal: LayoutConfig.space_10,
+                vertical: LayoutConfig.space_6,
+              ),
               decoration: BoxDecoration(
                 color: tag_bg,
                 borderRadius: BorderRadius.circular(AuthorStyle.pill_radius),
@@ -612,7 +615,12 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
   Widget _build_initial_error(String message) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 36, 24, 72),
+        padding: const EdgeInsets.fromLTRB(
+          LayoutConfig.space_24,
+          LayoutConfig.space_36,
+          LayoutConfig.space_24,
+          LayoutConfig.space_72,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -621,7 +629,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
               height: 76,
               decoration: BoxDecoration(
                 color: AuthorStyle.secondary_surface(widget.is_dark),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(LayoutConfig.radius_24),
               ),
               child: Center(
                 child: SvgIcon(
@@ -632,7 +640,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
                 ),
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: LayoutConfig.space_18),
             Text(
               easy.tr('creator_center.works_load_failed'),
               textAlign: TextAlign.center,
@@ -642,7 +650,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
                 fontWeight: AuthorStyle.title_weight,
               ),
             ),
-            const SizedBox(height: 9),
+            const SizedBox(height: LayoutConfig.space_9),
             Text(
               message,
               textAlign: TextAlign.center,
@@ -652,7 +660,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
                 height: 1.6,
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: LayoutConfig.space_18),
             widget.is_dark
                 ? OutlinedButton.icon(
                     onPressed: widget.on_refresh == null ? null : _refresh,
@@ -675,7 +683,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
   Widget _build_load_more_footer() {
     if (widget.is_loading_more || _load_more_in_flight) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: LayoutConfig.space_12),
         child: Center(child: _build_progress()),
       );
     }
@@ -701,7 +709,7 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
     final bool is_published_tab = widget.tab_index == 0;
     final bool is_off_shelf_tab = widget.tab_index == 3;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: LayoutConfig.space_12),
       child: Text(
         easy.tr(
           is_off_shelf_tab
@@ -722,10 +730,13 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
   Widget _build_error_notice(String message, {required VoidCallback on_retry}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: LayoutConfig.space_14,
+        vertical: LayoutConfig.space_10,
+      ),
       decoration: BoxDecoration(
         color: AuthorStyle.secondary_surface(widget.is_dark),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -758,16 +769,16 @@ class _CreatorWorkTabState extends State<CreatorWorkTab>
           side: BorderSide(color: AuthorStyle.border(widget.is_dark)),
           minimumSize: const Size(120, 44),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
           ),
         )
       : ElevatedButton.styleFrom(
           backgroundColor: ColorConstants.themeColor,
-          foregroundColor: Colors.black,
+          foregroundColor: ColorConstants.lightTextColor,
           elevation: 0,
           minimumSize: const Size(120, 44),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
           ),
         );
 
@@ -914,7 +925,7 @@ class _AnimatedWorkListState extends State<_AnimatedWorkList>
 
         return Padding(
           padding: EdgeInsets.only(
-            bottom: index < visible.length - 1
+            bottom: index < visible.length - LayoutConfig.space_1
                 ? AuthorStyle.work_card_spacing
                 : 0,
           ),
@@ -991,11 +1002,11 @@ class _ListSkeletonState extends State<_ListSkeleton>
       animation: _controller,
       builder: (context, _) {
         final Color base = widget.is_dark
-            ? const Color(0xFF2A2A2A)
-            : const Color(0xFFE8E8E8);
+            ? ColorConstants.components_cute_mascot_index_tone_ff2a2a2a
+            : ColorConstants.pages_published_long_novel_editor_widgets_skeleton_content_tone;
         final Color highlight = widget.is_dark
-            ? const Color(0xFF3A3A3A)
-            : const Color(0xFFF5F5F5);
+            ? ColorConstants.components_cute_mascot_index_tone_ff3a3a3a
+            : ColorConstants.config_color_config_tone_fff5f5f5;
         final double t = _controller.value;
         final Gradient gradient = LinearGradient(
           begin: const Alignment(-1.0, 0.0),
@@ -1007,10 +1018,15 @@ class _ListSkeletonState extends State<_ListSkeleton>
         return ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 72),
+          padding: const EdgeInsets.fromLTRB(
+            LayoutConfig.space_12,
+            0,
+            LayoutConfig.space_12,
+            LayoutConfig.space_72,
+          ),
           itemCount: 4,
           itemBuilder: (_, __) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: LayoutConfig.space_12),
             child: _build_card_skeleton(gradient),
           ),
         );
@@ -1020,24 +1036,24 @@ class _ListSkeletonState extends State<_ListSkeleton>
 
   Widget _build_card_skeleton(Gradient gradient) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(LayoutConfig.space_14),
       decoration: BoxDecoration(
-        color: widget.is_dark ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        color: widget.is_dark ? ColorConstants.pages_author_center_widgets_creator_work_tab_tone : ColorConstants.whiteColor,
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           _shimmer(gradient, width: 180, height: 18, radius: 4),
-          const SizedBox(height: 8),
+          const SizedBox(height: LayoutConfig.space_8),
           _shimmer(gradient, width: double.infinity, height: 14, radius: 4),
-          const SizedBox(height: 4),
+          const SizedBox(height: LayoutConfig.space_4),
           _shimmer(gradient, width: 220, height: 14, radius: 4),
-          const SizedBox(height: 12),
+          const SizedBox(height: LayoutConfig.space_12),
           Row(
             children: <Widget>[
               _shimmer(gradient, width: 48, height: 22, radius: 11),
-              const SizedBox(width: 8),
+              const SizedBox(width: LayoutConfig.space_8),
               _shimmer(gradient, width: 64, height: 22, radius: 11),
               const Spacer(),
               _shimmer(gradient, width: 80, height: 12, radius: 4),

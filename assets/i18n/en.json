@@ -921,6 +921,7 @@
     "intro_title": "About",
     "more": "More",
     "collapse": "Less",
+    "review_rating": "Rated {rating} out of 5",
     "hot_review_title": "Reviews",
     "more_review": "More",
     "reading_title": "Preview",
@@ -1259,6 +1260,9 @@
     "load_more": "Load more"
   },
   "comics": {
+    "hot_comments": "Top comments",
+    "write_comment": "Write a comment",
+    "comments_load_failed": "Comments could not be loaded. Please try again.",
     "chapter_count": "Chapters: {count}",
     "language_count": "Languages: {count}",
     "page_count": "Pages: {count}",
@@ -1275,7 +1279,7 @@
     "collect": "Save",
     "collected": "Saved",
     "start_reading": "Start reading",
-    "continue_reading": "Continue",
+    "continue_reading": "Continue reading",
     "login_required": "Sign in to continue",
     "reader_page": "Page {page}",
     "chapter_finished": "End of chapter",

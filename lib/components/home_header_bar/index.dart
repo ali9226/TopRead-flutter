@@ -57,7 +57,7 @@ class HomeHeaderBar extends StatelessWidget {
 
     /// 语种文字颜色。
     final Color languageTextColor = is_dark
-        ? Colors.white
+        ? ColorConstants.whiteColor
         : ColorConstants.lightTextColor;
 
     return WindowReservedRegionPadding(
@@ -111,9 +111,7 @@ class HomeHeaderBar extends StatelessWidget {
                                 ? HomeHeaderBarStyle.language_font_size_cjk
                                 : HomeHeaderBarStyle
                                       .language_font_size_alphabetic,
-                            fontWeight: FontConfig.adjustedWeight(
-                              FontWeight.w500,
-                            ),
+                            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                           ),
                         ),
                       ),
@@ -175,7 +173,7 @@ class HomeHeaderBar extends StatelessWidget {
       errorBuilder: (_, _, _) => Container(
         width: HomeHeaderBarStyle.language_icon_size,
         height: HomeHeaderBarStyle.language_icon_size,
-        color: Colors.grey,
+        color: ColorConstants.components_home_header_bar_index_tone,
       ),
     );
   }

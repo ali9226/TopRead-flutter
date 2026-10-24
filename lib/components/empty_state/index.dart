@@ -1,8 +1,10 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
+import 'package:app/config/color_config.dart';
 
 /// 空数据状态展示组件。
 ///
@@ -33,8 +35,8 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String lang = language_code ??
-        Localizations.localeOf(context).languageCode;
+    final String lang =
+        language_code ?? Localizations.localeOf(context).languageCode;
     final bool is_cjk = LanguageUtil.is_cjk_language(lang);
     final double font_size = is_cjk ? 13 : 12;
 
@@ -42,13 +44,13 @@ class EmptyState extends StatelessWidget {
 
     /// 图标颜色。
     final Color icon_color = is_dark
-        ? const Color(0xFF4A4D60)
-        : const Color(0xFFBBBBCC);
+        ? ColorConstants.components_empty_state_index_tone
+        : ColorConstants.components_empty_state_index_tone_ffbbbbcc;
 
     /// 文字颜色。
     final Color text_color = is_dark
-        ? const Color(0xFF6B6E82)
-        : const Color(0xFFAAAAAA);
+        ? ColorConstants.components_empty_state_index_tone_ff6b6e82
+        : ColorConstants.components_empty_state_index_tone_ffaaaaaa;
 
     return GestureDetector(
       onTap: on_reload,
@@ -57,13 +59,8 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            SvgIcon(
-              name: 'empty',
-              width: 151,
-              height: 151,
-              color: icon_color,
-            ),
-            const SizedBox(height: 12),
+            SvgIcon(name: 'empty', width: 151, height: 151, color: icon_color),
+            const SizedBox(height: LayoutConfig.space_12),
             Text(
               display_message,
               style: TextStyle(

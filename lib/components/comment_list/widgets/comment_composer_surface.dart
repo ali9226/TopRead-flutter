@@ -260,7 +260,7 @@ class CommentComposerSurface extends StatelessWidget {
         : CommentListStyle.emoji_active_light_bg;
 
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       child: InkWell(
         key: ValueKey<String>(
           is_editor
@@ -279,7 +279,7 @@ class CommentComposerSurface extends StatelessWidget {
           width: CommentListStyle.emoji_button_size,
           height: CommentListStyle.emoji_button_size,
           decoration: BoxDecoration(
-            color: show_emoji_panel ? active_bg_color : Colors.transparent,
+            color: show_emoji_panel ? active_bg_color : ColorConstants.transparent,
             shape: BoxShape.circle,
           ),
           alignment: Alignment.center,
@@ -318,13 +318,13 @@ class CommentComposerSurface extends StatelessWidget {
         ? CommentListStyle.send_disabled_dark_bg
         : CommentListStyle.send_disabled_light_bg;
     final Color text_color = has_text
-        ? Colors.black
+        ? ColorConstants.lightTextColor
         : is_dark
         ? CommentListStyle.send_disabled_dark_text
         : CommentListStyle.send_disabled_light_text;
 
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       child: InkWell(
         key: ValueKey<String>(
           is_editor

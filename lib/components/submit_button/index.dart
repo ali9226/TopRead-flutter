@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/config/color_config.dart';
@@ -35,7 +36,7 @@ class _SubmitButtonState extends State<SubmitButton> {
       height: 50,
       width: double.infinity,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_25),
         boxShadow: [
           BoxShadow(
             color: ColorConstants.themeColor.withValues(alpha: 0.24),
@@ -43,7 +44,7 @@ class _SubmitButtonState extends State<SubmitButton> {
             offset: const Offset(0, 8),
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: ColorConstants.shadowColor.withValues(alpha: 0.07843),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -51,16 +52,16 @@ class _SubmitButtonState extends State<SubmitButton> {
       ),
       child: Material(
         color: ColorConstants.themeColor,
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_25),
         elevation: 0,
-        shadowColor: Colors.transparent,
+        shadowColor: ColorConstants.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(25),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_25),
           onTap: widget.loading ? null : widget.onTap, // loading 时禁用点击
           child: Ink(
             decoration: BoxDecoration(
               color: ColorConstants.themeColor,
-              borderRadius: BorderRadius.circular(25),
+              borderRadius: BorderRadius.circular(LayoutConfig.radius_25),
             ),
             child: Center(
               child: widget.loading

@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/api/creator_workspace.dart';
 import 'package:app/components/svg_icon/index.dart';
@@ -19,6 +20,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'logic.dart';
 import 'widgets/chapter_writing_surface.dart';
+import 'package:app/config/color_config.dart';
 
 /// 已发布作品的新增/更新共用编辑器：进入页面只读，提交时才生成事务版本。
 class PublishedChapterEditor extends StatefulWidget {
@@ -225,7 +227,7 @@ class _PublishedChapterEditorState extends State<PublishedChapterEditor> {
                   (dark
                           ? SystemUiOverlayStyle.light
                           : SystemUiOverlayStyle.dark)
-                      .copyWith(statusBarColor: Colors.transparent),
+                      .copyWith(statusBarColor: ColorConstants.transparent),
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: AuthorStyle.hero_gradient(dark),
@@ -279,7 +281,9 @@ class _PublishedChapterEditorState extends State<PublishedChapterEditor> {
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.only(right: 12),
+                                padding: const EdgeInsets.only(
+                                  right: LayoutConfig.space_12,
+                                ),
                                 child: GestureDetector(
                                   onTap: saving ? null : _save_and_exit,
                                   child: Container(
@@ -294,7 +298,7 @@ class _PublishedChapterEditorState extends State<PublishedChapterEditor> {
                                         name: 'check_04',
                                         width: 9,
                                         height: 9,
-                                        color: Colors.black,
+                                        color: ColorConstants.lightTextColor,
                                       ),
                                     ),
                                   ),
@@ -413,7 +417,7 @@ class _ChapterBottomBar extends StatelessWidget {
                     WorkEditorStyle.action_height,
                   ),
                   backgroundColor: AuthorStyle.gold,
-                  foregroundColor: Colors.black,
+                  foregroundColor: ColorConstants.lightTextColor,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(
                       WorkEditorStyle.action_radius,

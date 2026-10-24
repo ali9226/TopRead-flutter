@@ -7,6 +7,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'steps/step_publish/step_publish.dart';
 import 'steps/step_publish/widgets/schedule_time/picker.dart';
+import 'package:app/config/color_config.dart';
 
 /// 新章节复用作品发布方式与日期组件，时间设置只属于当前章节。
 Future<({CreatorReleaseMode mode, DateTime? time})?>
@@ -69,9 +70,9 @@ show_chapter_publish_sheet({
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(WorkEditorStyle.action_height),
                       backgroundColor: AuthorStyle.gold,
-                      foregroundColor: Colors.black,
+                      foregroundColor: ColorConstants.lightTextColor,
                       disabledBackgroundColor: AuthorStyle.gold.withValues(alpha: 0.5),
-                      disabledForegroundColor: Colors.black.withValues(alpha: 0.5),
+                      disabledForegroundColor: ColorConstants.pages_work_editor_shared_widgets_chapter_publish_sheet_tone,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(WorkEditorStyle.action_radius),
                       ),

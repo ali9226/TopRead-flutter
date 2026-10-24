@@ -8,12 +8,19 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:app/api/tile_quest.dart';
+
 import 'game/config.dart';
 import 'game/engine.dart';
 import 'game/models.dart';
 import 'services/feedback_service.dart';
 import 'services/save_service.dart';
 import 'services/work_service.dart';
+
+/// 运行时可注入的遥测依赖；不注入时不联网（测试安全）。
+typedef TileQuestConfigLoader = Future<TileQuestGameConfig?> Function();
+typedef TileQuestSessionReporter =
+    Future<void> Function(TileQuestSessionReport report);
 
 /// Tile Quest 的页面控制器；规则由纯 Dart 引擎负责，动画只消费结果快照。
 ///
@@ -27,11 +34,15 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
     int Function()? now_ms,
     int Function()? next_seed,
     bool enable_timer = true,
+    TileQuestConfigLoader? config_loader,
+    TileQuestSessionReporter? session_reporter,
   }) : _save_service = save_service ?? TileQuestSaveService.shared,
        _work_service = work_service ?? TileQuestIsolateWork(),
        _feedback_service = feedback_service ?? TileQuestSystemFeedback(),
        _now_ms = now_ms ?? _monotonic_clock.elapsed_milliseconds,
        _next_seed = next_seed ?? _random_seed,
+       _config_loader = config_loader,
+       _session_reporter = session_reporter,
        _enable_timer = enable_timer;
 
   /// 保存周期与界面时间刷新周期分别管理，避免每帧重建棋盘。
@@ -39,6 +50,9 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
   static const int save_interval_ms = 5000;
   static const int supported_level_count = 2;
   static const Duration feedback_preload_budget = Duration(milliseconds: 240);
+  static const int _win_status = 1;
+  static const int _lose_status = 2;
+  static const int _abandoned_status = 3;
 
   static final _TileQuestClock _monotonic_clock = _TileQuestClock();
   static final Random _random = Random.secure();
@@ -49,7 +63,11 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
   final TileQuestFeedbackService _feedback_service;
   final int Function() _now_ms;
   final int Function() _next_seed;
+  final TileQuestConfigLoader? _config_loader;
+  final TileQuestSessionReporter? _session_reporter;
   final bool _enable_timer;
+
+  _TileQuestSessionContext? _session_context;
 
   TileQuestEngine? _engine;
   Future<void>? _initialization;
@@ -195,14 +213,28 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
       save_recovered = loaded.recovered;
       has_save_error = _save_service.has_write_error;
       // 每次进入都从教学关开始；旧图案表仅恢复经独立校验的进度与偏好。
+      final int run_seed = _challenge_seed(loaded.previous_seed);
+      final _ChallengeConfig challenge_config = await _resolve_challenge_config(
+        1,
+        run_seed,
+      );
       final TileQuestState generated = await _work_service.generate(
         level: 1,
-        seed: _challenge_seed(loaded.previous_seed),
+        seed: run_seed,
         unlocked_level: loaded.unlocked_level,
         challenge_id: _uuid.v4(),
+        layout_seed: challenge_config.layout_seed,
+        difficulty: challenge_config.difficulty,
       );
       await audio_ready;
       if (!_is_current_session(epoch)) return;
+      _begin_session(
+        generated,
+        run_seed: run_seed,
+        difficulty: challenge_config.difficulty,
+        layout_date: challenge_config.layout_date,
+        layout_seed: challenge_config.layout_seed,
+      );
       _engine = TileQuestEngine(generated);
       _board_revision++;
       _engine!.update_metadata(sound_enabled: loaded.sound_enabled);
@@ -427,14 +459,29 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
     _capture_elapsed();
     _notify();
     try {
+      _end_session(_abandoned_status);
+      final int run_seed = _challenge_seed(state!.seed);
+      final _ChallengeConfig challenge_config = await _resolve_challenge_config(
+        level,
+        run_seed,
+      );
       final TileQuestState generated = await _work_service.generate(
         level: level,
-        seed: _challenge_seed(state!.seed),
+        seed: run_seed,
         unlocked_level: state!.unlocked_level,
         challenge_id: _uuid.v4(),
+        layout_seed: challenge_config.layout_seed,
+        difficulty: challenge_config.difficulty,
       );
       if (!_is_current_session(epoch)) return false;
       final bool current_sound = sound_enabled;
+      _begin_session(
+        generated,
+        run_seed: run_seed,
+        difficulty: challenge_config.difficulty,
+        layout_date: challenge_config.layout_date,
+        layout_seed: challenge_config.layout_seed,
+      );
       _engine = TileQuestEngine(generated);
       _board_revision++;
       _engine!.update_metadata(sound_enabled: current_sound);
@@ -519,6 +566,27 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
   void _record_action(TileQuestActionResult result) {
     last_action = result;
     _recent_actions.add(result);
+    final _TileQuestSessionContext? context = _session_context;
+    if (context != null) {
+      switch (result.action) {
+        case TileQuestAction.undo:
+          context.undo_used++;
+        case TileQuestAction.shuffle:
+          context.shuffle_used++;
+        case TileQuestAction.remove:
+          context.remove_used++;
+        case TileQuestAction.tap:
+        case TileQuestAction.return_reserve:
+          context.tap_count++;
+      }
+      if (result.after.status != TileQuestStatus.playing) {
+        _end_session(
+          result.after.status == TileQuestStatus.won
+              ? _win_status
+              : _lose_status,
+        );
+      }
+    }
   }
 
   Future<void> _play_feedback(TileQuestFeedbackEvent event) async {
@@ -571,6 +639,7 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
   /// 退出先同步撤销计算的提交资格，再等待最终快照；重复退出共享栅栏。
   Future<void> leave_game() {
     if (_departure != null) return _departure!;
+    _end_session(_abandoned_status);
     _capture_elapsed();
     _leaving = true;
     _foreground = false;
@@ -584,6 +653,113 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
     return _departure = flush_save();
   }
 
+  /// 后端配置优先；失败回退本地默认（difficulty=8.00、run seed 兼作布局种子）。
+  Future<_ChallengeConfig> _resolve_challenge_config(
+    int level,
+    int run_seed,
+  ) async {
+    final String layout_date = _utc_date();
+    if (level < 2) {
+      return _ChallengeConfig(
+        difficulty: TileQuestConfig.level1Difficulty.toDouble(),
+        layout_date: layout_date,
+        layout_seed: run_seed,
+      );
+    }
+    TileQuestGameConfig? config;
+    try {
+      config = await _config_loader?.call();
+    } on Object {
+      config = null;
+    }
+    final double difficulty =
+        (config?.difficulty ?? TileQuestConfig.gameDifficulty.toDouble()).clamp(
+          1,
+          10,
+        );
+    final int? server_seed = config?.layout_seed;
+    return _ChallengeConfig(
+      difficulty: difficulty,
+      layout_date: config?.layout_date.isNotEmpty ?? false
+          ? config!.layout_date
+          : layout_date,
+      layout_seed: server_seed != null &&
+              server_seed >= 0 &&
+              server_seed <= TileQuestConfig.max_seed
+          ? server_seed
+          : run_seed,
+    );
+  }
+
+  /// 每局 UTC 题目日期，与后端 tile_quest_daily 的 date 同口径。
+  static String _utc_date() {
+    final DateTime now = DateTime.now().toUtc();
+    final String month = now.month.toString().padLeft(2, '0');
+    final String day = now.day.toString().padLeft(2, '0');
+    return '${now.year.toString().padLeft(4, '0')}-$month-$day';
+  }
+
+  /// 开局遥测：记录 challenge 维度的静态事实（题目/种子/总牌数）并上报。
+  /// [generated] 新生成的牌局（提供 challenge_id/level/总牌数）；
+  /// [run_seed] 本局随机种子；[difficulty]/[layout_date]/[layout_seed] 为本局题目参数。
+  void _begin_session(
+    TileQuestState generated, {
+    required int run_seed,
+    required double difficulty,
+    required String layout_date,
+    required int layout_seed,
+  }) {
+    _session_context = _TileQuestSessionContext(
+      challenge_id: generated.challenge_id,
+      level: generated.level,
+      difficulty: difficulty,
+      layout_date: layout_date,
+      layout_seed: layout_seed,
+      run_seed: run_seed,
+      tiles_total: generated.tiles.length,
+    );
+    _send_session_report(status: null);
+  }
+
+  /// 终局遥测（胜/败/放弃），fire-and-forget；重复调用幂等。
+  void _end_session(int status) {
+    final _TileQuestSessionContext? context = _session_context;
+    if (context == null || context.end_reported) return;
+    context.end_reported = true;
+    _capture_elapsed();
+    _send_session_report(status: status);
+    _session_context = null;
+  }
+
+  /// 把当前遥测上下文打包成上报载荷并 fire-and-forget。
+  /// [status] 为空表示开局上报，否则为终局（1=胜 2=败 3=弃）。
+  void _send_session_report({required int? status}) {
+    final _TileQuestSessionContext? context = _session_context;
+    final TileQuestSessionReporter? reporter = _session_reporter;
+    if (context == null || reporter == null) return;
+    final TileQuestState? current = state;
+    unawaited(
+      reporter(
+        TileQuestSessionReport(
+          challenge_id: context.challenge_id,
+          level: context.level,
+          difficulty: context.difficulty,
+          layout_date: context.layout_date,
+          layout_seed: context.layout_seed,
+          run_seed: context.run_seed,
+          tiles_total: context.tiles_total,
+          status: status,
+          duration_ms: current?.elapsed_ms ?? 0,
+          undo_used: context.undo_used,
+          shuffle_used: context.shuffle_used,
+          remove_used: context.remove_used,
+          tap_count: context.tap_count,
+          matched_count: current?.matched_count ?? 0,
+        ),
+      ),
+    );
+  }
+
   void _notify() {
     if (!_closed) update();
   }
@@ -591,6 +767,7 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
   @override
   void onClose() {
     if (_closed) return;
+    _end_session(_abandoned_status);
     _capture_elapsed();
     _foreground = false;
     _clock_anchor = null;
@@ -604,6 +781,45 @@ class TileQuestLogic extends GetxController with WidgetsBindingObserver {
     if (_observing) WidgetsBinding.instance.removeObserver(this);
     super.onClose();
   }
+}
+
+/// 单局遥测上下文，累积道具/点击计数直到终局上报。
+class _TileQuestSessionContext {
+  _TileQuestSessionContext({
+    required this.challenge_id,
+    required this.level,
+    required this.difficulty,
+    required this.layout_date,
+    required this.layout_seed,
+    required this.run_seed,
+    required this.tiles_total,
+  });
+
+  final String challenge_id;
+  final int level;
+  final double difficulty;
+  final String layout_date;
+  final int layout_seed;
+  final int run_seed;
+  final int tiles_total;
+  int undo_used = 0;
+  int shuffle_used = 0;
+  int remove_used = 0;
+  int tap_count = 0;
+  bool end_reported = false;
+}
+
+/// 本局生成使用的题目参数（服务端优先，失败回退本地默认）。
+class _ChallengeConfig {
+  const _ChallengeConfig({
+    required this.difficulty,
+    required this.layout_date,
+    required this.layout_seed,
+  });
+
+  final double difficulty;
+  final String layout_date;
+  final int layout_seed;
 }
 
 /// Stopwatch 提供不受系统校时影响的单调时钟。

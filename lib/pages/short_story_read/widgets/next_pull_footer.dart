@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/pages/short_story_read/style.dart';
@@ -46,8 +47,7 @@ class NextPullFooter extends StatelessWidget {
     }
 
     // 计算上拉进度（0.0 ~ 1.0）。
-    final double progress =
-        (pull_offset / trigger_distance).clamp(0.0, 1.0);
+    final double progress = (pull_offset / trigger_distance).clamp(0.0, 1.0);
 
     // 判断是否已达到触发阈值。
     final bool ready = pull_offset >= trigger_distance;
@@ -65,7 +65,7 @@ class NextPullFooter extends StatelessWidget {
         child: Opacity(
           opacity: progress,
           child: Padding(
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: const EdgeInsets.only(bottom: LayoutConfig.space_24),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
@@ -83,7 +83,7 @@ class NextPullFooter extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: LayoutConfig.space_4),
                 // 箭头图标，根据状态旋转方向。
                 AnimatedRotation(
                   turns: ready ? -0.25 : 0.25,

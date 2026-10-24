@@ -309,7 +309,12 @@ void main() {
     'high difficulty rejects missing cores and fabricated zero-tool wins',
     () {
       final state = mandatory_tool_fixture();
-      final no_core = Map<String, dynamic>.from(state.to_json())
+      final hard = TileQuestGenerator.generate(
+        level: 2,
+        difficulty: 10,
+        seed: 730,
+      );
+      final no_core = Map<String, dynamic>.from(hard.to_json())
         ..['expert_barrier'] = null;
       expect(() => TileQuestState.from_json(no_core), throwsFormatException);
       final removed = state.tiles
@@ -399,13 +404,13 @@ void main() {
           );
           TileQuestValidator.validate_state(state);
           final barrier = state.expert_barrier;
-          if (difficulty < TileQuestConfig.mandatory_tool_difficulty) {
+          if (difficulty < TileQuestConfig.trap_difficulty) {
             expect(barrier, isNull);
             expect(TileQuestValidator.validate_solution(state).valid, isTrue);
             continue;
           }
           expect(barrier, isNotNull);
-          final required_removes = difficulty == 10 ? 3 : 1;
+          final required_removes = 3;
           expect(barrier!.minimum_remove_uses, required_removes);
           expect(
             TileQuestValidator.validate_tool_solution(

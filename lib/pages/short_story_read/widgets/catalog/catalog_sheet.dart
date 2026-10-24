@@ -370,7 +370,9 @@ class _CatalogSheetState extends State<CatalogSheet> {
       constraints: BoxConstraints(maxHeight: max_height),
       decoration: BoxDecoration(
         color: bg_color,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(LayoutConfig.radius_16),
+        ),
       ),
       child: Stack(
         children: <Widget>[
@@ -442,7 +444,7 @@ class _CatalogSheetState extends State<CatalogSheet> {
     return ListView.builder(
       key: _list_view_key,
       controller: _scroll_controller,
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: LayoutConfig.space_8),
       // 列表项数量 + 底部加载更多组件。
       itemCount: widget.catalog_list.length + 1,
       itemBuilder: (BuildContext context, int index) {
@@ -488,17 +490,17 @@ class _CatalogSheetState extends State<CatalogSheet> {
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(
-        vertical: 8,
+        vertical: LayoutConfig.space_8,
         horizontal: _horizontal_padding,
       ),
       itemCount: 5,
       itemBuilder: (BuildContext context, int index) {
         return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
+          margin: const EdgeInsets.only(bottom: LayoutConfig.space_12),
+          padding: const EdgeInsets.all(LayoutConfig.space_14),
           decoration: BoxDecoration(
             color: card_bg,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(LayoutConfig.radius_12),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -509,11 +511,11 @@ class _CatalogSheetState extends State<CatalogSheet> {
                 height: 16,
                 decoration: BoxDecoration(
                   color: base_color,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
                 ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: LayoutConfig.space_10),
 
               /// 简介骨架（两行）。
               Container(
@@ -521,20 +523,20 @@ class _CatalogSheetState extends State<CatalogSheet> {
                 height: 12,
                 decoration: BoxDecoration(
                   color: base_color,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: LayoutConfig.space_6),
               Container(
                 width: 200,
                 height: 12,
                 decoration: BoxDecoration(
                   color: base_color,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: LayoutConfig.space_12),
 
               /// 底部骨架（标签 + 点赞）。
               Row(
@@ -544,16 +546,20 @@ class _CatalogSheetState extends State<CatalogSheet> {
                     height: 20,
                     decoration: BoxDecoration(
                       color: base_color,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(
+                        LayoutConfig.radius_4,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: LayoutConfig.space_6),
                   Container(
                     width: 36,
                     height: 20,
                     decoration: BoxDecoration(
                       color: base_color,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(
+                        LayoutConfig.radius_4,
+                      ),
                     ),
                   ),
                   const Spacer(),
@@ -562,7 +568,9 @@ class _CatalogSheetState extends State<CatalogSheet> {
                     height: 14,
                     decoration: BoxDecoration(
                       color: base_color,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(
+                        LayoutConfig.radius_4,
+                      ),
                     ),
                   ),
                 ],
@@ -585,7 +593,7 @@ class _CatalogSheetState extends State<CatalogSheet> {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
+        padding: const EdgeInsets.symmetric(vertical: LayoutConfig.space_40),
         child: Text(
           tr('short_story_read.catalog_empty'),
           style: TextStyle(fontSize: 14, color: text_color),

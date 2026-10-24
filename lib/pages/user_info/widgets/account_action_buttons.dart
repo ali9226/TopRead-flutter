@@ -198,9 +198,7 @@ class _AccountActionButton extends StatelessWidget {
               : null,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(
-                alpha: Style.actionButtonShadowOpacity,
-              ),
+              color: ColorConstants.shadowColor.withValues(alpha: Style.actionButtonShadowOpacity),
               blurRadius: Style.actionButtonShadowBlur,
               offset: Style.actionButtonShadowOffset,
             ),

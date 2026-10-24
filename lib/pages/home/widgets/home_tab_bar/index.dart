@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'dart:ui';
 import 'package:app/config/font_config.dart';
 
@@ -119,97 +120,99 @@ class _HomeTabBarState extends State<HomeTabBar> {
 
     final Color gradient_color = is_dark
         ? ColorConstants.nightBackgroundColor
-        : const Color(0xFFF6F7FB);
+        : ColorConstants.components_category_filter_category_filter_bar_tone_fff6f7fb;
 
     return IgnorePointer(
       ignoring: is_loading,
       child: Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.centerLeft,
-      children: <Widget>[
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TabBar(
-            controller: controller,
-            isScrollable: true,
-            labelPadding: EdgeInsets.only(left: label_padding_left),
-            padding: EdgeInsets.only(right: padding_right),
-          labelStyle: TextStyle(
-            fontSize: font_size,
-            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-          ),
-          unselectedLabelStyle: TextStyle(
-            fontSize: font_size,
-            fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-          ),
-          labelColor: is_dark ? Colors.white : Colors.black,
-          unselectedLabelColor: unselected_color,
-          indicator: UnderlineTabIndicator(
-            borderSide: BorderSide(
-              width: 3,
-              color: ColorConstants.themeColor,
-            ),
-            insets: const EdgeInsets.only(bottom: AuthorStyle.tab_indicator_bottom_offset),
-          ),
-          dividerHeight: 0,
-          tabAlignment: TabAlignment.start,
-          splashFactory: NoSplash.splashFactory,
-          overlayColor: WidgetStateProperty.all(Colors.transparent),
-          tabs: List<Widget>.generate(
-            titles.length,
-            (int index) => _build_tab_item(
-              index: index,
-              title: titles[index],
-              is_cjk: is_cjk,
-              font_size: font_size,
-            ),
-          ),
-          ),
-        ),
-
-        Positioned(
-          left: 0,
-          top: 0,
-          bottom: 0,
-          child: IgnorePointer(
-            child: Container(
-              width: HomeTabBarStyle.gradient_width,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: <Color>[
-                    gradient_color,
-                    gradient_color.withValues(alpha: 0.0),
-                  ],
+        clipBehavior: Clip.none,
+        alignment: Alignment.centerLeft,
+        children: <Widget>[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TabBar(
+              controller: controller,
+              isScrollable: true,
+              labelPadding: EdgeInsets.only(left: label_padding_left),
+              padding: EdgeInsets.only(right: padding_right),
+              labelStyle: TextStyle(
+                fontSize: font_size,
+                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+              ),
+              unselectedLabelStyle: TextStyle(
+                fontSize: font_size,
+                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+              ),
+              labelColor: is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor,
+              unselectedLabelColor: unselected_color,
+              indicator: UnderlineTabIndicator(
+                borderSide: BorderSide(
+                  width: 3,
+                  color: ColorConstants.themeColor,
+                ),
+                insets: const EdgeInsets.only(
+                  bottom: AuthorStyle.tab_indicator_bottom_offset,
+                ),
+              ),
+              dividerHeight: 0,
+              tabAlignment: TabAlignment.start,
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.all(ColorConstants.transparent),
+              tabs: List<Widget>.generate(
+                titles.length,
+                (int index) => _build_tab_item(
+                  index: index,
+                  title: titles[index],
+                  is_cjk: is_cjk,
+                  font_size: font_size,
                 ),
               ),
             ),
           ),
-        ),
 
-        Positioned(
-          right: 0,
-          top: 0,
-          bottom: 0,
-          child: IgnorePointer(
-            child: Container(
-              width: HomeTabBarStyle.gradient_width,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: <Color>[
-                    gradient_color,
-                    gradient_color.withValues(alpha: 0.0),
-                  ],
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: Container(
+                width: HomeTabBarStyle.gradient_width,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: <Color>[
+                      gradient_color,
+                      gradient_color.withValues(alpha: 0.0),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
-    ),
+
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: Container(
+                width: HomeTabBarStyle.gradient_width,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerRight,
+                    end: Alignment.centerLeft,
+                    colors: <Color>[
+                      gradient_color,
+                      gradient_color.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -225,8 +228,7 @@ class _HomeTabBarState extends State<HomeTabBar> {
     required bool is_cjk,
     required double font_size,
   }) {
-    final Color selected_color =
-        widget.is_dark ? Colors.white : Colors.black;
+    final Color selected_color = widget.is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor;
 
     final Color unselected_color = widget.is_dark
         ? HomeTabBarStyle.unselected_dark_color
@@ -240,8 +242,7 @@ class _HomeTabBarState extends State<HomeTabBar> {
     return AnimatedBuilder(
       animation: widget.tab_controller.animation!,
       builder: (BuildContext context, Widget? child) {
-        final double animation_value =
-            widget.tab_controller.animation!.value;
+        final double animation_value = widget.tab_controller.animation!.value;
 
         final double distance = (animation_value - index).abs();
         final double t = distance.clamp(0.0, 1.0);
@@ -250,16 +251,15 @@ class _HomeTabBarState extends State<HomeTabBar> {
         final double scale = lerpDouble(selected_scale, 1.0, t) ?? 1.0;
 
         // 颜色：线性插值
-        final Color text_color = Color.lerp(
-                selected_color, unselected_color, t) ??
-            unselected_color;
+        final Color text_color =
+            Color.lerp(selected_color, unselected_color, t) ?? unselected_color;
 
         return Transform.scale(
           scale: scale,
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: 4,
-              vertical: 10,
+              horizontal: LayoutConfig.space_4,
+              vertical: LayoutConfig.space_10,
             ),
             child: Text(
               title,

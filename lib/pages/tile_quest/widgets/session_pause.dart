@@ -1,4 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import '../style.dart';
 import 'quest_controls.dart';
@@ -39,7 +40,7 @@ class QuestSessionPause extends StatelessWidget {
                   size: 44,
                   color: TileQuestStyle.gold,
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: LayoutConfig.space_18),
                 Text(
                   quest_text(
                     context,
@@ -49,14 +50,14 @@ class QuestSessionPause extends StatelessWidget {
                   style: TileQuestStyle.body(quest_is_cjk(context)),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: LayoutConfig.space_24),
                 QuestPrimaryButton(
                   key: const ValueKey('tile_quest_resume_session'),
                   label: quest_text(context, 'continue_game', 'Continue'),
                   on_tap: loading ? null : on_continue,
                   icon: Icons.play_arrow_rounded,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: LayoutConfig.space_10),
                 QuestPrimaryButton(
                   label: quest_text(context, 'back', 'Back'),
                   on_tap: on_back,

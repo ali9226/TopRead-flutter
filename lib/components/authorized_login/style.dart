@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/color_config.dart';
 
@@ -15,25 +16,25 @@ class AuthorizedLoginStyle {
   static const double icon_size = 30;
 
   /// 网络图标圆角。
-  static const double icon_border_radius = 6;
+  static const double icon_border_radius = LayoutConfig.radius_6;
 
   /// 标题容器高度。
   static const double title_container_height = 30;
 
   /// 标题左右间距。
-  static const double title_horizontal_spacing = 10;
+  static const double title_horizontal_spacing = LayoutConfig.space_10;
 
   /// 列表顶部间距。
-  static const double list_top_spacing = 12;
+  static const double list_top_spacing = LayoutConfig.space_12;
 
   /// 单个客服项宽度。
   static const double item_width = 72;
 
   /// 客服项横向间距。
-  static const double item_horizontal_spacing = 16;
+  static const double item_horizontal_spacing = LayoutConfig.space_16;
 
   /// 客服项纵向间距。
-  static const double item_vertical_spacing = 12;
+  static const double item_vertical_spacing = LayoutConfig.space_12;
 
   /// 其他认证流程进行时，非当前授权入口的透明度。
   static const double disabled_item_opacity = 0.38;
@@ -42,7 +43,7 @@ class AuthorizedLoginStyle {
   static const Duration item_state_duration = Duration(milliseconds: 180);
 
   /// 图标和标题之间的间距。
-  static const double icon_bottom_spacing = 4;
+  static const double icon_bottom_spacing = LayoutConfig.space_4;
 
   /// 标题字号。
   static const double title_font_size = 12;

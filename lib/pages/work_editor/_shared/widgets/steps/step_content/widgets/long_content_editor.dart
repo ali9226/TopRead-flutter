@@ -85,7 +85,7 @@ class _LongContentEditorState extends State<LongContentEditor> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       builder: (_) => _ChapterDirectory(
         chapters: List.of(widget.chapters),
         activeIndex: widget.active_chapter_index,
@@ -108,11 +108,13 @@ class _LongContentEditorState extends State<LongContentEditor> {
     final dark = widget.is_dark;
     final action = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       builder: (_) => Container(
         decoration: BoxDecoration(
           color: AuthorStyle.surface(dark),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(LayoutConfig.radius_20),
+          ),
         ),
         child: SafeArea(
           top: false,
@@ -121,9 +123,11 @@ class _LongContentEditorState extends State<LongContentEditor> {
             children: [
               BottomSheetDragHandle(is_dark: dark),
               Material(
-                color: Colors.transparent,
+                color: ColorConstants.transparent,
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: LayoutConfig.space_24,
+                  ),
                   leading: SvgIcon(
                     name: 'upgrade',
                     width: 20,
@@ -136,9 +140,11 @@ class _LongContentEditorState extends State<LongContentEditor> {
               ),
               if (index >= 0 && widget.chapters.length > 1)
                 Material(
-                  color: Colors.transparent,
+                  color: ColorConstants.transparent,
                   child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: LayoutConfig.space_24,
+                    ),
                     leading: SvgIcon(
                       name: 'delete',
                       width: 20,
@@ -152,7 +158,7 @@ class _LongContentEditorState extends State<LongContentEditor> {
                     onTap: () => Navigator.pop(context, 'delete'),
                   ),
                 ),
-              const SizedBox(height: 8),
+              const SizedBox(height: LayoutConfig.space_8),
             ],
           ),
         ),
@@ -201,7 +207,10 @@ class _LongContentEditorState extends State<LongContentEditor> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: LayoutConfig.space_12,
+                vertical: LayoutConfig.space_12,
+              ),
               child: Row(
                 children: [
                   GestureDetector(
@@ -216,10 +225,10 @@ class _LongContentEditorState extends State<LongContentEditor> {
                           width: 18,
                           height: 18,
                           color: dark
-                              ? Colors.white
+                              ? ColorConstants.whiteColor
                               : ColorConstants.lightTextColor,
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: LayoutConfig.space_6),
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 180),
                           child: Text(
@@ -229,13 +238,11 @@ class _LongContentEditorState extends State<LongContentEditor> {
                             style: TextStyle(
                               color: accent,
                               fontSize: 14,
-                              fontWeight: FontConfig.adjustedWeight(
-                                FontWeight.w500,
-                              ),
+                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: LayoutConfig.space_4),
                         Icon(
                           Icons.keyboard_arrow_down_rounded,
                           color: accent,
@@ -259,7 +266,7 @@ class _LongContentEditorState extends State<LongContentEditor> {
                         child: Icon(
                           Icons.add_rounded,
                           size: 18,
-                          color: Colors.black,
+                          color: ColorConstants.lightTextColor,
                         ),
                       ),
                     ),
@@ -270,11 +277,18 @@ class _LongContentEditorState extends State<LongContentEditor> {
             Divider(height: 1, color: AuthorStyle.border(dark)),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: LayoutConfig.space_12,
+                ),
                 child: Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 6, 0, 0),
+                      padding: const EdgeInsets.fromLTRB(
+                        0,
+                        LayoutConfig.space_6,
+                        0,
+                        0,
+                      ),
                       child: Row(
                         children: [
                           Expanded(
@@ -290,9 +304,7 @@ class _LongContentEditorState extends State<LongContentEditor> {
                               style: TextStyle(
                                 color: accent,
                                 fontSize: 15,
-                                fontWeight: FontConfig.adjustedWeight(
-                                  FontWeight.w500,
-                                ),
+                                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                               ),
                             ),
                           ),
@@ -315,7 +327,12 @@ class _LongContentEditorState extends State<LongContentEditor> {
                             onTap: () => _showChapterActions(context, index),
                             behavior: HitTestBehavior.opaque,
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(8, 8, 3, 8),
+                              padding: const EdgeInsets.fromLTRB(
+                                LayoutConfig.space_8,
+                                LayoutConfig.space_8,
+                                LayoutConfig.space_3,
+                                LayoutConfig.space_8,
+                              ),
                               child: SvgIcon(
                                 name: 'three_dots',
                                 width: 20,
@@ -330,7 +347,12 @@ class _LongContentEditorState extends State<LongContentEditor> {
                     Expanded(
                       child: SingleChildScrollView(
                         controller: _scroll,
-                        padding: const EdgeInsets.fromLTRB(0, 4, 0, 28),
+                        padding: const EdgeInsets.fromLTRB(
+                          0,
+                          LayoutConfig.space_4,
+                          0,
+                          LayoutConfig.space_28,
+                        ),
                         child: LongChapterFields(
                           title_controller: widget.chapter_title_controller,
                           content_controller: widget.chapter_content_controller,
@@ -343,7 +365,10 @@ class _LongContentEditorState extends State<LongContentEditor> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(
+                horizontal: LayoutConfig.space_12,
+                vertical: LayoutConfig.space_10,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -357,7 +382,9 @@ class _LongContentEditorState extends State<LongContentEditor> {
                   Container(
                     width: 1,
                     height: 10,
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: LayoutConfig.space_8,
+                    ),
                     color: AuthorStyle.border(dark),
                   ),
                   Text(
@@ -445,24 +472,31 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AuthorStyle.surface(dark),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(LayoutConfig.radius_26),
+            ),
           ),
           child: EditorKeyboardLayout(
             collapse_header: false,
             header: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(height: 10),
+                const SizedBox(height: LayoutConfig.space_10),
                 Container(
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
                     color: AuthorStyle.border(dark),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 16, 10, 8),
+                  padding: const EdgeInsets.fromLTRB(
+                    LayoutConfig.space_12,
+                    LayoutConfig.space_16,
+                    LayoutConfig.space_10,
+                    LayoutConfig.space_8,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -478,13 +512,11 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                                     ? WorkEditorStyle.directory_title_size_cjk
                                     : WorkEditorStyle
                                           .directory_title_size_alphabetic,
-                                fontWeight: FontConfig.adjustedWeight(
-                                  FontWeight.w600,
-                                ),
+                                fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
                                 color: text,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: LayoutConfig.space_4),
                             Text(
                               _ordering
                                   ? easy.tr(
@@ -513,7 +545,12 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  padding: const EdgeInsets.fromLTRB(
+                    LayoutConfig.space_12,
+                    LayoutConfig.space_8,
+                    LayoutConfig.space_12,
+                    LayoutConfig.space_12,
+                  ),
                   child: EditorKeyboardInput(
                     builder: (read_only, on_tap) => TextField(
                       readOnly: read_only,
@@ -576,7 +613,9 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                 : _ordering
                 ? ReorderableListView.builder(
                     scrollController: _directory_scroll,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: LayoutConfig.space_12,
+                    ),
                     buildDefaultDragHandles: false,
                     itemCount: indexes.length,
                     proxyDecorator: (child, index, animation) => child,
@@ -597,7 +636,9 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                   )
                 : ListView.builder(
                     controller: _directory_scroll,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: LayoutConfig.space_12,
+                    ),
                     itemCount: indexes.length,
                     itemBuilder: (context, index) => _row(indexes[index]),
                   ),
@@ -687,7 +728,12 @@ class _DirectoryFooter extends StatelessWidget {
         top: false,
         maintainBottomViewPadding: true,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
+          padding: const EdgeInsets.fromLTRB(
+            LayoutConfig.space_12,
+            LayoutConfig.space_12,
+            LayoutConfig.space_12,
+            LayoutConfig.space_14,
+          ),
           child: Row(
             children: [
               Expanded(
@@ -710,13 +756,13 @@ class _DirectoryFooter extends StatelessWidget {
                     foregroundColor: text,
                     side: BorderSide(color: AuthorStyle.border(is_dark)),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
+                      horizontal: LayoutConfig.space_16,
+                      vertical: LayoutConfig.space_14,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: LayoutConfig.space_12),
               Expanded(
                 child: FilledButton.icon(
                   onPressed: on_new_chapter,
@@ -724,7 +770,7 @@ class _DirectoryFooter extends StatelessWidget {
                     name: 'add',
                     width: 19,
                     height: 19,
-                    color: is_dark ? const Color(0xFF1A1A18) : Colors.white,
+                    color: is_dark ? ColorConstants.pages_author_center_widgets_creator_empty_state_tone : ColorConstants.whiteColor,
                   ),
                   label: Text(
                     easy.tr('creator_center.new_chapter'),
@@ -734,9 +780,11 @@ class _DirectoryFooter extends StatelessWidget {
                   style: FilledButton.styleFrom(
                     backgroundColor: accent,
                     foregroundColor: is_dark
-                        ? const Color(0xFF1A1A18)
-                        : Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                        ? ColorConstants.pages_author_center_widgets_creator_empty_state_tone
+                        : ColorConstants.whiteColor,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: LayoutConfig.space_14,
+                    ),
                   ),
                 ),
               ),

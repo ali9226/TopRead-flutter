@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
@@ -45,7 +46,8 @@ class StatisticsState extends State<Statistics> {
   }
 
   void _load_if_author() {
-    final bool is_author = user_information.userInfo.value?.author == 2 &&
+    final bool is_author =
+        user_information.userInfo.value?.author == 2 &&
         projectConfigStore.current.is_creator_enabled;
     if (is_author) {
       logic.load_dashboard();
@@ -53,16 +55,16 @@ class StatisticsState extends State<Statistics> {
   }
 
   /// 作者作品数量颜色（清透蓝）。
-  static const Color _work_color = Color(0xFF6596FF);
+  static const Color _work_color = ColorConstants.accent_sky_blue;
 
   /// 评论颜色（清透蓝）。
-  static const Color _comment_color = Color(0xFF8DB7FF);
+  static const Color _comment_color = ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff;
 
   /// 点赞颜色（暖珊瑚）。
-  static const Color _like_color = Color(0xFFFF9E80);
+  static const Color _like_color = ColorConstants.message_type_accent_color_list_ffff9e80;
 
   /// 收藏颜色（主题金）。
-  static const Color _favorite_color = Color(0xFFFFD45A);
+  static const Color _favorite_color = ColorConstants.message_type_accent_color_list;
 
   @override
   Widget build(BuildContext context) {
@@ -71,11 +73,11 @@ class StatisticsState extends State<Statistics> {
       final isDark = deviceInfo.theme.value == ThemeMode.dark;
 
       /// TODO 数值主文案颜色。
-      final titleColor = isDark ? Colors.white : ColorConstants.lightTextColor;
+      final titleColor = isDark ? ColorConstants.whiteColor : ColorConstants.lightTextColor;
 
       /// TODO 标签副文案颜色。
       final subtitleColor = isDark
-          ? Colors.white.withValues(alpha: 0.58)
+          ? ColorConstants.pages_top_up_widgets_top_up_amount_section_tone
           : ColorConstants.lightTextColor.withValues(alpha: 0.56);
 
       /// 根据当前语种判断是否为 CJK，用于调整卡片高度和标签字号。
@@ -86,13 +88,19 @@ class StatisticsState extends State<Statistics> {
       final bool show_comment = projectConfigStore.current.is_comment_enabled;
 
       /// 已认证作者在个人中心优先看到作品经营数据（需同时满足创作者功能开启）。
-      final bool is_author = user_information.userInfo.value?.author == 2 &&
+      final bool is_author =
+          user_information.userInfo.value?.author == 2 &&
           projectConfigStore.current.is_creator_enabled;
 
       if (is_author) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, 14),
-          color: Colors.transparent,
+          padding: const EdgeInsets.fromLTRB(
+            LayoutConfig.space_10,
+            LayoutConfig.space_10,
+            LayoutConfig.space_10,
+            LayoutConfig.space_14,
+          ),
+          color: ColorConstants.transparent,
           child: Row(
             children: <Widget>[
               Expanded(
@@ -104,18 +112,18 @@ class StatisticsState extends State<Statistics> {
                     label: easy.tr('creator_center.stats_works'),
                     accentColor: _work_color,
                     startColor: isDark
-                        ? const Color(0xFF18222F)
-                        : const Color(0xFFF2F7FF),
+                        ? ColorConstants.pages_author_center_widgets_creator_header_tone_ff18222f
+                        : ColorConstants.pages_author_center_widgets_creator_header_tone,
                     endColor: isDark
-                        ? const Color(0xFF101721)
-                        : const Color(0xFFFBFDFF),
+                        ? ColorConstants.pages_author_center_widgets_creator_header_tone_ff101721
+                        : ColorConstants.pages_author_center_widgets_creator_header_tone_fffbfdff,
                     titleColor: titleColor,
                     subtitleColor: subtitleColor,
                     is_cjk: is_cjk,
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: LayoutConfig.space_10),
               Expanded(
                 child: GestureDetector(
                   onTap: () => logic.go_to_message(5),
@@ -125,18 +133,18 @@ class StatisticsState extends State<Statistics> {
                     label: easy.tr('creator_center.stats_favorites'),
                     accentColor: _favorite_color,
                     startColor: isDark
-                        ? const Color(0xFF262113)
-                        : const Color(0xFFFFF4D3),
+                        ? ColorConstants.pages_author_center_widgets_creator_header_tone_ff262113
+                        : ColorConstants.pages_author_center_widgets_creator_header_tone_fffff4d3,
                     endColor: isDark
-                        ? const Color(0xFF17140E)
-                        : const Color(0xFFFFFCF0),
+                        ? ColorConstants.pages_author_center_widgets_creator_header_tone_ff17140e
+                        : ColorConstants.pages_author_center_widgets_creator_header_tone_fffffcf0,
                     titleColor: titleColor,
                     subtitleColor: subtitleColor,
                     is_cjk: is_cjk,
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: LayoutConfig.space_10),
               Expanded(
                 child: GestureDetector(
                   onTap: () => logic.go_to_message(2),
@@ -146,11 +154,11 @@ class StatisticsState extends State<Statistics> {
                     label: easy.tr('creator_center.stats_comments'),
                     accentColor: _comment_color,
                     startColor: isDark
-                        ? const Color(0xFF18222F)
-                        : const Color(0xFFF2F7FF),
+                        ? ColorConstants.pages_author_center_widgets_creator_header_tone_ff18222f
+                        : ColorConstants.pages_author_center_widgets_creator_header_tone,
                     endColor: isDark
-                        ? const Color(0xFF101721)
-                        : const Color(0xFFFBFDFF),
+                        ? ColorConstants.pages_author_center_widgets_creator_header_tone_ff101721
+                        : ColorConstants.pages_author_center_widgets_creator_header_tone_fffbfdff,
                     titleColor: titleColor,
                     subtitleColor: subtitleColor,
                     is_cjk: is_cjk,
@@ -163,8 +171,13 @@ class StatisticsState extends State<Statistics> {
       }
 
       return Container(
-        padding: const EdgeInsets.fromLTRB(10, 10, 10, 14),
-        color: Colors.transparent,
+        padding: const EdgeInsets.fromLTRB(
+          LayoutConfig.space_10,
+          LayoutConfig.space_10,
+          LayoutConfig.space_10,
+          LayoutConfig.space_14,
+        ),
+        color: ColorConstants.transparent,
         child: Row(
           children: [
             if (show_comment) ...[
@@ -177,18 +190,18 @@ class StatisticsState extends State<Statistics> {
                     label: easy.tr('message.stats.comment'),
                     accentColor: _comment_color,
                     startColor: isDark
-                        ? const Color(0xFF18222F)
-                        : const Color(0xFFF2F7FF),
+                        ? ColorConstants.pages_author_center_widgets_creator_header_tone_ff18222f
+                        : ColorConstants.pages_author_center_widgets_creator_header_tone,
                     endColor: isDark
-                        ? const Color(0xFF101721)
-                        : const Color(0xFFFBFDFF),
+                        ? ColorConstants.pages_author_center_widgets_creator_header_tone_ff101721
+                        : ColorConstants.pages_author_center_widgets_creator_header_tone_fffbfdff,
                     titleColor: titleColor,
                     subtitleColor: subtitleColor,
                     is_cjk: is_cjk,
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: LayoutConfig.space_10),
             ],
             Expanded(
               child: GestureDetector(
@@ -199,18 +212,18 @@ class StatisticsState extends State<Statistics> {
                   label: easy.tr('message.stats.like'),
                   accentColor: _like_color,
                   startColor: isDark
-                      ? const Color(0xFF2B1B17)
-                      : const Color(0xFFFFEFEA),
+                      ? ColorConstants.pages_user_info_widgets_statistics_index_tone_ff2b1b17
+                      : ColorConstants.pages_user_info_widgets_statistics_index_tone_ffffefea,
                   endColor: isDark
-                      ? const Color(0xFF1A120F)
-                      : const Color(0xFFFFFBF9),
+                      ? ColorConstants.pages_user_info_widgets_statistics_index_tone_ff1a120f
+                      : ColorConstants.pages_user_info_widgets_statistics_index_tone_fffffbf9,
                   titleColor: titleColor,
                   subtitleColor: subtitleColor,
                   is_cjk: is_cjk,
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: LayoutConfig.space_10),
             Expanded(
               child: GestureDetector(
                 onTap: () => logic.go_to_message(5),
@@ -220,11 +233,11 @@ class StatisticsState extends State<Statistics> {
                   label: easy.tr('message.stats.favorite'),
                   accentColor: _favorite_color,
                   startColor: isDark
-                      ? const Color(0xFF262113)
-                      : const Color(0xFFFFF4D3),
+                      ? ColorConstants.pages_author_center_widgets_creator_header_tone_ff262113
+                      : ColorConstants.pages_author_center_widgets_creator_header_tone_fffff4d3,
                   endColor: isDark
-                      ? const Color(0xFF17140E)
-                      : const Color(0xFFFFFCF0),
+                      ? ColorConstants.pages_author_center_widgets_creator_header_tone_ff17140e
+                      : ColorConstants.pages_author_center_widgets_creator_header_tone_fffffcf0,
                   titleColor: titleColor,
                   subtitleColor: subtitleColor,
                   is_cjk: is_cjk,
@@ -275,7 +288,12 @@ class _StatCard extends StatelessWidget {
 
     return Container(
       height: card_height,
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+      padding: const EdgeInsets.fromLTRB(
+        LayoutConfig.space_14,
+        LayoutConfig.space_14,
+        LayoutConfig.space_14,
+        LayoutConfig.space_12,
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(Style.cardRadius),
         gradient: LinearGradient(
@@ -286,7 +304,7 @@ class _StatCard extends StatelessWidget {
         border: Border.all(color: accentColor.withValues(alpha: 0.18)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: ColorConstants.shadowColor.withValues(alpha: 0.03922),
             blurRadius: 14,
             offset: const Offset(0, 8),
           ),
@@ -301,7 +319,7 @@ class _StatCard extends StatelessWidget {
             height: 4,
             decoration: BoxDecoration(
               color: accentColor,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(LayoutConfig.radius_pill),
             ),
           ),
           Row(
@@ -318,10 +336,12 @@ class _StatCard extends StatelessWidget {
                 ),
               ),
               if (unread > 0) ...[
-                const SizedBox(width: 6),
+                const SizedBox(width: LayoutConfig.space_6),
                 Flexible(
                   child: Padding(
-                    padding: const EdgeInsets.only(bottom: 2),
+                    padding: const EdgeInsets.only(
+                      bottom: LayoutConfig.space_2,
+                    ),
                     child: Text(
                       '${unread.clamp(0, 99)}${easy.tr('message.stats.unread_suffix')}',
                       maxLines: 2,

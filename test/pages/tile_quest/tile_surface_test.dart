@@ -9,6 +9,7 @@ import 'package:app/pages/tile_quest/widgets/tile_surface_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/config/color_config.dart';
 
 Future<ui.Image> _icon(String name) async {
   final bytes = await rootBundle.load(
@@ -305,7 +306,7 @@ void main() {
       final images = <ui.Image>[];
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
-      canvas.drawColor(const Color(0xFF18324C), BlendMode.src);
+      canvas.drawColor(ColorConstants.test_pages_tile_quest_tile_surface_test_tone, BlendMode.src);
       try {
         for (var index = 0; index < quest_tile_assets.length; index++) {
           final image = await _icon(quest_tile_assets[index]);

@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -15,6 +16,7 @@ import 'package:app/pages/interest_preference/widgets/loading_indicator/index.da
 import 'package:app/models/preference.dart';
 import 'package:app/components/page_top_gradient_overlay/index.dart';
 import 'package:app/util/dialog/show_message.dart';
+import 'package:app/config/color_config.dart';
 
 /// 兴趣偏好公共内容组件。
 ///
@@ -384,9 +386,7 @@ class _InterestPreferenceContentState extends State<InterestPreferenceContent> {
               height: 220,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(
-                  0xFFF8D02D,
-                ).withValues(alpha: isDark ? 0.08 : 0.15),
+                color: ColorConstants.themeColor.withValues(alpha: isDark ? 0.08 : 0.15),
               ),
             ),
           ),
@@ -402,9 +402,7 @@ class _InterestPreferenceContentState extends State<InterestPreferenceContent> {
               height: 160,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(
-                  0xFF67C23A,
-                ).withValues(alpha: isDark ? 0.05 : 0.08),
+                color: ColorConstants.successColor.withValues(alpha: isDark ? 0.05 : 0.08),
               ),
             ),
           ),
@@ -422,14 +420,16 @@ class _InterestPreferenceContentState extends State<InterestPreferenceContent> {
       controller: _scrollController,
       padding: EdgeInsets.fromLTRB(
         InterestPreferenceStyle.pageHorizontalPadding,
-        statusBarHeight + InterestPreferenceStyle.topBarHeight - 12,
+        statusBarHeight +
+            InterestPreferenceStyle.topBarHeight -
+            LayoutConfig.space_12,
         InterestPreferenceStyle.pageHorizontalPadding,
         InterestPreferenceStyle.pageBottomPadding,
       ),
       children: <Widget>[
         /// 页面标题区（主标题 + 副标题）。
         TitleSection(isDark: isDark),
-        const SizedBox(height: 36),
+        const SizedBox(height: LayoutConfig.space_36),
 
         /// 动态渲染所有偏好分类区块。
         ..._build_dynamic_sections(isDark),

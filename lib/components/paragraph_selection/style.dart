@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
@@ -14,14 +15,14 @@ class ParagraphSelectionStyle {
   static const double menu_min_width_alphabetic = 92;
   static const double menu_line_height_cjk = 1.3;
   static const double menu_line_height_alphabetic = 1.4;
-  static const double menu_icon_size = 22;
-  static const double menu_icon_spacing = 5;
-  static const double menu_vertical_padding = 10;
-  static const double menu_horizontal_padding = 12;
-  static const double menu_radius = 10;
+  static const double menu_icon_size = LayoutConfig.icon_compact;
+  static const double menu_icon_spacing = LayoutConfig.space_5;
+  static const double menu_vertical_padding = LayoutConfig.space_10;
+  static const double menu_horizontal_padding = LayoutConfig.space_12;
+  static const double menu_radius = LayoutConfig.radius_10;
   static const double menu_elevation = 5;
-  static const double menu_screen_margin = 10;
-  static const double menu_anchor_gap = 8;
+  static const double menu_screen_margin = LayoutConfig.space_10;
+  static const double menu_anchor_gap = LayoutConfig.space_8;
   static const double menu_arrow_width = 12;
   static const double menu_arrow_height = 6;
 
@@ -31,13 +32,13 @@ class ParagraphSelectionStyle {
   static const double badge_line_height_alphabetic = 1.2;
   static const double badge_min_width = 24;
   static const double badge_height = 20;
-  static const double badge_horizontal_padding = 6;
-  static const double badge_gap = 6;
-  static const double badge_radius = 6;
+  static const double badge_horizontal_padding = LayoutConfig.space_6;
+  static const double badge_gap = LayoutConfig.space_6;
+  static const double badge_radius = LayoutConfig.radius_6;
   static const double badge_tail_size = 4;
   static const double badge_border_width = 1;
   static const double selection_opacity = 0.35;
-  static const double drag_reveal_padding = 48;
+  static const double drag_reveal_padding = LayoutConfig.space_48;
   static const double auto_scroll_edge_extent = 48;
   static const double auto_scroll_velocity = 30;
 

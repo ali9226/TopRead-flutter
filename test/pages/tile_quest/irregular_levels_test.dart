@@ -22,16 +22,6 @@ String _template_signature(TileQuestState state) =>
 List<int> _lead_path(TileQuestState state) =>
     state.expert_barrier?.lead_solution ?? state.certified_solution;
 
-Set<int> _reachable(int start, Map<int, Set<int>> edges) {
-  final found = <int>{};
-  final pending = edges[start]!.toList();
-  while (pending.isNotEmpty) {
-    final id = pending.removeLast();
-    if (found.add(id)) pending.addAll(edges[id]!);
-  }
-  return found;
-}
-
 ({
   double early_pressure,
   double late_pressure,
@@ -208,12 +198,6 @@ void main() {
               .toSet();
           expect(curve.late_types, greaterThan(opening_types.length));
           if (difficulty >= 8) {
-            final core_types =
-                state.expert_barrier?.front_ids
-                    .map((id) => state.tile_by_id(id).type)
-                    .toSet()
-                    .length ??
-                0;
             expect(
               curve.late_pressure,
               greaterThan(difficulty == 10 ? 3 : 4),
@@ -221,147 +205,10 @@ void main() {
             );
             expect(
               curve.late_types,
-              greaterThanOrEqualTo(difficulty == 10 ? 5 : 12 - core_types),
+              greaterThanOrEqualTo(difficulty == 10 ? 5 : 8),
             );
           }
         }
-      }
-    },
-  );
-
-  test(
-    'middle difficulties retain one real pair through a mandatory corridor',
-    () {
-      for (final difficulty in [6, 7, 8]) {
-        for (final seed in [0, 17, 730, 34861610, 68097315]) {
-          final state = TileQuestGenerator.generate(
-            level: 2,
-            seed: seed,
-            difficulty: difficulty,
-          );
-          final inventory = <int, List<int>>{};
-          final barrier = state.expert_barrier!;
-          final core_ids = {...barrier.front_ids, ...barrier.partner_ids};
-          for (final tile in state.tiles) {
-            if (core_ids.contains(tile.id)) continue;
-            inventory.putIfAbsent(tile.type, () => []).add(tile.id);
-          }
-          final rare = inventory.entries.where(
-            (entry) => entry.value.length == 3,
-          );
-          expect(rare, hasLength(1));
-          final path = _lead_path(state);
-          final key_type = rare.single.key;
-          final keys = List<int>.from(rare.single.value)
-            ..sort(
-              (left, right) =>
-                  path.indexOf(left).compareTo(path.indexOf(right)),
-            );
-          final graph = TileQuestGeometry(state.tiles);
-          expect(_reachable(keys[1], graph.blockers), contains(keys[0]));
-          expect(_reachable(keys[2], graph.blockers), contains(keys[1]));
-          final required = _reachable(
-            keys[2],
-            graph.blockers,
-          ).intersection(_reachable(keys[1], graph.supported));
-          expect(required.length, greaterThanOrEqualTo(6));
-          final both_open = path.indexOf(keys[1]);
-          final closes = path.indexOf(keys[2]);
-          expect(path.sublist(both_open + 1, closes), containsAll(required));
-          var held_keys = 0;
-          for (var step = 0; step < path.length; step++) {
-            if (state.tile_by_id(path[step]).type == key_type) {
-              held_keys = (held_keys + 1) % 3;
-            }
-            if (step >= both_open && step < closes) expect(held_keys, 2);
-          }
-          expect(held_keys, 0);
-          expect(
-            inventory.length,
-            DifficultyProfile.for_difficulty(difficulty).type_count -
-                barrier.front_ids
-                    .map((id) => state.tile_by_id(id).type)
-                    .toSet()
-                    .length,
-          );
-          expect(TileQuestValidator.validate_solution(state).valid, isTrue);
-        }
-      }
-    },
-  );
-
-  test(
-    'difficulty nine holds two rare pairs across a real mandatory corridor',
-    () {
-      for (var sample = 0; sample < 30; sample++) {
-        final state = TileQuestGenerator.generate(
-          level: 2,
-          seed: 32452843 + sample * 104729,
-          difficulty: 9,
-        );
-        final inventory = <int, List<int>>{};
-        final barrier = state.expert_barrier!;
-        final core_ids = {...barrier.front_ids, ...barrier.partner_ids};
-        for (final tile in state.tiles) {
-          if (core_ids.contains(tile.id)) continue;
-          inventory.putIfAbsent(tile.type, () => []).add(tile.id);
-        }
-        final rare = inventory.values.where((ids) => ids.length == 3).toList();
-        expect(rare, hasLength(2));
-        expect(inventory.values.where((ids) => ids.length < 6), hasLength(2));
-        final path = _lead_path(state);
-        for (final keys in rare) {
-          keys.sort((a, b) => path.indexOf(a).compareTo(path.indexOf(b)));
-        }
-        rare.sort(
-          (a, b) => path.indexOf(a.first).compareTo(path.indexOf(b.first)),
-        );
-        final graph = TileQuestGeometry(state.tiles);
-        final first = rare.first, second = rare.last;
-        final corridor = [
-          first[0],
-          first[1],
-          second[0],
-          second[1],
-          first[2],
-          second[2],
-        ];
-        for (var index = 1; index < corridor.length; index++) {
-          expect(
-            _reachable(corridor[index], graph.blockers),
-            contains(corridor[index - 1]),
-          );
-        }
-        final unavoidable = _reachable(
-          first[2],
-          graph.blockers,
-        ).intersection(_reachable(second[1], graph.supported));
-        expect(unavoidable.length, greaterThanOrEqualTo(12));
-        final both_pairs_open = path.indexOf(second[1]);
-        final first_pair_closes = path.indexOf(first[2]);
-        final interval_ids = path
-            .sublist(both_pairs_open + 1, first_pair_closes)
-            .toSet();
-        expect(interval_ids, containsAll(unavoidable));
-        final counts = List<int>.filled(TileQuestConfig.max_tile_types, 0);
-        final first_type = state.tile_by_id(first.first).type;
-        final second_type = state.tile_by_id(second.first).type;
-        for (var step = 0; step < path.length; step++) {
-          final type = state.tile_by_id(path[step]).type;
-          counts[type] = (counts[type] + 1) % 3;
-          final occupancy = counts.fold(0, (sum, count) => sum + count);
-          expect(occupancy, lessThan(TileQuestConfig.tray_capacity));
-          if (step >= both_pairs_open && step < first_pair_closes) {
-            expect(counts[first_type], 2);
-            expect(counts[second_type], 2);
-            expect(occupancy, greaterThanOrEqualTo(4));
-          }
-        }
-        expect(
-          state.clickable_tiles.any((tile) => corridor.contains(tile.id)),
-          isFalse,
-        );
-        expect(TileQuestValidator.validate_solution(state).valid, isTrue);
       }
     },
   );

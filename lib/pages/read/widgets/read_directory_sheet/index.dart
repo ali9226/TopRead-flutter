@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/bottom_sheet_drag_handle/index.dart';
@@ -45,10 +46,8 @@ class ReadDirectorySheet extends StatefulWidget {
       isScrollControlled: true,
       enableDrag: true,
       showDragHandle: false,
-      backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width,
-      ),
+      backgroundColor: ColorConstants.transparent,
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
       builder: (context) => ReadDirectorySheet(
         logic: logic,
         is_dark: is_dark,
@@ -341,7 +340,7 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
                   child: Text(
                     tr('read.no_notes'),
                     style: TextStyle(
-                      color: widget.is_dark ? Colors.white38 : Colors.black38,
+                      color: widget.is_dark ? ColorConstants.pages_read_widgets_read_directory_sheet_index_tone : ColorConstants.pages_customer_service_chat_widgets_message_bubble_tone,
                       fontSize: 15,
                     ),
                   ),
@@ -371,12 +370,12 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
         ReadDirectorySheetStyle.getSubTextColor(widget.is_dark);
 
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       clipBehavior: Clip.none,
       child: Theme(
         data: Theme.of(context).copyWith(
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
+          splashColor: ColorConstants.transparent,
+          highlightColor: ColorConstants.transparent,
           splashFactory: NoSplash.splashFactory,
         ),
         child: Container(
@@ -404,7 +403,7 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
             indicatorWeight: 3,
             indicatorSize: TabBarIndicatorSize.label,
             indicatorPadding: ReadDirectorySheetStyle.tab_indicator_padding,
-            dividerColor: Colors.transparent,
+            dividerColor: ColorConstants.transparent,
             tabs: [
               Tab(text: tr('read.detail')),
               Tab(text: tr('read.catalog')),
@@ -475,7 +474,7 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
         _chapter_item_heights[index] = size.height;
       },
       child: Material(
-        color: Colors.transparent,
+        color: ColorConstants.transparent,
         child: InkWell(
           onTap: () {
             Navigator.of(context).pop();
@@ -542,13 +541,15 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
                   _buildCurrentChapterTrailing(accent_color: accent_color)
                 else
                   Padding(
-                    padding: const EdgeInsets.only(right: 16),
+                    padding: const EdgeInsets.only(
+                      right: LayoutConfig.space_16,
+                    ),
                     child: Icon(
                       Icons.chevron_right_rounded,
                       size: 18,
                       color: widget.is_dark
-                          ? Colors.white.withValues(alpha: 0.15)
-                          : Colors.black.withValues(alpha: 0.1),
+                          ? ColorConstants.components_authorized_login_apple_review_index_tone
+                          : ColorConstants.pages_short_story_read_widgets_collapse_button_tone_1a222222,
                     ),
                   ),
               ],
@@ -597,7 +598,10 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
         .round();
 
     return Padding(
-      padding: const EdgeInsets.only(right: 16, top: 2),
+      padding: const EdgeInsets.only(
+        right: LayoutConfig.space_16,
+        top: LayoutConfig.space_2,
+      ),
       child: Text(
         '$progress_percent%',
         style: TextStyle(

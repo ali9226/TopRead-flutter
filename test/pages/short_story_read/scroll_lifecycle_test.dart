@@ -53,6 +53,8 @@ void main() {
 
   testWidgets('向下补偿保持栏位可见，后续手动滚动只累计真实位移', (tester) async {
     final logic = await create_logic(tester);
+    // 简介初始不展示底栏；本用例明确进入栏位已展开的阅读状态再验证补偿。
+    logic.is_bottom_bar_visible.value = true;
     logic.sync_scroll_offset(400);
     logic.on_scroll(405);
 
@@ -93,6 +95,8 @@ void main() {
 
   testWidgets('同步到顶部也只更新基准，不自动展开栏位', (tester) async {
     final logic = await create_logic(tester);
+    // toggle 从可见状态收起，不依赖简介的默认隐藏状态。
+    logic.is_bottom_bar_visible.value = true;
     logic.toggle_bars_visibility();
 
     logic.sync_scroll_offset(0);

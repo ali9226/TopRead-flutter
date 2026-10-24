@@ -18,6 +18,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:app/config/color_config.dart';
 
 class _Assets extends AssetLoader {
   const _Assets();
@@ -127,7 +128,7 @@ BookshelfBookItem _book({required String id, required bool comic}) =>
           : <String, String>{'progress': '32'},
       tag_key: comic ? 'bookshelf.tags.comic' : 'bookshelf.tags.serializing',
       cover_start_color: Colors.blueGrey,
-      cover_end_color: Colors.grey,
+      cover_end_color: ColorConstants.components_home_header_bar_index_tone,
       chapter_id: comic ? '91' : null,
       chapter_title: 'Chapter 7 · A New Beginning',
       page_index: 0,

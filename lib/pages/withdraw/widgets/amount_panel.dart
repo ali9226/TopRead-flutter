@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'dart:ui';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
@@ -139,13 +140,13 @@ class WithdrawAmountPanel extends StatelessWidget {
             ),
             border: Border.all(
               color: isDark
-                  ? const Color(0xFF8DB7FF).withValues(alpha: 0.14)
+                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.14)
                   : ColorConstants.themeColor.withValues(alpha: 0.14),
             ),
             boxShadow: [
               BoxShadow(
                 color: isDark
-                    ? Colors.black.withValues(alpha: 0.14)
+                    ? ColorConstants.shadowColor.withValues(alpha: 0.1412)
                     : ColorConstants.themeColor.withValues(alpha: 0.08),
                 blurRadius: 18,
                 offset: const Offset(0, 8),
@@ -167,10 +168,10 @@ class WithdrawAmountPanel extends StatelessWidget {
                       gradient: RadialGradient(
                         colors: [
                           (isDark
-                                  ? const Color(0xFF8DB7FF)
+                                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff
                                   : ColorConstants.themeColor)
                               .withValues(alpha: isDark ? 0.12 : 0.10),
-                          Colors.transparent,
+                          ColorConstants.transparent,
                         ],
                       ),
                     ),
@@ -189,10 +190,8 @@ class WithdrawAmountPanel extends StatelessWidget {
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          const Color(
-                            0xFF8DB7FF,
-                          ).withValues(alpha: isDark ? 0.08 : 0.05),
-                          Colors.transparent,
+                          ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: isDark ? 0.08 : 0.05),
+                          ColorConstants.transparent,
                         ],
                       ),
                     ),
@@ -244,7 +243,7 @@ class WithdrawAmountPanel extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: LayoutConfig.space_6),
                   Text(
                     easy.tr('withdraw_page.amount_hint'),
                     style: TextStyle(
@@ -253,19 +252,15 @@ class WithdrawAmountPanel extends StatelessWidget {
                       fontWeight: WithdrawStyle.subtitleWeight,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: LayoutConfig.space_16),
                   Container(
                     // 金额输入框外壳只负责包裹币种前缀、输入框本体和后缀单位。
                     height: WithdrawStyle.amountFieldHeight,
                     padding: WithdrawStyle.amountFieldPadding,
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withValues(
-                              alpha: WithdrawStyle.amountFieldDarkOpacity,
-                            )
-                          : Colors.black.withValues(
-                              alpha: WithdrawStyle.amountFieldLightOpacity,
-                            ),
+                          ? ColorConstants.whiteColor.withValues(alpha: WithdrawStyle.amountFieldDarkOpacity)
+                          : ColorConstants.lightTextColor.withValues(alpha: WithdrawStyle.amountFieldLightOpacity),
                       borderRadius: BorderRadius.circular(
                         WithdrawStyle.amountFieldRadius,
                       ),
@@ -280,7 +275,7 @@ class WithdrawAmountPanel extends StatelessWidget {
                             fontWeight: WithdrawStyle.amountInputWeight,
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: LayoutConfig.space_10),
                         Expanded(
                           child: TextField(
                             controller: controller,
@@ -340,8 +335,8 @@ class WithdrawAmountPanel extends StatelessWidget {
                     data: SliderTheme.of(context).copyWith(
                       trackHeight: 4,
                       inactiveTrackColor: isDark
-                          ? Colors.white.withValues(alpha: 0.10)
-                          : Colors.black.withValues(alpha: 0.08),
+                          ? ColorConstants.components_authorized_login_index_tone
+                          : ColorConstants.components_fixed_bottom_navigation_style_tone,
                       activeTrackColor: ColorConstants.themeColor,
                       thumbColor: ColorConstants.themeColor,
                       overlayColor: ColorConstants.themeColor.withValues(
@@ -386,7 +381,9 @@ class WithdrawAmountPanel extends StatelessWidget {
                   ),
                   const SizedBox(height: WithdrawStyle.shortcutTopSpacing),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: LayoutConfig.space_2,
+                    ),
                     child: Row(
                       children: [
                         Expanded(
@@ -458,33 +455,33 @@ class _ShortcutChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 非选中态的基础背景色。
-    final baseColor = dark ? const Color(0xFF1A2634) : const Color(0xFFF5F7FB);
+    final baseColor = dark ? ColorConstants.pages_withdraw_widgets_amount_panel_tone : ColorConstants.pages_withdraw_widgets_amount_panel_tone_fff5f7fb;
 
     // 选中后偏暖的高亮背景，用来强化“已应用快捷比例”的状态。
-    final activeBg = dark ? const Color(0xFF3A3220) : const Color(0xFFFFF3CC);
+    final activeBg = dark ? ColorConstants.pages_withdraw_widgets_amount_panel_tone_ff3a3220 : ColorConstants.components_image_source_sheet_index_tone_fffff3cc;
 
     // 普通状态边框色。
     final normalBorder = dark
-        ? const Color(0xFF334559)
-        : const Color(0xFFE2E8F0);
+        ? ColorConstants.pages_withdraw_widgets_amount_panel_tone_ff334559
+        : ColorConstants.util_dialog_pop_up_input_tone_ffe2e8f0;
 
     // 不可点击时的降级背景。
-    final disabledBg = dark ? const Color(0xFF141C27) : const Color(0xFFF1F5F9);
+    final disabledBg = dark ? ColorConstants.pages_withdraw_widgets_amount_panel_tone_ff141c27 : ColorConstants.pages_withdraw_widgets_amount_panel_tone_fff1f5f9;
 
     // 不可点击时的边框色。
     final disabledBorder = dark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.06);
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+        : ColorConstants.components_share_sheet_widgets_share_poster_card_tone_f222222;
 
     // 不可点击时的文字色。
     final disabledText = dark
-        ? const Color(0xFF64748B)
-        : const Color(0xFF94A3B8);
+        ? ColorConstants.pages_withdraw_widgets_amount_panel_tone_ff64748b
+        : ColorConstants.pages_withdraw_widgets_amount_panel_tone_ff94a3b8;
 
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(11),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_11),
         onTap: enabled ? onTap : null,
         child: TweenAnimationBuilder<double>(
           // 用一个 0 到 1 的补间值统一驱动背景、边框、文字和阴影变化，
@@ -499,13 +496,13 @@ class _ShortcutChip extends StatelessWidget {
                 : disabledBg;
             // 根据动画进度计算边框从普通态到高亮态的过渡。
             final borderColor = enabled
-                ? Color.lerp(normalBorder, const Color(0xFFF8D02D), t)!
+                ? Color.lerp(normalBorder, ColorConstants.themeColor, t)!
                 : disabledBorder;
             // 根据动画进度计算文字色，选中态会更偏金色。
             final textColor = enabled
                 ? Color.lerp(
-                    dark ? const Color(0xFFA9B5C6) : const Color(0xFF5B6472),
-                    dark ? const Color(0xFFFFE8A3) : const Color(0xFF6A4D00),
+                    dark ? ColorConstants.pages_withdraw_widgets_amount_panel_tone_ffa9b5c6 : ColorConstants.pages_withdraw_widgets_amount_panel_tone_ff5b6472,
+                    dark ? ColorConstants.pages_withdraw_widgets_type_selector_tone_ffffe8a3 : ColorConstants.pages_withdraw_widgets_amount_panel_tone_ff6a4d00,
                     t,
                   )!
                 : disabledText;
@@ -517,15 +514,13 @@ class _ShortcutChip extends StatelessWidget {
               height: WithdrawStyle.shortcutHeight,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(11),
+                borderRadius: BorderRadius.circular(LayoutConfig.radius_11),
                 color: bgColor,
                 border: Border.all(color: borderColor),
                 boxShadow: [
                   if (enabled && t > 0)
                     BoxShadow(
-                      color: const Color(
-                        0xFFF8D02D,
-                      ).withValues(alpha: 0.28 * t),
+                      color: ColorConstants.themeColor.withValues(alpha: 0.28 * t),
                       blurRadius: blur,
                       offset: Offset(0, y),
                     ),

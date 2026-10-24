@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:app/components/novel_cover/style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 骨架屏动画组件。
 ///
@@ -94,7 +95,7 @@ class _NovelCoverSkeletonAnimationState
             child: Container(
               width: widget.width,
               height: widget.height,
-              color: Colors.white,
+              color: ColorConstants.whiteColor,
             ),
           );
         },

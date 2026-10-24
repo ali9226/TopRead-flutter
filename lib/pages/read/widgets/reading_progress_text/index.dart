@@ -100,11 +100,9 @@ class ReadingProgressText extends StatelessWidget {
                   fontWeight: ProgressTextStyle.font_weight,
                   shadows: <Shadow>[
                     Shadow(
-                      color: Colors.black.withValues(
-                        alpha: is_dark
+                      color: ColorConstants.lightTextColor.withValues(alpha: is_dark
                             ? ProgressTextStyle.shadow_night_alpha
-                            : ProgressTextStyle.shadow_light_alpha,
-                      ),
+                            : ProgressTextStyle.shadow_light_alpha),
                       blurRadius: ProgressTextStyle.shadow_blur_radius,
                       offset: ProgressTextStyle.shadow_offset,
                     ),

@@ -2,10 +2,11 @@ import 'package:app/components/reader_action_icon/index.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/config/color_config.dart';
 
 void main() {
   testWidgets('共用目录和评论图标强制覆盖SVG内置填色', (tester) async {
-    const color = Color(0xFF7A6A56);
+    const color = ColorConstants.components_reader_top_bar_style_tone_ff7a6a56;
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(

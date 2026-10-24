@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_switch/flutter_switch.dart';
 import 'package:get/get.dart';
@@ -94,14 +95,14 @@ class _OperationLiState extends State<OperationLi>
               children: [
                 const ModalBarrier(
                   dismissible: false,
-                  color: Colors.transparent,
+                  color: ColorConstants.transparent,
                 ),
                 Opacity(
                   opacity: _opacityAnim.value,
                   child: Container(
                     width: double.infinity,
                     height: double.infinity,
-                    color: Colors.black,
+                    color: ColorConstants.lightTextColor,
                     child: Center(
                       child: Transform.scale(
                         scale: 0.5 + 0.5 * _opacityAnim.value,
@@ -150,25 +151,25 @@ class _OperationLiState extends State<OperationLi>
       final itemPadding = switchValue
           ? Style.darkItemPadding
           : Style.lightItemPadding;
-      final bgColor = switchValue ? Colors.transparent : Colors.transparent;
+      final bgColor = switchValue ? ColorConstants.transparent : ColorConstants.transparent;
       final textColor = switchValue
           ? ColorConstants.whiteColor
           : ColorConstants.lightTextColor;
       final subColor = switchValue
-          ? Colors.white.withValues(alpha: 0.38)
+          ? ColorConstants.pages_read_widgets_read_directory_sheet_index_tone
           : ColorConstants.lightTextColor.withValues(alpha: 0.22);
       final iconWrapColor = switchValue
-          ? Colors.white.withValues(alpha: 0.06)
+          ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
           : ColorConstants.themeColor.withValues(alpha: 0.12);
       final borderColor = switchValue
-          ? Colors.white.withValues(alpha: 0.05)
-          : Colors.black.withValues(alpha: 0.06);
+          ? ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff
+          : ColorConstants.components_share_sheet_widgets_share_poster_card_tone_f222222;
 
       return AnimatedContainer(
         duration: Duration(milliseconds: ThemeConstants.animationTime),
         color: bgColor,
         child: Material(
-          color: Colors.transparent,
+          color: ColorConstants.transparent,
           child: InkWell(
             onTap: widget.type == 2
                 ? () {
@@ -206,7 +207,7 @@ class _OperationLiState extends State<OperationLi>
                       height: 20,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: LayoutConfig.space_12),
                   Expanded(
                     child: Text(
                       widget.title,
@@ -219,7 +220,7 @@ class _OperationLiState extends State<OperationLi>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: LayoutConfig.space_10),
                   if (widget.trailing != null)
                     widget.trailing!
                   else if (widget.type == 1)
@@ -239,8 +240,8 @@ class _OperationLiState extends State<OperationLi>
                         borderRadius: 20.0,
                         padding: 3.0,
                         activeColor: ColorConstants.themeColor,
-                        inactiveColor: Colors.grey.shade300,
-                        toggleColor: Colors.white,
+                        inactiveColor: ColorConstants.customer_service_sheet_style_drag_bar_color_light,
+                        toggleColor: ColorConstants.whiteColor,
                         activeIcon: SvgIcon(
                           name: "moon",
                           width: 14,
@@ -263,7 +264,9 @@ class _OperationLiState extends State<OperationLi>
                         color: ColorConstants.themeColor.withValues(
                           alpha: switchValue ? 0.10 : 0.14,
                         ),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(
+                          LayoutConfig.radius_10,
+                        ),
                         border: Border.all(
                           color: ColorConstants.themeColor.withValues(
                             alpha: switchValue ? 0.18 : 0.24,

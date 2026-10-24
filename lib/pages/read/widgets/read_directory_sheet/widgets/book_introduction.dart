@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/pages/read/logic.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/stat_section/index.dart';
@@ -22,17 +23,20 @@ class BookIntroduction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+      padding: const EdgeInsets.symmetric(
+        horizontal: LayoutConfig.space_24,
+        vertical: LayoutConfig.space_20,
+      ),
       physics: const BouncingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 统计子组件，展示评分、在读人数、字数三个指标。
           ReadStatSection(is_dark: is_dark, detail: detail),
-          const SizedBox(height: 24),
+          const SizedBox(height: LayoutConfig.space_24),
           // 标签子组件，展示小说标签列表。
           ReadTagSection(is_dark: is_dark, tag_list: detail.tag_list),
-          const SizedBox(height: 24),
+          const SizedBox(height: LayoutConfig.space_24),
           // 简介子组件，字号+2px，默认展开。
           ReadIntroSummarySection(
             is_dark: is_dark,
@@ -40,7 +44,7 @@ class BookIntroduction extends StatelessWidget {
             initial_expanded: true,
             font_size: IntroSummaryStyle.intro_font_size + 2,
           ),
-          const SizedBox(height: 40), // 底部留白
+          const SizedBox(height: LayoutConfig.space_40), // 底部留白
         ],
       ),
     );

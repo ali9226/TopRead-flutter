@@ -16,6 +16,7 @@ import 'package:app/pages/tile_quest/widgets/board_canvas.dart';
 import 'scene_probe.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/config/color_config.dart';
 
 const _size = Size(390, 844);
 
@@ -88,12 +89,12 @@ Future<ui.Image> _raster(
         ),
       );
       if (frame.face_progress < 1) {
-        paint.color = Colors.white;
+        paint.color = ColorConstants.whiteColor;
         canvas.drawImageRect(atlas, previous, dest, paint);
       }
       if (frame.face_progress > 0 &&
           (frame.previous_type != frame.type || frame.face_progress >= 1)) {
-        paint.color = Colors.white.withValues(alpha: frame.face_progress);
+        paint.color = ColorConstants.whiteColor.withValues(alpha: frame.face_progress);
         canvas.drawImageRect(atlas, image, dest, paint);
       }
       canvas.restore();

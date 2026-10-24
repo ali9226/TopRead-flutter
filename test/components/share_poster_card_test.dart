@@ -11,6 +11,7 @@ import 'package:app/components/share_sheet/widgets/card_preview_sheet.dart';
 import 'package:app/components/share_sheet/widgets/share_poster_card.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/stores/share_store.dart';
+import 'package:app/config/color_config.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -58,11 +59,11 @@ void main() {
                       date_text: '2026.07.13',
                       fallback_avatar_index: 3,
                       canvas_colors: <Color>[
-                        Color(0xFFE7E2D8),
-                        Color(0xFFD8D1C4),
+                        ColorConstants.poster_qr_color_ffe7e2d8,
+                        ColorConstants.poster_qr_color_ffd8d1c4,
                       ],
-                      accent_color: Color(0xFF8A755D),
-                      footer_color: Color(0xFFF3F0EA),
+                      accent_color: ColorConstants.poster_qr_color_ff8a755d,
+                      footer_color: ColorConstants.poster_qr_color_fff3f0ea,
                     ),
                   ),
                 ),

@@ -92,7 +92,7 @@ class TileQuestState {
   final Map<int, int> reserve_columns;
   final TileQuestStatus status;
   final int level;
-  final int difficulty;
+  final double difficulty;
   final int seed;
   final String challenge_id;
   final int elapsed_ms;
@@ -113,7 +113,7 @@ class TileQuestState {
     required this.level,
     required this.seed,
     required this.challenge_id,
-    int? difficulty,
+    num? difficulty,
     this.elapsed_ms = 0,
     this.unlocked_level = 1,
     Map<TileQuestTool, int>? tools,
@@ -133,10 +133,11 @@ class TileQuestState {
              },
        ),
        difficulty =
-           difficulty ??
-           (level == 1
-               ? TileQuestConfig.level1Difficulty
-               : TileQuestConfig.gameDifficulty),
+           (difficulty ??
+                   (level == 1
+                       ? TileQuestConfig.level1Difficulty
+                       : TileQuestConfig.gameDifficulty))
+               .toDouble(),
        tools = Map.unmodifiable(
          tools ??
              {
@@ -367,7 +368,7 @@ class TileQuestState {
         reserve_columns: columns,
         status: TileQuestStatus.values.byName(json['status'] as String),
         level: read_int(json['level']),
-        difficulty: read_int(json['difficulty']),
+        difficulty: read_double(json['difficulty']),
         seed: read_int(json['seed']),
         challenge_id: json['challenge_id'] as String,
         elapsed_ms: read_int(json['elapsed_ms']),

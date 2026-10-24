@@ -27,24 +27,18 @@ class TopUpRecordEmptyState extends StatelessWidget {
     return Container(
       padding: TopUpRecordStyle.emptyCardPadding,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF171A27) : Colors.white,
+        color: isDark ? ColorConstants.pages_top_up_record_index_tone : ColorConstants.whiteColor,
         borderRadius: BorderRadius.circular(TopUpRecordStyle.emptyCardRadius),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(
-                  alpha: TopUpRecordStyle.emptyCardBorderDarkOpacity,
-                )
-              : Colors.black.withValues(
-                  alpha: TopUpRecordStyle.emptyCardBorderLightOpacity,
-                ),
+              ? ColorConstants.whiteColor.withValues(alpha: TopUpRecordStyle.emptyCardBorderDarkOpacity)
+              : ColorConstants.lightTextColor.withValues(alpha: TopUpRecordStyle.emptyCardBorderLightOpacity),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: isDark
+            color: ColorConstants.shadowColor.withValues(alpha: isDark
                   ? TopUpRecordStyle.emptyCardShadowDarkOpacity
-                  : TopUpRecordStyle.emptyCardShadowLightOpacity,
-            ),
+                  : TopUpRecordStyle.emptyCardShadowLightOpacity),
             blurRadius: TopUpRecordStyle.emptyCardShadowBlur,
             offset: const Offset(0, TopUpRecordStyle.emptyCardShadowOffsetY),
           ),

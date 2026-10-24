@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'dart:math';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -88,7 +89,7 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
             decoration: BoxDecoration(
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: shadow_alpha),
+                  color: ColorConstants.shadowColor.withValues(alpha: shadow_alpha),
                   blurRadius: ReadDirectorySheetStyle.cover_shadow_blur_radius,
                   offset: const Offset(
                     0,
@@ -139,15 +140,15 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
                             color: title_color,
                             fontSize: title_font_size,
                             height: 1.15,
-                            fontWeight: FontConfig.adjustedWeight(
-                              FontWeight.w500,
-                            ),
+                            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: LayoutConfig.space_8),
                       Padding(
-                        padding: const EdgeInsets.only(top: 3),
+                        padding: const EdgeInsets.only(
+                          top: LayoutConfig.space_3,
+                        ),
                         child: Icon(
                           Icons.arrow_forward_ios_rounded,
                           color: title_color.withValues(alpha: 0.3),
@@ -166,7 +167,9 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.only(
+                          right: LayoutConfig.space_6,
+                        ),
                         child: widget.detail.author_avatar_url.isNotEmpty
                             ? ClipOval(
                                 child: CachedNetworkImage(
@@ -198,13 +201,11 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
                                   style: TextStyle(
                                     color: sub_text_color,
                                     fontSize: author_font_size,
-                                    fontWeight: FontConfig.adjustedWeight(
-                                      FontWeight.w500,
-                                    ),
+                                    fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                                   ),
                                 ),
                               ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: LayoutConfig.space_8),
                             _buildFollowButton(is_cjk: is_cjk),
                           ],
                         ),
@@ -233,7 +234,7 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
     // 夜间模式使用主题色，日间模式使用品牌蓝色。
     final Color accent_color = widget.is_dark
         ? ColorConstants.themeColor
-        : const Color(0xFF3D7DFF);
+        : ColorConstants.pages_read_widgets_read_directory_sheet_widgets_book_detail_header_tone;
     final String follow_text = _is_focused
         ? tr('read.followed')
         : tr('read.follow');
@@ -255,7 +256,7 @@ class _BookDetailHeaderState extends State<BookDetailHeader> {
           padding: ReadDirectorySheetStyle.follow_button_padding,
           decoration: BoxDecoration(
             color: _is_focused
-                ? Colors.transparent
+                ? ColorConstants.transparent
                 : accent_color.withValues(alpha: 0.16),
             border: _is_focused
                 ? Border.all(

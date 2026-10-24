@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/components/svg_icon/index.dart';
@@ -36,8 +37,8 @@ class TopUpHeroCard extends StatelessWidget {
 
     // 右上记录入口按钮的背景色。
     final Color chipBackground = isDark
-        ? Colors.white.withValues(alpha: 0.10)
-        : Colors.white.withValues(alpha: 0.42);
+        ? ColorConstants.components_authorized_login_index_tone
+        : ColorConstants.pages_short_story_read_index_tone_6bffffff;
 
     return Container(
       padding: Style.heroPadding,
@@ -47,16 +48,14 @@ class TopUpHeroCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isDark
-              ? const <Color>[Color(0xFF263046), Color(0xFF181C29)]
-              : const <Color>[Color(0xFFFFF2B2), Color(0xFFF1D875)],
+              ? const <Color>[ColorConstants.night_hero_card_top_warm, ColorConstants.night_hero_gradient_deep]
+              : const <Color>[ColorConstants.gold_gradient_start, ColorConstants.gold_gradient_end],
         ),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: isDark
+            color: ColorConstants.shadowColor.withValues(alpha: isDark
                   ? Style.cardShadowDarkOpacity
-                  : Style.cardShadowLightOpacity,
-            ),
+                  : Style.cardShadowLightOpacity),
             blurRadius: Style.cardShadowBlur,
             offset: const Offset(0, Style.cardShadowOffsetY),
           ),
@@ -78,23 +77,25 @@ class TopUpHeroCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: LayoutConfig.space_12),
               GestureDetector(
                 // 记录入口放在 Hero 里，是为了把“查看历史充值”这个次级高频动作提到首屏。
                 onTap: onTapRecords,
                 behavior: HitTestBehavior.opaque,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+                    horizontal: LayoutConfig.space_12,
+                    vertical: LayoutConfig.space_8,
                   ),
                   decoration: BoxDecoration(
                     color: chipBackground,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(
+                      LayoutConfig.radius_pill,
+                    ),
                     border: Border.all(
                       color: isDark
-                          ? Colors.white.withValues(alpha: 0.10)
-                          : Colors.white.withValues(alpha: 0.34),
+                          ? ColorConstants.components_authorized_login_index_tone
+                          : ColorConstants.pages_top_up_widgets_top_up_hero_card_tone_57ffffff,
                     ),
                   ),
                   child: Row(
@@ -106,7 +107,7 @@ class TopUpHeroCard extends StatelessWidget {
                         height: 14,
                         color: isDark ? ColorConstants.themeColor : textColor,
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: LayoutConfig.space_6),
                       Text(
                         easy.tr('top_up_qr_code_page.records'),
                         style: TextStyle(
@@ -121,7 +122,7 @@ class TopUpHeroCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: LayoutConfig.space_8),
           Text(
             easy.tr('top_up_page.subtitle'),
             style: TextStyle(

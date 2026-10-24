@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/util/language_util/index.dart';
 import '../style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 在线客服聊天输入栏。
 ///
@@ -179,7 +181,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       textCapitalization: TextCapitalization.sentences,
                       cursorColor: CustomerServiceChatStyle.send_button_color,
                       cursorWidth: 2,
-                      scrollPadding: const EdgeInsets.only(bottom: 24),
+                      scrollPadding: const EdgeInsets.only(
+                        bottom: LayoutConfig.space_24,
+                      ),
                       style: TextStyle(
                         fontSize: input_font_size,
                         fontWeight:
@@ -257,7 +261,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
           ),
         ),
         child: Material(
-          color: Colors.transparent,
+          color: ColorConstants.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(
               CustomerServiceChatStyle.send_button_radius,
@@ -312,7 +316,7 @@ class _ChatToolButton extends StatelessWidget {
         width: CustomerServiceChatStyle.tool_button_size,
         height: CustomerServiceChatStyle.tool_button_size,
         child: Material(
-          color: Colors.transparent,
+          color: ColorConstants.transparent,
           shape: const CircleBorder(),
           clipBehavior: Clip.antiAlias,
           child: InkResponse(

@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'dart:math' as math;
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/config/color_config.dart';
@@ -470,8 +471,8 @@ class _CreatorFlexibleHeader extends StatelessWidget {
                     onTap: on_back,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 2,
-                        vertical: 4,
+                        horizontal: LayoutConfig.space_2,
+                        vertical: LayoutConfig.space_4,
                       ),
                       child: Icon(
                         Icons.arrow_back_ios_new_rounded,
@@ -480,7 +481,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: LayoutConfig.space_6),
                   NicknameBadge(
                     nickname: author_name,
                     is_dark: is_dark,
@@ -494,8 +495,8 @@ class _CreatorFlexibleHeader extends StatelessWidget {
                     onTap: on_open_guide,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 2,
-                        vertical: 4,
+                        horizontal: LayoutConfig.space_2,
+                        vertical: LayoutConfig.space_4,
                       ),
                       child: Icon(
                         Icons.help_outline_rounded,
@@ -510,7 +511,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
           ),
 
           /// 用户昵称标签 + 问候语。
-          const SizedBox(height: 8),
+          const SizedBox(height: LayoutConfig.space_8),
 
           /// 主标题。
           Text(
@@ -527,7 +528,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
               letterSpacing: is_cjk ? 0.2 : -0.2,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: LayoutConfig.space_4),
 
           /// 副标题。
           Text(
@@ -541,7 +542,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
               fontWeight: AuthorStyle.body_weight,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: LayoutConfig.space_20),
 
           /// 统计卡片：作品、收藏、评论。
           Row(
@@ -575,13 +576,13 @@ class _CreatorFlexibleHeader extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: LayoutConfig.space_18),
 
           /// 操作按钮：创建作品、继续写作（有草稿时显示）。
           LayoutBuilder(
             builder: (context, constraints) {
               final double total = constraints.maxWidth;
-              final double gap = 10;
+              final double gap = LayoutConfig.space_10;
               final double half = (total - gap) / 2;
               return Row(
                 children: <Widget>[
@@ -652,7 +653,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
                   is_dark: is_dark,
                   on_tap: on_back,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: LayoutConfig.space_10),
                 NicknameBadge(
                   nickname: author_name,
                   is_dark: is_dark,
@@ -667,7 +668,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
                   is_dark: is_dark,
                   on_tap: on_open_guide,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: LayoutConfig.space_8),
                 _HeaderIconButton(
                   icon: Icons.add_rounded,
                   tooltip: easy.tr('creator_center.create_work'),
@@ -712,7 +713,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
         ),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Colors.black.withValues(alpha: is_dark ? 0.10 : 0.04),
+            color: ColorConstants.shadowColor.withValues(alpha: is_dark ? 0.10 : 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -728,7 +729,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
             height: 4,
             decoration: BoxDecoration(
               color: accent_color,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(LayoutConfig.radius_pill),
             ),
           ),
           Column(
@@ -756,7 +757,7 @@ class _CreatorFlexibleHeader extends StatelessWidget {
                         fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                       ),
                     ),
-              const SizedBox(height: 3),
+              const SizedBox(height: LayoutConfig.space_3),
               Text(
                 label,
                 maxLines: 1,
@@ -777,30 +778,30 @@ class _CreatorFlexibleHeader extends StatelessWidget {
 
   /// TODO 日间模式渐变起始色（浅色调）。
   static Color _light_gradient_start(Color accent) {
-    if (accent == AuthorStyle.blue) return const Color(0xFFF2F7FF);
-    if (accent == AuthorStyle.gold) return const Color(0xFFFFF4D3);
-    return const Color(0xFFFFF0F0);
+    if (accent == AuthorStyle.blue) return ColorConstants.pages_author_center_widgets_creator_header_tone;
+    if (accent == AuthorStyle.gold) return ColorConstants.pages_author_center_widgets_creator_header_tone_fffff4d3;
+    return ColorConstants.pages_author_center_widgets_creator_header_tone_fffff0f0;
   }
 
   /// TODO 日间模式渐变结束色（接近白色）。
   static Color _light_gradient_end(Color accent) {
-    if (accent == AuthorStyle.blue) return const Color(0xFFFBFDFF);
-    if (accent == AuthorStyle.gold) return const Color(0xFFFFFCF0);
-    return const Color(0xFFFFF8F8);
+    if (accent == AuthorStyle.blue) return ColorConstants.pages_author_center_widgets_creator_header_tone_fffbfdff;
+    if (accent == AuthorStyle.gold) return ColorConstants.pages_author_center_widgets_creator_header_tone_fffffcf0;
+    return ColorConstants.pages_author_center_widgets_creator_header_tone_fffff8f8;
   }
 
   /// TODO 夜间模式渐变起始色（深色调）。
   static Color _dark_gradient_start(Color accent) {
-    if (accent == AuthorStyle.blue) return const Color(0xFF18222F);
-    if (accent == AuthorStyle.gold) return const Color(0xFF262113);
-    return const Color(0xFF261515);
+    if (accent == AuthorStyle.blue) return ColorConstants.pages_author_center_widgets_creator_header_tone_ff18222f;
+    if (accent == AuthorStyle.gold) return ColorConstants.pages_author_center_widgets_creator_header_tone_ff262113;
+    return ColorConstants.pages_author_center_widgets_creator_header_tone_ff261515;
   }
 
   /// TODO 夜间模式渐变结束色（更深色调）。
   static Color _dark_gradient_end(Color accent) {
-    if (accent == AuthorStyle.blue) return const Color(0xFF101721);
-    if (accent == AuthorStyle.gold) return const Color(0xFF17140E);
-    return const Color(0xFF171010);
+    if (accent == AuthorStyle.blue) return ColorConstants.pages_author_center_widgets_creator_header_tone_ff101721;
+    if (accent == AuthorStyle.gold) return ColorConstants.pages_author_center_widgets_creator_header_tone_ff17140e;
+    return ColorConstants.pages_author_center_widgets_creator_header_tone_ff171010;
   }
 }
 
@@ -827,7 +828,7 @@ class _CreatorFilterTabBar extends StatelessWidget {
 
     return Container(
       height: AuthorStyle.header_tab_bar_height,
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       alignment: Alignment.centerLeft,
       child: TabBar(
         controller: tab_controller,
@@ -837,7 +838,9 @@ class _CreatorFilterTabBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(
           horizontal: AuthorStyle.page_padding,
         ),
-        labelPadding: EdgeInsets.symmetric(horizontal: is_cjk ? 20 : 16),
+        labelPadding: EdgeInsets.symmetric(
+          horizontal: is_cjk ? LayoutConfig.space_20 : LayoutConfig.space_16,
+        ),
         indicatorSize: TabBarIndicatorSize.label,
         indicator: UnderlineTabIndicator(
           borderSide: BorderSide(
@@ -863,7 +866,7 @@ class _CreatorFilterTabBar extends StatelessWidget {
           fontWeight: AuthorStyle.body_weight,
         ),
         splashFactory: NoSplash.splashFactory,
-        overlayColor: WidgetStateProperty.all(Colors.transparent),
+        overlayColor: WidgetStateProperty.all(ColorConstants.transparent),
         tabs: List<Widget>.generate(
           titles.length,
           (int index) => _build_tab_title(index: index, title: titles[index]),
@@ -944,7 +947,7 @@ class _HeaderIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color foreground = is_accent
-        ? const Color(0xFF1D1B14)
+        ? ColorConstants.pages_author_center_widgets_creator_header_tone_ff1d1b14
         : AuthorStyle.primary_text(is_dark);
     final Color background = is_accent
         ? AuthorStyle.gold
@@ -990,7 +993,7 @@ class _HeaderActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color foreground = is_primary
-        ? const Color(0xFF1A1A18)
+        ? ColorConstants.pages_author_center_widgets_creator_empty_state_tone
         : AuthorStyle.primary_text(is_dark);
     final Color background = is_primary
         ? AuthorStyle.gold
@@ -1002,7 +1005,7 @@ class _HeaderActionButton extends StatelessWidget {
       label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       style: FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(AuthorStyle.header_action_height),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        padding: const EdgeInsets.symmetric(horizontal: LayoutConfig.space_14),
         backgroundColor: background,
         foregroundColor: foreground,
         elevation: 0,

@@ -15,6 +15,7 @@ import 'package:app/pages/ranking_full_list/style.dart';
 import 'package:app/pages/ranking_full_list/widgets/bookshelf_book_card.dart';
 import 'package:app/stores/ranking_full_list_store.dart';
 import 'package:app/util/novel_navigation/index.dart';
+import 'package:app/config/color_config.dart';
 
 /// 完整榜单网格内容组件。
 ///
@@ -86,12 +87,12 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
 
   /// 标签颜色池。
   static const List<Color> _tag_color_pool = <Color>[
-    Color(0xFF2FBF9B),
-    Color(0xFF5F8BFF),
-    Color(0xFFF56C6C),
-    Color(0xFFFF9F5A),
-    Color(0xFF8B7CFF),
-    Color(0xFFE6A23C),
+    ColorConstants.native_advertiser,
+    ColorConstants.native_attribution,
+    ColorConstants.dangerColor,
+    ColorConstants.palette_orange,
+    ColorConstants.palette_violet,
+    ColorConstants.palette_amber,
   ];
 
   /// 缓存仓库。
@@ -253,11 +254,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
                       show: _is_back_to_top_visible,
                       isDark: widget.is_dark,
                       onTap: _scroll_to_top,
-                      right:
-                          floating_back_to_top_style
-                              .FloatingBackToTopStyle
-                              .right -
-                          Style.page_horizontal_padding,
+                      horizontalPadding: 0,
                       visibleBottom:
                           fixed_nav_style.Style.bar_height +
                           floating_back_to_top_style
@@ -413,7 +410,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
         showTips: false,
         parameter: <String, dynamic>{
           'limit': _page_size,
-          if (category_id != null) 'category_id': category_id,
+          'category_id': ?category_id,
           if (no_ids != null && no_ids.isNotEmpty) 'no_ids': no_ids,
         },
         fromJsonList: (List<dynamic> json) =>
@@ -513,8 +510,8 @@ class _BookCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color block_color = is_dark
-        ? const Color(0xFF1A2130)
-        : const Color(0xFFEDEFF4);
+        ? ColorConstants.pages_bookshelf_widgets_bookshelf_grid_content_tone
+        : ColorConstants.pages_bookshelf_widgets_bookshelf_grid_content_tone_ffedeff4;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -540,7 +537,7 @@ class _BookCardSkeleton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(LayoutConfig.tag_radius),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: LayoutConfig.space_8),
             Container(
               height: 13,
               width: 72,

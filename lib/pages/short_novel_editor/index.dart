@@ -493,7 +493,7 @@ class _ShortNovelEditorPageState extends State<ShortNovelEditorPage>
           appBar: WindowAppBar(
             child: AppBar(
               backgroundColor: AuthorStyle.surface(is_dark),
-              surfaceTintColor: Colors.transparent,
+              surfaceTintColor: ColorConstants.transparent,
               foregroundColor: AuthorStyle.primary_text(is_dark),
               elevation: 0,
               title: Column(

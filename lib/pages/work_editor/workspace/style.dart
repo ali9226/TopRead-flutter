@@ -1,5 +1,6 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:flutter/material.dart';
@@ -8,12 +9,12 @@ import 'package:flutter/material.dart';
 class WorkspaceStyle {
   const WorkspaceStyle._();
 
-  static const double gap = 12;
-  static const double small_gap = 6;
-  static const double radius = 14;
+  static const double gap = LayoutConfig.space_12;
+  static const double small_gap = LayoutConfig.space_6;
+  static const double radius = LayoutConfig.radius_14;
   static const double cover_width = 88;
   static const double cover_height = 112;
-  static const double icon_size = 22;
+  static const double icon_size = LayoutConfig.icon_compact;
   static const double title_size_cjk = 23;
   static const double title_size_alphabetic = 21;
   static const double body_size_cjk = 15;

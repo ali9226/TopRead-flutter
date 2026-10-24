@@ -39,7 +39,7 @@ class DebugPage extends StatelessWidget {
             leading: IconButton(
               icon: Icon(
                 Icons.arrow_back_ios_rounded,
-                color: isDark ? Colors.white : ColorConstants.lightTextColor,
+                color: isDark ? ColorConstants.whiteColor : ColorConstants.lightTextColor,
                 size: 20,
               ),
               onPressed: () => AppRouter.pop(),
@@ -49,7 +49,7 @@ class DebugPage extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
-                color: isDark ? Colors.white : ColorConstants.lightTextColor,
+                color: isDark ? ColorConstants.whiteColor : ColorConstants.lightTextColor,
               ),
             ),
             centerTitle: true,

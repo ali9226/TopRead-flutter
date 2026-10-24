@@ -1,4 +1,5 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
+import 'package:app/config/layout_config.dart';
 import 'dart:math' as math;
 import 'dart:ui' show DisplayFeature;
 import 'package:flutter/material.dart';
@@ -333,16 +334,16 @@ class QuestSceneLayout {
   // 槽背景、静态牌、移动牌只读取下列统一尺寸和坐标。
   static const int slot_count = 7;
   static const int reserve_count = 3;
-  static const double tray_padding = 6;
-  static const double tray_gap = 3;
-  static const double reserve_vertical_padding = 2;
-  static const double reserve_right_padding = 5;
-  static const double reserve_gap = 4;
+  static const double tray_padding = LayoutConfig.space_6;
+  static const double tray_gap = LayoutConfig.space_3;
+  static const double reserve_vertical_padding = LayoutConfig.space_2;
+  static const double reserve_right_padding = LayoutConfig.space_5;
+  static const double reserve_gap = LayoutConfig.space_4;
 
   static const double _narrow_width = 350;
-  static const double _narrow_inset = 12;
+  static const double _narrow_inset = LayoutConfig.space_12;
   static const double _header_top = 8;
-  static const double _landscape_gap = 9;
+  static const double _landscape_gap = LayoutConfig.space_9;
   static const double _minimum_tool_height = 44;
   static const double _minimum_extent = 1;
   static const double _minimum_board_extent = 20;
@@ -350,7 +351,7 @@ class QuestSceneLayout {
   static const double _portrait_bottom = TileQuestStyle.portrait_bottom_spacing;
   static const double _portrait_gap = TileQuestStyle.portrait_controls_gap;
   static const double _tutorial_height = 26;
-  static const double _narrow_board_margin = 4;
+  static const double _narrow_board_margin = LayoutConfig.space_4;
   static const double _board_bottom_gap = TileQuestStyle.board_bottom_spacing;
   static const double reserve_stack_lift = 6;
 
@@ -524,7 +525,9 @@ class QuestSceneLayout {
     }
     final top = index < landscape_tray_top_count;
     final row_index = top ? index : index - landscape_tray_top_count;
-    final row_count = top ? landscape_tray_top_count : slot_count - landscape_tray_top_count;
+    final row_count = top
+        ? landscape_tray_top_count
+        : slot_count - landscape_tray_top_count;
     final row_width = row_count * edge + tray_gap * (row_count - 1);
     final row_top = top
         ? tray.top + tray_padding

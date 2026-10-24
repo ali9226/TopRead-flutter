@@ -3,6 +3,7 @@ import 'package:app/config/font_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/widgets/ranking_section/style.dart';
 import 'package:app/util/language_util/index.dart';
+import 'package:app/config/color_config.dart';
 
 /// 榜单 Tab 栏组件。
 ///
@@ -60,11 +61,11 @@ class RankingTabBar extends StatelessWidget {
         : RankingSectionStyle.tab_separator_width_alphabetic;
 
     /// 选中文字颜色。
-    final Color selected_color = is_dark ? Colors.white : Colors.black;
+    final Color selected_color = is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor;
 
     /// 未选中文字颜色。
     final Color unselected_color = is_dark
-        ? Colors.white.withValues(alpha: 0.54)
+        ? ColorConstants.components_app_wrapper_index_tone
         : RankingSectionStyle.unselected_color_light;
 
     return SizedBox(

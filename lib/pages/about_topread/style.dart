@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 
@@ -9,22 +10,22 @@ class Style {
   static const double logo_size = 90;
 
   /// Logo顶部间距。
-  static const double logo_top_spacing = 10;
+  static const double logo_top_spacing = LayoutConfig.space_10;
 
   /// Logo与口号间距。
-  static const double logo_to_slogan_spacing = 5;
+  static const double logo_to_slogan_spacing = LayoutConfig.space_5;
 
   /// 口号与版本号间距。
-  static const double slogan_to_version_spacing = 6;
+  static const double slogan_to_version_spacing = LayoutConfig.space_6;
 
   /// 版本号与列表间距。
-  static const double version_to_list_spacing = 60;
+  static const double version_to_list_spacing = LayoutConfig.space_60;
 
   /// 列表项高度。
   static const double list_item_height = 56;
 
   /// 列表项左右内边距。
-  static const double list_horizontal_padding = 16;
+  static const double list_horizontal_padding = LayoutConfig.space_16;
 
   /// 版本号字号。
   static const double version_font_size = 14;

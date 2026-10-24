@@ -1,14 +1,11 @@
+import 'package:app/components/floating_back_to_top/index.dart';
+import 'package:app/components/floating_back_to_top/style.dart';
 import 'package:flutter/material.dart';
-import 'package:app/components/back_to_top_button/index.dart';
 
 import '../style.dart';
 
-/// 账单页返回顶部按钮层。
+/// 账单页回顶入口，与账单正文使用同一列宽、左右边距和安全区。
 class BillPageBackToTop extends StatelessWidget {
-  final bool isDark;
-  final bool visible;
-  final VoidCallback onTap;
-
   const BillPageBackToTop({
     super.key,
     required this.isDark,
@@ -16,24 +13,20 @@ class BillPageBackToTop extends StatelessWidget {
     required this.onTap,
   });
 
+  final bool isDark;
+  final bool visible;
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
-    return AnimatedSlide(
-      duration: const Duration(milliseconds: Style.backToTopSlideDurationMs),
-      curve: Curves.easeOutCubic,
-      offset: visible
-          ? Offset.zero
-          : const Offset(0, Style.backToTopHiddenOffsetY),
-      child: AnimatedOpacity(
-        duration: const Duration(
-          milliseconds: Style.backToTopOpacityDurationMs,
-        ),
-        opacity: visible ? 1 : 0,
-        child: IgnorePointer(
-          ignoring: !visible,
-          child: BackToTopButton(isDark: isDark, onTap: onTap),
-        ),
-      ),
+    final bottom_safe_area = MediaQuery.paddingOf(context).bottom;
+    return FloatingBackToTop(
+      show: visible,
+      isDark: isDark,
+      onTap: onTap,
+      horizontalPadding: Style.pageHorizontalPadding,
+      visibleBottom: FloatingBackToTopStyle.page_bottom + bottom_safe_area,
+      hiddenBottom: FloatingBackToTopStyle.hidden_offset + bottom_safe_area,
     );
   }
 }

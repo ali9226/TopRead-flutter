@@ -1,3 +1,4 @@
+import 'package:app/config/color_config.dart';
 import 'package:flutter/material.dart';
 
 import '../style.dart';
@@ -28,8 +29,8 @@ class NightPanelDecor extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.white.withValues(alpha: 0.06),
-                  Colors.transparent,
+                  ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff,
+                  ColorConstants.transparent,
                 ],
               ),
             ),
@@ -47,10 +48,10 @@ class NightPanelDecor extends StatelessWidget {
                   center: const Alignment(0.3, 0.3),
                   radius: 0.8,
                   colors: [
-                    Colors.white.withValues(alpha: 0.12),
-                    Colors.white.withValues(alpha: 0.06),
-                    Colors.white.withValues(alpha: 0.02),
-                    Colors.transparent,
+                    ColorConstants.components_fixed_bottom_navigation_widgets_night_panel_decor_tone,
+                    ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff,
+                    ColorConstants.components_fixed_bottom_navigation_widgets_night_panel_decor_tone_5ffffff,
+                    ColorConstants.transparent,
                   ],
                   stops: const [0.0, 0.3, 0.6, 1.0],
                 ),
@@ -68,8 +69,8 @@ class NightPanelDecor extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    Colors.white.withValues(alpha: 0.06),
-                    Colors.transparent,
+                    ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff,
+                    ColorConstants.transparent,
                   ],
                 ),
               ),
@@ -86,8 +87,8 @@ class NightPanelDecor extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFF8DB7FF).withValues(alpha: 0.1),
-                    Colors.transparent,
+                    ColorConstants.util_dialog_show_upgrade_dialog_tone_1a8db7ff,
+                    ColorConstants.transparent,
                   ],
                 ),
               ),

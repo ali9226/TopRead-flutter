@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
@@ -49,22 +50,20 @@ class TopUpBottomActionBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: floating
             ? (isDark
-                  ? const Color(0xFF171A27).withValues(alpha: 0.96)
-                  : Colors.white.withValues(alpha: 0.96))
-            : (isDark ? const Color(0xFF171A27) : Colors.white),
+                  ? ColorConstants.pages_top_up_record_index_tone.withValues(alpha: 0.96)
+                  : ColorConstants.pages_top_up_widgets_top_up_bottom_action_bar_tone_f5ffffff)
+            : (isDark ? ColorConstants.pages_top_up_record_index_tone : ColorConstants.whiteColor),
         borderRadius: BorderRadius.circular(Style.bottomActionRadius),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04),
+              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+              : ColorConstants.components_paragraph_comment_sheet_widgets_comment_item_tone,
         ),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: isDark
+            color: ColorConstants.shadowColor.withValues(alpha: isDark
                   ? Style.cardShadowDarkOpacity
-                  : Style.cardShadowLightOpacity,
-            ),
+                  : Style.cardShadowLightOpacity),
             blurRadius: Style.cardShadowBlur,
             offset: const Offset(0, Style.cardShadowOffsetY),
           ),
@@ -92,7 +91,7 @@ class TopUpBottomActionBar extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: LayoutConfig.space_10),
           _TopUpSubmitButton(
             enabled: enabled,
             loading: loading,
@@ -130,8 +129,8 @@ class _TopUpBottomActionChip extends StatelessWidget {
       padding: Style.bottomActionChipPadding,
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : Colors.black.withValues(alpha: 0.035),
+            ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+            : ColorConstants.pages_short_story_read_widgets_next_story_preview_tone_9222222,
         borderRadius: BorderRadius.circular(Style.bottomActionChipRadius),
       ),
       child: Row(

@@ -110,7 +110,7 @@ class ShortStoryReadLogic {
   /// 底部评论栏是否可见。
   ///
   /// 与导航栏联动，同时显示/隐藏。
-  final RxBool is_bottom_bar_visible = true.obs;
+  final RxBool is_bottom_bar_visible = false.obs;
 
   /// 当前阅读进度（0.0 ~ 1.0）。
   ///

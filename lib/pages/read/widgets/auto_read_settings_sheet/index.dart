@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -6,6 +7,7 @@ import 'package:app/components/bottom_sheet_drag_handle/index.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/util/device/save_body_font_size.dart';
+import 'package:app/config/color_config.dart';
 
 /// 自动阅读设置弹窗组件。
 ///
@@ -42,7 +44,7 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
     final DeviceInfo device_info = Get.find<DeviceInfo>();
     final bool is_dark = device_info.theme.value == ThemeMode.dark;
 
-    final Color bg_color = is_dark ? const Color(0xFF161B22) : Colors.white;
+    final Color bg_color = is_dark ? ColorConstants.components_reader_top_bar_style_tone : ColorConstants.whiteColor;
 
     final double screen_height = MediaQuery.of(context).size.height;
     final double max_height = screen_height * 0.9;
@@ -51,18 +53,30 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
       constraints: BoxConstraints(maxHeight: max_height),
       decoration: BoxDecoration(
         color: bg_color,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(LayoutConfig.radius_16),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           _buildHeader(is_dark: is_dark),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: const EdgeInsets.fromLTRB(
+              LayoutConfig.space_20,
+              LayoutConfig.space_16,
+              LayoutConfig.space_20,
+              0,
+            ),
             child: _buildSpeedSection(is_dark: is_dark),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+            padding: const EdgeInsets.fromLTRB(
+              LayoutConfig.space_20,
+              LayoutConfig.space_24,
+              LayoutConfig.space_20,
+              LayoutConfig.space_24,
+            ),
             child: _buildExitButton(is_dark: is_dark),
           ),
         ],
@@ -71,22 +85,27 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
   }
 
   Widget _buildHeader({required bool is_dark}) {
-    final Color title_color = is_dark ? Colors.white : const Color(0xFF1F1A12);
+    final Color title_color = is_dark ? ColorConstants.whiteColor : ColorConstants.components_reader_top_bar_style_tone_ff1f1a12;
 
     final Color icon_color = is_dark
-        ? Colors.white.withValues(alpha: 0.7)
-        : const Color(0xFF7A6A56);
+        ? ColorConstants.components_reader_bottom_action_style_tone_b2ffffff
+        : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56;
 
     final Color divider_color = is_dark
-        ? const Color(0xFF21262D)
-        : const Color(0xFFEEEEEE);
+        ? ColorConstants.components_reader_top_bar_style_tone_ff21262d
+        : ColorConstants.components_reader_top_bar_style_tone_ffeeeeee;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         BottomSheetDragHandle(is_dark: is_dark),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+          padding: const EdgeInsets.fromLTRB(
+            LayoutConfig.space_20,
+            LayoutConfig.space_16,
+            LayoutConfig.space_12,
+            LayoutConfig.space_12,
+          ),
           child: Row(
             children: <Widget>[
               Text(
@@ -102,7 +121,7 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
                 onTap: widget.on_close,
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(LayoutConfig.space_8),
                   child: SvgIcon(
                     name: 'close',
                     width: 16,
@@ -120,17 +139,17 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
   }
 
   Widget _buildSpeedSection({required bool is_dark}) {
-    final Color title_color = is_dark ? Colors.white : const Color(0xFF1F1A12);
+    final Color title_color = is_dark ? ColorConstants.whiteColor : ColorConstants.components_reader_top_bar_style_tone_ff1f1a12;
 
     final Color track_color = is_dark
-        ? Colors.white.withValues(alpha: 0.15)
-        : const Color(0xFF7A6A56).withValues(alpha: 0.15);
+        ? ColorConstants.components_authorized_login_apple_review_index_tone
+        : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56.withValues(alpha: 0.15);
 
-    final Color thumb_color = is_dark ? Colors.white : Colors.white;
+    final Color thumb_color = is_dark ? ColorConstants.whiteColor : ColorConstants.whiteColor;
 
     final Color thumb_shadow_color = is_dark
-        ? Colors.black.withValues(alpha: 0.4)
-        : Colors.black.withValues(alpha: 0.15);
+        ? ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone
+        : ColorConstants.pages_home_widgets_tab_bar_skeleton_index_tone_26222222;
 
     return Obx(() {
       final int percentage = (widget.auto_read_speed.value * 100).round();
@@ -199,17 +218,17 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
               child: Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                    horizontal: LayoutConfig.space_12,
+                    vertical: LayoutConfig.space_6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.75),
-                    borderRadius: BorderRadius.circular(4),
+                    color: ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone_bf222222,
+                    borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
                   ),
                   child: Text(
                     '$percentage%',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: ColorConstants.whiteColor,
                       fontSize: 13,
                       fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                     ),
@@ -230,9 +249,9 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
         height: 48,
         decoration: BoxDecoration(
           color: is_dark
-              ? Colors.white.withValues(alpha: 0.10)
-              : const Color(0xFF7A6A56).withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(24),
+              ? ColorConstants.components_authorized_login_index_tone
+              : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_24),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -241,15 +260,15 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
               name: 'quit',
               width: 18,
               height: 18,
-              color: Color(0xFFE54D4D),
+              color: ColorConstants.pages_read_widgets_auto_read_settings_sheet_index_tone_ffe54d4d,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: LayoutConfig.space_8),
             Text(
               tr('short_story_read.exit_auto_read'),
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                color: const Color(0xFFE54D4D),
+                color: ColorConstants.pages_read_widgets_auto_read_settings_sheet_index_tone_ffe54d4d,
               ),
             ),
           ],
@@ -294,7 +313,7 @@ class _CircleThumbShape extends SliderComponentShape {
     canvas.drawCircle(center + const Offset(0, 1), thumbSize / 2, shadow_paint);
 
     final Paint thumb_paint = Paint()
-      ..color = sliderTheme.thumbColor ?? Colors.white;
+      ..color = sliderTheme.thumbColor ?? ColorConstants.whiteColor;
     canvas.drawCircle(center, thumbSize / 2, thumb_paint);
   }
 }

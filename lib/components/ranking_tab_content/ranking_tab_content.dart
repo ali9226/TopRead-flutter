@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -6,6 +7,7 @@ import 'package:app/components/home/style.dart';
 import 'package:app/components/ranking_tab_content/story_rank_card.dart';
 import 'package:app/components/empty_state/index.dart';
 import 'package:app/models/story_item.dart';
+import 'package:app/config/color_config.dart';
 
 /// 榜单内容区域子组件。
 ///
@@ -42,7 +44,7 @@ class RankingTabContent extends StatelessWidget {
     final bool is_empty = visible_story_item_list.isEmpty;
 
     /// "查看更多"基础颜色。
-    final Color ranking_more_base_color = is_dark ? Colors.white : Colors.black;
+    final Color ranking_more_base_color = is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor;
 
     /// "查看更多"显示颜色。
     final Color ranking_more_color = ranking_more_base_color.withValues(
@@ -56,21 +58,18 @@ class RankingTabContent extends StatelessWidget {
           SizedBox(
             height: Style.ranking_grid_height,
             child: is_empty
-                ? EmptyState(
-                    is_dark: is_dark,
-                    on_reload: on_reload,
-                  )
+                ? EmptyState(is_dark: is_dark, on_reload: on_reload)
                 : GridView.builder(
                     physics: const NeverScrollableScrollPhysics(),
                     padding: EdgeInsets.zero,
                     itemCount: visible_story_item_list.length,
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: Style.ranking_cross_axis_count,
-                      crossAxisSpacing: Style.ranking_column_spacing,
-                      mainAxisSpacing: Style.ranking_row_spacing,
-                      mainAxisExtent: Style.ranking_item_height,
-                    ),
+                          crossAxisCount: Style.ranking_cross_axis_count,
+                          crossAxisSpacing: Style.ranking_column_spacing,
+                          mainAxisSpacing: Style.ranking_row_spacing,
+                          mainAxisExtent: Style.ranking_item_height,
+                        ),
                     itemBuilder: (BuildContext context, int index) {
                       /// 当前索引对应的小说数据。
                       final StoryItem current_story_item =
@@ -103,7 +102,7 @@ class RankingTabContent extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
                   Padding(
-                    padding: const EdgeInsets.only(top: 1),
+                    padding: const EdgeInsets.only(top: LayoutConfig.space_1),
                     child: Text(
                       easy.tr('home.view_more'),
                       style: TextStyle(

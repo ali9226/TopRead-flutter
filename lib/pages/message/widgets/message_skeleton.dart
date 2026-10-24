@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/message/style.dart';
+import 'package:app/config/layout_config.dart';
 
 /// 消息列表骨架屏，带 shimmer 流光动画。
 ///
@@ -48,11 +49,11 @@ class _MessageSkeletonState extends State<MessageSkeleton>
             final double dx = _animation.value * 2.0;
             return LinearGradient(
               colors: [
-                Colors.transparent,
-                Colors.white.withValues(alpha: 0.12),
-                Colors.white.withValues(alpha: 0.28),
-                Colors.white.withValues(alpha: 0.12),
-                Colors.transparent,
+                ColorConstants.transparent,
+                ColorConstants.components_fixed_bottom_navigation_widgets_night_panel_decor_tone,
+                ColorConstants.pages_short_story_read_widgets_next_story_preview_tone,
+                ColorConstants.components_fixed_bottom_navigation_widgets_night_panel_decor_tone,
+                ColorConstants.transparent,
               ],
               stops: const [0.0, 0.3, 0.5, 0.7, 1.0],
               begin: Alignment(-1.0 + dx, 0.0),
@@ -70,12 +71,12 @@ class _MessageSkeletonState extends State<MessageSkeleton>
 
   Widget _build_item() {
     final Color card_color =
-        widget.is_dark ? const Color(0xFF171C28) : Colors.white;
+        widget.is_dark ? ColorConstants.pages_home_widgets_tab_contents_recommend_tab_index_tone : ColorConstants.whiteColor;
     final Color block_color =
-        widget.is_dark ? const Color(0xFF2A2A3C) : const Color(0xFFF0F0F0);
+        widget.is_dark ? ColorConstants.customer_service_sheet_style_bubble_admin_bg_dark : ColorConstants.components_comment_list_widgets_comment_avatar_tone_fff0f0f0;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: LayoutConfig.space_10),
       child: Container(
         padding: MessageStyle.card_padding,
         decoration: BoxDecoration(
@@ -114,7 +115,7 @@ class _MessageSkeletonState extends State<MessageSkeleton>
                         height: 14,
                         decoration: BoxDecoration(
                           color: block_color,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
                         ),
                       ),
                       const Spacer(),
@@ -123,7 +124,7 @@ class _MessageSkeletonState extends State<MessageSkeleton>
                         height: 11,
                         decoration: BoxDecoration(
                           color: block_color,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
                         ),
                       ),
                     ],
@@ -137,7 +138,7 @@ class _MessageSkeletonState extends State<MessageSkeleton>
                         height: 12,
                         decoration: BoxDecoration(
                           color: block_color,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
                         ),
                       ),
                       const Spacer(),

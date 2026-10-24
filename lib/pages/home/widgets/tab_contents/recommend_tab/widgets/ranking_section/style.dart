@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app/config/layout_config.dart';
+import 'package:app/config/color_config.dart';
 
 /// 榜单区域样式常量。
 ///
@@ -41,10 +42,10 @@ class RankingSectionStyle {
   static const double tab_separator_width_alphabetic = 14;
 
   /// Tab 列表左侧内边距。
-  static const double tab_left_padding = 14;
+  static const double tab_left_padding = LayoutConfig.space_14;
 
   /// Tab 列表右侧内边距（最后一个 tab 标题的右边距）。
-  static const double tab_right_padding = 20;
+  static const double tab_right_padding = LayoutConfig.space_20;
 
   /// Tab 栏左侧渐变遮罩宽度。
   static const double tab_left_gradient_width = 14;
@@ -53,10 +54,10 @@ class RankingSectionStyle {
   static const double tab_right_gradient_width = 30;
 
   /// "完整榜单"按钮与 Tab 列表的间距。
-  static const double full_ranking_gap = 5;
+  static const double full_ranking_gap = LayoutConfig.space_5;
 
   /// "完整榜单"文字与图标的间距。
-  static const double full_ranking_icon_gap = 2;
+  static const double full_ranking_icon_gap = LayoutConfig.space_2;
 
   /// "完整榜单"图标尺寸。
   static const double full_ranking_icon_size = 14;
@@ -67,7 +68,7 @@ class RankingSectionStyle {
   static const int rows_per_column = 4;
 
   /// 列与列之间的间距。
-  static const double column_gap = 10;
+  static const double column_gap = LayoutConfig.space_10;
 
   /// 榜单每一列的固定内容宽度。
   ///
@@ -88,7 +89,7 @@ class RankingSectionStyle {
   static const double cover_border_radius = LayoutConfig.tag_radius;
 
   /// 单个书籍项的高度（封面 + 底部间距）。
-  static const double item_bottom_spacing = 11;
+  static const double item_bottom_spacing = LayoutConfig.space_11;
 
   /// 默认文字缩放比例下的单个书籍项高度。
   static const double item_height = cover_height + item_bottom_spacing;
@@ -97,10 +98,10 @@ class RankingSectionStyle {
   static const double content_height_adjustment = 5;
 
   /// 内容区域左右内边距。
-  static const double content_padding_horizontal = 10;
+  static const double content_padding_horizontal = LayoutConfig.space_10;
 
   /// 内容区域顶部内边距。
-  static const double content_padding_top = 5;
+  static const double content_padding_top = LayoutConfig.space_5;
 
   /// 内容区域渐变遮罩宽度。
   static const double content_gradient_mask_width = 8;
@@ -145,33 +146,33 @@ class RankingSectionStyle {
   static const double category_line_height = 1.35;
 
   /// 文字布局安全余量，避免不同平台的像素取整裁剪字形底部。
-  static const double text_layout_safety_padding = 2;
+  static const double text_layout_safety_padding = LayoutConfig.space_2;
 
   /// 分隔点尺寸。
   static const double separator_dot_size = 3;
 
   /// 封面与排名序号间距。
-  static const double cover_to_rank_gap = 4;
+  static const double cover_to_rank_gap = LayoutConfig.space_4;
 
   /// 排名序号与书籍信息间距。
-  static const double rank_to_info_gap = 4;
+  static const double rank_to_info_gap = LayoutConfig.space_4;
 
   /// 分类与分隔点间距。
-  static const double category_to_dot_gap = 4;
+  static const double category_to_dot_gap = LayoutConfig.space_4;
 
   /// 分隔点与热度间距。
-  static const double dot_to_heat_gap = 4;
+  static const double dot_to_heat_gap = LayoutConfig.space_4;
 
   // ---- 颜色 ----
 
   /// 未选中 Tab 文字颜色（日间模式）。
-  static const Color unselected_color_light = Color(0xFF999999);
+  static const Color unselected_color_light = ColorConstants.customer_service_sheet_style_time_color_light;
 
   /// 书名文字颜色（日间模式）。
-  static const Color title_color_light = Color(0xFF222222);
+  static const Color title_color_light = ColorConstants.lightTextColor;
 
   /// 分类/热度文字颜色（日间模式）。
-  static const Color secondary_color_light = Color(0xFF999999);
+  static const Color secondary_color_light = ColorConstants.customer_service_sheet_style_time_color_light;
 
   /// 前三名排名序号对应的主题色索引映射。
   static const int top_rank_count = 3;
@@ -217,10 +218,10 @@ class RankingSectionStyle {
   // ---- 查看更多按钮样式 ----
 
   /// "查看更多"按钮顶部间距。
-  static const double view_more_top_spacing = 2;
+  static const double view_more_top_spacing = LayoutConfig.space_2;
 
   /// "查看更多"按钮底部间距。
-  static const double view_more_bottom_spacing = 8;
+  static const double view_more_bottom_spacing = LayoutConfig.space_8;
 
   /// "查看更多"内容区域固定高度。
   static const double view_more_content_height = 22;
@@ -241,13 +242,13 @@ class RankingSectionStyle {
   static const double view_more_icon_size = 12;
 
   /// "查看更多"文字与图标间距。
-  static const double view_more_icon_gap = 2;
+  static const double view_more_icon_gap = LayoutConfig.space_2;
 
   /// "查看更多"下划线高度。
   static const double view_more_underline_height = 1;
 
   /// "查看更多"下划线与文字间距。
-  static const double view_more_underline_gap = 2;
+  static const double view_more_underline_gap = LayoutConfig.space_2;
 
   // ---- 骨架屏样式 ----
 
@@ -296,23 +297,23 @@ class RankingSectionStyle {
   static const double skeleton_metadata_height = 10;
 
   /// 标题与分类骨架之间的间距。
-  static const double skeleton_text_line_spacing = 6;
+  static const double skeleton_text_line_spacing = LayoutConfig.space_6;
 
   /// 日间主题骨架底色。
-  static const Color skeleton_light_color = Color(0x269E9E9E);
+  static const Color skeleton_light_color = ColorConstants.skeleton_light_color_269e9e9e;
 
   /// 夜间主题骨架底色。
-  static const Color skeleton_dark_color = Color(0x14FFFFFF);
+  static const Color skeleton_dark_color = ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff;
 
   /// 日间主题流光底色。
-  static const Color skeleton_light_shimmer_base_color = Color(0x1A9E9E9E);
+  static const Color skeleton_light_shimmer_base_color = ColorConstants.skeleton_light_shimmer_base_color_1a9e9e9e;
 
   /// 日间主题流光高亮色。
-  static const Color skeleton_light_shimmer_highlight_color = Color(0x409E9E9E);
+  static const Color skeleton_light_shimmer_highlight_color = ColorConstants.skeleton_light_shimmer_highlight_color_409e9e9e;
 
   /// 夜间主题流光底色。
-  static const Color skeleton_dark_shimmer_base_color = Color(0x0DFFFFFF);
+  static const Color skeleton_dark_shimmer_base_color = ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff;
 
   /// 夜间主题流光高亮色。
-  static const Color skeleton_dark_shimmer_highlight_color = Color(0x1FFFFFFF);
+  static const Color skeleton_dark_shimmer_highlight_color = ColorConstants.components_fixed_bottom_navigation_widgets_night_panel_decor_tone;
 }

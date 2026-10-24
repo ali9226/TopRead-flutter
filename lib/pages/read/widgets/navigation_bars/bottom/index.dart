@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/reader_bottom_action/index.dart';
 import 'package:app/components/reader_bottom_action/style.dart';
 import 'package:app/components/reader_action_icon/index.dart';
@@ -113,16 +114,16 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
 
     /// 背景色。
     final Color bg_color = widget.is_dark
-        ? const Color(0xFF161B22)
-        : Colors.white;
+        ? ColorConstants.components_reader_top_bar_style_tone
+        : ColorConstants.whiteColor;
 
     /// 图标/文字颜色。
     final Color icon_color = ReaderBottomActionStyle.foreground(widget.is_dark);
 
     /// 分割线颜色。
     final Color divider_color = widget.is_dark
-        ? const Color(0xFF21262D)
-        : const Color(0xFFEEEEEE);
+        ? ColorConstants.components_reader_top_bar_style_tone_ff21262d
+        : ColorConstants.components_reader_top_bar_style_tone_ffeeeeee;
 
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 300),
@@ -204,25 +205,27 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
   Widget _buildProgressBarSection(Color text_color, Color thumb_color) {
     /// 禁用状态文字颜色。
     final Color disabled_text_color = widget.is_dark
-        ? Colors.white.withValues(alpha: 0.25)
-        : const Color(0xFF7A6A56).withValues(alpha: 0.4);
+        ? ColorConstants.pages_home_widgets_tab_bar_skeleton_index_tone
+        : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56.withValues(alpha: 0.4);
 
     /// 进度条轨道颜色。
     final Color track_color = widget.is_dark
-        ? Colors.white.withValues(alpha: 0.15)
-        : const Color(0xFF7A6A56).withValues(alpha: 0.15);
+        ? ColorConstants.components_authorized_login_apple_review_index_tone
+        : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56.withValues(alpha: 0.15);
 
     /// 滑块阴影颜色。
     final Color thumb_shadow_color = widget.is_dark
-        ? Colors.black.withValues(alpha: 0.4)
-        : Colors.black.withValues(alpha: 0.15);
+        ? ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone
+        : ColorConstants.pages_home_widgets_tab_bar_skeleton_index_tone_26222222;
 
     return Stack(
       clipBehavior: Clip.none,
       children: <Widget>[
         /// 主要内容行。
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(
+            horizontal: LayoutConfig.space_16,
+          ),
           child: SizedBox(
             height: 40,
             child: Row(
@@ -276,7 +279,7 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
       onTap: is_enabled ? onTap : null,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: LayoutConfig.space_8),
         child: Text(
           text,
           style: TextStyle(
@@ -300,7 +303,7 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
         : widget.progress;
 
     /// 滑块半径。
-    const double thumb_radius = 9.0;
+    const double thumb_radius = LayoutConfig.radius_9;
 
     /// 滑块尺寸。
     const double thumb_size = 18.0;
@@ -324,7 +327,7 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
           behavior: HitTestBehavior.opaque,
           child: Container(
             height: 40,
-            color: Colors.transparent,
+            color: ColorConstants.transparent,
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 /// 轨道可用宽度。
@@ -346,7 +349,9 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
                         height: track_height,
                         decoration: BoxDecoration(
                           color: track_color,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(
+                            LayoutConfig.radius_4,
+                          ),
                         ),
                       ),
                     ),
@@ -388,7 +393,7 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
     if (render_box == null) return;
 
     const double thumb_size = 18.0;
-    const double thumb_radius = 9.0;
+    const double thumb_radius = LayoutConfig.radius_9;
     final double track_width = render_box.size.width - thumb_size;
     if (track_width <= 0) return;
     final double new_progress =
@@ -409,7 +414,7 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
     if (render_box == null) return;
 
     const double thumb_size = 18.0;
-    const double thumb_radius = 9.0;
+    const double thumb_radius = LayoutConfig.radius_9;
     final double track_width = render_box.size.width - thumb_size;
     if (track_width <= 0) return;
     final double new_progress =
@@ -448,7 +453,7 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
     final Offset position = render_box.localToGlobal(Offset.zero);
 
     const double thumb_size = 18.0;
-    const double thumb_radius = 9.0;
+    const double thumb_radius = LayoutConfig.radius_9;
     final double track_width = render_box.size.width - thumb_size;
     final double popup_left =
         position.dx + thumb_radius + (track_width * _drag_progress) - 20;
@@ -475,10 +480,13 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: LayoutConfig.space_8,
+              vertical: LayoutConfig.space_4,
+            ),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.75),
-              borderRadius: BorderRadius.circular(4),
+              color: ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone_bf222222,
+              borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -486,17 +494,17 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
                 Text(
                   percentage_text,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: ColorConstants.whiteColor,
                     fontSize: 12,
                     fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                   ),
                 ),
                 if (chapter_text.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: LayoutConfig.space_2),
                   Text(
                     chapter_text,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: ColorConstants.pages_read_widgets_navigation_bars_bottom_index_tone_ccffffff,
                       fontSize: 10,
                     ),
                   ),
@@ -506,7 +514,7 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
           ),
           CustomPaint(
             size: const Size(12, 6),
-            painter: _ArrowPainter(color: Colors.black87),
+            painter: _ArrowPainter(color: ColorConstants.pages_short_story_read_widgets_bottom_comment_bar_tone),
           ),
         ],
       ),

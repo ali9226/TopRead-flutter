@@ -21,6 +21,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:app/config/color_config.dart';
 
 class _Device extends DeviceInfo {
   @override
@@ -179,7 +180,7 @@ void main() {
         expect(login.right, lessThanOrEqualTo(width - 84));
         final image = await _capture(tester, boundary);
         final right_pixel = await _pixel(tester, image, width.toInt() - 8, 40);
-        expect(right_pixel, isNot(Colors.white));
+        expect(right_pixel, isNot(ColorConstants.whiteColor));
         expect(right_pixel.a, 1);
         expect(right_pixel.r, greaterThan(.35));
         expect(right_pixel.g, greaterThan(.25));
@@ -214,7 +215,7 @@ void main() {
       final right_pixel = await _pixel(tester, image, 450, 120);
       expect(
         right_pixel,
-        dark ? const Color(0xFF0D1117) : const Color(0xFFF6F7FB),
+        dark ? ColorConstants.test_components_fullbleed_surfaces_test_tone : ColorConstants.components_category_filter_category_filter_bar_tone_fff6f7fb,
       );
       image.dispose();
       expect(tester.takeException(), isNull);
@@ -244,7 +245,7 @@ void main() {
       final image = await _capture(tester, boundary);
       final right = await _pixel(tester, image, 450, 120);
       final center = await _pixel(tester, image, 210, 120);
-      expect(right, isNot(Colors.white));
+      expect(right, isNot(ColorConstants.whiteColor));
       expect(center, right);
       image.dispose();
       expect(tester.takeException(), isNull);

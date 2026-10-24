@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 
@@ -109,14 +110,14 @@ class TopBar extends StatelessWidget {
       child: AnimatedContainer(
         /// 背景显隐动画时长。
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(6),
+        padding: const EdgeInsets.all(LayoutConfig.space_6),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: scrolled
               ? (isDark
-                    ? Colors.white.withValues(alpha: 0.12)
-                    : Colors.black.withValues(alpha: 0.08))
-              : Colors.transparent,
+                    ? ColorConstants.components_fixed_bottom_navigation_widgets_night_panel_decor_tone
+                    : ColorConstants.components_fixed_bottom_navigation_style_tone)
+              : ColorConstants.transparent,
         ),
         child: Transform.rotate(
           /// 旋转 180 度使箭头朝左。
@@ -160,7 +161,7 @@ class TopBar extends StatelessWidget {
               ? ColorConstants.themeColor.withValues(alpha: 0.4)
               : ColorConstants.themeColor,
           borderRadius: BorderRadius.circular(
-            InterestPreferenceStyle.topBarButtonHeight / 2,
+            InterestPreferenceStyle.topBarButtonHeight / LayoutConfig.radius_2,
           ),
         ),
         child: isLoading
@@ -169,7 +170,7 @@ class TopBar extends StatelessWidget {
                 height: 16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.black,
+                  color: ColorConstants.lightTextColor,
                 ),
               )
             : AnimatedDefaultTextStyle(
@@ -180,8 +181,8 @@ class TopBar extends StatelessWidget {
                   fontSize: _resolve_action_font_size(context),
                   fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                   color: canSave
-                      ? Colors.black
-                      : Colors.black.withValues(alpha: 0.4),
+                      ? ColorConstants.lightTextColor
+                      : ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone,
                 ),
                 child: Text(easy.tr('interest_preference.save')),
               ),

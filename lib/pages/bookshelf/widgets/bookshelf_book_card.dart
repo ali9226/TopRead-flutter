@@ -7,6 +7,7 @@ import 'package:app/components/novel_cover/index.dart';
 import 'package:app/pages/bookshelf/style.dart';
 import 'package:app/stores/bookshelf_store.dart';
 import 'package:app/util/text/text_layout_measure.dart';
+import 'package:app/config/color_config.dart';
 
 /// 书籍卡片组件。
 ///
@@ -36,11 +37,11 @@ class BookshelfBookCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color title_color = is_dark ? Colors.white : const Color(0xFF2B2F36);
+    final Color title_color = is_dark ? ColorConstants.whiteColor : ColorConstants.pages_bookshelf_widgets_bookshelf_book_card_tone;
 
     final Color meta_text_color = is_dark
-        ? Colors.white.withValues(alpha: 0.52)
-        : const Color(0xFF6F7785);
+        ? ColorConstants.pages_bookshelf_widgets_bookshelf_book_card_tone_85ffffff
+        : ColorConstants.pages_bookshelf_widgets_bookshelf_book_card_tone_ff6f7785;
 
     final TextStyle meta_text_style = TextStyle(
       color: meta_text_color,
@@ -94,8 +95,8 @@ class BookshelfBookCard extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: is_dark
-                                  ? Colors.black.withValues(alpha: 0.45)
-                                  : Colors.white.withValues(alpha: 0.72),
+                                  ? ColorConstants.pages_bookshelf_widgets_bookshelf_book_card_tone_73222222
+                                  : ColorConstants.pages_bookshelf_widgets_bookshelf_book_card_tone_b8ffffff,
                               borderRadius: BorderRadius.circular(
                                 Style.tag_radius,
                               ),
@@ -104,12 +105,10 @@ class BookshelfBookCard extends StatelessWidget {
                               easy.tr(book_item.tag_key!),
                               style: TextStyle(
                                 color: is_dark
-                                    ? Colors.white
-                                    : const Color(0xFF23262D),
+                                    ? ColorConstants.whiteColor
+                                    : ColorConstants.pages_bookshelf_widgets_bookshelf_book_card_tone_ff23262d,
                                 fontSize: Style.tag_font_size,
-                                fontWeight: FontConfig.adjustedWeight(
-                                  FontWeight.w500,
-                                ),
+                                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                               ),
                             ),
                           ),

@@ -36,26 +36,22 @@ class BillEmptyState extends StatelessWidget {
       padding: Style.emptyCardPadding,
       decoration: BoxDecoration(
         /// 深浅色模式分别使用不同卡片底色。
-        color: isDark ? const Color(0xFF171926) : Colors.white,
+        color: isDark ? ColorConstants.nightHighlightColor : ColorConstants.whiteColor,
 
         /// 空状态卡片圆角。
         borderRadius: BorderRadius.circular(Style.emptyCardRadius),
         border: Border.all(
           /// 轻量描边让白色卡片在浅色背景里也有边界。
           color: isDark
-              ? Colors.white.withValues(alpha: Style.emptyCardBorderDarkOpacity)
-              : Colors.black.withValues(
-                  alpha: Style.emptyCardBorderLightOpacity,
-                ),
+              ? ColorConstants.whiteColor.withValues(alpha: Style.emptyCardBorderDarkOpacity)
+              : ColorConstants.lightTextColor.withValues(alpha: Style.emptyCardBorderLightOpacity),
         ),
         boxShadow: <BoxShadow>[
           BoxShadow(
             /// 用柔和阴影把空状态卡片从背景上托起来。
-            color: Colors.black.withValues(
-              alpha: isDark
+            color: ColorConstants.shadowColor.withValues(alpha: isDark
                   ? Style.emptyCardShadowDarkOpacity
-                  : Style.emptyCardShadowLightOpacity,
-            ),
+                  : Style.emptyCardShadowLightOpacity),
             blurRadius: Style.emptyCardShadowBlur,
             offset: const Offset(0, Style.emptyCardShadowOffsetY),
           ),
@@ -159,7 +155,7 @@ class _BillActionButton extends StatelessWidget {
     /// 实心和描边按钮使用不同背景色。
     final Color background = filled
         ? ColorConstants.themeColor
-        : (isDark ? const Color(0xFF171926) : Colors.white);
+        : (isDark ? ColorConstants.nightHighlightColor : ColorConstants.whiteColor);
 
     /// 实心按钮默认配深色文字；
     /// 描边按钮则跟随当前主题走普通文字色。
@@ -194,14 +190,10 @@ class _BillActionButton extends StatelessWidget {
               /// 实心按钮不再需要描边；
               /// 描边按钮则保留一层轻边界。
               color: filled
-                  ? Colors.transparent
+                  ? ColorConstants.transparent
                   : (isDark
-                        ? Colors.white.withValues(
-                            alpha: Style.actionButtonBorderDarkOpacity,
-                          )
-                        : Colors.black.withValues(
-                            alpha: Style.actionButtonBorderLightOpacity,
-                          )),
+                        ? ColorConstants.whiteColor.withValues(alpha: Style.actionButtonBorderDarkOpacity)
+                        : ColorConstants.lightTextColor.withValues(alpha: Style.actionButtonBorderLightOpacity)),
             ),
           ),
         ),

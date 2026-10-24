@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -38,8 +39,7 @@ class _ApplyViewState extends State<ApplyView> {
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _codeController = TextEditingController();
-  final TextEditingController _introductionController =
-      TextEditingController();
+  final TextEditingController _introductionController = TextEditingController();
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _codeFocusNode = FocusNode();
   final FocusNode _introductionFocusNode = FocusNode();
@@ -104,7 +104,9 @@ class _ApplyViewState extends State<ApplyView> {
     }
     setState(() => _isSendingCode = true);
     try {
-      final success = await _logic.send_verification_code(_emailController.text);
+      final success = await _logic.send_verification_code(
+        _emailController.text,
+      );
       if (success) _startCountdown();
     } finally {
       if (mounted) setState(() => _isSendingCode = false);
@@ -164,7 +166,7 @@ class _ApplyViewState extends State<ApplyView> {
         const SizedBox(height: Style.sectionSpacing),
 
         /// 验证码。
-        const SizedBox(height: 10),
+        const SizedBox(height: LayoutConfig.space_10),
         AuthFieldLabel(
           iconName: 'password',
           title: easy.tr('installation.verify_code'),
@@ -173,7 +175,7 @@ class _ApplyViewState extends State<ApplyView> {
         const SizedBox(height: Style.sectionSpacing),
 
         /// 自我介绍。
-        const SizedBox(height: 10),
+        const SizedBox(height: LayoutConfig.space_10),
         AuthFieldLabel(
           iconName: 'account',
           title: easy.tr('installation.introduction'),
@@ -191,11 +193,11 @@ class _ApplyViewState extends State<ApplyView> {
         ),
 
         /// 协议文字。
-        const SizedBox(height: 16),
+        const SizedBox(height: LayoutConfig.space_16),
         _buildAgreementText(),
 
         /// 底部留白。
-        const SizedBox(height: 40),
+        const SizedBox(height: LayoutConfig.space_40),
       ],
     );
   }
@@ -210,7 +212,7 @@ class _ApplyViewState extends State<ApplyView> {
       return Column(
         children: [
           const SizedBox(height: AuthPageStyle.brandTopSpacing),
-          const SizedBox(height: 30),
+          const SizedBox(height: LayoutConfig.space_30),
 
           /// Logo。
           Center(
@@ -223,10 +225,10 @@ class _ApplyViewState extends State<ApplyView> {
           ),
 
           /// 副标题（带装饰线）。
-          const SizedBox(height: 12),
+          const SizedBox(height: LayoutConfig.space_12),
           _buildSloganRow(isDark, textColor),
 
-          const SizedBox(height: 30),
+          const SizedBox(height: LayoutConfig.space_30),
         ],
       );
     });
@@ -254,7 +256,7 @@ class _ApplyViewState extends State<ApplyView> {
           ),
 
           /// 中间副标题文字。
-          const SizedBox(width: 12),
+          const SizedBox(width: LayoutConfig.space_12),
           Flexible(
             child: Text(
               easy.tr('installation.subtitle'),
@@ -271,7 +273,7 @@ class _ApplyViewState extends State<ApplyView> {
           ),
 
           /// 右侧渐变装饰线。
-          const SizedBox(width: 12),
+          const SizedBox(width: LayoutConfig.space_12),
           Container(
             width: AuthPageStyle.sloganWidth,
             height: AuthPageStyle.sloganHeight,
@@ -322,7 +324,9 @@ class _ApplyViewState extends State<ApplyView> {
                 width: 1,
               ),
             ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: LayoutConfig.space_14,
+            ),
           ),
         ),
       );
@@ -375,23 +379,25 @@ class _ApplyViewState extends State<ApplyView> {
                       width: 1,
                     ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: LayoutConfig.space_14,
+                  ),
                 ),
               ),
             ),
 
             /// 发送验证码按钮。
-            const SizedBox(width: 16),
+            const SizedBox(width: LayoutConfig.space_16),
             GestureDetector(
               onTap: (canSend && !_isSendingCode) ? _handleSendCode : null,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+                  horizontal: LayoutConfig.space_12,
+                  vertical: LayoutConfig.space_8,
                 ),
                 decoration: BoxDecoration(
                   color: ColorConstants.themeColor,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
                 ),
                 child: _isSendingCode
                     ? SizedBox(
@@ -456,7 +462,9 @@ class _ApplyViewState extends State<ApplyView> {
                 width: 1,
               ),
             ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: LayoutConfig.space_14,
+            ),
           ),
         ),
       );
@@ -470,7 +478,9 @@ class _ApplyViewState extends State<ApplyView> {
       final Color textColor = AuthTextStyle.textColor(isDark: isDark);
       return Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
+          padding: const EdgeInsets.symmetric(
+            horizontal: LayoutConfig.space_40,
+          ),
           child: RichText(
             textAlign: TextAlign.center,
             text: TextSpan(
@@ -482,9 +492,7 @@ class _ApplyViewState extends State<ApplyView> {
               ),
               children: [
                 TextSpan(text: easy.tr('installation.agreement_prefix')),
-                WidgetSpan(
-                  child: SizedBox(width: 5),
-                ),
+                WidgetSpan(child: SizedBox(width: LayoutConfig.space_5)),
                 TextSpan(
                   text: easy.tr('installation.agreement_link'),
                   style: TextStyle(

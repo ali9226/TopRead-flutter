@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
@@ -118,7 +119,7 @@ class AuthFieldLabel extends StatelessWidget {
             width: AuthPageStyle.fieldIconSize,
             height: AuthPageStyle.fieldIconSize,
           ),
-          const SizedBox(width: 7),
+          const SizedBox(width: LayoutConfig.space_7),
           Text(
             title,
             style: TextStyle(
@@ -219,7 +220,9 @@ class _AuthTextFieldState extends State<AuthTextField> {
                     width: 1,
                   ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: LayoutConfig.space_14,
+                ),
                 suffixIconConstraints: const BoxConstraints(
                   minWidth: 0,
                   minHeight: 0,
@@ -238,7 +241,9 @@ class _AuthTextFieldState extends State<AuthTextField> {
                             GestureDetector(
                               onTap: _clearText,
                               child: Padding(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.all(
+                                  LayoutConfig.space_8,
+                                ),
                                 child: SvgIcon(
                                   name: 'clear_02',
                                   color: AuthPageStyle.passwordIconColor,
@@ -251,7 +256,9 @@ class _AuthTextFieldState extends State<AuthTextField> {
                               GestureDetector(
                                 onTap: _toggleObscureText,
                                 child: Padding(
-                                  padding: const EdgeInsets.all(4),
+                                  padding: const EdgeInsets.all(
+                                    LayoutConfig.space_4,
+                                  ),
                                   child: SvgIcon(
                                     key: ValueKey(
                                       _obscureText ? 'show' : 'hide',
@@ -331,10 +338,12 @@ class AuthRememberRow extends StatelessWidget {
                       border: Border.all(
                         color: remember ? ColorConstants.themeColor : textColor,
                       ),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(
+                        LayoutConfig.radius_4,
+                      ),
                       color: remember
                           ? ColorConstants.themeColor
-                          : Colors.transparent,
+                          : ColorConstants.transparent,
                     ),
                     child: remember
                         ? Icon(
@@ -346,7 +355,7 @@ class AuthRememberRow extends StatelessWidget {
                           )
                         : null,
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: LayoutConfig.space_6),
                   Flexible(
                     child: Text(
                       easy.tr('login.remember_password'),
@@ -363,9 +372,9 @@ class AuthRememberRow extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: LayoutConfig.space_12),
           Padding(
-            padding: const EdgeInsets.only(right: 20),
+            padding: const EdgeInsets.only(right: LayoutConfig.space_20),
             child: GestureDetector(
               onTap: onTapForgotPassword,
               behavior: HitTestBehavior.translucent,
@@ -423,7 +432,7 @@ class AuthFooterAction extends StatelessWidget {
               fontWeight: AuthTextStyle.fontWeight,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: LayoutConfig.space_8),
           Semantics(
             button: true,
             enabled: enabled,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../style.dart';
+import 'package:app/config/color_config.dart';
+import 'package:app/config/layout_config.dart';
 
 /// 充值页骨架屏。
 ///
@@ -116,12 +118,12 @@ class _TopUpSkeletonCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF171926) : Colors.white,
+        color: isDark ? ColorConstants.nightHighlightColor : ColorConstants.whiteColor,
         borderRadius: BorderRadius.circular(Style.cardRadius),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.black.withValues(alpha: 0.04),
+              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff
+              : ColorConstants.components_paragraph_comment_sheet_widgets_comment_item_tone,
         ),
       ),
       padding: padding,
@@ -155,9 +157,9 @@ class _TopUpSkeletonBar extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.07)
-              : Colors.black.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(999),
+              ? ColorConstants.pages_bill_widgets_bill_loading_skeleton_tone
+              : ColorConstants.components_share_sheet_widgets_share_poster_card_tone_f222222,
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_pill),
         ),
       ),
     );

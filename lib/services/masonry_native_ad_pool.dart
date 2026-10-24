@@ -8,6 +8,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'package:app/components/recommend_book_card/style.dart';
 import 'package:app/config/ad_type_config.dart';
+import 'package:app/config/color_config.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/permission_request/admob_consent_permission_request.dart';
 import 'package:app/services/ad_impression_reporter.dart';
@@ -320,6 +321,7 @@ class MasonryNativeAdController extends ChangeNotifier {
         factoryId: 'masonryNativeAdCard',
         customOptions: <String, Object>{
           'isDark': is_dark,
+          'palette': ColorConstants.native_ad_palette(is_dark),
           'advertisementLabel': advertisement_label,
           'slotId': slot_id,
           'cardWidth': card_width,

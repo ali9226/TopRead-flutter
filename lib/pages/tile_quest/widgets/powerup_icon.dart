@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../game/models.dart';
 import 'scene_assets.dart';
+import 'package:app/config/color_config.dart';
 
 /// 精确裁切的原图自带高光与投影；运行时只缩放一次透明纹理。
 class QuestPowerupIcon extends StatelessWidget {
@@ -25,7 +26,7 @@ class QuestPowerupIcon extends StatelessWidget {
         TileQuestTool.remove => Icons.outbox_rounded,
       },
       size: size,
-      color: Colors.white,
+      color: ColorConstants.whiteColor,
     ),
   );
 }

@@ -1,8 +1,10 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import 'package:app/pages/short_story_read/style.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/config/color_config.dart';
 
 /// 错误状态组件。
 ///
@@ -15,11 +17,7 @@ class ErrorState extends StatelessWidget {
   /// 重试按钮点击回调。
   final VoidCallback on_retry;
 
-  const ErrorState({
-    super.key,
-    required this.is_dark,
-    required this.on_retry,
-  });
+  const ErrorState({super.key, required this.is_dark, required this.on_retry});
 
   @override
   Widget build(BuildContext context) {
@@ -43,12 +41,8 @@ class ErrorState extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
           /// 错误图标。
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: secondary_color,
-          ),
-          const SizedBox(height: 16),
+          Icon(Icons.error_outline, size: 64, color: secondary_color),
+          const SizedBox(height: LayoutConfig.space_16),
 
           /// 错误标题（国际化）。
           Text(
@@ -59,30 +53,27 @@ class ErrorState extends StatelessWidget {
               color: text_color,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: LayoutConfig.space_8),
 
           /// 错误描述（国际化）。
           Text(
             tr('short_story_read.load_failed_hint'),
-            style: TextStyle(
-              fontSize: 14,
-              color: secondary_color,
-            ),
+            style: TextStyle(fontSize: 14, color: secondary_color),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: LayoutConfig.space_24),
 
           /// 重试按钮（胶囊形状）。
           ElevatedButton(
             onPressed: on_retry,
             style: ElevatedButton.styleFrom(
               backgroundColor: button_color,
-              foregroundColor: Colors.white,
+              foregroundColor: ColorConstants.whiteColor,
               padding: const EdgeInsets.symmetric(
-                horizontal: 32,
-                vertical: 12,
+                horizontal: LayoutConfig.space_32,
+                vertical: LayoutConfig.space_12,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(LayoutConfig.radius_24),
               ),
             ),
             child: Text(

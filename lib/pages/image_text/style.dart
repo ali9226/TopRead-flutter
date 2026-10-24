@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/config/color_config.dart';
@@ -7,13 +8,14 @@ class Style {
   const Style._();
 
   /// 页面左右基础边距。
-  static const double page_horizontal_padding = 12;
+  static const double page_horizontal_padding =
+      LayoutConfig.page_horizontal_padding;
 
   /// 页面底部基础边距。
-  static const double page_bottom_padding = 28;
+  static const double page_bottom_padding = LayoutConfig.space_28;
 
   /// 标题卡片圆角。
-  static const double title_card_radius = 22;
+  static const double title_card_radius = LayoutConfig.radius_22;
 
   /// 标题字号。
   static const double title_font_size = 24;
@@ -25,13 +27,13 @@ class Style {
   static final FontWeight title_font_weight = FontConfig.adjustedWeight(FontWeight.w500);
 
   /// 内容卡片圆角。
-  static const double content_card_radius = 20;
+  static const double content_card_radius = LayoutConfig.radius_20;
 
   /// 文章标题与正文统一内容边距。
   static const EdgeInsets article_content_padding = EdgeInsets.fromLTRB(
-    1,
-    2,
-    1,
+    LayoutConfig.space_1,
+    LayoutConfig.space_2,
+    LayoutConfig.space_1,
     0,
   );
 
@@ -45,6 +47,18 @@ class Style {
   static const double loading_font_size = 14;
 
   /// 页面右上角装饰圆尺寸。
+  /// 右上光斑顶部偏移。
+  static const double decor_circle_one_top = -40;
+
+  /// 右上光斑右侧偏移。
+  static const double decor_circle_one_right = -24;
+
+  /// 左侧光斑顶部偏移。
+  static const double decor_circle_two_top = 120;
+
+  /// 左侧光斑左侧偏移。
+  static const double decor_circle_two_left = -36;
+
   static const double decor_circle_one_size = 220;
 
   /// 页面左侧装饰圆尺寸。
@@ -54,7 +68,7 @@ class Style {
   static const double decor_circle_opacity = 0.10;
 
   /// 标题区与内容区间距。
-  static const double title_to_content_spacing = 14;
+  static const double title_to_content_spacing = LayoutConfig.space_14;
 
   /// 回到顶部按钮触发阈值占屏高比。
   static const double back_to_top_threshold_ratio = 0.5;

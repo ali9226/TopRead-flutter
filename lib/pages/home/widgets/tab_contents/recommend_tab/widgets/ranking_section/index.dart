@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/models/story_item.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/widgets/ranking_section/style.dart';
@@ -100,7 +101,7 @@ class _RankingSectionState extends State<RankingSection> {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Padding(
-          padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
+          padding: const EdgeInsets.fromLTRB(0, 0, LayoutConfig.space_10, 0),
           child: _build_ranking_tab_bar(selected_sub_tab_index),
         ),
         Transform.translate(

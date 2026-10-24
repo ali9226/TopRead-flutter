@@ -468,8 +468,7 @@ void main() {
               final engine = TileQuestEngine(state);
               replay(engine, List<int>.of(state.certified_solution));
               expect(engine.state.status, TileQuestStatus.won);
-              if (difficulty >= TileQuestConfig.mandatory_tool_difficulty) {
-                expect(engine.state.tools_used, greaterThanOrEqualTo(1));
+              if (difficulty >= TileQuestConfig.trap_difficulty) {
                 expect(
                   engine.state.tools[TileQuestTool.remove],
                   lessThan(

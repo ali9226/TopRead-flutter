@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/components/svg_icon/index.dart';
@@ -33,17 +34,24 @@ class TopUpTypePickerSheet extends StatelessWidget {
       top: false,
       child: Container(
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF171A27) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          color: isDark ? ColorConstants.pages_top_up_record_index_tone : ColorConstants.whiteColor,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(LayoutConfig.radius_28),
+          ),
         ),
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
+        padding: const EdgeInsets.fromLTRB(
+          LayoutConfig.space_18,
+          LayoutConfig.space_18,
+          LayoutConfig.space_18,
+          LayoutConfig.space_24,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             buildDragHandle(),
-            const SizedBox(height: 18),
+            const SizedBox(height: LayoutConfig.space_18),
             buildTitle(),
-            const SizedBox(height: 12),
+            const SizedBox(height: LayoutConfig.space_12),
             ConstrainedBox(
               constraints: const BoxConstraints(
                 maxHeight: Style.typeDropdownMenuMaxHeight,
@@ -51,7 +59,8 @@ class TopUpTypePickerSheet extends StatelessWidget {
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: dataList.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                separatorBuilder: (_, _) =>
+                    const SizedBox(height: LayoutConfig.space_10),
                 itemBuilder: (BuildContext context, int index) {
                   final TransactionInquireTypeItem item = dataList[index];
                   final bool isSelected = selectedType?.id == item.id;
@@ -76,9 +85,9 @@ class TopUpTypePickerSheet extends StatelessWidget {
       height: 4,
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.16)
-            : Colors.black.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(999),
+            ? ColorConstants.components_reading_banner_slide_index_tone_29ffffff
+            : ColorConstants.pages_short_story_read_widgets_collapse_button_tone_1a222222,
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_pill),
       ),
     );
   }
@@ -122,8 +131,8 @@ class TopUpTypePickerSheet extends StatelessWidget {
                     Style.accentColor.withValues(alpha: isDark ? 0.12 : 0.05),
                   ]
                 : (isDark
-                      ? const <Color>[Color(0xFF171B28), Color(0xFF111420)]
-                      : const <Color>[Color(0xFFFFFCF2), Color(0xFFF7F6EF)]),
+                      ? const <Color>[ColorConstants.night_sheet_gradient_start, ColorConstants.night_sheet_gradient_end]
+                      : const <Color>[ColorConstants.pages_change_password_style_tone_fffffcf2, ColorConstants.pages_top_up_widgets_top_up_type_picker_sheet_tone_fff7f6ef]),
           ),
           borderRadius: BorderRadius.circular(Style.typeTileRadius),
           border: Border.all(
@@ -131,14 +140,14 @@ class TopUpTypePickerSheet extends StatelessWidget {
             color: isSelected
                 ? Style.accentColor
                 : (isDark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : Colors.black.withValues(alpha: 0.05)),
+                      ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+                      : ColorConstants.components_home_top_search_entry_index_tone),
           ),
         ),
         child: Row(
           children: <Widget>[
             buildIconWrap(isSelected: isSelected),
-            const SizedBox(width: 12),
+            const SizedBox(width: LayoutConfig.space_12),
             Expanded(
               child: Text(
                 getTopUpTypeDisplayText(item),
@@ -158,7 +167,7 @@ class TopUpTypePickerSheet extends StatelessWidget {
               color: isSelected
                   ? Style.accentColor
                   : (isDark
-                        ? Colors.white.withValues(alpha: 0.40)
+                        ? ColorConstants.pages_top_up_widgets_top_up_type_picker_sheet_tone
                         : ColorConstants.hintColor),
             ),
           ],
@@ -176,8 +185,8 @@ class TopUpTypePickerSheet extends StatelessWidget {
         color: isSelected
             ? Style.accentColor.withValues(alpha: 0.18)
             : (isDark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : Colors.black.withValues(alpha: 0.04)),
+                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+                  : ColorConstants.components_paragraph_comment_sheet_widgets_comment_item_tone),
       ),
       child: Center(
         child: SvgIcon(

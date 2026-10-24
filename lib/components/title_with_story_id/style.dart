@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
@@ -8,16 +9,16 @@ import 'package:app/config/font_config.dart';
 /// 避免魔法数字散落各处。
 class TitleWithStoryIdStyle {
   /// 徽标左侧与标题文字的间距。
-  static const double badge_left_spacing = 6;
+  static const double badge_left_spacing = LayoutConfig.space_6;
 
   /// 徽标水平内边距（胶囊左右留白）。
-  static const double badge_padding_horizontal = 8;
+  static const double badge_padding_horizontal = LayoutConfig.space_8;
 
   /// 徽标垂直内边距（胶囊上下留白）。
   static const double badge_padding_vertical = 3.5;
 
   /// 徽标圆角（取大值形成胶囊形，视觉更轻盈现代）。
-  static const double badge_border_radius = 100;
+  static const double badge_border_radius = LayoutConfig.radius_pill;
 
   /// 徽标描边宽度（接近发丝线的细描边）。
   static const double badge_border_width = 1;
@@ -65,10 +66,10 @@ class TitleWithStoryIdStyle {
   static const double badge_number_font_size_alphabetic = 10.5;
 
   /// "ID" 前缀与数字之间的间距。
-  static const double badge_prefix_spacing = 3;
+  static const double badge_prefix_spacing = LayoutConfig.space_3;
 
   /// 数字与分隔线、分隔线与图标之间的间距。
-  static const double badge_divider_spacing = 4;
+  static const double badge_divider_spacing = LayoutConfig.space_4;
 
   /// 图标尺寸。
   static const double badge_icon_size = 12;
@@ -80,14 +81,10 @@ class TitleWithStoryIdStyle {
   static const double badge_number_letter_spacing = 0.2;
 
   /// "ID" 前缀字重。
-  static final FontWeight badge_prefix_font_weight = FontConfig.adjustedWeight(
-    FontWeight.w500,
-  );
+  static final FontWeight badge_prefix_font_weight = FontConfig.adjustedWeight(FontWeight.w500);
 
   /// ID 数字字重（比前缀重一档，形成主次层级）。
-  static final FontWeight badge_number_font_weight = FontConfig.adjustedWeight(
-    FontWeight.w600,
-  );
+  static final FontWeight badge_number_font_weight = FontConfig.adjustedWeight(FontWeight.w600);
 
   /// 按压时的整体缩放比例（模拟 iOS 轻按回弹）。
   static const double pressed_scale = 0.94;
@@ -108,16 +105,16 @@ class TitleWithStoryIdStyle {
   static final Color copied_icon_color = ColorConstants.successColor;
 
   /// 替换封面按钮左侧间距。
-  static const double replace_button_left_spacing = 6;
+  static const double replace_button_left_spacing = LayoutConfig.space_6;
 
   /// 替换封面按钮水平内边距。
-  static const double replace_button_padding_horizontal = 8;
+  static const double replace_button_padding_horizontal = LayoutConfig.space_8;
 
   /// 替换封面按钮垂直内边距。
   static const double replace_button_padding_vertical = 3.5;
 
   /// 替换封面按钮圆角（胶囊形）。
-  static const double replace_button_border_radius = 100;
+  static const double replace_button_border_radius = LayoutConfig.radius_pill;
 
   /// 替换封面按钮描边宽度。
   static const double replace_button_border_width = 1;
@@ -151,7 +148,7 @@ class TitleWithStoryIdStyle {
   static const double replace_button_icon_size = 12;
 
   /// 替换封面按钮图标与文字间距。
-  static const double replace_button_icon_spacing = 3;
+  static const double replace_button_icon_spacing = LayoutConfig.space_3;
 
   /// 替换封面按钮加载圈线宽。
   static const double replace_button_loading_stroke_width = 1.5;

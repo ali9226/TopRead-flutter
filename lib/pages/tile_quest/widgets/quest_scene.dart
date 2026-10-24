@@ -1,4 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
+import 'package:app/config/layout_config.dart';
 import 'dart:collection';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -400,7 +401,7 @@ class _TileQuestSceneState extends State<TileQuestScene>
                   children: [
                     for (final tool in TileQuestTool.values) ...[
                       if (tool != TileQuestTool.values.first)
-                        const SizedBox(width: 10),
+                        const SizedBox(width: LayoutConfig.space_10),
                       Expanded(
                         child: QuestToolButton(
                           key: ValueKey('tile_quest_tool_${tool.name}'),

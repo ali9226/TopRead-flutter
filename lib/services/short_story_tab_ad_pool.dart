@@ -284,13 +284,14 @@ class ShortStoryTabAdController extends ChangeNotifier {
         factoryId: 'shortStoryNativeAdCard',
         customOptions: <String, Object>{
           'isDark': is_dark,
+          'palette': ColorConstants.native_ad_palette(
+            is_dark,
+            tag_color: tag_color,
+          ),
           'advertisementLabel': advertisement_label,
           'slotId': slot_id,
           'cardWidth': card_width,
           'layoutToken': generation,
-          'tagColorRed': (tag_color.r * 255).round(),
-          'tagColorGreen': (tag_color.g * 255).round(),
-          'tagColorBlue': (tag_color.b * 255).round(),
         },
         request: const AdRequest(),
         nativeAdOptions: NativeAdOptions(

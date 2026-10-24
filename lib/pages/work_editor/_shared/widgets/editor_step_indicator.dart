@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
@@ -36,7 +37,12 @@ class EditorStepIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: AuthorStyle.surface(is_dark),
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 15),
+      padding: const EdgeInsets.fromLTRB(
+        LayoutConfig.space_18,
+        LayoutConfig.space_12,
+        LayoutConfig.space_18,
+        LayoutConfig.space_15,
+      ),
       child: WindowContentLayout(
         expand_height: false,
         child: Row(
@@ -93,19 +99,19 @@ class EditorStepIndicator extends StatelessWidget {
                                     ? const Icon(
                                         Icons.close_rounded,
                                         size: 15,
-                                        color: Colors.white,
+                                        color: ColorConstants.whiteColor,
                                       )
                                     : is_active && index < current_step
                                     ? const Icon(
                                         Icons.check_rounded,
                                         size: 15,
-                                        color: Color(0xFF1A1A18),
+                                        color: ColorConstants.pages_author_center_widgets_creator_empty_state_tone,
                                       )
                                     : Text(
                                         '${index + 1}',
                                         style: TextStyle(
                                           color: is_active
-                                              ? const Color(0xFF1A1A18)
+                                              ? ColorConstants.pages_author_center_widgets_creator_empty_state_tone
                                               : AuthorStyle.secondary_text(
                                                   is_dark,
                                                 ),

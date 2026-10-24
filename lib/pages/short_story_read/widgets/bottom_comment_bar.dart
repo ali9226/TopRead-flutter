@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/reader_bottom_action/index.dart';
 import 'package:app/components/reader_bottom_action/style.dart';
 import 'package:app/components/reader_action_icon/index.dart';
@@ -236,8 +237,8 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
 
     /// 滑块阴影颜色。
     final Color thumb_shadow_color = widget.is_dark
-        ? Colors.black.withValues(alpha: 0.4)
-        : Colors.black.withValues(alpha: 0.15);
+        ? ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone
+        : ColorConstants.pages_home_widgets_tab_bar_skeleton_index_tone_26222222;
 
     /// 文字字号。
     final double font_size = is_cjk
@@ -353,7 +354,7 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
           behavior: HitTestBehavior.opaque,
           child: Container(
             height: ShortStoryReadStyle.progress_bar_height,
-            color: Colors.transparent,
+            color: ColorConstants.transparent,
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 /// 滑块半径。
@@ -537,10 +538,12 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: ShortStoryReadStyle.progress_popup_padding,
-              vertical: ShortStoryReadStyle.progress_popup_padding / 2,
+              vertical:
+                  ShortStoryReadStyle.progress_popup_padding /
+                  LayoutConfig.space_2,
             ),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.75),
+              color: ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone_bf222222,
               borderRadius: BorderRadius.circular(
                 ShortStoryReadStyle.progress_popup_radius,
               ),
@@ -548,7 +551,7 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
             child: Text(
               percentage_text,
               style: TextStyle(
-                color: Colors.white,
+                color: ColorConstants.whiteColor,
                 fontSize: 12,
                 fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
               ),
@@ -561,7 +564,7 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
               ShortStoryReadStyle.progress_popup_arrow_size * 2,
               ShortStoryReadStyle.progress_popup_arrow_size,
             ),
-            painter: _ArrowPainter(color: Colors.black87),
+            painter: _ArrowPainter(color: ColorConstants.pages_short_story_read_widgets_bottom_comment_bar_tone),
           ),
         ],
       ),

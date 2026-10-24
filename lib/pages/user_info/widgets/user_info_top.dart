@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'dart:io';
 import 'dart:math';
@@ -236,7 +237,7 @@ class _UserInfoTopState extends State<UserInfoTop>
                       bottom: false,
                       child: Padding(
                         padding: EdgeInsets.only(
-                          top: statusBarHeight + 20,
+                          top: statusBarHeight + LayoutConfig.space_20,
                           bottom: Style.bottomPadding,
                         ),
                         child: Obx(() {
@@ -258,21 +259,19 @@ class _UserInfoTopState extends State<UserInfoTop>
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: isDark
-                                  ? const Color(
-                                      0xFF8DB7FF,
-                                    ).withValues(alpha: 0.22)
-                                  : Colors.white.withValues(alpha: 0.18),
+                                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.22)
+                                  : ColorConstants.components_image_source_sheet_index_tone,
                               border: Border.all(
                                 color: isDark
-                                    ? const Color(
-                                        0xFF8DB7FF,
-                                      ).withValues(alpha: 0.16)
-                                    : Colors.white.withValues(alpha: 0.34),
+                                    ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.16)
+                                    : ColorConstants.pages_top_up_widgets_top_up_hero_card_tone_57ffffff,
                               ),
                             ),
                             alignment: Alignment.center,
                             child: Padding(
-                              padding: const EdgeInsets.all(5),
+                              padding: const EdgeInsets.all(
+                                LayoutConfig.space_5,
+                              ),
                               child: isDark
                                   ? Container(
                                       width: Style.avatarSize,
@@ -290,7 +289,7 @@ class _UserInfoTopState extends State<UserInfoTop>
                                         name: "logo",
                                         width: Style.logoSize,
                                         height: Style.logoSize,
-                                        color: Colors.white,
+                                        color: ColorConstants.whiteColor,
                                       ),
                                     )
                                   : Container(
@@ -298,9 +297,7 @@ class _UserInfoTopState extends State<UserInfoTop>
                                       height: Style.avatarSize,
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
-                                        color: Colors.white.withValues(
-                                          alpha: 0.92,
-                                        ),
+                                        color: ColorConstants.pages_user_info_widgets_user_info_top_tone_ebffffff,
                                       ),
                                       alignment: Alignment.center,
                                       child: SvgIcon(
@@ -320,16 +317,12 @@ class _UserInfoTopState extends State<UserInfoTop>
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: isDark
-                                  ? const Color(
-                                      0xFF8DB7FF,
-                                    ).withValues(alpha: 0.22)
-                                  : Colors.white.withValues(alpha: 0.18),
+                                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.22)
+                                  : ColorConstants.components_image_source_sheet_index_tone,
                               border: Border.all(
                                 color: isDark
-                                    ? const Color(
-                                        0xFF8DB7FF,
-                                      ).withValues(alpha: 0.16)
-                                    : Colors.white.withValues(alpha: 0.34),
+                                    ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.16)
+                                    : ColorConstants.pages_top_up_widgets_top_up_hero_card_tone_57ffffff,
                               ),
                             ),
                             alignment: Alignment.center,
@@ -350,10 +343,8 @@ class _UserInfoTopState extends State<UserInfoTop>
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: isDark
-                                      ? const Color(
-                                          0xFF8DB7FF,
-                                        ).withValues(alpha: 0.25)
-                                      : Colors.white.withValues(alpha: 0.45),
+                                      ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.25)
+                                      : ColorConstants.pages_change_nickname_index_tone,
                                   width: 2,
                                 ),
                               ),
@@ -371,9 +362,7 @@ class _UserInfoTopState extends State<UserInfoTop>
                                         child: Container(
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
-                                            color: Colors.black.withOpacity(
-                                              0.4,
-                                            ),
+                                            color: ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone,
                                           ),
                                           child: Center(
                                             child: SizedBox(
@@ -381,9 +370,8 @@ class _UserInfoTopState extends State<UserInfoTop>
                                               height: 28,
                                               child: CircularProgressIndicator(
                                                 strokeWidth: 3,
-                                                color: Colors.white,
-                                                backgroundColor: Colors.white
-                                                    .withOpacity(0.3),
+                                                color: ColorConstants.whiteColor,
+                                                backgroundColor: ColorConstants.components_authorized_login_apple_review_index_tone_4cffffff,
                                               ),
                                             ),
                                           ),
@@ -401,16 +389,12 @@ class _UserInfoTopState extends State<UserInfoTop>
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: isDark
-                                    ? const Color(
-                                        0xFF8DB7FF,
-                                      ).withValues(alpha: 0.22)
-                                    : Colors.white.withValues(alpha: 0.18),
+                                    ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.22)
+                                    : ColorConstants.components_image_source_sheet_index_tone,
                                 border: Border.all(
                                   color: isDark
-                                      ? const Color(
-                                          0xFF8DB7FF,
-                                        ).withValues(alpha: 0.25)
-                                      : Colors.white.withValues(alpha: 0.45),
+                                      ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.25)
+                                      : ColorConstants.pages_change_nickname_index_tone,
                                   width: 2,
                                 ),
                               ),

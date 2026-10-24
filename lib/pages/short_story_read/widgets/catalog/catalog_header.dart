@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -51,7 +52,12 @@ class CatalogHeader extends StatelessWidget {
       children: <Widget>[
         BottomSheetDragHandle(is_dark: is_dark),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+          padding: const EdgeInsets.fromLTRB(
+            LayoutConfig.space_20,
+            LayoutConfig.space_16,
+            LayoutConfig.space_12,
+            LayoutConfig.space_12,
+          ),
           child: Row(
             children: <Widget>[
               /// 标题文字。
@@ -67,17 +73,18 @@ class CatalogHeader extends StatelessWidget {
               ),
 
               /// 关闭按钮。
-              GestureDetector(
-                onTap: on_close,
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: SvgPicture.asset(
-                    'assets/svg/close.svg',
-                    width: 16,
-                    height: 16,
-                    colorFilter: ColorFilter.mode(icon_color, BlendMode.srcIn),
-                  ),
+              IconButton(
+                onPressed: on_close,
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                constraints: const BoxConstraints(
+                  minWidth: ShortStoryReadStyle.catalog_close_target,
+                  minHeight: ShortStoryReadStyle.catalog_close_target,
+                ),
+                icon: SvgPicture.asset(
+                  'assets/svg/close.svg',
+                  width: ShortStoryReadStyle.catalog_close_icon_size,
+                  height: ShortStoryReadStyle.catalog_close_icon_size,
+                  colorFilter: ColorFilter.mode(icon_color, BlendMode.srcIn),
                 ),
               ),
             ],

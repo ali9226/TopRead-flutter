@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'dart:async';
 import 'dart:ui';
@@ -95,7 +96,7 @@ class _BookshelfPageState extends State<BookshelfPage>
       /// 页面背景颜色。
       final Color background_color = is_dark
           ? ColorConstants.nightBackgroundColor
-          : const Color(0xFFF6F7FB);
+          : ColorConstants.components_category_filter_category_filter_bar_tone_fff6f7fb;
 
       /// 主标题颜色。
       final Color title_color = is_dark
@@ -146,9 +147,7 @@ class _BookshelfPageState extends State<BookshelfPage>
                                     style: TextStyle(
                                       color: title_color,
                                       fontSize: Style.title_font_size,
-                                      fontWeight: FontConfig.adjustedWeight(
-                                        FontWeight.w500,
-                                      ),
+                                      fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                                     ),
                                   ),
                                   const SizedBox(
@@ -182,12 +181,13 @@ class _BookshelfPageState extends State<BookshelfPage>
                                 controller: _tab_controller,
                                 isScrollable: true,
                                 tabAlignment: TabAlignment.start,
-                                dividerColor: Colors.transparent,
+                                dividerColor: ColorConstants.transparent,
                                 indicatorSize: TabBarIndicatorSize.label,
                                 labelPadding: Style.tab_label_padding,
                                 indicator: UnderlineTabIndicator(
                                   borderRadius: BorderRadius.circular(
-                                    Style.tab_indicator_height / 2,
+                                    Style.tab_indicator_height /
+                                        LayoutConfig.radius_2,
                                   ),
                                   borderSide: BorderSide(
                                     color: ColorConstants.themeColor,

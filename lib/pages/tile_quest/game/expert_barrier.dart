@@ -45,27 +45,27 @@ class TileQuestExpertBarrier {
 
   int get core_tile_count => front_ids.length + partner_ids.length;
 
-  static List<int> front_types_for_difficulty(int difficulty) =>
-      difficulty == 10
+  static List<int> front_types_for_difficulty(num difficulty) =>
+      difficulty >= 10
       ? front_types
       : difficulty >= TileQuestConfig.mandatory_tool_difficulty
       ? tool_front_types
       : const [];
 
-  static List<int> partner_types_for_difficulty(int difficulty) =>
-      difficulty == 10
+  static List<int> partner_types_for_difficulty(num difficulty) =>
+      difficulty >= 10
       ? partner_types
       : difficulty >= TileQuestConfig.mandatory_tool_difficulty
       ? tool_partner_types
       : const [];
 
-  static int type_count_for_difficulty(int difficulty) => difficulty == 10
+  static int type_count_for_difficulty(num difficulty) => difficulty >= 10
       ? type_count
       : difficulty >= TileQuestConfig.mandatory_tool_difficulty
       ? tool_type_count
       : 0;
 
-  static int tile_count_for_difficulty(int difficulty) => difficulty == 10
+  static int tile_count_for_difficulty(num difficulty) => difficulty >= 10
       ? tile_count
       : difficulty >= TileQuestConfig.mandatory_tool_difficulty
       ? tool_tile_count
@@ -213,10 +213,19 @@ class TileQuestExpertBarrier {
         invalid();
       }
     }
-    for (final type in actual_types) {
-      if (state.tiles.where((tile) => tile.type == type).length != 3) {
-        invalid();
+    // 核心图案允许在普通区出现，但每种总张数必须是 3 的倍数，且普通区的
+    // 副本必须先于暗坑首牌被强制清空（都是首牌的遮挡祖先）——暗坑激活时
+    // 外援为零、槽内零残留，容量证明不受影响。
+    for (final type in actual_types.toSet()) {
+      final copies = state.tiles.where((tile) => tile.type == type).length;
+      if (copies < 3 || copies % 3 != 0) invalid();
+    }
+    for (final tile in state.tiles) {
+      if (!actual_types.contains(tile.type)) continue;
+      if (front_ids.contains(tile.id) || partner_ids.contains(tile.id)) {
+        continue;
       }
+      if (!depends_on(front_ids.first, tile.id)) invalid();
     }
   }
 

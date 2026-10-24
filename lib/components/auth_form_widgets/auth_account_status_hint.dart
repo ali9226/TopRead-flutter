@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
@@ -32,7 +33,11 @@ class AuthAccountStatusHint extends StatelessWidget {
       curve: Curves.easeInOut,
       child: show
           ? Padding(
-              padding: const EdgeInsets.only(top: 8, left: 20, right: 20),
+              padding: const EdgeInsets.only(
+                top: LayoutConfig.space_8,
+                left: LayoutConfig.space_20,
+                right: LayoutConfig.space_20,
+              ),
               child: Row(
                 children: [
                   Icon(
@@ -44,7 +49,7 @@ class AuthAccountStatusHint extends StatelessWidget {
                         ? ColorConstants.dangerColor
                         : ColorConstants.successColor,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: LayoutConfig.space_4),
                   Expanded(
                     child: Text(
                       message,

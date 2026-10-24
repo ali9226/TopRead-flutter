@@ -74,6 +74,8 @@ class _FeedbackWork implements TileQuestWorkService {
     required int seed,
     required int unlocked_level,
     String? challenge_id,
+    int? layout_seed,
+    num? difficulty,
   }) async => TileQuestState(
     tiles: <TileQuestTile>[
       for (var id = 0; id < types.length; id++)

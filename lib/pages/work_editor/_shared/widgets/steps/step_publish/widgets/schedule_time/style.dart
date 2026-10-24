@@ -1,5 +1,6 @@
 // ignore_for_file: constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
 
@@ -9,13 +10,13 @@ class ScheduleTimeStyle {
 
   static const double sheet_max_width = 560;
   static const double sheet_height_factor = .92;
-  static const double sheet_radius = 28;
-  static const double card_radius = 18;
-  static const double sheet_padding = 22;
-  static const double card_padding = 16;
-  static const double section_gap = 20;
-  static const double small_gap = 8;
-  static const double icon_size = 22;
+  static const double sheet_radius = LayoutConfig.radius_28;
+  static const double card_radius = LayoutConfig.radius_18;
+  static const double sheet_padding = LayoutConfig.space_22;
+  static const double card_padding = LayoutConfig.space_16;
+  static const double section_gap = LayoutConfig.space_20;
+  static const double small_gap = LayoutConfig.space_8;
+  static const double icon_size = LayoutConfig.icon_compact;
   static const double badge_size = 52;
   static const double button_height = 50;
   static const double wheel_height = 200;

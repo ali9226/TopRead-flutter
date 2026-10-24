@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/config/layout_config.dart';
+import 'package:app/config/color_config.dart';
 
 /// 兴趣偏好页面样式常量。
 ///
@@ -12,22 +13,23 @@ class InterestPreferenceStyle {
   // ==================== 页面布局 ========================
 
   /// 页面水平内边距，与首页、user_info 等页面保持一致。
-  static const double pageHorizontalPadding = LayoutConfig.page_horizontal_padding;
+  static const double pageHorizontalPadding =
+      LayoutConfig.page_horizontal_padding;
 
   /// 页面底部安全区内边距。
-  static const double pageBottomPadding = 32.0;
+  static const double pageBottomPadding = LayoutConfig.space_32;
 
   /// 顶部导航栏高度（含安全区）。
   static const double topBarHeight = 56.0;
 
   /// 顶部栏保存与跳过按钮之间的间距。
-  static const double topBarActionSpacing = 4.0;
+  static const double topBarActionSpacing = LayoutConfig.space_4;
 
   /// 顶部栏保存按钮高度。
   static const double topBarButtonHeight = 32.0;
 
   /// 保存按钮水平内边距。
-  static const double saveButtonHorizontalPadding = 16.0;
+  static const double saveButtonHorizontalPadding = LayoutConfig.space_16;
 
   /// 顶部操作按钮 CJK 字号。
   static const double topBarActionFontSizeCjk = 14.0;
@@ -39,10 +41,10 @@ class InterestPreferenceStyle {
   static const double skipButtonMinWidth = 44.0;
 
   /// 跳过按钮最小高度。
-  static const double skipButtonMinHeight = 44.0;
+  static const double skipButtonMinHeight = LayoutConfig.compact_control_height;
 
   /// 跳过按钮水平内边距。
-  static const double skipButtonHorizontalPadding = 8.0;
+  static const double skipButtonHorizontalPadding = LayoutConfig.space_8;
 
   // ==================== 页面标题区 ========================
 
@@ -50,20 +52,16 @@ class InterestPreferenceStyle {
   static const double titleFontSize = 24.0;
 
   /// 页面主标题字重。
-  static final FontWeight titleFontWeight = FontConfig.adjustedWeight(
-    FontWeight.w500,
-  );
+  static final FontWeight titleFontWeight = FontConfig.adjustedWeight(FontWeight.w500);
 
   /// 页面主标题底部间距。
-  static const double titleBottomSpacing = 6.0;
+  static const double titleBottomSpacing = LayoutConfig.space_6;
 
   /// 页面副标题字号。
   static const double subtitleFontSize = 13.0;
 
   /// 页面副标题字重。
-  static final FontWeight subtitleFontWeight = FontConfig.adjustedWeight(
-    FontWeight.w400,
-  );
+  static final FontWeight subtitleFontWeight = FontConfig.adjustedWeight(FontWeight.w400);
 
   // ==================== 分组区 ========================
 
@@ -71,26 +69,24 @@ class InterestPreferenceStyle {
   static const double sectionTitleSize = 16.0;
 
   /// 分组标题字重。
-  static final FontWeight sectionTitleWeight = FontConfig.adjustedWeight(
-    FontWeight.w500,
-  );
+  static final FontWeight sectionTitleWeight = FontConfig.adjustedWeight(FontWeight.w500);
 
   /// 分组标题右侧提示字号。
   static const double sectionHintSize = 12.0;
 
   /// 分组标题底部间距。
-  static const double sectionTitleBottomSpacing = 14.0;
+  static const double sectionTitleBottomSpacing = LayoutConfig.space_14;
 
   /// 分组之间间距。
-  static const double sectionSpacing = 32.0;
+  static const double sectionSpacing = LayoutConfig.space_32;
 
   /// 标签圆角。
-  static const double chipBorderRadius = 10.0;
+  static const double chipBorderRadius = LayoutConfig.radius_10;
 
   /// 标签水平内边距（CJK 语系）。
   ///
   /// 中文标签短小紧凑，16px 内边距视觉舒适。
-  static const double chipHorizontalPaddingCjk = 16.0;
+  static const double chipHorizontalPaddingCjk = LayoutConfig.space_16;
 
   /// 标签水平内边距（非 CJK 语系）。
   ///
@@ -106,10 +102,10 @@ class InterestPreferenceStyle {
   static const double chipFontSizeAlphabetic = 13.0;
 
   /// 标签之间水平间距。
-  static const double chipSpacing = 10.0;
+  static const double chipSpacing = LayoutConfig.space_10;
 
   /// 标签之间垂直间距。
-  static const double chipRunSpacing = 12.0;
+  static const double chipRunSpacing = LayoutConfig.space_12;
 
   // ==================== 自适应列数 ========================
 
@@ -153,35 +149,35 @@ class InterestPreferenceStyle {
 
   /// 页面背景色。
   static Color backgroundColor({required bool isDark}) {
-    return isDark ? const Color(0xFF12141F) : const Color(0xFFF5F6FA);
+    return isDark ? ColorConstants.pages_interest_preference_style_tone : ColorConstants.pages_interest_preference_style_tone_fff5f6fa;
   }
 
   /// 页面标题文字色。
   static Color titleColor({required bool isDark}) {
-    return isDark ? Colors.white : const Color(0xFF1A1A1A);
+    return isDark ? ColorConstants.whiteColor : ColorConstants.components_cute_mascot_index_tone_ff1a1a1a;
   }
 
   /// 页面副标题文字色。
   static Color subtitleColor({required bool isDark}) {
     return isDark
-        ? Colors.white.withValues(alpha: 0.5)
-        : const Color(0xFF999999);
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_80ffffff
+        : ColorConstants.customer_service_sheet_style_time_color_light;
   }
 
   /// 分组标题文字色。
   static Color sectionTitleColor({required bool isDark}) {
-    return isDark ? Colors.white : const Color(0xFF1A1A1A);
+    return isDark ? ColorConstants.whiteColor : ColorConstants.components_cute_mascot_index_tone_ff1a1a1a;
   }
 
   /// 分组提示文字色。
   static Color sectionHintColor({required bool isDark}) {
     return isDark
-        ? Colors.white.withValues(alpha: 0.4)
-        : const Color(0xFFBBBBBB);
+        ? ColorConstants.pages_top_up_widgets_top_up_type_picker_sheet_tone
+        : ColorConstants.components_load_more_footer_index_tone_ffbbbbbb;
   }
 
   /// 顶部导航栏返回按钮颜色。
   static Color topBarIconColor({required bool isDark}) {
-    return isDark ? Colors.white : const Color(0xFF1A1A1A);
+    return isDark ? ColorConstants.whiteColor : ColorConstants.components_cute_mascot_index_tone_ff1a1a1a;
   }
 }

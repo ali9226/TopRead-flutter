@@ -1,6 +1,6 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/color_config.dart';
-import 'package:app/util/color_util.dart';
 
 /// 认证页公共样式。
 class AuthPageStyle {
@@ -8,18 +8,18 @@ class AuthPageStyle {
 
   static const double logoSize = 90;
   static const double logoHeightSize = 90;
-  static const double fieldIconSize = 22;
+  static const double fieldIconSize = LayoutConfig.icon_compact;
   static const double passwordIconSize = 26;
   static const double rememberSize = 16;
   static const double sloganWidth = 50;
   static const double sloganHeight = 2;
   static const EdgeInsets contentPadding = EdgeInsets.zero;
-  static const double fieldHorizontalPadding = 20;
+  static const double fieldHorizontalPadding = LayoutConfig.space_20;
   static const double topHeaderHeight = 92;
-  static const double brandTopSpacing = 10;
+  static const double brandTopSpacing = LayoutConfig.space_10;
   static const double brandTranslateY = -80;
 
-  static final Color passwordIconColor = hexToColor('#c8c9cc');
+  static final Color passwordIconColor = ColorConstants.auth_page_style_password_icon_color;
 
   static final List<AuthBackgroundBubble> loginBubbles = [
     AuthBackgroundBubble(
@@ -47,7 +47,7 @@ class AuthPageStyle {
       right: -25,
       lightOpacity: 0.04,
       darkOpacity: 0.10,
-      color: Colors.black,
+      color: ColorConstants.lightTextColor,
     ),
   ];
 
@@ -77,32 +77,30 @@ class AuthPageStyle {
       left: -18,
       lightOpacity: 0.04,
       darkOpacity: 0.10,
-      color: Colors.black,
+      color: ColorConstants.lightTextColor,
     ),
   ];
 
   static List<Color> backgroundGradient(bool isDark) {
     if (isDark) {
-      return const [Color(0xFF1A1D2C), Color(0xFF12121C), Color(0xFF0D0E14)];
+      return const [ColorConstants.night_gradient_start, ColorConstants.nightBackgroundColor, ColorConstants.night_gradient_end];
     }
 
-    return const [Color(0xFFFFF6D6), Color(0xFFF8F6EF), Color(0xFFFFFFFF)];
+    return const [ColorConstants.password_icon_color_fffff6d6, ColorConstants.password_icon_color_fff8f6ef, ColorConstants.whiteColor];
   }
 
   static Color primaryTextColor(bool isDark) {
-    return isDark
-        ? Colors.white
-        : ColorConstants.nightBackgroundColor;
+    return isDark ? ColorConstants.whiteColor : ColorConstants.nightBackgroundColor;
   }
 
   static Color hintColor(bool isDark) {
-    return isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+    return isDark ? ColorConstants.components_auth_page_style_tone : ColorConstants.components_auth_page_style_tone_ff757575;
   }
 
   static Color inputBorderColor(bool isDark) {
     return isDark
         ? ColorConstants.nightTextColor
-        : Colors.black.withValues(alpha: 0.2);
+        : ColorConstants.components_cute_mascot_index_tone_33222222;
   }
 
   static BoxDecoration sloganGradientBar({

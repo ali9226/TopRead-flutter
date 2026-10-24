@@ -80,53 +80,64 @@ class TileQuestLayoutPatterns {
         depth,
       for (var depth = preferred_depth - 1; depth >= 1; depth--) depth,
     ];
+
+    List<TileQuestTile>? build(int main_count, int auxiliary_count, int depth) {
+      final auxiliary_layers = _auxiliary_layers(
+        auxiliary_layout,
+        auxiliary_count,
+        depth,
+      );
+      final counts = _layer_counts(
+        main_count,
+        footprints,
+        cap_count: cap_count,
+      );
+      if (counts == null) return null;
+      final tiles = <TileQuestTile>[];
+      for (var layer = 0; layer < footprints.length; layer++) {
+        for (final point in footprints[layer].take(counts[layer])) {
+          // Core is a logical depth basin, not necessarily the screen center.
+          final core = peaks.any(
+            (peak) =>
+                (point.x + .5 - peak.x).abs() <= 1 &&
+                (point.y + .5 - peak.y).abs() <= 1,
+          );
+          _add(tiles, point, layer, core ? 'core' : 'main');
+        }
+      }
+      for (var layer = 0; layer < auxiliary_layers.length; layer++) {
+        for (final slot in auxiliary_layers[layer]) {
+          _add(tiles, slot, layer, slot.y == 0 ? 'side_top' : 'side_bottom');
+        }
+      }
+      return tiles;
+    }
+
+    bool acceptable(List<TileQuestTile> tiles) {
+      final opening = TileQuestGeometry(
+        tiles,
+      ).refresh(tiles).where((tile) => !tile.is_blocked).length;
+      return opening >= TileQuestConfig.minimum_opening_tiles &&
+          opening <= TileQuestConfig.maximum_opening_tiles &&
+          opening % 3 == 0;
+    }
+
+    int stock_of(int auxiliary_count, int depth) => _auxiliary_layers(
+      auxiliary_layout,
+      auxiliary_count,
+      depth,
+    ).fold<int>(0, (sum, layer) => sum + layer.length);
+
     for (final depth in depths) {
       for (
         var auxiliary_count = maximum_auxiliary_stacks;
         auxiliary_count >= minimum_auxiliary_stacks;
         auxiliary_count--
       ) {
-        final auxiliary_layers = _auxiliary_layers(
-          auxiliary_layout,
-          auxiliary_count,
-          depth,
-        );
-        final auxiliary_stock = auxiliary_layers.fold<int>(
-          0,
-          (sum, layer) => sum + layer.length,
-        );
-        final main_count = profile.tile_count - auxiliary_stock;
-        final counts = _layer_counts(
-          main_count,
-          footprints,
-          cap_count: cap_count,
-        );
-        if (counts == null) continue;
-        final tiles = <TileQuestTile>[];
-        for (var layer = 0; layer < footprints.length; layer++) {
-          for (final point in footprints[layer].take(counts[layer])) {
-            // Core is a logical depth basin, not necessarily the screen center.
-            final core = peaks.any(
-              (peak) =>
-                  (point.x + .5 - peak.x).abs() <= 1 &&
-                  (point.y + .5 - peak.y).abs() <= 1,
-            );
-            _add(tiles, point, layer, core ? 'core' : 'main');
-          }
-        }
-        for (var layer = 0; layer < auxiliary_layers.length; layer++) {
-          for (final slot in auxiliary_layers[layer]) {
-            _add(tiles, slot, layer, slot.y == 0 ? 'side_top' : 'side_bottom');
-          }
-        }
-        final opening = TileQuestGeometry(
-          tiles,
-        ).refresh(tiles).where((tile) => !tile.is_blocked).length;
-        if (opening >= TileQuestConfig.minimum_opening_tiles &&
-            opening <= TileQuestConfig.maximum_opening_tiles &&
-            opening % 3 == 0) {
-          return tiles;
-        }
+        final main_count =
+            profile.tile_count - stock_of(auxiliary_count, depth);
+        final tiles = build(main_count, auxiliary_count, depth);
+        if (tiles != null && acceptable(tiles)) return tiles;
       }
     }
     return null;

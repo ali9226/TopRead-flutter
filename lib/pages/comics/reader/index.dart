@@ -484,7 +484,8 @@ class _ComicReaderPageState extends State<ComicReaderPage>
   );
 
   Widget _build_canvas(BuildContext context, ComicReading? reading) {
-    if (_logic.loading || reading == null || _logic.error != null) {
+    if (_logic.loading) return const ComicReaderSkeleton();
+    if (reading == null || _logic.error != null) {
       return Center(
         child: ComicsEmptyState(
           loading: _logic.loading,

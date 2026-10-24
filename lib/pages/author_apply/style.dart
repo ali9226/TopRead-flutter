@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/auth_page/style.dart';
 import 'package:app/config/color_config.dart';
@@ -38,7 +39,7 @@ class Style {
       right: -20,
       lightOpacity: 0.04,
       darkOpacity: 0.10,
-      color: Colors.black,
+      color: ColorConstants.lightTextColor,
     ),
   ];
 
@@ -48,8 +49,7 @@ class Style {
   static const double titleSize = 24;
 
   /// 页面主标题字重。
-  static final FontWeight titleWeight =
-      FontConfig.adjustedWeight(FontWeight.w600);
+  static final FontWeight titleWeight = FontConfig.adjustedWeight(FontWeight.w600);
 
   // ==================== 输入框 ====================
 
@@ -62,13 +62,13 @@ class Style {
   // ==================== 间距 ====================
 
   /// 字段区块间距。
-  static const double sectionSpacing = 8;
+  static const double sectionSpacing = LayoutConfig.space_8;
 
   /// 大间距（提交按钮前）。
-  static const double largeSpacing = 28;
+  static const double largeSpacing = LayoutConfig.space_28;
 
   /// 按钮水平外边距。
-  static const double buttonHorizontalMargin = 20.0;
+  static const double buttonHorizontalMargin = LayoutConfig.space_20;
 
   // ==================== 协议 ====================
 

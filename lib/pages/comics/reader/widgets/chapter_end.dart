@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
@@ -103,8 +104,8 @@ class ComicReaderChapterEnd extends StatelessWidget {
               width: ComicReaderStyle.end_divider_width,
               height: ComicReaderStyle.end_divider_thickness,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.20),
-                borderRadius: BorderRadius.circular(2),
+                color: ColorConstants.components_work_hero_stats_style_tone_33ffffff,
+                borderRadius: BorderRadius.circular(LayoutConfig.radius_2),
               ),
             ),
           ),
@@ -153,7 +154,7 @@ class ComicReaderChapterEnd extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: LayoutConfig.space_8),
                           const Icon(Icons.arrow_forward_rounded, size: 18),
                         ],
                       ),

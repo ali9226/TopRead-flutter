@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/pages/short_story_read/style.dart';
@@ -56,8 +57,7 @@ class PreviousPullHeader extends StatelessWidget {
     }
 
     // 计算下拉进度（0.0 ~ 1.0）。
-    final double progress =
-        (pull_offset / trigger_distance).clamp(0.0, 1.0);
+    final double progress = (pull_offset / trigger_distance).clamp(0.0, 1.0);
 
     // 判断是否已达到触发阈值。
     final bool ready = pull_offset >= trigger_distance;
@@ -106,17 +106,17 @@ class PreviousPullHeader extends StatelessWidget {
                       switchOutCurve: Curves.easeIn,
                       transitionBuilder:
                           (Widget child, Animation<double> animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: child,
-                        );
-                      },
+                            return FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            );
+                          },
                       child: Text(
                         ready
                             ? localized_texts['release_view'] ??
-                                'Release to view'
+                                  'Release to view'
                             : localized_texts['pull_down_view'] ??
-                                'Pull to view',
+                                  'Pull to view',
                         key: ValueKey<bool>(ready),
                         style: TextStyle(
                           fontSize: 13,
@@ -126,7 +126,7 @@ class PreviousPullHeader extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: LayoutConfig.space_4),
                     // 箭头图标，AnimatedRotation 独立于文字，实现平滑旋转过渡。
                     AnimatedRotation(
                       turns: ready ? -0.25 : 0.25,
@@ -144,7 +144,7 @@ class PreviousPullHeader extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: LayoutConfig.space_8),
                 // 上一篇小说标题。
                 Text(
                   previous_title,

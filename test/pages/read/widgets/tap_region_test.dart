@@ -8,6 +8,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/config/color_config.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -140,7 +141,7 @@ Future<void> _pump_reading_region(
                           ),
                           is_dark: false,
                           body_font_size: 18,
-                          text_color: Colors.black,
+                          text_color: ColorConstants.lightTextColor,
                           on_comment: (_) {},
                           on_tap_position: on_tap_position,
                           on_selection_changed: (active) {

@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
@@ -108,7 +109,7 @@ class _ChapterEditorPageState extends State<ChapterEditorPage> {
         appBar: WindowAppBar(
           child: AppBar(
             backgroundColor: AuthorStyle.background(is_dark),
-            surfaceTintColor: Colors.transparent,
+            surfaceTintColor: ColorConstants.transparent,
             foregroundColor: AuthorStyle.primary_text(is_dark),
             elevation: 0,
             titleSpacing: 0,
@@ -148,7 +149,7 @@ class _ChapterEditorPageState extends State<ChapterEditorPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: LayoutConfig.space_8),
             ],
           ),
         ),
@@ -159,9 +160,9 @@ class _ChapterEditorPageState extends State<ChapterEditorPage> {
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(
                     ChapterEditorStyle.page_padding,
-                    14,
+                    LayoutConfig.space_14,
                     ChapterEditorStyle.page_padding,
-                    30,
+                    LayoutConfig.space_30,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -202,9 +203,7 @@ class _ChapterEditorPageState extends State<ChapterEditorPage> {
                           color: AuthorStyle.primary_text(is_dark),
                           fontSize: ChapterEditorStyle.content_font_size,
                           height: ChapterEditorStyle.content_line_height,
-                          fontWeight: FontConfig.adjustedWeight(
-                            FontWeight.w400,
-                          ),
+                          fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                         ),
                         decoration: InputDecoration(
                           hintText: easy.tr(
@@ -227,7 +226,9 @@ class _ChapterEditorPageState extends State<ChapterEditorPage> {
               height:
                   ChapterEditorStyle.toolbar_height +
                   MediaQuery.paddingOf(context).bottom,
-              padding: const EdgeInsets.symmetric(horizontal: 18),
+              padding: const EdgeInsets.symmetric(
+                horizontal: LayoutConfig.space_18,
+              ),
               decoration: BoxDecoration(
                 color: AuthorStyle.surface(is_dark),
                 border: Border(
@@ -245,7 +246,7 @@ class _ChapterEditorPageState extends State<ChapterEditorPage> {
                         size: 18,
                         color: AuthorStyle.secondary_text(is_dark),
                       ),
-                      const SizedBox(width: 7),
+                      const SizedBox(width: LayoutConfig.space_7),
                       Expanded(
                         child: Text(
                           easy.tr('creator_center.local_autosave_hint'),

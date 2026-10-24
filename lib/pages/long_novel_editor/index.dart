@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
@@ -27,6 +28,7 @@ import '../work_editor/_shared/editor_form_manager.dart';
 import '../work_editor/_shared/editor_file_handler.dart';
 import '../work_editor/_shared/widgets/editor_step_indicator.dart';
 import '../work_editor/_shared/widgets/editor_keyboard_layout.dart';
+import 'package:app/config/color_config.dart';
 
 /// 长篇小说编辑页面。
 ///
@@ -525,7 +527,7 @@ class _LongNovelEditorPageState extends State<LongNovelEditorPage>
           appBar: WindowAppBar(
             child: AppBar(
               backgroundColor: AuthorStyle.surface(is_dark),
-              surfaceTintColor: Colors.transparent,
+              surfaceTintColor: ColorConstants.transparent,
               foregroundColor: AuthorStyle.primary_text(is_dark),
               elevation: 0,
               title: Text(
@@ -565,8 +567,8 @@ class _LongNovelEditorPageState extends State<LongNovelEditorPage>
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
+                          horizontal: LayoutConfig.space_12,
+                          vertical: LayoutConfig.space_10,
                         ),
                         color: AuthorStyle.gold.withValues(
                           alpha: is_dark ? .10 : .13,

@@ -72,21 +72,21 @@ class Style {
   /// --- 颜色配置 ---
 
   /// 阅读页背景颜色（日间模式）。
-  static const Color light_background_color = Colors.white;
+  static const Color light_background_color = ColorConstants.whiteColor;
 
   /// 阅读页背景颜色（夜间模式）。
   static final Color dark_background_color =
       ColorConstants.nightBackgroundColor;
 
   /// 上下导航栏背景颜色（日间模式）。
-  static const Color light_navigation_bar_color = Colors.white;
+  static const Color light_navigation_bar_color = ColorConstants.whiteColor;
 
   /// 上下导航栏背景颜色（夜间模式）。
-  static const Color dark_navigation_bar_color = Color(0xFF1B2231);
+  static const Color dark_navigation_bar_color = ColorConstants.dark_navigation_bar_color_ff1b2231;
 
   /// 底部进度条激活颜色。
   static final Color progress_bar_active_color = ColorConstants.themeColor;
 
   /// 底部进度条渐变结束颜色（如果需要渐变效果）。
-  static const Color progress_bar_gradient_end_color = Color(0xFFFF9E80);
+  static const Color progress_bar_gradient_end_color = ColorConstants.message_type_accent_color_list_ffff9e80;
 }

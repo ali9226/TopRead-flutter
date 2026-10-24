@@ -1,7 +1,9 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:app/config/color_config.dart';
 
 /// 自动阅读设置浮动按钮组件。
 ///
@@ -21,25 +23,28 @@ class AutoReadSettingsButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color bg_color = is_dark ? const Color(0xFF161B22) : Colors.white;
+    final Color bg_color = is_dark ? ColorConstants.components_reader_top_bar_style_tone : ColorConstants.whiteColor;
 
-    final Color text_color = is_dark ? Colors.white : const Color(0xFF1F1A12);
+    final Color text_color = is_dark ? ColorConstants.whiteColor : ColorConstants.components_reader_top_bar_style_tone_ff1f1a12;
 
     final Color icon_color = is_dark
-        ? Colors.white.withValues(alpha: 0.7)
-        : const Color(0xFF7A6A56);
+        ? ColorConstants.components_reader_bottom_action_style_tone_b2ffffff
+        : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56;
 
     final Color shadow_color = is_dark
-        ? Colors.black.withValues(alpha: 0.35)
-        : Colors.black.withValues(alpha: 0.12);
+        ? ColorConstants.pages_short_story_read_widgets_scroll_to_bottom_button_tone
+        : ColorConstants.util_dialog_show_bottom_tip_tone_1f222222;
 
     return GestureDetector(
       onTap: on_tap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: LayoutConfig.space_14,
+          vertical: LayoutConfig.space_10,
+        ),
         decoration: BoxDecoration(
           color: bg_color,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_20),
           boxShadow: <BoxShadow>[
             BoxShadow(
               color: shadow_color,
@@ -59,7 +64,7 @@ class AutoReadSettingsButton extends StatelessWidget {
                 color: text_color,
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: LayoutConfig.space_4),
             Transform.rotate(
               angle: -1.5708,
               child: SvgPicture.asset(

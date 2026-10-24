@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/config/color_config.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -336,7 +337,7 @@ Future<void> _pump_reader(WidgetTester tester, {
                             text: paragraphs[index].text,
                             start_offset: paragraphs[index].start_offset,
                             text_style: TextStyle(fontSize: 18, height: 1.8,
-                              color: is_dark ? Colors.white70 : Colors.black87,
+                              color: is_dark ? ColorConstants.components_reader_top_bar_style_tone_b3ffffff : ColorConstants.pages_short_story_read_widgets_bottom_comment_bar_tone,
                             ),
                             is_dark: is_dark, comment_count: comment_count,
                             on_comment: (selection) => on_comment?.call(index, selection),

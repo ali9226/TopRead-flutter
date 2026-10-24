@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:app/components/comment_list/widgets/comment_item.dart';
+import 'package:app/components/work_section_card/index.dart';
 import 'package:app/components/comment_list/widgets/comment_input.dart';
 import 'package:app/models/user_info.dart';
 import 'package:app/pages/comics/widgets/comment_sheet/index.dart';
@@ -14,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:app/config/color_config.dart';
 
 class _Assets extends AssetLoader {
   const _Assets();
@@ -217,6 +219,15 @@ void main() {
       await tester.tap(find.text('Open comments'));
       await tester.pumpAndSettle();
       expect(find.byType(ComicCommentSheetFeedback), findsOneWidget);
+      final sheet = tester.widget<Container>(
+        find.byKey(const ValueKey<String>('comic_comment_sheet')),
+      );
+      final surface = sheet.decoration! as BoxDecoration;
+      expect(
+        surface.color,
+        dark ? WorkSectionCardStyle.background(true) : ColorConstants.whiteColor,
+      );
+      expect(surface.boxShadow, WorkSectionCardStyle.shadows(dark));
       expect(tester.takeException(), isNull);
       await tester.ensureVisible(
         find.descendant(

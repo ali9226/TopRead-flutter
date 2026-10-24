@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/components/positioning/style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 定位按钮组件。
 ///
@@ -44,11 +45,9 @@ class PositioningButton extends StatelessWidget {
         : PositioningStyle.bg_light;
 
     /// 阴影颜色。
-    final Color shadow_color = Colors.black.withValues(
-      alpha: is_dark
+    final Color shadow_color = ColorConstants.lightTextColor.withValues(alpha: is_dark
           ? PositioningStyle.shadow_opacity_dark
-          : PositioningStyle.shadow_opacity_light,
-    );
+          : PositioningStyle.shadow_opacity_light);
 
     /// 图标颜色。
     final Color effective_icon_color = icon_color ??

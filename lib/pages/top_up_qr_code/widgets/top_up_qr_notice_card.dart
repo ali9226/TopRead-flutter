@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/config/color_config.dart';
@@ -32,7 +33,7 @@ class TopUpQrNoticeCard extends StatelessWidget {
             )
           : Style.noticeCardPadding,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF171A27) : Colors.white,
+        color: isDark ? ColorConstants.pages_top_up_record_index_tone : ColorConstants.whiteColor,
         borderRadius: isBottomDocked
             ? const BorderRadius.vertical(
                 top: Radius.circular(Style.bottomNoticeTopRadius),
@@ -40,8 +41,8 @@ class TopUpQrNoticeCard extends StatelessWidget {
             : BorderRadius.circular(Style.bottomNoticeTopRadius),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04),
+              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+              : ColorConstants.components_paragraph_comment_sheet_widgets_comment_item_tone,
         ),
       ),
       child: Column(
@@ -57,7 +58,7 @@ class TopUpQrNoticeCard extends StatelessWidget {
               fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: LayoutConfig.space_10),
           Text(
             easy.tr(
               'top_up_qr_code_page.notice_01',
@@ -75,7 +76,7 @@ class TopUpQrNoticeCard extends StatelessWidget {
               fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: LayoutConfig.space_8),
           Text(
             easy.tr('top_up_qr_code_page.notice_02'),
             style: TextStyle(
@@ -85,7 +86,7 @@ class TopUpQrNoticeCard extends StatelessWidget {
               fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: LayoutConfig.space_8),
           Text(
             easy.tr('top_up_qr_code_page.notice_03'),
             style: TextStyle(
@@ -95,7 +96,7 @@ class TopUpQrNoticeCard extends StatelessWidget {
               fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: LayoutConfig.space_10),
           Text(
             '${easy.tr('top_up_qr_code_page.serial_number')}: ${detail?.serialNumber ?? '--'}',
             style: TextStyle(

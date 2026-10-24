@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:app/config/color_config.dart';
 
 /// iPhone Duo closed：右侧状态区 84、底部手势区 34（逻辑像素）。
 const _duo_size = Size(466, 678);
@@ -23,7 +24,7 @@ Offset get _top_right => Offset(_duo_size.width - 2, 2);
 /// 右侧状态区中线（面板未覆盖到的中上部）。
 Offset get _right_mid => Offset(_duo_size.width - 2, 100);
 
-const _bg = Color(0xFF3A7BBE);
+const _bg = ColorConstants.components_app_modal_full_window_test_tone_ff3a7bbe;
 
 MediaQueryData _duo_media() => MediaQueryData(
   size: _duo_size,
@@ -126,7 +127,7 @@ void main() {
                 onPressed: () => showGeneralDialog<void>(
                   context: context,
                   barrierLabel: 'dialog',
-                  barrierColor: Colors.black.withValues(alpha: 0.34),
+                  barrierColor: ColorConstants.util_dialog_pop_up_input_tone,
                   pageBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
                 child: const Text('open'),

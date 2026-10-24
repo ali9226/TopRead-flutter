@@ -7,6 +7,7 @@ import 'package:app/config/font_config.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/components/novel_cover/style.dart';
 import 'package:app/components/novel_cover/skeleton_animation.dart';
+import 'package:app/config/color_config.dart';
 
 /// 小说封面组件。
 ///
@@ -546,9 +547,7 @@ class _NovelCoverState extends State<NovelCover> {
       case 0:
       case 3:
       default:
-        return Colors.white.withValues(
-          alpha: NovelCoverStyle.description_text_opacity,
-        );
+        return ColorConstants.whiteColor.withValues(alpha: NovelCoverStyle.description_text_opacity);
     }
   }
 
@@ -564,9 +563,7 @@ class _NovelCoverState extends State<NovelCover> {
     if (variant_index == 1 || variant_index == 2 || variant_index == 4) {
       return <Shadow>[
         Shadow(
-          color: Colors.white.withValues(
-            alpha: NovelCoverStyle.light_text_shadow_opacity,
-          ),
+          color: ColorConstants.whiteColor.withValues(alpha: NovelCoverStyle.light_text_shadow_opacity),
           offset: const Offset(0, NovelCoverStyle.text_shadow_offset_y),
           blurRadius: blur_radius,
         ),
@@ -575,9 +572,7 @@ class _NovelCoverState extends State<NovelCover> {
 
     return <Shadow>[
       Shadow(
-        color: Colors.black.withValues(
-          alpha: NovelCoverStyle.text_shadow_opacity,
-        ),
+        color: ColorConstants.lightTextColor.withValues(alpha: NovelCoverStyle.text_shadow_opacity),
         offset: const Offset(0, NovelCoverStyle.text_shadow_offset_y),
         blurRadius: blur_radius,
       ),
@@ -597,13 +592,9 @@ class _NovelCoverState extends State<NovelCover> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: <Color>[
-            Colors.white.withValues(
-              alpha: NovelCoverStyle.light_overlay_high_opacity,
-            ),
-            Colors.white.withValues(
-              alpha: NovelCoverStyle.light_overlay_low_opacity,
-            ),
-            Colors.transparent,
+            ColorConstants.whiteColor.withValues(alpha: NovelCoverStyle.light_overlay_high_opacity),
+            ColorConstants.whiteColor.withValues(alpha: NovelCoverStyle.light_overlay_low_opacity),
+            ColorConstants.transparent,
           ],
         );
       case NovelCoverStyle.poster_overlay_bottom_dark:
@@ -611,13 +602,9 @@ class _NovelCoverState extends State<NovelCover> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: <Color>[
-            Colors.transparent,
-            Colors.black.withValues(
-              alpha: NovelCoverStyle.dark_overlay_medium_opacity,
-            ),
-            Colors.black.withValues(
-              alpha: NovelCoverStyle.dark_overlay_high_opacity,
-            ),
+            ColorConstants.transparent,
+            ColorConstants.lightTextColor.withValues(alpha: NovelCoverStyle.dark_overlay_medium_opacity),
+            ColorConstants.lightTextColor.withValues(alpha: NovelCoverStyle.dark_overlay_high_opacity),
           ],
         );
       case NovelCoverStyle.poster_overlay_left_light:
@@ -625,13 +612,9 @@ class _NovelCoverState extends State<NovelCover> {
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: <Color>[
-            Colors.white.withValues(
-              alpha: NovelCoverStyle.light_overlay_high_opacity,
-            ),
-            Colors.white.withValues(
-              alpha: NovelCoverStyle.light_overlay_low_opacity,
-            ),
-            Colors.transparent,
+            ColorConstants.whiteColor.withValues(alpha: NovelCoverStyle.light_overlay_high_opacity),
+            ColorConstants.whiteColor.withValues(alpha: NovelCoverStyle.light_overlay_low_opacity),
+            ColorConstants.transparent,
           ],
         );
       case NovelCoverStyle.poster_overlay_light_gradient:
@@ -639,15 +622,9 @@ class _NovelCoverState extends State<NovelCover> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: <Color>[
-            Colors.white.withValues(
-              alpha: NovelCoverStyle.light_overlay_medium_opacity,
-            ),
-            Colors.white.withValues(
-              alpha: NovelCoverStyle.light_overlay_high_opacity,
-            ),
-            Colors.white.withValues(
-              alpha: NovelCoverStyle.light_overlay_low_opacity,
-            ),
+            ColorConstants.whiteColor.withValues(alpha: NovelCoverStyle.light_overlay_medium_opacity),
+            ColorConstants.whiteColor.withValues(alpha: NovelCoverStyle.light_overlay_high_opacity),
+            ColorConstants.whiteColor.withValues(alpha: NovelCoverStyle.light_overlay_low_opacity),
           ],
         );
       case NovelCoverStyle.poster_overlay_dark_gradient:
@@ -656,15 +633,9 @@ class _NovelCoverState extends State<NovelCover> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: <Color>[
-            Colors.black.withValues(
-              alpha: NovelCoverStyle.dark_overlay_low_opacity,
-            ),
-            Colors.black.withValues(
-              alpha: NovelCoverStyle.dark_overlay_medium_opacity,
-            ),
-            Colors.black.withValues(
-              alpha: NovelCoverStyle.dark_overlay_high_opacity,
-            ),
+            ColorConstants.lightTextColor.withValues(alpha: NovelCoverStyle.dark_overlay_low_opacity),
+            ColorConstants.lightTextColor.withValues(alpha: NovelCoverStyle.dark_overlay_medium_opacity),
+            ColorConstants.lightTextColor.withValues(alpha: NovelCoverStyle.dark_overlay_high_opacity),
           ],
         );
     }

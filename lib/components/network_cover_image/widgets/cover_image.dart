@@ -1,8 +1,10 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import 'package:app/components/network_cover_image/style.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/config/color_config.dart';
 
 /// 自适应宽高比的网络封面图组件。
 ///
@@ -36,7 +38,8 @@ class CoverImage extends StatefulWidget {
 }
 
 /// [CoverImage] 的状态类。
-class _CoverImageState extends State<CoverImage> with SingleTickerProviderStateMixin {
+class _CoverImageState extends State<CoverImage>
+    with SingleTickerProviderStateMixin {
   /// 当前解析到的宽高比，为 `null` 时表示尚未解析完成。
   double? _resolved_aspect_ratio;
 
@@ -97,8 +100,7 @@ class _CoverImageState extends State<CoverImage> with SingleTickerProviderStateM
     late final ImageStreamListener listener;
     listener = ImageStreamListener(
       (ImageInfo image_info, bool _) {
-        final double ratio =
-            image_info.image.width / image_info.image.height;
+        final double ratio = image_info.image.width / image_info.image.height;
         if (mounted) {
           setState(() {
             _resolved_aspect_ratio = ratio;
@@ -127,8 +129,8 @@ class _CoverImageState extends State<CoverImage> with SingleTickerProviderStateM
 
     return ClipRRect(
       borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(12),
-        topRight: Radius.circular(12),
+        topLeft: Radius.circular(LayoutConfig.radius_12),
+        topRight: Radius.circular(LayoutConfig.radius_12),
       ),
       child: AspectRatio(
         aspectRatio: aspect_ratio,
@@ -151,11 +153,7 @@ class _CoverImageState extends State<CoverImage> with SingleTickerProviderStateM
       height: double.infinity,
       fit: BoxFit.cover,
       placeholder: (BuildContext context, String url) => _build_skeleton(),
-      errorWidget: (
-        BuildContext context,
-        String url,
-        Object error,
-      ) {
+      errorWidget: (BuildContext context, String url, Object error) {
         return _build_error_placeholder();
       },
     );
@@ -197,7 +195,7 @@ class _CoverImageState extends State<CoverImage> with SingleTickerProviderStateM
             ).createShader(bounds);
           },
           blendMode: BlendMode.srcATop,
-          child: const ColoredBox(color: Colors.white),
+          child: const ColoredBox(color: ColorConstants.whiteColor),
         );
       },
     );
@@ -227,9 +225,7 @@ class _CoverImageState extends State<CoverImage> with SingleTickerProviderStateM
               ),
             ),
             if ((widget.error_text ?? '').isNotEmpty) ...<Widget>[
-              const SizedBox(
-                height: NetworkCoverImageStyle.error_content_gap,
-              ),
+              const SizedBox(height: NetworkCoverImageStyle.error_content_gap),
               Text(
                 widget.error_text!,
                 maxLines: 1,

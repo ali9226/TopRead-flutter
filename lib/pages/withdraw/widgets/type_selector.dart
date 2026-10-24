@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/components/svg_icon/index.dart';
@@ -98,13 +99,13 @@ class WithdrawTypeSelector extends StatelessWidget {
         ),
         border: Border.all(
           color: isDark
-              ? const Color(0xFF8DB7FF).withValues(alpha: 0.14)
+              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.14)
               : ColorConstants.themeColor.withValues(alpha: 0.14),
         ),
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha: 0.14)
+                ? ColorConstants.shadowColor.withValues(alpha: 0.1412)
                 : ColorConstants.themeColor.withValues(alpha: 0.08),
             blurRadius: 18,
             offset: const Offset(0, 8),
@@ -126,10 +127,10 @@ class WithdrawTypeSelector extends StatelessWidget {
                   gradient: RadialGradient(
                     colors: [
                       (isDark
-                              ? const Color(0xFF8DB7FF)
+                              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff
                               : ColorConstants.themeColor)
                           .withValues(alpha: isDark ? 0.12 : 0.10),
-                      Colors.transparent,
+                      ColorConstants.transparent,
                     ],
                   ),
                 ),
@@ -148,10 +149,8 @@ class WithdrawTypeSelector extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      const Color(
-                        0xFF8DB7FF,
-                      ).withValues(alpha: isDark ? 0.08 : 0.05),
-                      Colors.transparent,
+                      ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: isDark ? 0.08 : 0.05),
+                      ColorConstants.transparent,
                     ],
                   ),
                 ),
@@ -174,7 +173,7 @@ class WithdrawTypeSelector extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: LayoutConfig.space_12),
                   GestureDetector(
                     onTap: onTapRecords,
                     behavior: HitTestBehavior.opaque,
@@ -183,14 +182,14 @@ class WithdrawTypeSelector extends StatelessWidget {
                       padding: WithdrawStyle.recordButtonPadding,
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withValues(alpha: 0.05)
+                            ? ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff
                             : ColorConstants.themeColor.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(
                           WithdrawStyle.recordButtonRadius,
                         ),
                         border: Border.all(
                           color: isDark
-                              ? const Color(0xFF8DB7FF).withValues(alpha: 0.12)
+                              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.12)
                               : ColorConstants.themeColor.withValues(
                                   alpha: 0.18,
                                 ),
@@ -207,7 +206,7 @@ class WithdrawTypeSelector extends StatelessWidget {
                                 ? ColorConstants.themeColor
                                 : titleColor,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: LayoutConfig.space_6),
                           Text(
                             easy.tr('withdraw_page.records'),
                             style: TextStyle(
@@ -222,7 +221,7 @@ class WithdrawTypeSelector extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: LayoutConfig.space_6),
               Text(
                 easy.tr('withdraw_page.type_hint'),
                 style: TextStyle(
@@ -231,7 +230,7 @@ class WithdrawTypeSelector extends StatelessWidget {
                   fontWeight: WithdrawStyle.subtitleWeight,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: LayoutConfig.space_16),
               Wrap(
                 // 网络类型数量可能不固定，用 Wrap 而不是 Row，
                 // 可以避免网络类型变多时直接溢出。
@@ -265,18 +264,14 @@ class WithdrawTypeSelector extends StatelessWidget {
                 padding: WithdrawStyle.addressFieldPadding,
                 decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.white.withValues(
-                          alpha: WithdrawStyle.addressFieldDarkOpacity,
-                        )
-                      : Colors.black.withValues(
-                          alpha: WithdrawStyle.addressFieldLightOpacity,
-                        ),
+                      ? ColorConstants.whiteColor.withValues(alpha: WithdrawStyle.addressFieldDarkOpacity)
+                      : ColorConstants.lightTextColor.withValues(alpha: WithdrawStyle.addressFieldLightOpacity),
                   borderRadius: BorderRadius.circular(
                     WithdrawStyle.addressFieldRadius,
                   ),
                   border: Border.all(
                     color: isDark
-                        ? const Color(0xFF8DB7FF).withValues(alpha: 0.12)
+                        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.12)
                         : ColorConstants.themeColor.withValues(alpha: 0.10),
                   ),
                 ),
@@ -319,12 +314,13 @@ class WithdrawTypeSelector extends StatelessWidget {
                     if (addressController.text.trim().isNotEmpty) ...[
                       const SizedBox(width: WithdrawStyle.addressActionGap),
                       Material(
-                        color: Colors.transparent,
+                        color: ColorConstants.transparent,
                         child: InkWell(
                           // 只有当前确实有输入内容时才显示清空按钮，
                           // 避免空输入框右侧堆无意义图标。
                           borderRadius: BorderRadius.circular(
-                            WithdrawStyle.addressClearButtonSize / 2,
+                            WithdrawStyle.addressClearButtonSize /
+                                LayoutConfig.radius_2,
                           ),
                           onTap: onTapClearAddress,
                           child: Ink(
@@ -332,8 +328,8 @@ class WithdrawTypeSelector extends StatelessWidget {
                             height: WithdrawStyle.addressClearButtonSize,
                             decoration: BoxDecoration(
                               color: isDark
-                                  ? Colors.white.withValues(alpha: 0.06)
-                                  : Colors.black.withValues(alpha: 0.05),
+                                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+                                  : ColorConstants.components_home_top_search_entry_index_tone,
                               shape: BoxShape.circle,
                             ),
                             child: Center(
@@ -349,7 +345,7 @@ class WithdrawTypeSelector extends StatelessWidget {
                     ],
                     const SizedBox(width: WithdrawStyle.addressActionGap),
                     Material(
-                      color: Colors.transparent,
+                      color: ColorConstants.transparent,
                       child: InkWell(
                         // 粘贴按钮单独做强调色渐变，目的是把“粘贴地址”这个高频动作提出来。
                         borderRadius: BorderRadius.circular(
@@ -364,10 +360,10 @@ class WithdrawTypeSelector extends StatelessWidget {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: isDark
-                                  ? const [Color(0xFF2C3444), Color(0xFF232A38)]
+                                  ? const [ColorConstants.pages_withdraw_widgets_type_selector_tone_ff2c3444, ColorConstants.pages_withdraw_widgets_type_selector_tone_ff232a38]
                                   : const [
-                                      Color(0xFFFFF7D8),
-                                      Color(0xFFFFEAA5),
+                                      ColorConstants.pages_withdraw_widgets_type_selector_tone_fffff7d8,
+                                      ColorConstants.pages_withdraw_widgets_type_selector_tone_ffffeaa5,
                                     ],
                             ),
                             borderRadius: BorderRadius.circular(
@@ -375,17 +371,15 @@ class WithdrawTypeSelector extends StatelessWidget {
                             ),
                             border: Border.all(
                               color: isDark
-                                  ? const Color(
-                                      0xFF8DB7FF,
-                                    ).withValues(alpha: 0.14)
-                                  : const Color(0xFFE7C866),
+                                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.14)
+                                  : ColorConstants.pages_withdraw_widgets_type_selector_tone,
                             ),
                             boxShadow: [
                               BoxShadow(
                                 color:
                                     (isDark
-                                            ? const Color(0xFF8DB7FF)
-                                            : const Color(0xFFF6C542))
+                                            ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff
+                                            : ColorConstants.pages_withdraw_widgets_type_selector_tone_fff6c542)
                                         .withValues(
                                           alpha: isDark ? 0.10 : 0.16,
                                         ),
@@ -401,16 +395,16 @@ class WithdrawTypeSelector extends StatelessWidget {
                                 width: 16,
                                 height: 16,
                                 color: isDark
-                                    ? const Color(0xFFFFE8A3)
-                                    : const Color(0xFF7A5A00),
+                                    ? ColorConstants.pages_withdraw_widgets_type_selector_tone_ffffe8a3
+                                    : ColorConstants.pages_withdraw_widgets_type_selector_tone_ff7a5a00,
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: LayoutConfig.space_6),
                               Text(
                                 easy.tr('withdraw_page.paste'),
                                 style: TextStyle(
                                   color: isDark
-                                      ? const Color(0xFFFFE8A3)
-                                      : const Color(0xFF7A5A00),
+                                      ? ColorConstants.pages_withdraw_widgets_type_selector_tone_ffffe8a3
+                                      : ColorConstants.pages_withdraw_widgets_type_selector_tone_ff7a5a00,
                                   fontSize: 12,
                                   fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                                 ),
@@ -461,9 +455,7 @@ class _TypeChip extends StatelessWidget {
     final borderColor = selected
         ? ColorConstants.themeColor
         : isDark
-        ? const Color(
-            0xFF8DB7FF,
-          ).withValues(alpha: WithdrawStyle.typeChipBorderDarkOpacity)
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: WithdrawStyle.typeChipBorderDarkOpacity)
         : ColorConstants.themeColor.withValues(
             alpha: WithdrawStyle.typeChipBorderLightOpacity,
           );
@@ -483,8 +475,8 @@ class _TypeChip extends StatelessWidget {
                     alpha: isDark ? 0.16 : 0.12,
                   )
                 : isDark
-                ? Colors.white.withValues(alpha: 0.03)
-                : Colors.black.withValues(alpha: 0.02),
+                ? ColorConstants.util_dialog_show_upgrade_dialog_tone_8ffffff
+                : ColorConstants.pages_withdraw_widgets_type_selector_tone_5222222,
             border: Border.all(color: borderColor),
           ),
           child: Text(

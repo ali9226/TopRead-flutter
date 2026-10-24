@@ -95,11 +95,9 @@ class UnlockOverlay extends StatelessWidget {
                 border: Border.all(color: border_color),
                 boxShadow: <BoxShadow>[
                   BoxShadow(
-                    color: Colors.black.withValues(
-                      alpha: is_dark
+                    color: ColorConstants.shadowColor.withValues(alpha: is_dark
                           ? ShortStoryReadStyle.unlock_shadow_alpha_dark
-                          : ShortStoryReadStyle.unlock_shadow_alpha_light,
-                    ),
+                          : ShortStoryReadStyle.unlock_shadow_alpha_light),
                     blurRadius: ShortStoryReadStyle.unlock_shadow_blur_radius,
                     offset: const Offset(
                       0,
@@ -242,9 +240,7 @@ class UnlockOverlay extends StatelessWidget {
                                           .unlock_button_font_size_cjk
                                     : ShortStoryReadStyle
                                           .unlock_button_font_size_alphabetic,
-                                fontWeight: FontConfig.adjustedWeight(
-                                  FontWeight.w500,
-                                ),
+                                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                               ),
                             ),
                           ),

@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/inline_native_ad/index.dart';
@@ -15,6 +16,7 @@ import 'package:app/components/paragraph_selection/scope.dart';
 import './style.dart';
 import 'paragraph.dart';
 import 'tap_region.dart';
+import 'package:app/config/color_config.dart';
 
 /// 阅读页正文内容组件。
 ///
@@ -45,8 +47,12 @@ class ReadContent extends StatelessWidget {
   final VoidCallback? on_share;
   final VoidCallback? on_read;
   final VoidCallback? on_favorite;
+  final VoidCallback? on_comments;
   final bool favorited;
   final bool favorite_loading;
+
+  /// 上层依据真实历史和正文阅读位置维护的续读状态。
+  final ValueListenable<bool>? continuing_listenable;
 
   /// 与短篇共用段落选择、输入和详情弹窗的交互入口。
   final void Function(ReadingContentItem, TextSelection)? on_paragraph_comment;
@@ -94,8 +100,10 @@ class ReadContent extends StatelessWidget {
     this.on_share,
     this.on_read,
     this.on_favorite,
+    this.on_comments,
     this.favorited = false,
     this.favorite_loading = false,
+    this.continuing_listenable,
     this.on_paragraph_comment,
     this.on_paragraph_comments,
     this.on_paragraph_share,
@@ -121,23 +129,29 @@ class ReadContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         if (logic.should_show_introduction) ...<Widget>[
-          ReadIntroductionSection(
-            is_dark: is_dark,
-            detail: detail,
-            on_back: on_back,
-            on_share: on_share,
-            on_read: on_read,
-            on_favorite: on_favorite,
-            favorited: favorited,
-            favorite_loading: favorite_loading,
-            on_focus_changed: on_focus_changed,
-            // 调试用户点击"替换封面"后同步本地详情并刷新封面展示。
-            on_cover_replaced: (cover_url, cover_width, cover_height) =>
-                logic.update_story_cover(
-                  cover_url: cover_url,
-                  cover_width: cover_width,
-                  cover_height: cover_height,
-                ),
+          ValueListenableBuilder<bool>(
+            valueListenable:
+                continuing_listenable ?? const AlwaysStoppedAnimation(false),
+            builder: (context, continuing, _) => ReadIntroductionSection(
+              continuing: continuing,
+              is_dark: is_dark,
+              detail: detail,
+              on_back: on_back,
+              on_share: on_share,
+              on_read: on_read,
+              on_favorite: on_favorite,
+              on_comments: on_comments,
+              favorited: favorited,
+              favorite_loading: favorite_loading,
+              on_focus_changed: on_focus_changed,
+              // 调试用户点击"替换封面"后同步本地详情并刷新封面展示。
+              on_cover_replaced: (cover_url, cover_width, cover_height) =>
+                  logic.update_story_cover(
+                    cover_url: cover_url,
+                    cover_width: cover_width,
+                    cover_height: cover_height,
+                  ),
+            ),
           ),
           SizedBox(height: ContentStyle.reading_top_spacing),
         ],
@@ -147,7 +161,7 @@ class ReadContent extends StatelessWidget {
           builder: (on_tap_position, on_selection_changed) => Container(
             key: reading_section_key,
             width: double.infinity,
-            color: Colors.transparent,
+            color: ColorConstants.transparent,
             margin: const EdgeInsets.only(
               left: MainListStyle.page_horizontal_padding,
               right: MainListStyle.page_horizontal_padding,
@@ -288,7 +302,8 @@ class ReadContent extends StatelessWidget {
                 ? ContentStyle.reading_paragraph_bottom_spacing * 1.5
                 : ContentStyle.reading_paragraph_bottom_spacing,
             top: item.is_title
-                ? ContentStyle.reading_paragraph_top_spacing * 2
+                ? ContentStyle.reading_paragraph_top_spacing *
+                      LayoutConfig.space_2
                 : 0,
           ),
           child: ReaderParagraphItem(

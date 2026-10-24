@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -18,6 +19,7 @@ import 'package:app/util/router/router_util.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/widgets/ranking_section/style.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/style.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/widgets/ranking_section/index.dart';
+import 'package:app/config/color_config.dart';
 
 /// 推荐 Tab 内容组件。
 ///
@@ -248,8 +250,9 @@ class _RecommendTabContentState extends State<RecommendTabContent>
   /// 获取当前选中 Tab 的 id。
   int get _current_tab_id {
     final List<int> ids = rankings_id_list;
-    if (ids.isEmpty || _selected_ranking_tab_index.value >= ids.length)
+    if (ids.isEmpty || _selected_ranking_tab_index.value >= ids.length) {
       return 0;
+    }
     return ids[_selected_ranking_tab_index.value];
   }
 
@@ -515,7 +518,7 @@ class _RecommendTabContentState extends State<RecommendTabContent>
 
     return Obx(() {
       final bool is_dark = device_info.theme.value == ThemeMode.dark;
-      final Color panel_bg = is_dark ? const Color(0xFF171C28) : Colors.white;
+      final Color panel_bg = is_dark ? ColorConstants.pages_home_widgets_tab_contents_recommend_tab_index_tone : ColorConstants.whiteColor;
       final List<String> ranking_titles = rankings_title_list;
       final List<List<StoryItem>> all_ranking_data =
           _build_ranking_data_from_store();
@@ -572,7 +575,9 @@ class _RecommendTabContentState extends State<RecommendTabContent>
                 const SizedBox(height: RecommendTabStyle.recommend_top_spacing),
                 // 今日推荐瀑布流区域
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: LayoutConfig.space_12,
+                  ),
                   child: AnimatedRecommendWaterfall(
                     key: _recommend_waterfall_key,
                     waterfall_id: 'home_recommend',
@@ -591,7 +596,6 @@ class _RecommendTabContentState extends State<RecommendTabContent>
             show: _is_back_to_top_visible,
             isDark: is_dark,
             onTap: _scroll_to_top,
-            right: floating_back_to_top_style.FloatingBackToTopStyle.right,
             visibleBottom:
                 fixed_nav_style.Style.bar_height +
                 floating_back_to_top_style

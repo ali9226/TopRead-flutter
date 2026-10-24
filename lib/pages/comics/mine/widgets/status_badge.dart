@@ -5,6 +5,7 @@ import 'package:app/pages/comics/mine/style.dart';
 import 'package:app/pages/comics/style.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// 作品状态角标：草稿 / 审核中 / 已发布 / 已驳回 / 已隐藏。
 ///
@@ -49,7 +50,7 @@ class ComicsStatusBadge extends StatelessWidget {
       child: Text(
         _label(context),
         style: TextStyle(
-          color: Colors.white,
+          color: ColorConstants.whiteColor,
           fontSize: ComicsMineStatusStyle.badge_font_size,
           fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
           letterSpacing: is_cjk ? null : 0.2,

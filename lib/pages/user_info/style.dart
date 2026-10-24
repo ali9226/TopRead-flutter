@@ -6,10 +6,10 @@ import 'package:app/config/font_config.dart';
 /// 样式配置（类似 CSS）
 class Style {
   /// 用户中心内容区与客服区之间的垂直间距。
-  static const double support_spacing = 40;
+  static const double support_spacing = LayoutConfig.space_40;
 
   /// 用户中心页面底部基础留白。
-  static const double page_bottom_spacing = 24;
+  static const double page_bottom_spacing = LayoutConfig.space_24;
 
   /// 用户中心顶部背景图在夜间模式下的遮罩透明度。
   ///
@@ -17,7 +17,7 @@ class Style {
   static const double top_background_dark_overlay_opacity = 0.09;
 
   /// 顶部区域默认横向内边距
-  static const double horizontalPadding = 16;
+  static const double horizontalPadding = LayoutConfig.page_horizontal_padding;
 
   /// 头像尺寸
   static const double avatarSize = 70;
@@ -35,25 +35,26 @@ class Style {
   static const double languageTopSpacing = 0;
 
   /// 顶部区域基础上内边距
-  static const double topPadding = 20;
+  static const double topPadding = LayoutConfig.space_20;
 
   /// 顶部区域基础下内边距
-  static const double bottomPadding = 20;
+  static const double bottomPadding = LayoutConfig.space_20;
 
   /// 头像距离语种切换区域的间距
   static const double avatarSpacingFromLanguage = -10;
 
   /// 未登录时，头像距离登录注册按钮的间距
-  static const double loginButtonSpacingFromAvatar = 20;
+  static const double loginButtonSpacingFromAvatar = LayoutConfig.space_20;
 
   /// 未登录时，福袋距离登录注册按钮的间距
-  static const double guestLuckyBagSpacingFromLoginButton = 30;
+  static const double guestLuckyBagSpacingFromLoginButton =
+      LayoutConfig.space_30;
 
   /// 已登录时，头像距离昵称的间距
-  static const double nicknameSpacingFromAvatar = 10;
+  static const double nicknameSpacingFromAvatar = LayoutConfig.space_10;
 
   /// 已登录时，昵称距离余额区块的间距
-  static const double balanceSectionSpacingFromNickname = 20;
+  static const double balanceSectionSpacingFromNickname = LayoutConfig.space_20;
 
   /// 福袋右边距
   static const double luckyBagRight = 10;
@@ -74,31 +75,31 @@ class Style {
   static const double actionButtonHeight = 42;
 
   /// 上下两个操作按钮之间的垂直间距
-  static const double actionButtonSpacing = 8;
+  static const double actionButtonSpacing = LayoutConfig.space_8;
 
   /// 操作按钮左右内容留白
   static const EdgeInsets actionButtonPadding = EdgeInsets.symmetric(
-    horizontal: 14,
-    vertical: 8,
+    horizontal: LayoutConfig.space_14,
+    vertical: LayoutConfig.space_8,
   );
 
   /// 操作按钮圆角
   static const double actionButtonRadius = LayoutConfig.section_radius;
 
   /// 操作按钮图标尺寸
-  static const double actionButtonIconSize = 20;
+  static const double actionButtonIconSize = LayoutConfig.icon_medium;
 
   /// 操作按钮图标与文案之间的间距
-  static const double actionButtonIconGap = 4;
+  static const double actionButtonIconGap = LayoutConfig.space_4;
 
   /// 操作按钮左侧图标区域固定宽度
-  static const double actionButtonIconAreaWidth = 24;
+  static const double actionButtonIconAreaWidth = LayoutConfig.icon_regular;
 
   /// 操作按钮图标承载块尺寸
-  static const double actionButtonIconWrapSize = 24;
+  static const double actionButtonIconWrapSize = LayoutConfig.icon_regular;
 
   /// 操作按钮图标承载块圆角
-  static const double actionButtonIconWrapRadius = 8;
+  static const double actionButtonIconWrapRadius = LayoutConfig.radius_8;
 
   /// 充值按钮图标承载块透明度
   static const double rechargeIconWrapOpacity = 0.16;
@@ -125,10 +126,10 @@ class Style {
   static const double withdrawBorderOpacity = 0.18;
 
   /// 充值按钮的文字和图标颜色
-  static const Color rechargeForegroundColor = Colors.black;
+  static const Color rechargeForegroundColor = ColorConstants.lightTextColor;
 
   /// 提现按钮的背景色
-  static const Color withdrawBackgroundColor = Colors.black;
+  static const Color withdrawBackgroundColor = ColorConstants.lightTextColor;
 
   /// 提现按钮的文字和图标颜色
   static final Color withdrawForegroundColor = ColorConstants.themeColor;
@@ -147,8 +148,8 @@ class Style {
   static const double decor_glow_one_top = -16;
   static const double decor_glow_one_right = -18;
   static const double decor_glow_one_size = 180;
-  static const Color decor_glow_one_dark_color = Color(0xFF8DB7FF);
-  static const Color decor_glow_one_light_color = Color(0xFFFFD45A);
+  static const Color decor_glow_one_dark_color = ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff;
+  static const Color decor_glow_one_light_color = ColorConstants.message_type_accent_color_list;
   static const double decor_glow_one_dark_opacity = 0.08;
   static const double decor_glow_one_light_opacity = 0.12;
 
@@ -156,8 +157,8 @@ class Style {
   static const double decor_glow_two_top = 92;
   static const double decor_glow_two_left = -34;
   static const double decor_glow_two_size = 140;
-  static const Color decor_glow_two_dark_color = Color(0xFFFF9E80);
-  static const Color decor_glow_two_light_color = Color(0xFF8DB7FF);
+  static const Color decor_glow_two_dark_color = ColorConstants.message_type_accent_color_list_ffff9e80;
+  static const Color decor_glow_two_light_color = ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff;
   static const double decor_glow_two_dark_opacity = 0.06;
   static const double decor_glow_two_light_opacity = 0.10;
 
@@ -166,7 +167,7 @@ class Style {
   static const double decor_outline_one_right = 42;
   static const double decor_outline_one_angle = -0.22;
   static const double decor_outline_one_size = 72;
-  static const double decor_outline_one_radius = 22;
+  static const double decor_outline_one_radius = LayoutConfig.radius_22;
   static const double decor_outline_one_dark_opacity = 0.05;
   static const double decor_outline_one_light_opacity = 0.07;
 
@@ -175,9 +176,9 @@ class Style {
   static const double decor_block_right = -12;
   static const double decor_block_angle = 0.38;
   static const double decor_block_size = 110;
-  static const double decor_block_radius = 30;
-  static const Color decor_block_dark_color = Color(0xFFFFD45A);
-  static const Color decor_block_light_color = Color(0xFFFF9E80);
+  static const double decor_block_radius = LayoutConfig.radius_30;
+  static const Color decor_block_dark_color = ColorConstants.message_type_accent_color_list;
+  static const Color decor_block_light_color = ColorConstants.message_type_accent_color_list_ffff9e80;
   static const double decor_block_dark_opacity = 0.04;
   static const double decor_block_light_opacity = 0.06;
 
@@ -189,8 +190,8 @@ class Style {
   static const double decor_line_height = 1;
   static const double decor_line_one_dark_opacity = 0.04;
   static const double decor_line_one_light_opacity = 0.07;
-  static const Color decor_line_two_dark_color = Color(0xFFFFD45A);
-  static const Color decor_line_two_light_color = Color(0xFF8DB7FF);
+  static const Color decor_line_two_dark_color = ColorConstants.message_type_accent_color_list;
+  static const Color decor_line_two_light_color = ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff;
   static const double decor_line_two_dark_opacity = 0.05;
   static const double decor_line_two_light_opacity = 0.07;
 }

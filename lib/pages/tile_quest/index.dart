@@ -1,5 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
+import 'package:app/config/layout_config.dart';
 import 'dart:async';
+import 'package:app/api/tile_quest.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/util/router/router_back.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +20,7 @@ import 'widgets/scene_assets.dart';
 import 'widgets/session_pause.dart';
 import 'widgets/tile_card.dart';
 import 'widgets/tile_skin.dart';
+import 'package:app/config/color_config.dart';
 
 /// 游戏路由页面只协调 UI、弹层与导航；所有规则和存档由控制器处理。
 class TileQuestPage extends StatefulWidget {
@@ -44,7 +47,12 @@ class _TileQuestPageState extends State<TileQuestPage> {
   @override
   void initState() {
     super.initState();
-    _logic = widget.logic ?? TileQuestLogic();
+    _logic =
+        widget.logic ??
+        TileQuestLogic(
+          config_loader: fetch_tile_quest_config,
+          session_reporter: report_tile_quest_session,
+        );
   }
 
   @override
@@ -130,7 +138,7 @@ class _TileQuestPageState extends State<TileQuestPage> {
         anchorPoint: QuestPlayfield.anchor_for(MediaQuery.of(context)),
         barrierColor: TileQuestStyle.modal_barrier.withValues(alpha: .75),
         builder: (dialog_context) => Dialog(
-          backgroundColor: Colors.transparent,
+          backgroundColor: ColorConstants.transparent,
           insetPadding: const EdgeInsets.all(TileQuestStyle.panel_inset),
           child: Container(
             constraints: const BoxConstraints(
@@ -149,7 +157,7 @@ class _TileQuestPageState extends State<TileQuestPage> {
                     color: TileQuestStyle.gold,
                     size: 40,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: LayoutConfig.space_16),
                   Text(
                     quest_text(
                       context,
@@ -163,7 +171,7 @@ class _TileQuestPageState extends State<TileQuestPage> {
                           : TileQuestStyle.restart_title_size_alphabetic,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: LayoutConfig.space_12),
                   Text(
                     quest_text(
                       context,
@@ -173,13 +181,13 @@ class _TileQuestPageState extends State<TileQuestPage> {
                     textAlign: TextAlign.center,
                     style: TileQuestStyle.body(cjk, color: TileQuestStyle.pale),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: LayoutConfig.space_24),
                   QuestPrimaryButton(
                     key: const ValueKey('tile_quest_confirm_restart'),
                     label: quest_text(context, 'restart', 'Restart'),
                     on_tap: () => answer(dialog_context, true),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: LayoutConfig.space_10),
                   QuestPrimaryButton(
                     label: quest_text(context, 'cancel', 'Keep playing'),
                     primary: false,
@@ -384,7 +392,7 @@ class _TileQuestPageState extends State<TileQuestPage> {
                                     child: LinearProgressIndicator(
                                       minHeight: 2,
                                       color: TileQuestStyle.gold,
-                                      backgroundColor: Colors.transparent,
+                                      backgroundColor: ColorConstants.transparent,
                                     ),
                                   ),
                                 if (logic.has_save_error)
@@ -397,11 +405,13 @@ class _TileQuestPageState extends State<TileQuestPage> {
                                           TileQuestStyle.save_error_background(
                                             is_dark,
                                           ),
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(
+                                        LayoutConfig.radius_12,
+                                      ),
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 4,
+                                          horizontal: LayoutConfig.space_12,
+                                          vertical: LayoutConfig.space_4,
                                         ),
                                         child: Row(
                                           children: [
@@ -458,7 +468,7 @@ class _TileQuestPageState extends State<TileQuestPage> {
 
   Widget _loading_or_error(TileQuestLogic logic) => Center(
     child: Padding(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(LayoutConfig.space_32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -470,7 +480,7 @@ class _TileQuestPageState extends State<TileQuestPage> {
               size: 42,
               color: TileQuestStyle.gold,
             ),
-          const SizedBox(height: 20),
+          const SizedBox(height: LayoutConfig.space_20),
           Text(
             quest_text(
               context,
@@ -483,12 +493,12 @@ class _TileQuestPageState extends State<TileQuestPage> {
             style: TileQuestStyle.body(quest_is_cjk(context)),
           ),
           if (!logic.is_loading) ...[
-            const SizedBox(height: 24),
+            const SizedBox(height: LayoutConfig.space_24),
             QuestPrimaryButton(
               label: quest_text(context, 'retry', 'Try again'),
               on_tap: () => unawaited(logic.initialize()),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: LayoutConfig.space_10),
             QuestPrimaryButton(
               label: quest_text(context, 'back', 'Back'),
               primary: false,

@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'package:app/components/svg_icon/index.dart';
+import 'package:app/config/color_config.dart';
 
 /// 评论区头像组件。
 ///
@@ -58,7 +59,7 @@ class CommentAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: is_dark ? const Color(0xFF2C2C2C) : const Color(0xFFF0F0F0),
+        color: is_dark ? ColorConstants.components_comment_list_widgets_comment_avatar_tone : ColorConstants.components_comment_list_widgets_comment_avatar_tone_fff0f0f0,
         shape: BoxShape.circle,
       ),
       child: SvgIcon(

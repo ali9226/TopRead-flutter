@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/components/share_sheet/style.dart';
@@ -60,7 +61,8 @@ class ShareIconItem extends StatelessWidget {
           /// 纯图标（无圆形背景）。
           SizedBox(
             width: ShareSheetStyle.icon_size,
-            child: icon_widget ??
+            child:
+                icon_widget ??
                 Icon(
                   icon,
                   size: ShareSheetStyle.icon_inner_size,
@@ -69,7 +71,7 @@ class ShareIconItem extends StatelessWidget {
           ),
 
           /// 图标与文字之间的间距。
-          const SizedBox(height: 2),
+          const SizedBox(height: LayoutConfig.space_2),
 
           /// 文字标签（不截断，自动撑开宽度）。
           Text(

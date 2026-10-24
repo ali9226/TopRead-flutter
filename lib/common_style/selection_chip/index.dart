@@ -1,3 +1,4 @@
+import 'package:app/config/color_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 
@@ -141,11 +142,11 @@ class SelectionChip extends StatelessWidget {
     /// 无固定宽度时（兴趣偏好场景），用 IntrinsicWidth 让 Wrap 能正确测量宽度。
     if (fixedWidth != null) {
       return Material(
-        color: Colors.transparent,
+        color: ColorConstants.transparent,
         child: InkWell(
           onTap: onTap,
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
+          splashColor: ColorConstants.transparent,
+          highlightColor: ColorConstants.transparent,
           borderRadius: BorderRadius.circular(bRadius),
           child: chip,
         ),
@@ -154,11 +155,11 @@ class SelectionChip extends StatelessWidget {
 
     return IntrinsicWidth(
       child: Material(
-        color: Colors.transparent,
+        color: ColorConstants.transparent,
         child: InkWell(
           onTap: onTap,
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
+          splashColor: ColorConstants.transparent,
+          highlightColor: ColorConstants.transparent,
           borderRadius: BorderRadius.circular(bRadius),
           child: chip,
         ),

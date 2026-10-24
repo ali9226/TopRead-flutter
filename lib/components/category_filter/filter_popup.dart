@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
@@ -100,25 +101,24 @@ class _CategoryFilterPopupState extends State<CategoryFilterPopup>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _panel_slide_animation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _panel_animation_controller,
-      curve: Curves.easeOutCubic,
-    ));
+    _panel_slide_animation =
+        Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _panel_animation_controller,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     _overlay_animation_controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
-    _overlay_opacity_animation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _overlay_animation_controller,
-      curve: Curves.easeOut,
-    ));
+    _overlay_opacity_animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _overlay_animation_controller,
+        curve: Curves.easeOut,
+      ),
+    );
 
     _overlay_animation_controller.forward();
     _panel_animation_controller.forward();
@@ -159,15 +159,17 @@ class _CategoryFilterPopupState extends State<CategoryFilterPopup>
     final double screen_width = MediaQuery.of(context).size.width;
     final double available_width =
         screen_width - CategoryFilterStyle.popup_content_padding.horizontal;
-    final int column_count = (available_width / target_tag_width)
-        .floor()
-        .clamp(3, 8);
+    final int column_count = (available_width / target_tag_width).floor().clamp(
+      3,
+      8,
+    );
 
     /// 计算选中项所在行。
     final int row = index ~/ column_count;
 
     /// 每行高度 = 标签高度 + 行间距。
-    final double row_height = SelectionChipStyle.chipHeight +
+    final double row_height =
+        SelectionChipStyle.chipHeight +
         CategoryFilterStyle.popup_tag_row_spacing;
 
     /// 目标滚动偏移量（上方留一点间距）。
@@ -252,8 +254,8 @@ class _CategoryFilterPopupState extends State<CategoryFilterPopup>
 
     /// 标题文字色。
     final Color title_color = widget.is_dark
-        ? const Color(0xFFE8E8EA)
-        : const Color(0xFF1A1A1A);
+        ? ColorConstants.components_category_filter_filter_popup_tone
+        : ColorConstants.components_cute_mascot_index_tone_ff1a1a1a;
 
     /// 标题左侧图标颜色。
     final Color title_icon_color = widget.is_dark
@@ -291,7 +293,7 @@ class _CategoryFilterPopupState extends State<CategoryFilterPopup>
         : CategoryFilterStyle.clear_light_text;
 
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       child: Stack(
         children: <Widget>[
           /// 遮罩层（淡入淡出，点击触发滑下关闭）。
@@ -323,7 +325,8 @@ class _CategoryFilterPopupState extends State<CategoryFilterPopup>
                   onVerticalDragUpdate: _on_drag_update,
                   onVerticalDragEnd: _on_drag_end,
                   child: Container(
-                    height: MediaQuery.of(context).size.height *
+                    height:
+                        MediaQuery.of(context).size.height *
                         (MediaQuery.of(context).size.width >
                                 MediaQuery.of(context).size.height
                             ? 0.85
@@ -331,22 +334,24 @@ class _CategoryFilterPopupState extends State<CategoryFilterPopup>
                     decoration: BoxDecoration(
                       color: popup_bg,
                       borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
+                        top: Radius.circular(LayoutConfig.radius_16),
                       ),
                     ),
                     child: SafeArea(
                       top: false,
                       bottom: false,
                       child: StatefulBuilder(
-                        builder:
-                            (BuildContext context, StateSetter set_inner_state) {
+                        builder: (BuildContext context, StateSetter set_inner_state) {
                           /// 实时读取临时选中的分类 id。
                           final int? temp_id = widget.temp_selected_id.value;
 
                           /// 判断是否有选中（用于确定按钮文字）。
                           final bool has_selection = temp_id != null;
                           final String confirm_text_str = has_selection
-                              ? easy.tr('filter_popup.confirm_with_count', args: ['1'])
+                              ? easy.tr(
+                                  'filter_popup.confirm_with_count',
+                                  args: ['1'],
+                                )
                               : easy.tr('filter_popup.confirm');
 
                           return Column(
@@ -354,8 +359,8 @@ class _CategoryFilterPopupState extends State<CategoryFilterPopup>
                               /// 标题栏（标题居中）。
                               Padding(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
+                                  horizontal: LayoutConfig.space_16,
+                                  vertical: LayoutConfig.space_12,
                                 ),
                                 child: Stack(
                                   alignment: Alignment.center,
@@ -397,121 +402,140 @@ class _CategoryFilterPopupState extends State<CategoryFilterPopup>
                                 height: 1,
                                 thickness: 0.5,
                                 color: widget.is_dark
-                                    ? const Color(0xFF2A2D3C)
-                                    : const Color(0xFFF0F0F0),
+                                    ? ColorConstants.components_category_filter_filter_popup_tone_ff2a2d3c
+                                    : ColorConstants.components_comment_list_widgets_comment_avatar_tone_fff0f0f0,
                               ),
 
                               /// 中间可滚动的分类网格（等宽列，占据剩余空间）。
                               Expanded(
                                 child: LayoutBuilder(
-                                  builder: (BuildContext context,
-                                      BoxConstraints constraints) {
-                                    /// 可用宽度（扣除内边距）。
-                                    final double available_width =
-                                        constraints.maxWidth -
+                                  builder:
+                                      (
+                                        BuildContext context,
+                                        BoxConstraints constraints,
+                                      ) {
+                                        /// 可用宽度（扣除内边距）。
+                                        final double available_width =
+                                            constraints.maxWidth -
                                             CategoryFilterStyle
-                                                .popup_content_padding.horizontal;
+                                                .popup_content_padding
+                                                .horizontal;
 
-                                    /// 根据可用宽度动态计算列数（等分）。
-                                    final int column_count =
-                                        (available_width / target_tag_width)
-                                            .floor()
-                                            .clamp(3, 8);
+                                        /// 根据可用宽度动态计算列数（等分）。
+                                        final int column_count =
+                                            (available_width / target_tag_width)
+                                                .floor()
+                                                .clamp(3, 8);
 
-                                    /// 每列等分宽度。
-                                    final double tag_width =
-                                        (available_width -
+                                        /// 每列等分宽度。
+                                        final double tag_width =
+                                            (available_width -
                                                 (column_count - 1) *
                                                     CategoryFilterStyle
                                                         .popup_tag_column_spacing) /
                                             column_count;
 
-                                    return SingleChildScrollView(
-                                      controller: widget.scroll_controller,
-                                      padding: CategoryFilterStyle
-                                          .popup_content_padding,
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 14),
-                                        child: Wrap(
-                                          spacing: CategoryFilterStyle
-                                              .popup_tag_column_spacing,
-                                          runSpacing: CategoryFilterStyle
-                                              .popup_tag_row_spacing,
-                                          children: List<Widget>.generate(
-                                            widget.category_list.length,
-                                            (int index) {
-                                              final PreferenceItem item =
-                                                  widget.category_list[index];
-                                              /// 判断当前分类是否被临时选中。
-                                              final bool is_selected =
-                                                  temp_id == item.id;
-                                              return Material(
-                                                color: Colors.transparent,
-                                                child: InkWell(
-                                                  onTap: () {
-                                                    widget.on_toggle_category(
-                                                        item.id);
-                                                    set_inner_state(() {});
-                                                  },
-                                                  splashColor: Colors.transparent,
-                                                  highlightColor: Colors.transparent,
-                                                  child: AnimatedContainer(
-                                                    duration: const Duration(
-                                                        milliseconds: 250),
-                                                    curve: Curves.easeInOut,
-                                                    width: tag_width,
-                                                    height: SelectionChipStyle
-                                                        .chipHeight,
-                                                    alignment: Alignment.center,
-                                                    decoration: BoxDecoration(
-                                                      color: is_selected
-                                                          ? selected_bg
-                                                          : unselected_bg,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                        CategoryFilterStyle
-                                                            .popup_tag_border_radius,
-                                                      ),
-                                                      border: Border.all(
-                                                        color: is_selected
-                                                            ? ColorConstants
-                                                                .themeColor
-                                                            : unselected_bg,
-                                                        width: 1,
+                                        return SingleChildScrollView(
+                                          controller: widget.scroll_controller,
+                                          padding: CategoryFilterStyle
+                                              .popup_content_padding,
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: LayoutConfig.space_14,
+                                            ),
+                                            child: Wrap(
+                                              spacing: CategoryFilterStyle
+                                                  .popup_tag_column_spacing,
+                                              runSpacing: CategoryFilterStyle
+                                                  .popup_tag_row_spacing,
+                                              children: List<Widget>.generate(
+                                                widget.category_list.length,
+                                                (int index) {
+                                                  final PreferenceItem item =
+                                                      widget
+                                                          .category_list[index];
+
+                                                  /// 判断当前分类是否被临时选中。
+                                                  final bool is_selected =
+                                                      temp_id == item.id;
+                                                  return Material(
+                                                    color: ColorConstants.transparent,
+                                                    child: InkWell(
+                                                      onTap: () {
+                                                        widget
+                                                            .on_toggle_category(
+                                                              item.id,
+                                                            );
+                                                        set_inner_state(() {});
+                                                      },
+                                                      splashColor:
+                                                          ColorConstants.transparent,
+                                                      highlightColor:
+                                                          ColorConstants.transparent,
+                                                      child: AnimatedContainer(
+                                                        duration:
+                                                            const Duration(
+                                                              milliseconds: 250,
+                                                            ),
+                                                        curve: Curves.easeInOut,
+                                                        width: tag_width,
+                                                        height:
+                                                            SelectionChipStyle
+                                                                .chipHeight,
+                                                        alignment:
+                                                            Alignment.center,
+                                                        decoration: BoxDecoration(
+                                                          color: is_selected
+                                                              ? selected_bg
+                                                              : unselected_bg,
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                CategoryFilterStyle
+                                                                    .popup_tag_border_radius,
+                                                              ),
+                                                          border: Border.all(
+                                                            color: is_selected
+                                                                ? ColorConstants
+                                                                      .themeColor
+                                                                : unselected_bg,
+                                                            width: 1,
+                                                          ),
+                                                        ),
+                                                        child: Text(
+                                                          item.title,
+                                                          style: TextStyle(
+                                                            fontSize:
+                                                                popup_tag_font_size,
+                                                            fontWeight:
+                                                                FontConfig.adjustedWeight(
+                                                                  FontWeight
+                                                                      .w400,
+                                                                ),
+                                                            color: is_selected
+                                                                ? selected_text
+                                                                : unselected_text,
+                                                          ),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
                                                       ),
                                                     ),
-                                                    child: Text(
-                                                      item.title,
-                                                      style: TextStyle(
-                                                        fontSize: popup_tag_font_size,
-                                                        fontWeight:
-                                                            FontConfig.adjustedWeight(FontWeight.w400),
-                                                        color: is_selected
-                                                            ? selected_text
-                                                            : unselected_text,
-                                                      ),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                ),
-                                              );
-                                            },
+                                                  );
+                                                },
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                      ),
-                                    );
-                                  },
+                                        );
+                                      },
                                 ),
                               ),
 
                               /// 底部固定按钮区域。
                               Container(
                                 padding: EdgeInsets.fromLTRB(
-                                  16,
+                                  LayoutConfig.space_16,
                                   CategoryFilterStyle.popup_button_top_spacing,
-                                  16,
+                                  LayoutConfig.space_16,
                                   CategoryFilterStyle.popup_button_bottom_safe +
                                       MediaQuery.of(context).padding.bottom,
                                 ),
@@ -539,7 +563,8 @@ class _CategoryFilterPopupState extends State<CategoryFilterPopup>
                                             easy.tr('filter_popup.clear'),
                                             style: TextStyle(
                                               fontSize: popup_button_font_size,
-                                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                                              fontWeight:
+                                                  FontConfig.adjustedWeight(FontWeight.w500),
                                               color: clear_text,
                                             ),
                                           ),
@@ -548,8 +573,9 @@ class _CategoryFilterPopupState extends State<CategoryFilterPopup>
                                     ),
 
                                     SizedBox(
-                                        width: CategoryFilterStyle
-                                            .popup_button_spacing),
+                                      width: CategoryFilterStyle
+                                          .popup_button_spacing,
+                                    ),
 
                                     /// 确定按钮（主题色背景，黑色文字，点击触发滑下关闭）。
                                     Expanded(
@@ -573,8 +599,9 @@ class _CategoryFilterPopupState extends State<CategoryFilterPopup>
                                             confirm_text_str,
                                             style: TextStyle(
                                               fontSize: popup_button_font_size,
-                                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                                              color: Colors.black,
+                                              fontWeight:
+                                                  FontConfig.adjustedWeight(FontWeight.w500),
+                                              color: ColorConstants.lightTextColor,
                                             ),
                                           ),
                                         ),

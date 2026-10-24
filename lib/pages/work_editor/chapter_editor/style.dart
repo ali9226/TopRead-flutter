@@ -1,3 +1,5 @@
+import 'package:app/config/layout_config.dart';
+
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 /// TODO 章节编辑页尺寸配置。
@@ -5,7 +7,7 @@ class ChapterEditorStyle {
   const ChapterEditorStyle._();
 
   /// TODO 页面水平留白。
-  static const double page_padding = 18;
+  static const double page_padding = LayoutConfig.space_18;
 
   /// TODO 标题输入字号。
   static const double title_font_size = 20;
@@ -20,5 +22,5 @@ class ChapterEditorStyle {
   static const double toolbar_height = 66;
 
   /// TODO 保存按钮圆角。
-  static const double button_radius = 16;
+  static const double button_radius = LayoutConfig.radius_16;
 }

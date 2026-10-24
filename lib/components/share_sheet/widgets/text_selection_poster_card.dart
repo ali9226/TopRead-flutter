@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -11,6 +12,7 @@ import 'package:app/components/novel_cover/index.dart';
 import 'package:app/components/share_sheet/style.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/util/language_util/index.dart';
+import 'package:app/config/color_config.dart';
 
 /// 段落选中文字的分享海报卡片。
 ///
@@ -201,7 +203,7 @@ class TextSelectionPosterCard extends StatelessWidget {
                   fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: LayoutConfig.space_3),
               Text(
                 date_text,
                 style: TextStyle(
@@ -213,7 +215,7 @@ class TextSelectionPosterCard extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: LayoutConfig.space_12),
         _build_brand_mark(),
       ],
     );
@@ -261,14 +263,14 @@ class TextSelectionPosterCard extends StatelessWidget {
     return Container(
       width: ShareSheetStyle.poster_brand_mark_size,
       height: ShareSheetStyle.poster_brand_mark_size,
-      padding: const EdgeInsets.all(2),
+      padding: const EdgeInsets.all(LayoutConfig.space_2),
       decoration: BoxDecoration(
         color: _brand_surface_color,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_8),
         border: Border.all(color: accent_color.withValues(alpha: 0.18)),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_6),
         child: SvgPicture.asset(
           'assets/svg/logo.svg',
           fit: BoxFit.cover,
@@ -313,7 +315,7 @@ class TextSelectionPosterCard extends StatelessWidget {
                         height: 1.24,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: LayoutConfig.space_4),
                     Text(
                       secondary_text,
                       maxLines: 1,
@@ -324,7 +326,7 @@ class TextSelectionPosterCard extends StatelessWidget {
                         fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                       ),
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: LayoutConfig.space_7),
                     Text(
                       easy.tr(
                         'share_sheet.read_together',
@@ -380,7 +382,10 @@ class TextSelectionPosterCard extends StatelessWidget {
     return Container(
       width: ShareSheetStyle.poster_cover_width,
       height: ShareSheetStyle.poster_cover_height,
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: LayoutConfig.space_6,
+        vertical: LayoutConfig.space_8,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -401,7 +406,7 @@ class TextSelectionPosterCard extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: use_dark_palette ? const Color(0xFF171717) : Colors.white,
+            color: use_dark_palette ? ColorConstants.components_share_sheet_widgets_share_poster_card_tone : ColorConstants.whiteColor,
             fontSize: 9,
             fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
             height: 1.35,
@@ -418,11 +423,11 @@ class TextSelectionPosterCard extends StatelessWidget {
     return Container(
       width: ShareSheetStyle.poster_qr_size,
       height: ShareSheetStyle.poster_qr_size,
-      padding: const EdgeInsets.all(3),
+      padding: const EdgeInsets.all(LayoutConfig.space_3),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        color: ColorConstants.whiteColor,
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_8),
+        border: Border.all(color: ColorConstants.components_share_sheet_widgets_share_poster_card_tone_f222222),
       ),
       child: QrImageView(
         data: qr_data,

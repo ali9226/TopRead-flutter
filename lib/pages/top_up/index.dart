@@ -20,6 +20,8 @@ import 'widgets/top_up_hero_card.dart';
 import 'widgets/top_up_loading_skeleton.dart';
 import 'widgets/top_up_type_picker_sheet.dart';
 import 'widgets/top_up_type_section.dart';
+import 'package:app/components/page_backdrop/index.dart';
+import 'package:app/components/page_backdrop/widgets/decor_glow_spot.dart';
 
 /// 充值页面。
 ///
@@ -194,7 +196,7 @@ class _TopUpState extends State<TopUp> {
 
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       isScrollControlled: true,
       builder: (_) {
         return TopUpTypePickerSheet(
@@ -257,61 +259,37 @@ class _TopUpState extends State<TopUp> {
               // 页面最底层背景渐变。
               // 这个层只负责铺底色氛围，不参与交互，
               // 这样后面的卡片、悬浮按钮和头部渐变都能在统一底板上叠加。
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: isDark
-                          ? const <Color>[
-                              Color(0xFF191C2A),
-                              Color(0xFF11131D),
-                              Color(0xFF0C0D14),
-                            ]
-                          : const <Color>[
-                              Color(0xFFF6F0D8),
-                              Color(0xFFF8F8F4),
-                              Color(0xFFFFFFFF),
-                            ],
-                    ),
-                  ),
-                ),
+              PageBackdropGradient(
+                colors: isDark
+                    ? const <Color>[
+                        ColorConstants.night_gradient_mid,
+                        ColorConstants.night_gradient_deep,
+                        ColorConstants.night_gradient_deepest,
+                      ]
+                    : const <Color>[
+                        ColorConstants.warm_page_gradient_start,
+                        ColorConstants.pages_top_up_widgets_top_up_amount_section_tone_fff8f8f4,
+                        ColorConstants.whiteColor,
+                      ],
               ),
               // 右上角装饰光斑。
               // 纯视觉元素，目的是让顶部区域更有层次感，避免大面积纯色显得单薄。
-              Positioned(
-                top: -40,
-                right: -24,
-                child: IgnorePointer(
-                  child: Container(
-                    width: Style.decorCircleOneSize,
-                    height: Style.decorCircleOneSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Style.accentColor.withValues(
-                        alpha: Style.decorCircleOpacity,
-                      ),
-                    ),
-                  ),
+              DecorGlowSpot(
+                size: Style.decorCircleOneSize,
+                top: Style.decorCircleOneTop,
+                right: Style.decorCircleOneRight,
+                color: Style.accentColor.withValues(
+                  alpha: Style.decorCircleOpacity,
                 ),
               ),
               // 左侧辅助光斑。
               // 和右上角光斑形成对角呼应，平衡页面重心。
-              Positioned(
-                top: 120,
-                left: -36,
-                child: IgnorePointer(
-                  child: Container(
-                    width: Style.decorCircleTwoSize,
-                    height: Style.decorCircleTwoSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: ColorConstants.successColor.withValues(
-                        alpha: Style.decorCircleOpacity,
-                      ),
-                    ),
-                  ),
+              DecorGlowSpot(
+                size: Style.decorCircleTwoSize,
+                top: Style.decorCircleTwoTop,
+                left: Style.decorCircleTwoLeft,
+                color: ColorConstants.successColor.withValues(
+                  alpha: Style.decorCircleOpacity,
                 ),
               ),
               // 主内容滚动层。
@@ -417,7 +395,7 @@ class _TopUpState extends State<TopUp> {
                 left: 0,
                 right: 0,
                 child: Material(
-                  color: Colors.transparent,
+                  color: ColorConstants.transparent,
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -446,16 +424,14 @@ class _TopUpState extends State<TopUp> {
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Container(
-                      color: Colors.black.withValues(
-                        alpha: Style.loadingMaskOpacity,
-                      ),
+                      color: ColorConstants.lightTextColor.withValues(alpha: Style.loadingMaskOpacity),
                       alignment: Alignment.center,
                       child: Container(
                         padding: const EdgeInsets.all(Style.loadingCardPadding),
                         decoration: BoxDecoration(
                           color: isDark
-                              ? const Color(0xFF1A1D2B)
-                              : Colors.white,
+                              ? ColorConstants.pages_bill_widgets_bill_page_loading_overlay_tone
+                              : ColorConstants.whiteColor,
                           borderRadius: BorderRadius.circular(
                             Style.loadingCardRadius,
                           ),

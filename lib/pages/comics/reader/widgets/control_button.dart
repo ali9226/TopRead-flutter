@@ -6,6 +6,7 @@ import 'package:app/components/reader_bottom_action/style.dart';
 import 'package:app/pages/comics/reader/style.dart';
 import 'package:app/pages/comics/style.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// TODO 沿用小说阅读工具栏的无边框图标文字项；视觉紧凑，透明命中区域至少48像素。
 class ComicReaderControlButton extends StatelessWidget {
@@ -76,7 +77,7 @@ class ComicReaderControlButton extends StatelessWidget {
         enabled: on_pressed != null,
         label: label,
         child: Material(
-          color: Colors.transparent,
+          color: ColorConstants.transparent,
           child: InkWell(
             onTap: on_pressed,
             borderRadius: BorderRadius.circular(

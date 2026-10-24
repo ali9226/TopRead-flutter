@@ -1,4 +1,6 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// 正文内容区块样式常量
 class ContentStyle {
@@ -9,7 +11,12 @@ class ContentStyle {
   static const double reading_radius = 0;
 
   /// 正文容器内边距
-  static const EdgeInsets reading_padding = EdgeInsets.fromLTRB(0, 18, 0, 32);
+  static const EdgeInsets reading_padding = EdgeInsets.fromLTRB(
+    0,
+    LayoutConfig.space_18,
+    0,
+    LayoutConfig.space_32,
+  );
 
   /// 正文标题字号
   static const double reading_title_font_size = 22;
@@ -18,7 +25,7 @@ class ContentStyle {
   static const double reading_hint_font_size = 12;
 
   /// 正文段落顶部间距
-  static const double reading_paragraph_top_spacing = 16;
+  static const double reading_paragraph_top_spacing = LayoutConfig.space_16;
 
   /// 正文字号
   static const double reading_paragraph_font_size = 17;
@@ -31,7 +38,7 @@ class ContentStyle {
   static const double reading_paragraph_height_alphabetic = 1.9;
 
   /// 正文段落底部间距
-  static const double reading_paragraph_bottom_spacing = 18;
+  static const double reading_paragraph_bottom_spacing = LayoutConfig.space_18;
 
   /// 原生广告在单章正文中的插入比例。
   static const double native_ad_display_ratio = 0.5;
@@ -40,10 +47,10 @@ class ContentStyle {
   static const int native_ad_minimum_paragraph_count = 4;
 
   /// 阅读提示标题与副标题的垂直间距
-  static const double reading_hint_top_spacing = 6;
+  static const double reading_hint_top_spacing = LayoutConfig.space_6;
 
   /// 正文容器底部外边距
-  static const double reading_container_bottom_margin = 8;
+  static const double reading_container_bottom_margin = LayoutConfig.space_8;
 
   /// 正文点击区域分段数量
   static const double reading_tap_block_count = 3;
@@ -58,40 +65,40 @@ class ContentStyle {
   static const double reading_mask_height = 96;
 
   /// 夜间模式下的正文文字颜色
-  static const Color reading_text_color_dark = Color(0xE0FFFFFF); // white88
+  static const Color reading_text_color_dark = ColorConstants.components_reading_banner_slide_index_tone_e0ffffff; // white88
 
   /// 日间模式下的正文文字颜色
-  static const Color reading_text_color_light = Color(0xFF3B3226);
+  static const Color reading_text_color_light = ColorConstants.reading_text_color_light_ff3b3226;
 
   /// 夜间模式下的正文标题颜色
-  static const Color reading_title_color_dark = Colors.white;
+  static const Color reading_title_color_dark = ColorConstants.whiteColor;
 
   /// 日间模式下的正文标题颜色
-  static const Color reading_title_color_light = Color(0xFF1F1A12);
+  static const Color reading_title_color_light = ColorConstants.components_reader_top_bar_style_tone_ff1f1a12;
 
   /// 夜间模式下的正文提示颜色
-  static const Color reading_hint_color_dark = Color(0xA3FFFFFF); // white64
+  static const Color reading_hint_color_dark = ColorConstants.pages_message_widgets_message_item_card_tone; // white64
 
   /// 日间模式下的正文提示颜色
-  static const Color reading_hint_color_light = Color(0xFF7A6A56);
+  static const Color reading_hint_color_light = ColorConstants.components_reader_top_bar_style_tone_ff7a6a56;
 
   /// 上一章加载中指示器的垂直内边距
   static const EdgeInsets loading_indicator_padding = EdgeInsets.symmetric(
-    vertical: 32,
+    vertical: LayoutConfig.space_32,
   );
 
   /// 上一章加载中指示器的图标尺寸
-  static const double loading_indicator_icon_size = 16;
+  static const double loading_indicator_icon_size = LayoutConfig.icon_small;
 
   /// 上一章加载中指示器的图标与文字间距
-  static const double loading_indicator_icon_spacing = 8;
+  static const double loading_indicator_icon_spacing = LayoutConfig.space_8;
 
   /// 上一章加载中指示器的文字字号
   static const double loading_indicator_font_size = 14;
 
   /// 夜间模式下加载指示器的文字颜色
-  static const Color loading_indicator_text_color_dark = Color(0xA3FFFFFF);
+  static const Color loading_indicator_text_color_dark = ColorConstants.pages_message_widgets_message_item_card_tone;
 
   /// 日间模式下加载指示器的文字颜色
-  static const Color loading_indicator_text_color_light = Color(0xFF7A6A56);
+  static const Color loading_indicator_text_color_light = ColorConstants.components_reader_top_bar_style_tone_ff7a6a56;
 }

@@ -5,6 +5,7 @@ import 'package:app/config/font_config.dart';
 
 import 'package:app/components/network_cover_image/index.dart';
 import 'package:app/components/home/style.dart';
+import 'package:app/config/color_config.dart';
 
 class ReadingBannerSlide extends StatelessWidget {
   /// 海报主标题。
@@ -84,11 +85,11 @@ class ReadingBannerSlide extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: <Color>[
                     isDark
-                        ? Colors.black.withValues(alpha: 0.20)
-                        : const Color(0xFFFFF3C4).withValues(alpha: 0.10),
+                        ? ColorConstants.components_cute_mascot_index_tone_33222222
+                        : ColorConstants.components_reading_banner_slide_index_tone_fffff3c4.withValues(alpha: 0.10),
                     isDark
-                        ? Colors.black.withValues(alpha: 0.62)
-                        : const Color(0xFF7A5B1F).withValues(alpha: 0.36),
+                        ? ColorConstants.components_reading_banner_slide_index_tone_9e222222
+                        : ColorConstants.components_reading_banner_slide_index_tone_ff7a5b1f.withValues(alpha: 0.36),
                   ],
                 ),
               ),
@@ -103,7 +104,7 @@ class ReadingBannerSlide extends StatelessWidget {
                   height: Style.banner_decoration_circle_size,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: isDark ? 0.08 : 0.20),
+                    color: ColorConstants.whiteColor.withValues(alpha: isDark ? 0.08 : 0.20),
                   ),
                 ),
               ),
@@ -124,8 +125,8 @@ class ReadingBannerSlide extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: isDark
-                              ? Colors.white.withValues(alpha: 0.16)
-                              : Colors.black.withValues(alpha: 0.28),
+                              ? ColorConstants.components_reading_banner_slide_index_tone_29ffffff
+                              : ColorConstants.components_reading_banner_slide_index_tone_47222222,
                           borderRadius: BorderRadius.circular(
                             Style.banner_badge_radius,
                           ),
@@ -135,7 +136,7 @@ class ReadingBannerSlide extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: Colors.white,
+                            color: ColorConstants.whiteColor,
                             fontSize: Style.banner_badge_font_size,
                             fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                           ),
@@ -151,7 +152,7 @@ class ReadingBannerSlide extends StatelessWidget {
                       maxLines: title_max_lines,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: ColorConstants.whiteColor,
                         fontSize: Style.banner_title_font_size,
                         fontWeight: FontConfig.adjustedWeight(FontWeight.w900),
                         height: Style.banner_title_height,
@@ -167,7 +168,7 @@ class ReadingBannerSlide extends StatelessWidget {
                       maxLines: subtitle_max_lines,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.88),
+                        color: ColorConstants.components_reading_banner_slide_index_tone_e0ffffff,
                         fontSize: Style.banner_subtitle_font_size,
                         height: Style.banner_subtitle_height,
                         fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
@@ -182,7 +183,7 @@ class ReadingBannerSlide extends StatelessWidget {
                         vertical: Style.banner_highlight_vertical_padding,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.26),
+                        color: ColorConstants.util_dialog_show_upgrade_dialog_tone_42222222,
                         borderRadius: BorderRadius.circular(
                           Style.banner_highlight_radius,
                         ),
@@ -192,7 +193,7 @@ class ReadingBannerSlide extends StatelessWidget {
                         maxLines: highlight_max_lines,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white,
+                          color: ColorConstants.whiteColor,
                           fontSize: Style.banner_highlight_font_size,
                           fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                         ),
@@ -239,7 +240,7 @@ class ReadingBannerSlide extends StatelessWidget {
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
         return Container(
-          color: isDark ? const Color(0xFF1D2435) : const Color(0xFFDDE4EF),
+          color: isDark ? ColorConstants.components_reading_banner_slide_index_tone_ff1d2435 : ColorConstants.components_reading_banner_slide_index_tone_ffdde4ef,
         );
       },
     );

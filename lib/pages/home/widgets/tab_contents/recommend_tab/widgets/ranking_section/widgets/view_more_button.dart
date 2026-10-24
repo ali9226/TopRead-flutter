@@ -4,6 +4,7 @@ import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/widgets/ranking_section/style.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/config/color_config.dart';
 
 /// "查看更多"按钮组件。
 ///
@@ -37,8 +38,8 @@ class ViewMoreButton extends StatelessWidget {
 
     /// 文字和箭头颜色：统一使用浅灰色。
     final Color content_color = is_dark
-        ? Colors.white.withValues(alpha: 0.54)
-        : const Color(0xFF999999);
+        ? ColorConstants.components_app_wrapper_index_tone
+        : ColorConstants.customer_service_sheet_style_time_color_light;
 
     /// 下划线颜色：与文字颜色保持一致。
     final Color underline_color = content_color;

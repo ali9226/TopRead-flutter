@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
 import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:flutter/material.dart';
@@ -45,7 +46,7 @@ class EditorSectionCard extends StatelessWidget {
       children: <Widget>[
         if (show_header)
           Padding(
-            padding: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.only(bottom: LayoutConfig.space_16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -57,7 +58,7 @@ class EditorSectionCard extends StatelessWidget {
                     fontWeight: WorkEditorStyle.section_title_weight,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: LayoutConfig.space_4),
                 Text(
                   subtitle,
                   style: TextStyle(

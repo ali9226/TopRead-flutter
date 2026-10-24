@@ -1,9 +1,11 @@
+import 'package:app/config/layout_config.dart';
+
 /// 加载更多底部组件样式常量。
 class LoadMoreFooterStyle {
   const LoadMoreFooterStyle._();
 
   /// 垂直内边距。
-  static const double vertical_spacing = 20;
+  static const double vertical_spacing = LayoutConfig.space_20;
 
   /// 文案字号。
   static const double font_size = 13;
@@ -18,19 +20,19 @@ class LoadMoreFooterStyle {
   static const double spinner_stroke_width = 2.5;
 
   /// 箭头图标尺寸。
-  static const double icon_size = 16;
+  static const double icon_size = LayoutConfig.icon_small;
 
   /// 图标与文字间距。
-  static const double icon_spacing = 6;
+  static const double icon_spacing = LayoutConfig.space_6;
 
   /// 胶囊按钮水平内边距。
-  static const double button_horizontal_padding = 20;
+  static const double button_horizontal_padding = LayoutConfig.space_20;
 
   /// 胶囊按钮垂直内边距。
-  static const double button_vertical_padding = 8;
+  static const double button_vertical_padding = LayoutConfig.space_8;
 
   /// 胶囊按钮圆角。
-  static const double button_radius = 20;
+  static const double button_radius = LayoutConfig.radius_20;
 
   /// 装饰线宽度。
   static const double divider_width = 40;
@@ -39,5 +41,5 @@ class LoadMoreFooterStyle {
   static const double divider_height = 1;
 
   /// 装饰线与文字间距。
-  static const double divider_text_spacing = 10;
+  static const double divider_text_spacing = LayoutConfig.space_10;
 }

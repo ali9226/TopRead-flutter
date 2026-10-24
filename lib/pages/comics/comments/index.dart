@@ -3,7 +3,6 @@
 import 'dart:async';
 
 import 'package:app/components/window_content_layout/index.dart';
-import 'package:app/components/comment_list/style.dart';
 import 'package:app/components/comment_list/widgets/comment_input.dart';
 import 'package:app/components/comment_list/widgets/comment_skeleton.dart';
 import 'package:app/config/font_config.dart';
@@ -16,6 +15,7 @@ import 'package:app/pages/comics/style.dart';
 import 'package:app/pages/comics/widgets/empty_state.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// TODO 普通漫画评论与章评论共用小说列表项及输入栏，章 ID 只决定独立的数据范围。
 class ComicCommentsPage extends StatefulWidget {
@@ -156,9 +156,7 @@ class _ComicCommentsPageState extends State<ComicCommentsPage> {
       return Scaffold(
         resizeToAvoidBottomInset: false,
         backgroundColor: widget.in_sheet
-            ? (dark
-                  ? CommentListStyle.sheet_dark_bg
-                  : CommentListStyle.sheet_light_bg)
+            ? ComicCommentSheetStyle.background(dark)
             : ComicsStyle.surface(context),
         appBar: widget.embedded
             ? null
@@ -166,7 +164,7 @@ class _ComicCommentsPageState extends State<ComicCommentsPage> {
                 child: AppBar(
                   toolbarHeight: toolbar_height,
                   backgroundColor: ComicsStyle.surface(context),
-                  surfaceTintColor: Colors.transparent,
+                  surfaceTintColor: ColorConstants.transparent,
                   title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -183,9 +181,7 @@ class _ComicCommentsPageState extends State<ComicCommentsPage> {
                           fontSize: ComicsStyle.is_cjk(context)
                               ? ComicCommentsStyle.title_size_cjk
                               : ComicCommentsStyle.title_size_alphabetic,
-                          fontWeight: FontConfig.adjustedWeight(
-                            FontWeight.w500,
-                          ),
+                          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                         ),
                       ),
                       if (_logic.total > 0)

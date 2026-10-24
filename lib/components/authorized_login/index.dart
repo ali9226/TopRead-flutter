@@ -201,8 +201,8 @@ class _AuthorizedLoginViewState extends State<AuthorizedLoginView> {
         height: AuthorizedLoginStyle.icon_size,
         decoration: BoxDecoration(
           color: device_info.dark.value
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.black.withValues(alpha: 0.05),
+              ? ColorConstants.components_authorized_login_index_tone
+              : ColorConstants.components_home_top_search_entry_index_tone,
           borderRadius: BorderRadius.circular(
             AuthorizedLoginStyle.icon_border_radius,
           ),
@@ -240,7 +240,7 @@ class _AuthorizedLoginViewState extends State<AuthorizedLoginView> {
       width: AuthorizedLoginStyle.icon_size,
       height: AuthorizedLoginStyle.icon_size,
       color: (device_info.dark.value && svgName == 'apple')
-          ? Colors.white
+          ? ColorConstants.whiteColor
           : null,
     );
   }

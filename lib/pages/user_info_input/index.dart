@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'dart:math' as math;
 import 'package:app/config/font_config.dart';
@@ -331,9 +332,9 @@ class _UserInfoInputPageState extends State<UserInfoInputPage> {
                                       ? null
                                       : _handle_submit,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    shadowColor: Colors.transparent,
-                                    disabledBackgroundColor: Colors.transparent,
+                                    backgroundColor: ColorConstants.transparent,
+                                    shadowColor: ColorConstants.transparent,
+                                    disabledBackgroundColor: ColorConstants.transparent,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(
                                         Style.submit_button_radius,
@@ -609,7 +610,7 @@ class _FieldActionButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.only(left: 8),
+        padding: const EdgeInsets.only(left: LayoutConfig.space_8),
         child: Icon(
           icon,
           size: Style.field_action_icon_size,

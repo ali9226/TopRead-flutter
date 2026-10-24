@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/comics/editor/models.dart';
 import 'package:app/pages/comics/editor/style.dart';
@@ -87,11 +88,12 @@ class ChapterImageList extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: LayoutConfig.space_8),
           Text(
-            tr('comics.image_count', namedArgs: <String, String>{
-              'count': '${images.length}',
-            }),
+            tr(
+              'comics.image_count',
+              namedArgs: <String, String>{'count': '${images.length}'},
+            ),
             style: ComicsStyle.text(
               context,
               size: is_cjk
@@ -125,7 +127,9 @@ class _ImageRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       key: key,
-      padding: const EdgeInsets.only(bottom: ComicEditorStyle.image_thumb_spacing),
+      padding: const EdgeInsets.only(
+        bottom: ComicEditorStyle.image_thumb_spacing,
+      ),
       child: Row(
         children: <Widget>[
           /// 拖动手柄（仅可编辑时由 ReorderableListView 提供默认手势）。
@@ -135,23 +139,26 @@ class _ImageRow extends StatelessWidget {
               size: 20,
               color: ComicEditorStyle.input_hint(context),
             ),
-          if (enabled) const SizedBox(width: 4),
+          if (enabled) const SizedBox(width: LayoutConfig.space_4),
 
           /// 缩略图。
           ClipRRect(
-            borderRadius: BorderRadius.circular(ComicEditorStyle.image_thumb_radius),
+            borderRadius: BorderRadius.circular(
+              ComicEditorStyle.image_thumb_radius,
+            ),
             child: SizedBox(
               width: ComicEditorStyle.image_thumb_size,
               height: ComicEditorStyle.image_thumb_size,
               child: ComicImage(
                 url: image.image_url,
-                semantic_label: tr('comics.page_count', namedArgs: <String, String>{
-                  'count': '${index + 1}',
-                }),
+                semantic_label: tr(
+                  'comics.page_count',
+                  namedArgs: <String, String>{'count': '${index + 1}'},
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: LayoutConfig.space_12),
 
           /// 页码 + 链接摘要。
           Expanded(
@@ -159,12 +166,13 @@ class _ImageRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  tr('comics.page_count', namedArgs: <String, String>{
-                    'count': '${index + 1}',
-                  }),
+                  tr(
+                    'comics.page_count',
+                    namedArgs: <String, String>{'count': '${index + 1}'},
+                  ),
                   style: ComicsStyle.text(context, strong: true),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: LayoutConfig.space_2),
                 Text(
                   image.image_url,
                   maxLines: 1,

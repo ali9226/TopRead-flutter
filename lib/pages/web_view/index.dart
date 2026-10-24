@@ -149,7 +149,7 @@ class _WebViewPageState extends State<WebViewPage> {
       child: LinearProgressIndicator(
         value: _loading_progress,
         minHeight: Style.progress_bar_height,
-        backgroundColor: Colors.transparent,
+        backgroundColor: ColorConstants.transparent,
         valueColor: AlwaysStoppedAnimation<Color>(ColorConstants.themeColor),
       ),
     );
@@ -258,7 +258,7 @@ class _WebViewPageState extends State<WebViewPage> {
                 label: Text(easy.tr('web_view.retry_button')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ColorConstants.themeColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: ColorConstants.whiteColor,
                   padding: const EdgeInsets.symmetric(
                     horizontal: Style.retry_button_horizontal_padding,
                     vertical: Style.retry_button_vertical_padding,
@@ -283,9 +283,7 @@ class _WebViewPageState extends State<WebViewPage> {
       top: Style.close_button_top_margin,
       left: Style.close_button_left_margin,
       child: Material(
-        color: Colors.black.withValues(
-          alpha: Style.close_button_background_alpha,
-        ),
+        color: ColorConstants.lightTextColor.withValues(alpha: Style.close_button_background_alpha),
         borderRadius: BorderRadius.circular(Style.close_button_radius),
         child: InkWell(
           onTap: _on_close_tap,
@@ -295,7 +293,7 @@ class _WebViewPageState extends State<WebViewPage> {
             height: Style.close_button_size,
             child: Icon(
               Icons.close,
-              color: Colors.white,
+              color: ColorConstants.whiteColor,
               size: Style.close_icon_size,
             ),
           ),

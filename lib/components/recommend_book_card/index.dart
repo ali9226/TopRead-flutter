@@ -181,13 +181,13 @@ class _RecommendBookCardState extends State<RecommendBookCard>
 
     /// 标题颜色。
     final Color title_color = widget.is_dark
-        ? Colors.white
-        : const Color(0xFF161C28);
+        ? ColorConstants.whiteColor
+        : ColorConstants.components_recommend_book_card_index_tone;
 
     /// 简介颜色。
     final Color description_color = widget.is_dark
-        ? Colors.white.withValues(alpha: 0.62)
-        : const Color(0xFF8B93A2);
+        ? ColorConstants.components_recommend_book_card_index_tone_9effffff
+        : ColorConstants.components_recommend_book_card_index_tone_ff8b93a2;
 
     /// 波纹颜色。
     final Color ripple_color = ColorConstants.themeColor.withValues(
@@ -247,9 +247,7 @@ class _RecommendBookCardState extends State<RecommendBookCard>
                               color: title_color,
                               fontSize: RecommendBookCardStyle.title_font_size,
                               height: RecommendBookCardStyle.title_height,
-                              fontWeight: FontConfig.adjustedWeight(
-                                FontWeight.w500,
-                              ),
+                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                             ),
                           ),
 
@@ -270,9 +268,7 @@ class _RecommendBookCardState extends State<RecommendBookCard>
                                     .description_font_size,
                                 height:
                                     RecommendBookCardStyle.description_height,
-                                fontWeight: FontConfig.adjustedWeight(
-                                  FontWeight.w400,
-                                ),
+                                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                               ),
                             ),
                           ],
@@ -350,9 +346,7 @@ class _RecommendBookCardState extends State<RecommendBookCard>
             left: RecommendBookCardStyle.cover_badge_margin.left,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: Colors.black.withValues(
-                  alpha: RecommendBookCardStyle.cover_badge_background_opacity,
-                ),
+                color: ColorConstants.lightTextColor.withValues(alpha: RecommendBookCardStyle.cover_badge_background_opacity),
                 borderRadius: BorderRadius.circular(
                   RecommendBookCardStyle.cover_badge_radius,
                 ),
@@ -362,7 +356,7 @@ class _RecommendBookCardState extends State<RecommendBookCard>
                 child: Text(
                   widget.item.cover_badge,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: ColorConstants.whiteColor,
                     fontSize: RecommendBookCardStyle.cover_badge_font_size,
                     fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                   ),
@@ -378,14 +372,12 @@ class _RecommendBookCardState extends State<RecommendBookCard>
             child: Text(
               widget.item.cover_meta_text,
               style: TextStyle(
-                color: Colors.white,
+                color: ColorConstants.whiteColor,
                 fontSize: RecommendBookCardStyle.cover_meta_font_size,
                 fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                 shadows: <Shadow>[
                   Shadow(
-                    color: Colors.black.withValues(
-                      alpha: RecommendBookCardStyle.cover_meta_shadow_opacity,
-                    ),
+                    color: ColorConstants.lightTextColor.withValues(alpha: RecommendBookCardStyle.cover_meta_shadow_opacity),
                     blurRadius: 8,
                     offset: const Offset(0, 1),
                   ),

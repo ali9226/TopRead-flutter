@@ -6,6 +6,7 @@ import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/config/color_config.dart';
 
 void main() {
   testWidgets('窗口收起展开保持编辑文本、滚动位置和原始字号', (tester) async {
@@ -149,7 +150,7 @@ void main() {
             child: Builder(
               builder: (context) {
                 content_media = MediaQuery.of(context);
-                return const ColoredBox(key: marker_key, color: Colors.white);
+                return const ColoredBox(key: marker_key, color: ColorConstants.whiteColor);
               },
             ),
           ),
@@ -190,7 +191,7 @@ void main() {
               max_width: max_width,
               child: const ColoredBox(
                 key: ValueKey('panel'),
-                color: Colors.white,
+                color: ColorConstants.whiteColor,
               ),
             ),
           ),

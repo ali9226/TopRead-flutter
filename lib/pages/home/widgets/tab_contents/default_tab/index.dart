@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -82,7 +83,7 @@ class _DefaultTabContentState extends State<DefaultTabContent>
 
     return ListView(
       controller: _scroll_controller,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: LayoutConfig.space_12),
       children: <Widget>[
         AnimatedRecommendWaterfall(
           key: _recommend_waterfall_key,

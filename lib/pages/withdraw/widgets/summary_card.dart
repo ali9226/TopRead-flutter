@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
@@ -55,16 +56,14 @@ class WithdrawSummaryCard extends StatelessWidget {
         ),
         border: Border.all(
           color: isDark
-              ? const Color(0xFF8DB7FF).withValues(alpha: 0.14)
+              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff.withValues(alpha: 0.14)
               : ColorConstants.themeColor.withValues(alpha: 0.14),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: isDark
+            color: ColorConstants.shadowColor.withValues(alpha: isDark
                   ? WithdrawStyle.cardShadowDarkOpacity
-                  : WithdrawStyle.cardShadowLightOpacity,
-            ),
+                  : WithdrawStyle.cardShadowLightOpacity),
             blurRadius: WithdrawStyle.cardShadowBlur,
             offset: const Offset(0, WithdrawStyle.cardShadowOffsetY),
           ),
@@ -84,7 +83,7 @@ class WithdrawSummaryCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: LayoutConfig.space_14),
           Text(
             easy.tr('withdraw_page.balance_title'),
             style: TextStyle(
@@ -93,7 +92,7 @@ class WithdrawSummaryCard extends StatelessWidget {
               fontWeight: WithdrawStyle.balanceHintWeight,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: LayoutConfig.space_6),
           Text(
             balanceText,
             style: TextStyle(
@@ -102,7 +101,7 @@ class WithdrawSummaryCard extends StatelessWidget {
               fontWeight: WithdrawStyle.balanceValueWeight,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: LayoutConfig.space_16),
           Container(
             // 下方的信息包裹区把“最小金额 / 最大金额”并排展示，
             // 避免两条信息分散到页面不同位置。
@@ -110,12 +109,8 @@ class WithdrawSummaryCard extends StatelessWidget {
             padding: WithdrawStyle.summaryWrapPadding,
             decoration: BoxDecoration(
               color: isDark
-                  ? Colors.white.withValues(
-                      alpha: WithdrawStyle.summaryWrapDarkOpacity,
-                    )
-                  : Colors.black.withValues(
-                      alpha: WithdrawStyle.summaryWrapLightOpacity,
-                    ),
+                  ? ColorConstants.whiteColor.withValues(alpha: WithdrawStyle.summaryWrapDarkOpacity)
+                  : ColorConstants.lightTextColor.withValues(alpha: WithdrawStyle.summaryWrapLightOpacity),
               borderRadius: BorderRadius.circular(
                 WithdrawStyle.summaryWrapRadius,
               ),
@@ -129,7 +124,7 @@ class WithdrawSummaryCard extends StatelessWidget {
                     isDark: isDark,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: LayoutConfig.space_12),
                 Expanded(
                   child: _MiniMetric(
                     label: easy.tr('withdraw_page.max_amount'),
@@ -177,7 +172,7 @@ class _MiniMetric extends StatelessWidget {
             fontWeight: FontConfig.adjustedWeight(FontWeight.w700),
           ),
         ),
-        const SizedBox(height: 5),
+        const SizedBox(height: LayoutConfig.space_5),
         Text(
           value,
           style: TextStyle(

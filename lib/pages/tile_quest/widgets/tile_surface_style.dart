@@ -1,6 +1,7 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names
 import 'package:flutter/material.dart';
 import '../style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 参考设计图的实体陶瓷牌：宽倒角瓷面、厚实暖棕侧壁、右下柔性接触影。
 ///
@@ -76,10 +77,10 @@ class QuestTileSurfaceStyle {
   /// 图案在牌面上的柔和投影：紧贴图案的高密度接触影 + 向外扩散的环境影。
   static const Offset icon_contact_offset = Offset(0, .014);
   static const double icon_contact_sigma = .012;
-  static const Color icon_contact_color = Color(0x6650392A);
+  static const Color icon_contact_color = ColorConstants.icon_contact_color_6650392a;
   static const Offset icon_shadow_offset = Offset(.012, .025);
   static const double icon_shadow_sigma = .024;
-  static const Color icon_shadow_color = Color(0x4D563D2D);
+  static const Color icon_shadow_color = ColorConstants.icon_shadow_color_4d563d2d;
 
   /// 原始底板的深棕底边提升到暖灰棕；保持奶油高光接近原值。
   /// 此曲线只用于底板，不影响图案饱和度、透明通道与完整厚度轮廓。
@@ -166,9 +167,9 @@ class QuestTileSurfaceStyle {
   /// 被压住的牌沿轮廓叠加一圈径向环境影：中心几乎不变暗，越靠边越暗，
   /// 压掉倒角亮边，避免看起来像“牌外还有一圈原来的底色”。
   static const List<Color> blocked_edge_colors = [
-    Color(0x00120D0A),
-    Color(0x00120D0A),
-    Color(0x42120D0A),
+    ColorConstants.icon_shadow_color_00120d0a,
+    ColorConstants.icon_shadow_color_00120d0a,
+    ColorConstants.icon_shadow_color_42120d0a,
   ];
   static const List<double> blocked_edge_stops = [0, .42, .74];
   static const double blocked_edge_grow = .006;

@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -5,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/short_story_read/style.dart';
 import 'package:app/stores/project_config_store.dart';
+import 'package:app/config/color_config.dart';
 
 /// 完整导航栏组件。
 ///
@@ -71,13 +73,13 @@ class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
 
     /// 骨架屏底色。
     final Color skeleton_base_color = is_dark
-        ? const Color(0xFF252836)
-        : const Color(0xFFF0F1F5);
+        ? ColorConstants.components_category_filter_index_tone
+        : ColorConstants.components_category_filter_index_tone_fff0f1f5;
 
     /// 骨架屏高亮色。
     final Color skeleton_highlight_color = is_dark
-        ? const Color(0xFF384356)
-        : const Color(0xFFF7F9FC);
+        ? ColorConstants.pages_short_story_read_widgets_full_appbar_tone
+        : ColorConstants.pages_short_story_read_widgets_full_appbar_tone_fff7f9fc;
 
     return Container(
       padding: EdgeInsets.only(top: status_bar_height),
@@ -100,7 +102,7 @@ class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ),
                 onPressed: on_back,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(LayoutConfig.space_12),
                 constraints: const BoxConstraints(),
               ),
 
@@ -109,7 +111,9 @@ class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
               /// 收藏按钮（加载时显示骨架屏，完成后显示真实图标）。
               is_loading
                   ? Padding(
-                      padding: const EdgeInsets.only(right: 20),
+                      padding: const EdgeInsets.only(
+                        right: LayoutConfig.space_20,
+                      ),
                       child: _IconSkeleton(
                         size: 22,
                         base_color: skeleton_base_color,
@@ -120,7 +124,9 @@ class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
                       onTap: is_favorite_loading ? null : on_favorite_tap,
                       behavior: HitTestBehavior.opaque,
                       child: Padding(
-                        padding: const EdgeInsets.only(right: 20),
+                        padding: const EdgeInsets.only(
+                          right: LayoutConfig.space_20,
+                        ),
                         child: TweenAnimationBuilder<double>(
                           duration: const Duration(milliseconds: 400),
                           curve: Curves.elasticOut,
@@ -137,9 +143,7 @@ class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
                             height: 22,
                             color: is_favorited
                                 ? (is_dark
-                                      ? const Color(
-                                          0xFFD0D4DB,
-                                        ).withValues(alpha: 0.82)
+                                      ? ColorConstants.components_fixed_bottom_navigation_style_tone_ffd0d4db.withValues(alpha: 0.82)
                                       : null)
                                 : right_icon_color,
                           ),
@@ -155,7 +159,9 @@ class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
 
                 return is_loading
                     ? Padding(
-                        padding: const EdgeInsets.only(right: 16),
+                        padding: const EdgeInsets.only(
+                          right: LayoutConfig.space_16,
+                        ),
                         child: _IconSkeleton(
                           size: 20,
                           base_color: skeleton_base_color,
@@ -166,15 +172,15 @@ class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
                         onTap: on_share,
                         behavior: HitTestBehavior.opaque,
                         child: Padding(
-                          padding: const EdgeInsets.only(right: 16),
+                          padding: const EdgeInsets.only(
+                            right: LayoutConfig.space_16,
+                          ),
                           child: SvgIcon(
                             name: 'share',
                             width: 20,
                             height: 20,
                             color: is_dark
-                                ? const Color(
-                                    0xFFD0D4DB,
-                                  ).withValues(alpha: 0.82)
+                                ? ColorConstants.components_fixed_bottom_navigation_style_tone_ffd0d4db.withValues(alpha: 0.82)
                                 : right_icon_color,
                           ),
                         ),
@@ -269,7 +275,7 @@ class _IconSkeletonState extends State<_IconSkeleton>
             child: Container(
               width: widget.size,
               height: widget.size,
-              color: Colors.white,
+              color: ColorConstants.whiteColor,
             ),
           );
         },

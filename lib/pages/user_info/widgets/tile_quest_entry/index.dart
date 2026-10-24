@@ -1,10 +1,12 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/util/router/router_util.dart';
 import 'style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 无需登录即可进入的独立小游戏入口；不依赖个人中心业务状态。
 class TileQuestEntry extends StatelessWidget {
@@ -24,7 +26,7 @@ class TileQuestEntry extends StatelessWidget {
     return Padding(
       padding: TileQuestEntryStyle.margin,
       child: Material(
-        color: Colors.transparent,
+        color: ColorConstants.transparent,
         borderRadius: BorderRadius.circular(TileQuestEntryStyle.radius),
         clipBehavior: Clip.antiAlias,
         child: Ink(
@@ -77,7 +79,7 @@ class TileQuestEntry extends StatelessWidget {
                             fontWeight: TileQuestEntryStyle.title_weight,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: LayoutConfig.space_4),
                         Text(
                           'tile_quest.entry_subtitle'.tr(),
                           style: TextStyle(
@@ -94,7 +96,7 @@ class TileQuestEntry extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: LayoutConfig.space_8),
                   Container(
                     width: TileQuestEntryStyle.action_size,
                     height: TileQuestEntryStyle.action_size,

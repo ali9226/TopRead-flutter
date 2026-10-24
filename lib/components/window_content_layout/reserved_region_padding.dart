@@ -16,12 +16,17 @@ class WindowReservedRegionPadding extends StatefulWidget {
     required this.child,
     this.enabled = true,
     this.mode = WindowReservedRegionPaddingMode.toolbar,
+    this.retain_when_above_viewport = false,
   });
   final Widget child;
   final bool enabled;
 
   /// TODO 仅标题显式使用heading；不改变正文、底栏和既有导航条的默认测量策略。
   final WindowReservedRegionPaddingMode mode;
+
+  /// 可滚动详情的内容离开顶部后保留已生效的同侧避让，避免上方高度改变而拖动正文锚点。
+  /// 普通工具栏仍按实际相交区域即时释放边距。
+  final bool retain_when_above_viewport;
 
   @override
   State<WindowReservedRegionPadding> createState() =>
@@ -41,6 +46,17 @@ class _WindowReservedRegionPaddingState
     if (widget.enabled && scope?.has_local_edge == true) {
       for (final region in scope!.regions) {
         final obstruction = region.bounds;
+        if (widget.retain_when_above_viewport && bounds.bottom <= 0) {
+          // 只保留当前窗口中仍与同侧边界横向相交的区域，旋转或移除遮挡后允许恢复。
+          if (obstruction.left <= bounds.left &&
+              obstruction.right > bounds.left) {
+            left = math.max(left, _insets.left);
+          } else if (obstruction.right >= bounds.right &&
+              obstruction.left < bounds.right) {
+            right = math.max(right, _insets.right);
+          }
+          continue;
+        }
         if (!bounds.overlaps(obstruction) ||
             (widget.mode == WindowReservedRegionPaddingMode.toolbar &&
                 bounds.height > obstruction.height)) {

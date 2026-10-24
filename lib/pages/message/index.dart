@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'dart:async';
 import 'package:app/config/font_config.dart';
@@ -58,35 +59,35 @@ class _MessagePageState extends State<MessagePage> {
   Worker? _tab_worker;
 
   /// 评论颜色（清透蓝）。
-  static const Color _comment_color = Color(0xFF8DB7FF);
+  static const Color _comment_color = ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff;
 
   /// 点赞颜色（暖珊瑚）。
-  static const Color _like_color = Color(0xFFFF9E80);
+  static const Color _like_color = ColorConstants.message_type_accent_color_list_ffff9e80;
 
   /// 收藏颜色（主题金）。
-  static const Color _favorite_color = Color(0xFFFFD45A);
+  static const Color _favorite_color = ColorConstants.message_type_accent_color_list;
 
   /// 客服回复颜色（清新绿）。
-  static const Color _chat_reply_color = Color(0xFF67C23A);
+  static const Color _chat_reply_color = ColorConstants.successColor;
 
   /// 顶部统计数据。
-  List<_quick_stat_item> get quick_stat_list => <_quick_stat_item>[
+  List<_QuickStatItem> get quick_stat_list => <_QuickStatItem>[
     if (projectConfigStore.current.is_comment_enabled)
-      _quick_stat_item(
+      _QuickStatItem(
         title: easy.tr('message.stats.comment'),
         total: message_store.comment_total.value,
         unread: message_store.comment_unread.value,
         color: _comment_color,
         type: 2,
       ),
-    _quick_stat_item(
+    _QuickStatItem(
       title: easy.tr('message.stats.like'),
       total: message_store.like_total.value,
       unread: message_store.like_unread.value,
       color: _like_color,
       type: 3,
     ),
-    _quick_stat_item(
+    _QuickStatItem(
       title: easy.tr('message.stats.favorite'),
       total: message_store.favorite_total.value,
       unread: message_store.favorite_unread.value,
@@ -298,7 +299,7 @@ class _MessagePageState extends State<MessagePage> {
       final bool is_logged_in = user_information.isLoggedIn.value;
       final Color background_color = is_dark
           ? ColorConstants.nightBackgroundColor
-          : const Color(0xFFF6F7FB);
+          : ColorConstants.components_category_filter_category_filter_bar_tone_fff6f7fb;
       final Color primary_text_color = is_dark
           ? ColorConstants.whiteColor
           : ColorConstants.lightTextColor;
@@ -342,24 +343,25 @@ class _MessagePageState extends State<MessagePage> {
                             style: TextStyle(
                               color: primary_text_color,
                               fontSize: MessageStyle.title_size,
-                              fontWeight: FontConfig.adjustedWeight(
-                                FontWeight.w500,
-                              ),
+                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: LayoutConfig.space_12),
                           Row(
                             children: quick_stat_list.asMap().entries.map((
                               entry,
                             ) {
                               final int index = entry.key;
-                              final _quick_stat_item item = entry.value;
+                              final _QuickStatItem item = entry.value;
                               final bool is_selected =
                                   selected_type == item.type;
                               return Expanded(
                                 child: Padding(
                                   padding: EdgeInsets.only(
-                                    right: index == quick_stat_list.length - 1
+                                    right:
+                                        index ==
+                                            quick_stat_list.length -
+                                                LayoutConfig.space_1
                                         ? 0
                                         : MessageStyle.quick_stat_item_gap,
                                   ),
@@ -380,7 +382,7 @@ class _MessagePageState extends State<MessagePage> {
                               );
                             }).toList(),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: LayoutConfig.space_16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: <Widget>[
@@ -396,9 +398,7 @@ class _MessagePageState extends State<MessagePage> {
                                 style: TextStyle(
                                   color: secondary_text_color,
                                   fontSize: 13,
-                                  fontWeight: FontConfig.adjustedWeight(
-                                    FontWeight.w500,
-                                  ),
+                                  fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                                 ),
                               ),
                               if (message_store.unread_total.value > 0)
@@ -409,20 +409,20 @@ class _MessagePageState extends State<MessagePage> {
                                     style: TextStyle(
                                       color: ColorConstants.dangerColor,
                                       fontSize: 12,
-                                      fontWeight: FontConfig.adjustedWeight(
-                                        FontWeight.w500,
-                                      ),
+                                      fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                                     ),
                                   ),
                                 ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: LayoutConfig.space_10),
                           if (messages.isEmpty && !message_store.has_loaded)
                             MessageSkeleton(is_dark: is_dark)
                           else if (messages.isEmpty)
                             Padding(
-                              padding: const EdgeInsets.only(top: 60),
+                              padding: const EdgeInsets.only(
+                                top: LayoutConfig.space_60,
+                              ),
                               child: Center(
                                 child: Column(
                                   children: <Widget>[
@@ -433,15 +433,15 @@ class _MessagePageState extends State<MessagePage> {
                                         alpha: 0.4,
                                       ),
                                     ),
-                                    const SizedBox(height: 12),
+                                    const SizedBox(
+                                      height: LayoutConfig.space_12,
+                                    ),
                                     Text(
                                       easy.tr('message.empty'),
                                       style: TextStyle(
                                         color: secondary_text_color,
                                         fontSize: 13,
-                                        fontWeight: FontConfig.adjustedWeight(
-                                          FontWeight.w400,
-                                        ),
+                                        fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                                       ),
                                     ),
                                   ],
@@ -500,9 +500,6 @@ class _MessagePageState extends State<MessagePage> {
                       show: _show_back_to_top,
                       isDark: is_dark,
                       onTap: _scroll_to_top,
-                      right: floating_back_to_top_style
-                          .FloatingBackToTopStyle
-                          .right,
                       visibleBottom:
                           fixed_nav_style.Style.bar_height +
                           floating_back_to_top_style
@@ -539,18 +536,18 @@ class _MessagePageState extends State<MessagePage> {
     final Color start_color = is_dark
         ? Color.alphaBlend(
             accent_color.withValues(alpha: 0.20),
-            const Color(0xFF171C28),
+            ColorConstants.pages_home_widgets_tab_contents_recommend_tab_index_tone,
           )
         : accent_color.withValues(alpha: 0.16);
     final Color end_color = is_dark
         ? Color.alphaBlend(
             accent_color.withValues(alpha: 0.08),
-            const Color(0xFF12121C),
+            ColorConstants.nightBackgroundColor,
           )
         : accent_color.withValues(alpha: 0.05);
 
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       borderRadius: BorderRadius.circular(MessageStyle.quick_stat_radius),
       child: Ink(
         height: MessageStyle.quick_stat_height,
@@ -567,7 +564,7 @@ class _MessagePageState extends State<MessagePage> {
           ),
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: Colors.black.withValues(alpha: is_dark ? 0.18 : 0.04),
+              color: ColorConstants.shadowColor.withValues(alpha: is_dark ? 0.18 : 0.04),
               blurRadius: 14,
               offset: const Offset(0, 8),
             ),
@@ -608,7 +605,9 @@ class _MessagePageState extends State<MessagePage> {
                   height: 4,
                   decoration: BoxDecoration(
                     color: accent_color,
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(
+                      LayoutConfig.radius_pill,
+                    ),
                   ),
                 ),
                 // 总数 + 未读数。
@@ -626,10 +625,12 @@ class _MessagePageState extends State<MessagePage> {
                       ),
                     ),
                     if (unread > 0) ...[
-                      const SizedBox(width: 6),
+                      const SizedBox(width: LayoutConfig.space_6),
                       Flexible(
                         child: Padding(
-                          padding: const EdgeInsets.only(bottom: 2),
+                          padding: const EdgeInsets.only(
+                            bottom: LayoutConfig.space_2,
+                          ),
                           child: Text(
                             '${unread.clamp(0, 99)}${easy.tr('message.stats.unread_suffix')}',
                             maxLines: 2,
@@ -637,9 +638,7 @@ class _MessagePageState extends State<MessagePage> {
                             style: TextStyle(
                               color: accent_color,
                               fontSize: 11,
-                              fontWeight: FontConfig.adjustedWeight(
-                                FontWeight.w600,
-                              ),
+                              fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
                             ),
                           ),
                         ),
@@ -668,14 +667,14 @@ class _MessagePageState extends State<MessagePage> {
 }
 
 /// 顶部统计模型。
-class _quick_stat_item {
+class _QuickStatItem {
   final String title;
   final int total;
   final int unread;
   final Color color;
   final int type;
 
-  const _quick_stat_item({
+  const _QuickStatItem({
     required this.title,
     required this.total,
     required this.unread,
@@ -756,7 +755,7 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem>
             direction: DismissDirection.endToStart,
             background: Container(
               alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 20),
+              padding: const EdgeInsets.only(right: LayoutConfig.space_20),
               decoration: BoxDecoration(
                 color: ColorConstants.dangerColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(MessageStyle.card_radius),

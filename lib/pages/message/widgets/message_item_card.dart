@@ -1,17 +1,19 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/message/style.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/config/font_config.dart';
 
+import 'message_item_leading.dart';
+import 'message_type_badge.dart';
+
 /// 消息项卡片。
 class MessageItemCard extends StatelessWidget {
-  /// 左侧 SVG 图标名称。
+  /// 消息类型图标；有封面时显示在右侧。
   final String icon_name;
 
   /// 消息标题。
@@ -59,9 +61,13 @@ class MessageItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final DeviceInfo device_info = Get.find<DeviceInfo>();
     final bool is_dark = device_info.theme.value == ThemeMode.dark;
-    final bool has_cover = novel_cover != null && novel_cover!.isNotEmpty;
+    final cover_url = novel_cover?.trim() ?? '';
+    final bool has_cover = cover_url.isNotEmpty;
 
-    final Color card_color = is_dark ? const Color(0xFF171C28) : Colors.white;
+    final Color card_color = is_dark
+        ? ColorConstants
+              .pages_home_widgets_tab_contents_recommend_tab_index_tone
+        : ColorConstants.whiteColor;
     final Color title_color = is_dark
         ? ColorConstants.whiteColor
         : ColorConstants.lightTextColor;
@@ -82,7 +88,7 @@ class MessageItemCard extends StatelessWidget {
         : icon_and_badge_text_color;
 
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       borderRadius: BorderRadius.circular(MessageStyle.card_radius),
       child: InkWell(
         borderRadius: BorderRadius.circular(MessageStyle.card_radius),
@@ -102,22 +108,15 @@ class MessageItemCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              /// 左侧：有封面显示封面，否则显示图标
-              if (has_cover)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(MessageStyle.cover_radius),
-                  child: CachedNetworkImage(
-                    imageUrl: novel_cover!,
-                    width: MessageStyle.cover_width,
-                    height: MessageStyle.cover_height,
-                    fit: BoxFit.cover,
-                    errorWidget: (context, url, error) =>
-                        _build_icon(icon_and_badge_bg_color, icon_and_badge_text_color),
-                  ),
-                )
-              else
-                _build_icon(icon_and_badge_bg_color, icon_and_badge_text_color),
-              const SizedBox(width: 12),
+              MessageItemLeading(
+                cover_url: cover_url,
+                icon_name: icon_name,
+                background_color: icon_and_badge_bg_color,
+                foreground_color: icon_and_badge_text_color,
+                is_dark: is_dark,
+                unread_count: unread_count,
+              ),
+              const SizedBox(width: LayoutConfig.space_12),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -132,7 +131,9 @@ class MessageItemCard extends StatelessWidget {
                           Container(
                             width: 6,
                             height: 6,
-                            margin: const EdgeInsets.only(right: 6),
+                            margin: const EdgeInsets.only(
+                              right: LayoutConfig.space_6,
+                            ),
                             decoration: BoxDecoration(
                               color: ColorConstants.dangerColor,
                               shape: BoxShape.circle,
@@ -146,7 +147,9 @@ class MessageItemCard extends StatelessWidget {
                             style: TextStyle(
                               color: title_color,
                               fontSize: 15,
-                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
+                              ),
                             ),
                           ),
                         ),
@@ -155,79 +158,71 @@ class MessageItemCard extends StatelessWidget {
                           style: TextStyle(
                             color: subtitle_color,
                             fontSize: 11,
-                            fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                            fontWeight: FontConfig.adjustedWeight(
+                              FontWeight.w400,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: LayoutConfig.space_8),
+
                     /// 内容行：副标题 + 标签
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        Expanded(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 400),
-                            transitionBuilder: (child, animation) {
-                              return SizeTransition(
-                                sizeFactor: animation,
-                                axisAlignment: -1.0,
-                                child: FadeTransition(
-                                  opacity: animation,
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: Text(
-                              subtitle,
-                              key: ValueKey(subtitle),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: subtitle_color,
-                                fontSize: 12,
-                                height: 1.55,
-                                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: MessageStyle.badge_padding,
-                          decoration: BoxDecoration(
-                            color: badge_bg_color,
-                            borderRadius: BorderRadius.circular(
-                              MessageStyle.badge_radius,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (has_cover) ...[
-                                SvgPicture.asset(
-                                  'assets/svg/$icon_name.svg',
-                                  width: 12,
-                                  height: 12,
-                                  colorFilter: ColorFilter.mode(
-                                    badge_text_color,
-                                    BlendMode.srcIn,
+                    LayoutBuilder(
+                      builder: (context, constraints) => Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          Expanded(
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 400),
+                              transitionBuilder: (child, animation) {
+                                return SizeTransition(
+                                  sizeFactor: animation,
+                                  alignment: Alignment.topCenter,
+                                  child: FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                subtitle,
+                                key: ValueKey(subtitle),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: subtitle_color,
+                                  fontSize: 12,
+                                  height: 1.55,
+                                  fontWeight: FontConfig.adjustedWeight(
+                                    FontWeight.w400,
                                   ),
                                 ),
-                                const SizedBox(width: 4),
-                              ],
-                              Text(
-                                badge_text,
-                                style: TextStyle(
-                                  color: badge_text_color,
-                                  fontSize: 11,
-                                  fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                                ),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: LayoutConfig.space_8),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: has_cover
+                                  ? MessageStyle.icon_wrap_size
+                                  : constraints.maxWidth *
+                                        MessageStyle.badge_max_width_ratio,
+                            ),
+                            child: MessageTypeBadge(
+                              icon_name: icon_name,
+                              label: badge_text,
+                              icon_only: has_cover,
+                              background_color: has_cover
+                                  ? icon_and_badge_bg_color
+                                  : badge_bg_color,
+                              foreground_color: has_cover
+                                  ? icon_and_badge_text_color
+                                  : badge_text_color,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -236,58 +231,6 @@ class MessageItemCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  /// 构建左侧圆形图标。
-  Widget _build_icon(Color bg_color, Color icon_color) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: MessageStyle.icon_wrap_size,
-          height: MessageStyle.icon_wrap_size,
-          decoration: BoxDecoration(
-            color: bg_color,
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: SvgPicture.asset(
-            'assets/svg/$icon_name.svg',
-            width: MessageStyle.icon_size,
-            height: MessageStyle.icon_size,
-            colorFilter: ColorFilter.mode(
-              icon_color,
-              BlendMode.srcIn,
-            ),
-          ),
-        ),
-        if (unread_count > 1)
-          Positioned(
-            top: -4,
-            right: -4,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: ColorConstants.dangerColor,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              constraints: const BoxConstraints(
-                minWidth: 16,
-                minHeight: 16,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                unread_count > 99 ? '99+' : '$unread_count',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
-                ),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

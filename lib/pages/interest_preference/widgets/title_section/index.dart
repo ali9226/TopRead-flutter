@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 
@@ -17,7 +18,7 @@ class TitleSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       /// 顶部留白，与导航栏拉开间距。
-      padding: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(top: LayoutConfig.space_16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[

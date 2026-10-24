@@ -5,6 +5,7 @@ import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/models/comics.dart';
 import 'package:app/pages/comics/detail/widgets/about_story/index.dart';
 import 'package:app/pages/comics/detail/widgets/similar_comics/index.dart';
+import 'package:app/pages/comics/detail/widgets/similar_comics/comic_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -64,7 +65,7 @@ void main() {
       expect(tester.getRect(collapse), header_rect);
       expect(find.text('comics.show_less'), findsNothing);
       final full_text_height = tester.getSize(find.text(_description)).height;
-      await tester.tap(collapse);
+      await tester.tap(toggle);
       await tester.pump();
       expect(tester.widget<Text>(find.text(_description)).maxLines, isNull);
       expect(tester.getSize(find.text(_description)).height, full_text_height);
@@ -132,7 +133,7 @@ void main() {
   });
 
   for (final scale in [1.0, 1.5, 2.5]) {
-    testWidgets('推荐标题使用自然高度，长标题和 $scale 倍字体不溢出', (tester) async {
+    testWidgets('推荐统一卡片高度，长标题和 $scale 倍字体不溢出', (tester) async {
       final comics = List.generate(
         5,
         (index) => ComicItem(
@@ -156,6 +157,11 @@ void main() {
         scale: scale,
       );
       expect(tester.takeException(), isNull);
+      final heights = tester
+          .widgetList<ComicSimilarComicCard>(find.byType(ComicSimilarComicCard))
+          .map((card) => tester.getSize(find.byWidget(card)).height)
+          .toSet();
+      expect(heights, hasLength(1));
       await tester.drag(
         find.byType(ComicSimilarComicsRow),
         const Offset(-500, 0),
@@ -222,7 +228,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('comic_about_toggle')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('comic_about_collapse')));
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('comic_about_toggle')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('comic_about_toggle')));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('comic_about_collapse')), findsNothing);
       expect(tester.takeException(), isNull);

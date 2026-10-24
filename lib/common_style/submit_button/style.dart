@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/config/color_config.dart';
+import 'package:app/config/layout_config.dart';
 
 /// 全局统一提交按钮样式配置。
 ///
@@ -26,7 +27,7 @@ class CommonSubmitButtonStyle {
   static const double height = 54.0;
 
   /// 按钮圆角。
-  static const double radius = 27.0;
+  static const double radius = LayoutConfig.radius_27;
 
   /// 按钮水平内边距（用于非全宽场景）。
   static const double horizontalMargin = 0.0;
@@ -55,7 +56,7 @@ class CommonSubmitButtonStyle {
     return LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: const <Color>[Color(0xFFFFD861), Color(0xFFF4BD33)],
+      colors: const <Color>[ColorConstants.pages_change_password_style_tone_ffffd861, ColorConstants.common_style_submit_button_style_tone],
     );
   }
 
@@ -69,7 +70,7 @@ class CommonSubmitButtonStyle {
   static List<BoxShadow> shadow({required bool isDark}) {
     return <BoxShadow>[
       BoxShadow(
-        color: (isDark ? ColorConstants.themeColor : const Color(0xFFF4BD33))
+        color: (isDark ? ColorConstants.themeColor : ColorConstants.common_style_submit_button_style_tone)
             .withValues(alpha: 0.30),
         blurRadius: 18,
         offset: const Offset(0, 10),
@@ -79,11 +80,11 @@ class CommonSubmitButtonStyle {
 
   /// 按钮文字颜色（夜间模式为深色，日间模式也为深色）。
   static Color textColor({required bool isDark}) {
-    return const Color(0xFF3D2E1A);
+    return ColorConstants.common_style_submit_button_style_tone_ff3d2e1a;
   }
 
   /// loading 指示器颜色。
   static Color loadingColor({required bool isDark}) {
-    return const Color(0xFF3D2E1A);
+    return ColorConstants.common_style_submit_button_style_tone_ff3d2e1a;
   }
 }

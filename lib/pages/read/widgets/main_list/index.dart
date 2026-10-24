@@ -39,8 +39,12 @@ class ReadMainList extends StatelessWidget {
   final VoidCallback? on_share;
   final VoidCallback? on_read;
   final VoidCallback? on_favorite;
+  final VoidCallback? on_comments;
   final bool favorited;
   final bool favorite_loading;
+
+  /// 只监听阅读历史状态，避免滚动时重建整页正文。
+  final ValueListenable<bool>? continuing_listenable;
 
   /// 与短篇共用段落选择、输入和详情弹窗的交互入口。
   final void Function(ReadingContentItem, TextSelection)? on_paragraph_comment;
@@ -87,8 +91,10 @@ class ReadMainList extends StatelessWidget {
     this.on_share,
     this.on_read,
     this.on_favorite,
+    this.on_comments,
     this.favorited = false,
     this.favorite_loading = false,
+    this.continuing_listenable,
     this.on_paragraph_comment,
     this.on_paragraph_comments,
     this.on_paragraph_share,
@@ -138,8 +144,10 @@ class ReadMainList extends StatelessWidget {
               on_share: on_share,
               on_read: on_read,
               on_favorite: on_favorite,
+              on_comments: on_comments,
               favorited: favorited,
               favorite_loading: favorite_loading,
+              continuing_listenable: continuing_listenable,
               on_paragraph_comment: on_paragraph_comment,
               on_paragraph_comments: on_paragraph_comments,
               on_paragraph_share: on_paragraph_share,

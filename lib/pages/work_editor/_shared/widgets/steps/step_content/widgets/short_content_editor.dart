@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/author_center/author_style.dart';
@@ -62,13 +63,13 @@ class ShortContentEditor extends StatelessWidget {
                 fontWeight: AuthorStyle.body_weight,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: LayoutConfig.space_12),
 
             /// 文件上传按钮。
             _build_file_upload_button(),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: LayoutConfig.space_8),
 
         /// 与长篇共用输入准入：步骤和导航收起完成后，再建立键盘连接。
         EditorKeyboardInput(
@@ -107,12 +108,15 @@ class ShortContentEditor extends StatelessWidget {
   Widget _build_file_upload_button() {
     return InkWell(
       onTap: on_file_upload,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(LayoutConfig.radius_8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(
+          horizontal: LayoutConfig.space_10,
+          vertical: LayoutConfig.space_6,
+        ),
         decoration: BoxDecoration(
           color: ColorConstants.themeColor,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -123,7 +127,7 @@ class ShortContentEditor extends StatelessWidget {
               height: 16,
               color: ColorConstants.lightTextColor,
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: LayoutConfig.space_4),
             Text(
               easy.tr('creator_center.upload_file'),
               style: TextStyle(

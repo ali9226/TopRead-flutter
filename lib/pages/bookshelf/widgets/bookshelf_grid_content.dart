@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/components/fixed_bottom_navigation/style.dart'
@@ -229,7 +230,8 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
               show: _is_back_to_top_visible,
               isDark: widget.is_dark,
               onTap: _scroll_to_top,
-              right: floating_back_to_top_style.FloatingBackToTopStyle.right,
+              // 此 Stack 已由 _BookshelfTabPage 加上正文左右边距。
+              horizontalPadding: 0,
               visibleBottom:
                   fixed_nav_style.Style.bar_height +
                   floating_back_to_top_style
@@ -552,8 +554,8 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
   /// 构建空状态。
   Widget _build_empty_state() {
     final Color text_color = widget.is_dark
-        ? Colors.white.withValues(alpha: 0.6)
-        : const Color(0xFF9BA3B1);
+        ? ColorConstants.components_load_more_footer_index_tone
+        : ColorConstants.pages_bookshelf_widgets_focus_tab_content_tone;
 
     final String empty_key = widget.type == BookshelfContentType.history
         ? 'bookshelf.empty.history'
@@ -570,7 +572,7 @@ class _BookshelfGridContentState extends State<BookshelfGridContent> {
             size: 64,
             color: text_color,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: LayoutConfig.space_16),
           Text(
             easy.tr(empty_key),
             style: TextStyle(
@@ -645,8 +647,8 @@ class _BookCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color block_color = is_dark
-        ? const Color(0xFF1A2130)
-        : const Color(0xFFEDEFF4);
+        ? ColorConstants.pages_bookshelf_widgets_bookshelf_grid_content_tone
+        : ColorConstants.pages_bookshelf_widgets_bookshelf_grid_content_tone_ffedeff4;
 
     return Column(
       mainAxisSize: MainAxisSize.min,

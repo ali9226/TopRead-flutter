@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
+import 'package:app/config/color_config.dart';
 
 /// 样式配置（类似 CSS）
 class Style {
@@ -19,13 +20,13 @@ class Style {
   static final TextStyle textStyle = TextStyle(
     fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
     fontSize: 15,
-    color: Colors.black,
+    color: ColorConstants.lightTextColor,
   );
 
   static final TextStyle titleStyle = TextStyle(
     fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
     fontSize: 18,
-    color: Colors.black,
+    color: ColorConstants.lightTextColor,
     letterSpacing: 0.2,
   );
 }

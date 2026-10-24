@@ -1,9 +1,11 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
 
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/short_story_read/style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 收起/展开胶囊按钮组件。
 ///
@@ -45,8 +47,8 @@ class CollapseButton extends StatelessWidget {
 
     /// 阴影颜色（夜间模式阴影更深）。
     final Color shadow_color = is_dark
-        ? Colors.black.withValues(alpha: 0.3)
-        : Colors.black.withValues(alpha: 0.1);
+        ? ColorConstants.shadow_color_4c222222
+        : ColorConstants.pages_short_story_read_widgets_collapse_button_tone_1a222222;
 
     /// 按钮文字（展开时显示"收起"，收起时显示"展开"）。
     final String button_text = is_expanded
@@ -59,12 +61,12 @@ class CollapseButton extends StatelessWidget {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
         padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 8,
+          horizontal: LayoutConfig.space_14,
+          vertical: LayoutConfig.space_8,
         ),
         decoration: BoxDecoration(
           color: bg_color,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_20),
           boxShadow: [
             BoxShadow(
               color: shadow_color,
@@ -86,7 +88,7 @@ class CollapseButton extends StatelessWidget {
               ),
               child: Text(button_text),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: LayoutConfig.space_4),
 
             /// 箭头图标（展开时朝上，收起时朝下，带旋转动画）。
             AnimatedRotation(

@@ -29,7 +29,7 @@ class RankingSectionSkeleton extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Padding(
-          padding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
+          padding: const EdgeInsets.fromLTRB(0, 0, LayoutConfig.space_10, 0),
           child: tab_bar ?? _build_tab_bar_skeleton(),
         ),
         _build_content_skeleton(context),
@@ -104,22 +104,23 @@ class RankingSectionSkeleton extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: List<Widget>.generate(5, (int col_index) {
+              final right_gap = col_index < 4
+                  ? RankingSectionStyle.column_gap
+                  : 0.0;
               return Padding(
-                padding: EdgeInsets.only(
-                  right: col_index < 4 ? RankingSectionStyle.column_gap : 0,
-                ),
+                padding: EdgeInsets.only(right: right_gap),
                 child: SizedBox(
                   width: RankingSectionStyle.column_content_width,
                   child: Column(
                     children: List<Widget>.generate(
                       RankingSectionStyle.rows_per_column,
                       (int row_index) {
-                        return Padding(
-                          padding: EdgeInsets.only(
-                            bottom: row_index < RankingSectionStyle.rows_per_column - 1
+                        final bottom_gap =
+                            row_index < RankingSectionStyle.rows_per_column - 1
                                 ? item_height - item_content_height
-                                : 0,
-                          ),
+                                : 0.0;
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: bottom_gap),
                           child: _build_single_skeleton_item(
                             skeleton_color: skeleton_color,
                             index: row_index * 5 + col_index,

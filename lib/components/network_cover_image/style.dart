@@ -1,4 +1,6 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// 网络封面图片组件样式常量。
 ///
@@ -24,13 +26,13 @@ class NetworkCoverImageStyle {
   ];
 
   /// 默认错误占位图标尺寸。
-  static const double error_icon_size = 20;
+  static const double error_icon_size = LayoutConfig.icon_medium;
 
   /// 默认错误占位文字字号。
   static const double error_text_font_size = 12;
 
   /// 错误占位图标与文字间距。
-  static const double error_content_gap = 6;
+  static const double error_content_gap = LayoutConfig.space_6;
 
   /// 错误占位的图标透明度。
   static const double error_icon_opacity = 0.72;
@@ -39,26 +41,26 @@ class NetworkCoverImageStyle {
   static const double error_text_opacity = 0.78;
 
   /// 日间主题骨架底色。
-  static const Color light_skeleton_base_color = Color(0xFFE8ECF3);
+  static const Color light_skeleton_base_color = ColorConstants.cover_skeleton_light_base;
 
   /// 日间主题骨架高亮色。
-  static const Color light_skeleton_highlight_color = Color(0xFFF7F9FC);
+  static const Color light_skeleton_highlight_color = ColorConstants.pages_short_story_read_widgets_full_appbar_tone_fff7f9fc;
 
   /// 夜间主题骨架底色。
-  static const Color dark_skeleton_base_color = Color(0xFF232B39);
+  static const Color dark_skeleton_base_color = ColorConstants.cover_skeleton_dark_base;
 
   /// 夜间主题骨架高亮色。
-  static const Color dark_skeleton_highlight_color = Color(0xFF384356);
+  static const Color dark_skeleton_highlight_color = ColorConstants.pages_short_story_read_widgets_full_appbar_tone;
 
   /// 日间主题错误占位背景色。
-  static const Color light_error_background_color = Color(0xFFF3F5F9);
+  static const Color light_error_background_color = ColorConstants.cover_fallback_light_bg;
 
   /// 夜间主题错误占位背景色。
-  static const Color dark_error_background_color = Color(0xFF1A2130);
+  static const Color dark_error_background_color = ColorConstants.pages_bookshelf_widgets_bookshelf_grid_content_tone;
 
   /// 日间主题错误占位前景色。
-  static const Color light_error_foreground_color = Color(0xFF97A3B6);
+  static const Color light_error_foreground_color = ColorConstants.light_error_foreground_color_ff97a3b6;
 
   /// 夜间主题错误占位前景色。
-  static const Color dark_error_foreground_color = Color(0xFFADB9CB);
+  static const Color dark_error_foreground_color = ColorConstants.dark_error_foreground_color_ffadb9cb;
 }

@@ -57,7 +57,7 @@ class AuthTextStyle {
   /// 用于 Logo、口号、输入框标题等需要高对比度的元素。
   static Color primaryTextColor({required bool isDark}) {
     return isDark
-        ? Colors.white
+        ? ColorConstants.whiteColor
         : ColorConstants.nightBackgroundColor;
   }
 

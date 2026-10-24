@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -25,7 +26,7 @@ class AuthBrandSection extends StatelessWidget {
       return Column(
         children: [
           const SizedBox(height: AuthPageStyle.brandTopSpacing),
-          const SizedBox(height: 30),
+          const SizedBox(height: LayoutConfig.space_30),
           Center(
             child: SvgIcon(
               name: 'logo',
@@ -36,7 +37,7 @@ class AuthBrandSection extends StatelessWidget {
           ),
           const SizedBox(height: AuthTextStyle.logoToSloganSpacing),
           const Center(child: AuthSlogan()),
-          const SizedBox(height: 30),
+          const SizedBox(height: LayoutConfig.space_30),
         ],
       );
     });
@@ -59,22 +60,23 @@ class AuthSlogan extends StatelessWidget {
 
     return Obx(() {
       final bool isDark = deviceInfo.dark.value;
-      final Color textColor = color ?? AuthTextStyle.primaryTextColor(isDark: isDark);
+      final Color textColor =
+          color ?? AuthTextStyle.primaryTextColor(isDark: isDark);
 
       final LanguageStore languageStore = Get.find<LanguageStore>();
-      final LanguageInfo? currentLanguageInfo =
-          languageStore.find_supported_language_by_code(
-        context.locale.languageCode,
-      );
-      final String sloganText = (currentLanguageInfo != null &&
-              currentLanguageInfo.remark.isNotEmpty)
+      final LanguageInfo? currentLanguageInfo = languageStore
+          .find_supported_language_by_code(context.locale.languageCode);
+      final String sloganText =
+          (currentLanguageInfo != null && currentLanguageInfo.remark.isNotEmpty)
           ? currentLanguageInfo.remark
           : context.tr('login.slogan');
 
       return SizedBox(
         height: 50,
         child: Row(
-          mainAxisAlignment: alignLeft ? MainAxisAlignment.start : MainAxisAlignment.center,
+          mainAxisAlignment: alignLeft
+              ? MainAxisAlignment.start
+              : MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             if (!alignLeft)
@@ -86,7 +88,7 @@ class AuthSlogan extends StatelessWidget {
                   reverse: false,
                 ),
               ),
-            if (!alignLeft) const SizedBox(width: 10),
+            if (!alignLeft) const SizedBox(width: LayoutConfig.space_10),
             Flexible(
               child: Text(
                 sloganText,
@@ -100,7 +102,7 @@ class AuthSlogan extends StatelessWidget {
                 ),
               ),
             ),
-            if (!alignLeft) const SizedBox(width: 10),
+            if (!alignLeft) const SizedBox(width: LayoutConfig.space_10),
             if (!alignLeft)
               Container(
                 width: AuthTextStyle.sloganBarWidth,

@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/reader_theme_options/index.dart';
 import 'dart:async';
 import 'package:app/components/reader_theme_transition/index.dart';
@@ -89,7 +90,9 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
         constraints: BoxConstraints(maxHeight: max_height),
         decoration: BoxDecoration(
           color: bg_color,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(LayoutConfig.radius_16),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -97,14 +100,19 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
             _buildHeader(is_dark: is_dark),
             Flexible(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                padding: const EdgeInsets.fromLTRB(
+                  LayoutConfig.space_20,
+                  LayoutConfig.space_16,
+                  LayoutConfig.space_20,
+                  LayoutConfig.space_24,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     _buildFontSizeRow(is_dark: is_dark),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: LayoutConfig.space_20),
                     _buildThemeRow(is_dark: is_dark),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: LayoutConfig.space_24),
                     _buildOtherSection(is_dark: is_dark),
                   ],
                 ),
@@ -118,22 +126,27 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
 
   /// 构建顶部标题栏。
   Widget _buildHeader({required bool is_dark}) {
-    final Color title_color = is_dark ? Colors.white : const Color(0xFF1F1A12);
+    final Color title_color = is_dark ? ColorConstants.whiteColor : ColorConstants.components_reader_top_bar_style_tone_ff1f1a12;
 
     final Color icon_color = is_dark
-        ? Colors.white.withValues(alpha: 0.7)
-        : const Color(0xFF7A6A56);
+        ? ColorConstants.components_reader_bottom_action_style_tone_b2ffffff
+        : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56;
 
     final Color divider_color = is_dark
-        ? const Color(0xFF21262D)
-        : const Color(0xFFEEEEEE);
+        ? ColorConstants.components_reader_top_bar_style_tone_ff21262d
+        : ColorConstants.components_reader_top_bar_style_tone_ffeeeeee;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         BottomSheetDragHandle(is_dark: is_dark),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+          padding: const EdgeInsets.fromLTRB(
+            LayoutConfig.space_20,
+            LayoutConfig.space_16,
+            LayoutConfig.space_12,
+            LayoutConfig.space_12,
+          ),
           child: Row(
             children: <Widget>[
               Text(
@@ -149,7 +162,7 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
                 onTap: widget.on_close,
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(LayoutConfig.space_8),
                   child: SvgPicture.asset(
                     'assets/svg/close.svg',
                     width: 16,
@@ -195,7 +208,7 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
 
   /// 构建字号调节行。
   Widget _buildFontSizeRow({required bool is_dark}) {
-    final Color title_color = is_dark ? Colors.white : const Color(0xFF1F1A12);
+    final Color title_color = is_dark ? ColorConstants.whiteColor : ColorConstants.components_reader_top_bar_style_tone_ff1f1a12;
 
     final double current_size = widget.body_font_size.value;
     final bool can_increase = current_size < widget.font_size_max;
@@ -217,7 +230,7 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
             ),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: LayoutConfig.space_16),
         Expanded(
           child: _buildCapsuleButton(
             is_dark: is_dark,
@@ -227,7 +240,9 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: LayoutConfig.space_12,
+          ),
           child: _buildAnimatedFontSize(
             current_size: current_size,
             title_color: title_color,
@@ -295,17 +310,17 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
   }) {
     final Color bg_color = is_dark
         ? (is_enabled
-              ? Colors.white.withValues(alpha: 0.15)
-              : Colors.white.withValues(alpha: 0.08))
+              ? ColorConstants.components_authorized_login_apple_review_index_tone
+              : ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff)
         : (is_enabled
-              ? const Color(0xFF7A6A56).withValues(alpha: 0.10)
-              : const Color(0xFF7A6A56).withValues(alpha: 0.05));
+              ? ColorConstants.components_reader_top_bar_style_tone_ff7a6a56.withValues(alpha: 0.10)
+              : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56.withValues(alpha: 0.05));
 
     final Color icon_color = is_dark
-        ? (is_enabled ? Colors.white : Colors.white.withValues(alpha: 0.3))
+        ? (is_enabled ? ColorConstants.whiteColor : ColorConstants.components_authorized_login_apple_review_index_tone_4cffffff)
         : (is_enabled
-              ? const Color(0xFF1F1A12)
-              : const Color(0xFF7A6A56).withValues(alpha: 0.3));
+              ? ColorConstants.components_reader_top_bar_style_tone_ff1f1a12
+              : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56.withValues(alpha: 0.3));
 
     return GestureDetector(
       onTap: is_enabled ? onTap : null,
@@ -313,7 +328,7 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
         height: 36,
         decoration: BoxDecoration(
           color: bg_color,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_18),
         ),
         child: Center(
           child: SvgPicture.asset(
@@ -329,7 +344,7 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
 
   /// 构建其它区域（"其它"标题 + 自动阅读按钮）。
   Widget _buildOtherSection({required bool is_dark}) {
-    final Color title_color = is_dark ? Colors.white : const Color(0xFF1F1A12);
+    final Color title_color = is_dark ? ColorConstants.whiteColor : ColorConstants.components_reader_top_bar_style_tone_ff1f1a12;
 
     final double label_width = _calculate_label_width(context);
 
@@ -348,7 +363,7 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
             ),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: LayoutConfig.space_16),
         Expanded(
           child: GestureDetector(
             onTap: widget.on_auto_read,
@@ -356,9 +371,9 @@ class _ReadSettingsSheetState extends State<ReadSettingsSheet>
               height: 36,
               decoration: BoxDecoration(
                 color: is_dark
-                    ? Colors.white.withValues(alpha: 0.15)
-                    : const Color(0xFF7A6A56).withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(18),
+                    ? ColorConstants.components_authorized_login_apple_review_index_tone
+                    : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(LayoutConfig.radius_18),
               ),
               child: Center(
                 child: Text(

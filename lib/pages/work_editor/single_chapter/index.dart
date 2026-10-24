@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'dart:convert';
 import 'package:app/config/font_config.dart';
@@ -21,6 +22,7 @@ import 'package:get/get.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../workspace/logic.dart';
 import 'logic.dart';
+import 'package:app/config/color_config.dart';
 
 /* TODO 单章编辑路由：只读取当前章；原章发布即时生效，新章节可独立定时发布。 */
 class SingleChapterPage extends StatefulWidget {
@@ -159,7 +161,7 @@ class _SingleChapterPageState extends State<SingleChapterPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(tr('creator_workspace.recovery_hint')),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: LayoutConfig.space_16),
                     Text(tr('creator_workspace.cloud_copy')),
                     SelectableText('${cloud['title']}\n${cloud['content']}'),
                     const Divider(),
@@ -391,7 +393,7 @@ class _SingleChapterPageState extends State<SingleChapterPage> {
               appBar: WindowAppBar(
                 child: AppBar(
                   backgroundColor: AuthorStyle.surface(is_dark),
-                  surfaceTintColor: Colors.transparent,
+                  surfaceTintColor: ColorConstants.transparent,
                   foregroundColor: AuthorStyle.primary_text(is_dark),
                   elevation: 0,
                   title: Text(

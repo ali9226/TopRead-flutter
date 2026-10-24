@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
 import 'package:app/components/svg_icon/index.dart';
@@ -68,20 +69,14 @@ class TopUpRecordCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(TopUpRecordStyle.cardRadius),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(
-                  alpha: TopUpRecordStyle.cardBorderDarkOpacity,
-                )
-              : Colors.black.withValues(
-                  alpha: TopUpRecordStyle.cardBorderLightOpacity,
-                ),
+              ? ColorConstants.whiteColor.withValues(alpha: TopUpRecordStyle.cardBorderDarkOpacity)
+              : ColorConstants.lightTextColor.withValues(alpha: TopUpRecordStyle.cardBorderLightOpacity),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: isDark
+            color: ColorConstants.shadowColor.withValues(alpha: isDark
                   ? TopUpRecordStyle.cardShadowDarkOpacity
-                  : TopUpRecordStyle.cardShadowLightOpacity,
-            ),
+                  : TopUpRecordStyle.cardShadowLightOpacity),
             blurRadius: TopUpRecordStyle.cardShadowBlur,
             offset: const Offset(0, TopUpRecordStyle.cardShadowOffsetY),
           ),
@@ -301,14 +296,10 @@ class TopUpRecordCard extends StatelessWidget {
                                           TopUpRecordStyle.addressWrapPadding,
                                       decoration: BoxDecoration(
                                         color: isDark
-                                            ? Colors.white.withValues(
-                                                alpha: TopUpRecordStyle
-                                                    .addressWrapDarkOpacity,
-                                              )
-                                            : Colors.black.withValues(
-                                                alpha: TopUpRecordStyle
-                                                    .addressWrapLightOpacity,
-                                              ),
+                                            ? ColorConstants.whiteColor.withValues(alpha: TopUpRecordStyle
+                                                    .addressWrapDarkOpacity)
+                                            : ColorConstants.lightTextColor.withValues(alpha: TopUpRecordStyle
+                                                    .addressWrapLightOpacity),
                                         borderRadius: BorderRadius.circular(
                                           TopUpRecordStyle.addressWrapRadius,
                                         ),
@@ -498,9 +489,7 @@ class _InfoBlock extends StatelessWidget {
         color:
             backgroundColor ??
             (isDark
-                ? Colors.white.withValues(
-                    alpha: TopUpRecordStyle.infoBlockDarkOpacity,
-                  )
+                ? ColorConstants.whiteColor.withValues(alpha: TopUpRecordStyle.infoBlockDarkOpacity)
                 : TopUpRecordStyle.infoBlockLightColor),
         borderRadius: BorderRadius.circular(TopUpRecordStyle.infoBlockRadius),
       ),
@@ -601,7 +590,10 @@ class _InfoLine extends StatelessWidget {
               ),
             ),
           ),
-          if (trailing != null) ...[const SizedBox(width: 6), trailing!],
+          if (trailing != null) ...[
+            const SizedBox(width: LayoutConfig.space_6),
+            trailing!,
+          ],
         ],
       ),
     );

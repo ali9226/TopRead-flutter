@@ -9,6 +9,7 @@ import 'package:app/models/paragraph_anchor.dart';
 import 'package:app/models/story_paragraph.dart';
 import 'package:app/util/split_story_paragraphs.dart';
 import 'package:app/components/paragraph_selection/index.dart';
+import 'skeleton_content.dart';
 
 /// 正文内容组件。
 ///
@@ -175,7 +176,7 @@ class _StoryContentState extends State<StoryContent> {
 
     // 加载中状态：展示骨架屏。
     if (is_loading) {
-      return _buildLoadingSkeleton(is_dark: is_dark);
+      return SkeletonContent(is_dark: is_dark, font_size: body_font_size);
     }
 
     // 内容为空：不渲染任何内容。
@@ -209,37 +210,6 @@ class _StoryContentState extends State<StoryContent> {
       is_dark: is_dark,
       on_tap_position: (_) => widget.on_content_tap?.call(),
       child: body,
-    );
-  }
-
-  /// 构建加载中骨架屏。
-  ///
-  /// 模拟 12 行正文段落的占位效果，每 4 行中第 1 行使用较短宽度。
-  Widget _buildLoadingSkeleton({required bool is_dark}) {
-    /// 骨架屏底色。
-    final Color base_color = is_dark
-        ? ShortStoryReadStyle.skeleton_dark_base
-        : ShortStoryReadStyle.skeleton_light_base;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: List<Widget>.generate(12, (int index) {
-        /// 每 4 行中第 1 行使用较短宽度，模拟段落末行效果。
-        final double width = index % 4 == 0 ? 160 : double.infinity;
-        return Padding(
-          padding: const EdgeInsets.only(
-            bottom: ShortStoryReadStyle.paragraph_spacing,
-          ),
-          child: Container(
-            width: width,
-            height: 16,
-            decoration: BoxDecoration(
-              color: base_color,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-        );
-      }),
     );
   }
 

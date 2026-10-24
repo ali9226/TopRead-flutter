@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/config/color_config.dart';
 
 const _export = bool.fromEnvironment('TILE_QUEST_EXPORT_REVEAL');
 const _size = Size(390, 844);
@@ -88,7 +89,7 @@ Future<GlobalKey<_HarnessState>> _mount(
       home: RepaintBoundary(
         key: boundary,
         child: Scaffold(
-          backgroundColor: const Color(0xff233a56),
+          backgroundColor: ColorConstants.test_pages_tile_quest_reveal_pixel_preview_test_tone,
           body: _Harness(key: key),
         ),
       ),

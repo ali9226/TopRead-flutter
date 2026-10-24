@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 由 tool/sync_platform_colors.py 从 color_config.dart 生成，请勿手工改色。 -->
+<resources>
+    <color name="app_launch_background">#FF12121C</color>
+</resources>

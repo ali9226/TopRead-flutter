@@ -1,4 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/tile_quest_tile.dart';
 import '../style.dart';
@@ -15,8 +16,8 @@ class TileStateShowcase extends StatelessWidget {
         Text('STATES  状态对比', style: TilePreviewStyle.section()),
         const SizedBox(height: TilePreviewStyle.header_gap),
         Wrap(
-          spacing: 28,
-          runSpacing: 20,
+          spacing: LayoutConfig.space_28,
+          runSpacing: LayoutConfig.space_20,
           crossAxisAlignment: WrapCrossAlignment.end,
           children: [
             _state_item('普通', const TileQuestTile(size: 64)),
@@ -24,10 +25,7 @@ class TileStateShowcase extends StatelessWidget {
               '选中',
               const TileQuestTile(size: 64, is_selected: true, elevation: 1.3),
             ),
-            _state_item(
-              '遮挡',
-              const TileQuestTile(size: 64, is_blocked: true),
-            ),
+            _state_item('遮挡', const TileQuestTile(size: 64, is_blocked: true)),
           ],
         ),
       ],
@@ -39,7 +37,7 @@ class TileStateShowcase extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     children: [
       tile,
-      const SizedBox(height: 8),
+      const SizedBox(height: LayoutConfig.space_8),
       Text(label, style: TilePreviewStyle.label()),
     ],
   );

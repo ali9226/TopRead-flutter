@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/config/color_config.dart';
@@ -103,7 +104,7 @@ class _TopUserInfoState extends State<TopUserInfo> {
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: LayoutConfig.space_6),
               GestureDetector(
                 onTap: () {
                   /// 右侧编辑图标也复用同一个资料编辑入口。
@@ -114,12 +115,12 @@ class _TopUserInfoState extends State<TopUserInfo> {
                   height: 22,
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : Colors.white.withValues(alpha: 0.42),
-                    borderRadius: BorderRadius.circular(8),
+                        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff
+                        : ColorConstants.pages_short_story_read_index_tone_6bffffff,
+                    borderRadius: BorderRadius.circular(LayoutConfig.radius_8),
                     border: Border.all(
                       color: isDark
-                          ? Colors.white.withValues(alpha: 0.10)
+                          ? ColorConstants.components_authorized_login_index_tone
                           : ColorConstants.themeColor.withValues(alpha: 0.35),
                     ),
                   ),
@@ -172,7 +173,9 @@ class _TopUserInfoState extends State<TopUserInfo> {
                 const Spacer(),
                 if (widget.balanceTrailing != null)
                   Padding(
-                    padding: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.only(
+                      right: LayoutConfig.space_10,
+                    ),
                     child: widget.balanceTrailing!,
                   ),
               ],

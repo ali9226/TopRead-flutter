@@ -7,6 +7,41 @@ import UIKit
 import UserNotifications
 import google_mobile_ads
 
+/// 将 Flutter ARGB 转成 UIKit 颜色，原生端不定义色值。
+private func flutterColor(_ value: NSNumber) -> UIColor {
+  let argb = value.uint32Value
+  let byteMax: CGFloat = 255
+  return UIColor(
+    red: CGFloat((argb >> 16) & 0xFF) / byteMax,
+    green: CGFloat((argb >> 8) & 0xFF) / byteMax,
+    blue: CGFloat(argb & 0xFF) / byteMax,
+    alpha: CGFloat((argb >> 24) & 0xFF) / byteMax
+  )
+}
+
+/// 原生广告只解码 Flutter 色板，不在 Swift 内复制主题或标签颜色。
+private struct NativeAdPalette {
+  private let colors: [String: NSNumber]
+
+  init?(_ customOptions: [AnyHashable: Any]?) {
+    guard let colors = customOptions?["palette"] as? [String: NSNumber],
+      [
+        "card_background", "primary_text", "secondary_text",
+        "attribution_text", "attribution_background",
+        "advertiser_text", "advertiser_background", "cta_text", "cta_background",
+        "overlay_background", "overlay_scrim", "overlay_headline", "overlay_caption",
+        "overlay_tag", "overlay_tag_background", "overlay_cta_text",
+      ].allSatisfy({ colors[$0] != nil })
+    else { return nil }
+    self.colors = colors
+  }
+
+  func color(_ key: String) -> UIColor {
+    // 初始化时已验证所有协议字段；颜色数值按 Flutter toARGB32() 解码。
+    return flutterColor(colors[key]!)
+  }
+}
+
 /// 为广告分类标签提供与 Flutter 小说标签一致的水平、垂直内边距。
 private final class NativeAdInsetLabel: UILabel {
   private let textInsets = UIEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
@@ -35,7 +70,7 @@ private final class MasonryNativeAdFactory: NSObject, FLTNativeAdFactory {
     _ nativeAd: NativeAd,
     customOptions: [AnyHashable: Any]?
   ) -> NativeAdView? {
-    let isDark = customOptions?["isDark"] as? Bool ?? false
+    guard let palette = NativeAdPalette(customOptions) else { return nil }
     let advertisementLabel =
       customOptions?["advertisementLabel"] as? String ?? "Ad"
     let slotID = customOptions?["slotId"] as? String
@@ -46,19 +81,10 @@ private final class MasonryNativeAdFactory: NSObject, FLTNativeAdFactory {
       ? rawMediaAspectRatio
       : 1
     let mediaHeight = min(max(cardWidth / mediaAspectRatio, 120), 320)
-    let cardBackground = isDark
-      ? UIColor(red: 23 / 255, green: 28 / 255, blue: 40 / 255, alpha: 1)
-      : .white
-    let primaryText = isDark
-      ? UIColor.white
-      : UIColor(red: 22 / 255, green: 28 / 255, blue: 40 / 255, alpha: 1)
-    let secondaryText = isDark
-      ? UIColor(red: 176 / 255, green: 181 / 255, blue: 192 / 255, alpha: 1)
-      : UIColor(red: 116 / 255, green: 124 / 255, blue: 138 / 255, alpha: 1)
     let adView = NativeAdView(
       frame: CGRect(x: 0, y: 0, width: cardWidth, height: 1)
     )
-    adView.backgroundColor = cardBackground
+    adView.backgroundColor = palette.color("card_background")
     adView.layer.cornerRadius = 18
     adView.clipsToBounds = true
 
@@ -89,18 +115,8 @@ private final class MasonryNativeAdFactory: NSObject, FLTNativeAdFactory {
     attributionLabel.translatesAutoresizingMaskIntoConstraints = false
     attributionLabel.text = advertisementLabel
     attributionLabel.font = .systemFont(ofSize: 11, weight: .regular)
-    attributionLabel.textColor = UIColor(
-      red: 95 / 255,
-      green: 139 / 255,
-      blue: 1,
-      alpha: 0.96
-    )
-    attributionLabel.backgroundColor = UIColor(
-      red: 95 / 255,
-      green: 139 / 255,
-      blue: 1,
-      alpha: 0.16
-    )
+    attributionLabel.textColor = palette.color("attribution_text")
+    attributionLabel.backgroundColor = palette.color("attribution_background")
     attributionLabel.textAlignment = .center
     attributionLabel.layer.cornerRadius = 11
     attributionLabel.clipsToBounds = true
@@ -109,7 +125,7 @@ private final class MasonryNativeAdFactory: NSObject, FLTNativeAdFactory {
     let headlineLabel = makeLabel(
       text: nativeAd.headline,
       font: .systemFont(ofSize: 15, weight: .medium),
-      color: primaryText,
+      color: palette.color("primary_text"),
       lines: 2
     )
     adView.addSubview(headlineLabel)
@@ -118,7 +134,7 @@ private final class MasonryNativeAdFactory: NSObject, FLTNativeAdFactory {
     let bodyLabel = makeLabel(
       text: nativeAd.body,
       font: .systemFont(ofSize: 12, weight: .regular),
-      color: secondaryText,
+      color: palette.color("secondary_text"),
       lines: 2
     )
     bodyLabel.isHidden = nativeAd.body == nil
@@ -132,18 +148,8 @@ private final class MasonryNativeAdFactory: NSObject, FLTNativeAdFactory {
     advertiserLabel.numberOfLines = 1
     advertiserLabel.lineBreakMode = .byTruncatingTail
     advertiserLabel.isHidden = nativeAd.advertiser == nil
-    advertiserLabel.textColor = UIColor(
-      red: 47 / 255,
-      green: 191 / 255,
-      blue: 155 / 255,
-      alpha: 0.96
-    )
-    advertiserLabel.backgroundColor = UIColor(
-      red: 47 / 255,
-      green: 191 / 255,
-      blue: 155 / 255,
-      alpha: 0.16
-    )
+    advertiserLabel.textColor = palette.color("advertiser_text")
+    advertiserLabel.backgroundColor = palette.color("advertiser_background")
     advertiserLabel.textAlignment = .center
     advertiserLabel.layer.cornerRadius = 11
     advertiserLabel.clipsToBounds = true
@@ -153,15 +159,10 @@ private final class MasonryNativeAdFactory: NSObject, FLTNativeAdFactory {
     let callToActionLabel = makeLabel(
       text: nativeAd.callToAction,
       font: .systemFont(ofSize: 13, weight: .semibold),
-      color: UIColor(red: 42 / 255, green: 36 / 255, blue: 16 / 255, alpha: 1),
+      color: palette.color("cta_text"),
       lines: 1
     )
-    callToActionLabel.backgroundColor = UIColor(
-      red: 248 / 255,
-      green: 208 / 255,
-      blue: 45 / 255,
-      alpha: 1
-    )
+    callToActionLabel.backgroundColor = palette.color("cta_background")
     callToActionLabel.textAlignment = .center
     callToActionLabel.layer.cornerRadius = 10
     callToActionLabel.clipsToBounds = true
@@ -359,7 +360,7 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     _ nativeAd: NativeAd,
     customOptions: [AnyHashable: Any]?
   ) -> NativeAdView? {
-    let isDark = customOptions?["isDark"] as? Bool ?? false
+    guard let palette = NativeAdPalette(customOptions) else { return nil }
     let advertisementLabel =
       customOptions?["advertisementLabel"] as? String ?? "Ad"
     let slotID = customOptions?["slotId"] as? String
@@ -371,15 +372,10 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
         width.isFinite && width > 0 ? width : nil
       } ?? 320
 
-    // 颜色定义 - 遮罩层统一使用半透明黑色
-    let overlayColor = UIColor(white: 0, alpha: 0.8)
-    let headlineColor = UIColor.white
-    let advertiserColor = UIColor(red: 204 / 255, green: 204 / 255, blue: 204 / 255, alpha: 1)
-
     let adView = NativeAdView(
       frame: CGRect(x: 0, y: 0, width: resolvedCardWidth, height: 1)
     )
-    adView.backgroundColor = .black
+    adView.backgroundColor = palette.color("overlay_background")
     adView.layer.cornerRadius = 16
     adView.clipsToBounds = true
 
@@ -396,7 +392,7 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     // 底部信息遮罩层
     let overlayView = UIView(frame: .zero)
     overlayView.translatesAutoresizingMaskIntoConstraints = false
-    overlayView.backgroundColor = overlayColor
+    overlayView.backgroundColor = palette.color("overlay_scrim")
     adView.addSubview(overlayView)
 
     // 标题
@@ -404,7 +400,7 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     headlineLabel.translatesAutoresizingMaskIntoConstraints = false
     headlineLabel.text = nativeAd.headline
     headlineLabel.font = .systemFont(ofSize: 14, weight: .semibold)
-    headlineLabel.textColor = headlineColor
+    headlineLabel.textColor = palette.color("overlay_headline")
     headlineLabel.numberOfLines = 2
     overlayView.addSubview(headlineLabel)
     adView.headlineView = headlineLabel
@@ -414,28 +410,13 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     infoRow.translatesAutoresizingMaskIntoConstraints = false
     overlayView.addSubview(infoRow)
 
-    // 从 Flutter 端获取随机颜色
-    let tagColorRed = (customOptions?["tagColorRed"] as? NSNumber)?.doubleValue ?? 255
-    let tagColorGreen = (customOptions?["tagColorGreen"] as? NSNumber)?.doubleValue ?? 77
-    let tagColorBlue = (customOptions?["tagColorBlue"] as? NSNumber)?.doubleValue ?? 77
-
     let attributionLabel = UILabel(frame: .zero)
     attributionLabel.translatesAutoresizingMaskIntoConstraints = false
     attributionLabel.text = advertisementLabel
     attributionLabel.font = .systemFont(ofSize: 10, weight: .regular)
-    attributionLabel.textColor = UIColor(
-      red: tagColorRed / 255,
-      green: tagColorGreen / 255,
-      blue: tagColorBlue / 255,
-      alpha: 1
-    )
+    attributionLabel.textColor = palette.color("overlay_tag")
     attributionLabel.textAlignment = .center
-    attributionLabel.backgroundColor = UIColor(
-      red: tagColorRed / 255,
-      green: tagColorGreen / 255,
-      blue: tagColorBlue / 255,
-      alpha: 0.15
-    )
+    attributionLabel.backgroundColor = palette.color("overlay_tag_background")
     attributionLabel.layer.cornerRadius = 4
     attributionLabel.clipsToBounds = true
     infoRow.addSubview(attributionLabel)
@@ -444,7 +425,7 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     advertiserLabel.translatesAutoresizingMaskIntoConstraints = false
     advertiserLabel.text = nativeAd.advertiser
     advertiserLabel.font = .systemFont(ofSize: 11, weight: .regular)
-    advertiserLabel.textColor = advertiserColor
+    advertiserLabel.textColor = palette.color("overlay_caption")
     advertiserLabel.numberOfLines = 1
     advertiserLabel.isHidden = nativeAd.advertiser == nil
     infoRow.addSubview(advertiserLabel)
@@ -460,8 +441,8 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
     callToActionLabel.translatesAutoresizingMaskIntoConstraints = false
     callToActionLabel.text = nativeAd.callToAction
     callToActionLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-    callToActionLabel.textColor = UIColor(red: 34 / 255, green: 34 / 255, blue: 34 / 255, alpha: 1)
-    callToActionLabel.backgroundColor = UIColor(red: 248 / 255, green: 208 / 255, blue: 45 / 255, alpha: 1)
+    callToActionLabel.textColor = palette.color("overlay_cta_text")
+    callToActionLabel.backgroundColor = palette.color("cta_background")
     callToActionLabel.textAlignment = .center
     callToActionLabel.layer.cornerRadius = 19
     callToActionLabel.clipsToBounds = true
@@ -815,9 +796,10 @@ private final class ShortStoryNativeAdFactory: NSObject, FLTNativeAdFactory {
             self.readerBrightnessPreview = nil
             self.readerBrightnessPreviewValue = nil
             self.readerBrightnessAppliedPhysical = nil
-          } else if let readerWindow = readerWindow {
+          } else if let readerWindow = readerWindow,
+            let previewColor = arguments["preview_color"] as? NSNumber {
             let preview = self.readerBrightnessPreview ?? UIView(frame: readerWindow.bounds)
-            preview.backgroundColor = .black
+            preview.backgroundColor = flutterColor(previewColor)
             preview.isUserInteractionEnabled = false
             preview.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             preview.alpha = CGFloat((1 - brightness) * 0.75)

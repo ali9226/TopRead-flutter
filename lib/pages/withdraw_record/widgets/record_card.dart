@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
@@ -92,20 +93,14 @@ class WithdrawRecordCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(TopUpRecordStyle.cardRadius),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(
-                  alpha: TopUpRecordStyle.cardBorderDarkOpacity,
-                )
-              : Colors.black.withValues(
-                  alpha: TopUpRecordStyle.cardBorderLightOpacity,
-                ),
+              ? ColorConstants.whiteColor.withValues(alpha: TopUpRecordStyle.cardBorderDarkOpacity)
+              : ColorConstants.lightTextColor.withValues(alpha: TopUpRecordStyle.cardBorderLightOpacity),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(
-              alpha: isDark
+            color: ColorConstants.shadowColor.withValues(alpha: isDark
                   ? TopUpRecordStyle.cardShadowDarkOpacity
-                  : TopUpRecordStyle.cardShadowLightOpacity,
-            ),
+                  : TopUpRecordStyle.cardShadowLightOpacity),
             blurRadius: TopUpRecordStyle.cardShadowBlur,
             offset: const Offset(0, TopUpRecordStyle.cardShadowOffsetY),
           ),
@@ -181,7 +176,7 @@ class WithdrawRecordCard extends StatelessWidget {
                           amountText: amountText,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: LayoutConfig.space_12),
                       Container(
                         // 状态胶囊单独放在右上角，方便用户一眼定位当前记录结果。
                         padding: const EdgeInsets.symmetric(
@@ -244,12 +239,8 @@ class WithdrawRecordCard extends StatelessWidget {
                       padding: TopUpRecordStyle.addressWrapPadding,
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withValues(
-                                alpha: TopUpRecordStyle.addressWrapDarkOpacity,
-                              )
-                            : Colors.black.withValues(
-                                alpha: TopUpRecordStyle.addressWrapLightOpacity,
-                              ),
+                            ? ColorConstants.whiteColor.withValues(alpha: TopUpRecordStyle.addressWrapDarkOpacity)
+                            : ColorConstants.lightTextColor.withValues(alpha: TopUpRecordStyle.addressWrapLightOpacity),
                         borderRadius: BorderRadius.circular(
                           TopUpRecordStyle.addressWrapRadius,
                         ),

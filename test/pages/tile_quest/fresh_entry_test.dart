@@ -44,6 +44,8 @@ class _EntryWork implements TileQuestWorkService {
     required int seed,
     required int unlocked_level,
     String? challenge_id,
+    int? layout_seed,
+    num? difficulty,
   }) async {
     generation_count++;
     await generation_gate?.future;
@@ -53,6 +55,8 @@ class _EntryWork implements TileQuestWorkService {
       seed: seed,
       unlocked_level: unlocked_level,
       challenge_id: challenge_id,
+      layout_seed: layout_seed,
+      difficulty: difficulty,
     );
   }
 

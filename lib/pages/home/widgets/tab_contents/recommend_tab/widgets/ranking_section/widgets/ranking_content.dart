@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:app/models/story_item.dart';
@@ -92,7 +93,8 @@ class _RankingContentState extends State<RankingContent> {
     final double safe_viewport_width = viewport_width <= 0 ? 1 : viewport_width;
 
     // 使用动态列宽计算页面宽度。
-    final double new_page_extent = column_width + RankingSectionStyle.column_gap;
+    final double new_page_extent =
+        column_width + RankingSectionStyle.column_gap;
     final double new_fraction = new_page_extent / safe_viewport_width;
     final int max_column_index = total_columns <= 0 ? 0 : total_columns - 1;
 
@@ -179,7 +181,8 @@ class _RankingContentState extends State<RankingContent> {
       return 0;
     }
 
-    final double column_extent = RankingSectionStyle.column_content_width +
+    final double column_extent =
+        RankingSectionStyle.column_content_width +
         RankingSectionStyle.column_gap;
     final double viewport_width = _page_controller!.position.viewportDimension;
     final int visible_columns = (viewport_width / column_extent).floor();
@@ -226,9 +229,9 @@ class _RankingContentState extends State<RankingContent> {
         /// 动态列宽：屏幕宽度足够时平分屏幕（减去左右内边距），否则使用固定列宽。
         final double dynamic_column_width = can_show_all_columns
             ? (constraints.maxWidth -
-                    RankingSectionStyle.content_padding_horizontal * 2 -
-                    RankingSectionStyle.column_gap * (total_columns - 1)) /
-                total_columns
+                      RankingSectionStyle.content_padding_horizontal * 2 -
+                      RankingSectionStyle.column_gap * (total_columns - 1)) /
+                  total_columns
             : RankingSectionStyle.column_content_width;
 
         _ensure_page_controller(
@@ -311,8 +314,6 @@ class _RankingContentState extends State<RankingContent> {
     );
   }
 
-
-
   Widget _build_column(
     int column_index, {
     double column_width = RankingSectionStyle.column_content_width,
@@ -333,7 +334,7 @@ class _RankingContentState extends State<RankingContent> {
             final int book_index = start_index + row_index;
             return Padding(
               padding: EdgeInsets.only(
-                bottom: row_index < column_books.length - 1
+                bottom: row_index < column_books.length - LayoutConfig.space_1
                     ? RankingSectionStyle.row_gap
                     : 0,
               ),
@@ -406,12 +407,13 @@ class _LastColumnClampPagePhysics extends PageScrollPhysics {
     }
 
     /// 每列占用宽度：列宽 + 列间距。
-    final double column_extent = RankingSectionStyle.column_content_width +
+    final double column_extent =
+        RankingSectionStyle.column_content_width +
         RankingSectionStyle.column_gap;
 
     /// 屏幕能完整显示的列数。
-    final int visible_columns =
-        (position.viewportDimension / column_extent).floor();
+    final int visible_columns = (position.viewportDimension / column_extent)
+        .floor();
 
     /// 总列数。
     final int total_columns = last_page_index + 1;
@@ -479,7 +481,8 @@ class _LastColumnClampPagePhysics extends PageScrollPhysics {
     // 如果当前位置超出最大允许范围，回弹到最近的页面位置。
     if (position.pixels > max_allowed_pixels) {
       final double page_size = _page_size(position);
-      final double target_page = (max_allowed_pixels / page_size).floorToDouble();
+      final double target_page = (max_allowed_pixels / page_size)
+          .floorToDouble();
       final double target_pixels = target_page * page_size;
       return ScrollSpringSimulation(
         spring,

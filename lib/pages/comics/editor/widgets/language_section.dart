@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/pages/comics/editor/logic.dart';
 import 'package:app/pages/comics/editor/models.dart';
@@ -75,7 +76,10 @@ class LanguageSection extends StatelessWidget {
 
         if (language == null) ...<Widget>[
           const SizedBox(height: ComicEditorStyle.field_spacing),
-          _EmptyLanguages(enabled: enabled, on_add: () => _show_add_language(context)),
+          _EmptyLanguages(
+            enabled: enabled,
+            on_add: () => _show_add_language(context),
+          ),
         ] else ...<Widget>[
           const SizedBox(height: ComicEditorStyle.field_spacing),
 
@@ -89,8 +93,7 @@ class LanguageSection extends StatelessWidget {
             enabled: enabled,
             key: ValueKey('language_title_${language.id}_${language.language}'),
             initialValue: language.title,
-            onChanged: (String value) =>
-                logic.update_language(title: value),
+            onChanged: (String value) => logic.update_language(title: value),
             decoration: comic_editor_input_decoration(
               context,
               tr('comics.version_title'),
@@ -138,7 +141,7 @@ class LanguageSection extends StatelessWidget {
     final String? code = await showModalBottomSheet<String>(
       context: context,
       useRootNavigator: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       builder: (BuildContext sheet_context) => const _LanguagePickerSheet(),
     );
     if (code == null || code.isEmpty) return;
@@ -169,13 +172,13 @@ class _EmptyLanguages extends StatelessWidget {
             size: 36,
             color: ComicEditorStyle.input_hint(context),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: LayoutConfig.space_12),
           Text(
             tr('comics.add_first_language'),
             textAlign: TextAlign.center,
             style: ComicsStyle.text(context, color: ComicsStyle.muted(context)),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: LayoutConfig.space_14),
           ElevatedButton(
             onPressed: enabled ? on_add : null,
             style: ComicEditorStyle.primary_button(context),
@@ -211,7 +214,9 @@ class _LanguageChips extends StatelessWidget {
           final ComicEditorLanguage language = logic.data.languages[index];
           final bool selected = index == logic.selected_language_index;
           return Padding(
-            padding: const EdgeInsets.only(right: ComicEditorStyle.chip_spacing),
+            padding: const EdgeInsets.only(
+              right: ComicEditorStyle.chip_spacing,
+            ),
             child: _LanguageChip(
               label: language.language.toUpperCase(),
               selected: selected,
@@ -269,7 +274,7 @@ class _LanguageChip extends StatelessWidget {
                 ),
               ),
               if (enabled) ...<Widget>[
-                const SizedBox(width: 6),
+                const SizedBox(width: LayoutConfig.space_6),
                 GestureDetector(
                   onTap: on_remove,
                   child: Icon(
@@ -312,10 +317,17 @@ class _LanguagePickerSheet extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+        padding: const EdgeInsets.fromLTRB(
+          LayoutConfig.space_16,
+          LayoutConfig.space_12,
+          LayoutConfig.space_16,
+          LayoutConfig.space_20,
+        ),
         decoration: BoxDecoration(
           color: ComicsStyle.surface(context),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(LayoutConfig.radius_24),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -327,16 +339,16 @@ class _LanguagePickerSheet extends StatelessWidget {
                 height: 4,
                 decoration: BoxDecoration(
                   color: ComicsStyle.outline(context),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_pill),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: LayoutConfig.space_16),
             Text(
               tr('comics.select_language'),
               style: ComicEditorStyle.section_title(context),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: LayoutConfig.space_14),
             Wrap(
               spacing: ComicEditorStyle.chip_spacing,
               runSpacing: ComicEditorStyle.chip_spacing,

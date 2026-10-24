@@ -6,6 +6,7 @@ import 'package:app/pages/comics/widgets/comment_sheet/style.dart';
 import 'package:app/pages/comics/comments/index.dart';
 import 'package:app/pages/comics/comments/logic.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// TODO 漫画与长篇阅读器使用相同的底部评论面板、拖动标题、输入框和动画。
 /// 作品评论省略 chapter_id；指定章节时保持后端现有的独立章评范围。
@@ -25,16 +26,14 @@ Future<int?> show_comic_comment_sheet(
     enableDrag: true,
     showDragHandle: false,
     requestFocus: false,
-    backgroundColor: Colors.transparent,
+    backgroundColor: ColorConstants.transparent,
     clipBehavior: Clip.none,
     constraints: BoxConstraints(
       maxWidth: MediaQuery.sizeOf(
         context,
       ).width.clamp(0, ComicCommentSheetStyle.max_width),
     ),
-    barrierColor: Colors.black.withValues(
-      alpha: CommentListStyle.sheet_barrier_alpha,
-    ),
+    barrierColor: ColorConstants.shadowColor.withValues(alpha: CommentListStyle.sheet_barrier_alpha),
     sheetAnimationStyle: const AnimationStyle(
       duration: Duration(
         milliseconds: CommentListStyle.sheet_transition_duration_ms,
@@ -115,9 +114,7 @@ class _ComicCommentSheetState extends State<ComicCommentSheet> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final background = dark
-        ? CommentListStyle.sheet_dark_bg
-        : CommentListStyle.sheet_light_bg;
+    final background = ComicCommentSheetStyle.background(dark);
     return RepaintBoundary(
       child: Container(
         key: const ValueKey<String>('comic_comment_sheet'),
@@ -129,17 +126,7 @@ class _ComicCommentSheetState extends State<ComicCommentSheet> {
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(ComicCommentSheetStyle.radius),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(
-                alpha: dark
-                    ? CommentListStyle.sheet_shadow_alpha_dark
-                    : CommentListStyle.sheet_shadow_alpha_light,
-              ),
-              blurRadius: CommentListStyle.sheet_shadow_blur,
-              offset: const Offset(0, CommentListStyle.sheet_shadow_offset_y),
-            ),
-          ],
+          boxShadow: ComicCommentSheetStyle.shadows(dark),
         ),
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(

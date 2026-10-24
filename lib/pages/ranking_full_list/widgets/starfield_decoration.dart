@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// 顶部星星点缀装饰组件。
 ///
@@ -15,8 +16,8 @@ class StarfieldDecoration extends StatelessWidget {
   Widget build(BuildContext context) {
     /// 日间模式用主题色，夜间模式用金色。
     final Color color = is_dark
-        ? const Color(0xFFFFD45A)
-        : const Color(0xFFFFC94D);
+        ? ColorConstants.message_type_accent_color_list
+        : ColorConstants.pages_ranking_full_list_widgets_starfield_decoration_tone;
     /// 日间模式透明度更高（背景浅，需要更明显），夜间模式透明度适中。
     final double base = is_dark ? 1.0 : 1.8;
     return Positioned(

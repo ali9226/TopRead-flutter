@@ -70,8 +70,8 @@ Future<List<String>?> _pick_from_gallery(
 
   // TODO 打开多选器（主题色背景+lightTextColor文字，适配夜间模式）
   final Brightness brightness = is_dark ? Brightness.dark : Brightness.light;
-  final Color bg = is_dark ? const Color(0xFF111111) : Colors.white;
-  final Color text = is_dark ? Colors.white : ColorConstants.lightTextColor;
+  final Color bg = is_dark ? ColorConstants.customer_service_chat_style_page_bg_color_dark : ColorConstants.whiteColor;
+  final Color text = is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor;
   final List<AssetEntity>? selected = await AssetPicker.pickAssets(
     context,
     pickerConfig: AssetPickerConfig(
@@ -85,10 +85,10 @@ Future<List<String>?> _pick_from_gallery(
           onPrimary: ColorConstants.lightTextColor,
           secondary: ColorConstants.themeColor,
           onSecondary: ColorConstants.lightTextColor,
-          surface: is_dark ? const Color(0xFF191919) : Colors.white,
+          surface: is_dark ? ColorConstants.components_image_source_sheet_index_tone_ff191919 : ColorConstants.whiteColor,
           onSurface: text,
-          error: Colors.red,
-          onError: Colors.white,
+          error: ColorConstants.pages_customer_service_chat_widgets_image_picker_page_tone,
+          onError: ColorConstants.whiteColor,
         ),
         scaffoldBackgroundColor: bg,
         textTheme: TextTheme(

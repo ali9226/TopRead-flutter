@@ -23,18 +23,18 @@ class TileQuestStyle {
   static const double readable_tray_tile_width = 37;
   static const double fold_pane_min_width = 300;
   static const double fold_pane_min_height = 400;
-  static const double landscape_controls_gap = 12;
+  static const double landscape_controls_gap = LayoutConfig.space_12;
 
   /// 横屏牌面单元目标上限：宽屏放大牌面，而不是把余量全给操作区。
   static const double landscape_board_unit_cap = 72;
-  static const double landscape_board_gap = 8;
-  static const double landscape_bottom_spacing = 8;
+  static const double landscape_board_gap = LayoutConfig.space_8;
+  static const double landscape_bottom_spacing = LayoutConfig.space_8;
   static const double landscape_tools_height = 68;
 
   /// 主阵和辅助岛横向排列，区域之间保留四分之三格的明确间隔。
   static const double landscape_main_columns = 6;
   static const double landscape_island_gap = .75;
-  static const double landscape_auxiliary_rows_gap = 1;
+  static const double landscape_auxiliary_rows_gap = LayoutConfig.space_1;
   static const double landscape_reference_rows = 6;
 
   /// 按安全区域内的实际窗口高度启用短高布局，与设备型号无关。
@@ -42,18 +42,18 @@ class TileQuestStyle {
   static const double compact_header_height = 44;
   static const double compact_board_top = 60;
   static const double compact_island_gap = .18;
-  static const double compact_bottom_gap = 8;
+  static const double compact_bottom_gap = LayoutConfig.space_8;
   static const double compact_reserve_fraction = .37;
   static const double compact_reserve_min_width = 112;
   static const double compact_reserve_max_width = 160;
   static const double compact_reserve_max_edge = 36;
   static const double narrow_tool_width = 80;
-  static const double narrow_tool_icon_size = 24;
-  static const double narrow_tool_content_inset = 4;
+  static const double narrow_tool_icon_size = LayoutConfig.icon_regular;
+  static const double narrow_tool_content_inset = LayoutConfig.space_4;
 
   /// 与首页等页面共用同一左右边距变量，统一调整只改 LayoutConfig。
   static const double page_inset = LayoutConfig.page_horizontal_padding;
-  static const double board_side_margin = 4;
+  static const double board_side_margin = LayoutConfig.space_4;
 
   /// 七格槽按父容器宽度均分，宽屏/平板达到此宽度后停止长大并整体居中。
   static const double tray_tile_max_width = 60;
@@ -66,8 +66,8 @@ class TileQuestStyle {
   static const double tool_icon_compact_size = 34;
   static const double tool_icon_size = 36;
   static const double tool_tall_threshold = 56;
-  static const double tool_content_inset = 6;
-  static const double tool_content_gap = 4;
+  static const double tool_content_inset = LayoutConfig.space_6;
+  static const double tool_content_gap = LayoutConfig.space_4;
 
   /// 道具剩余次数角标：主题色圆点 + 外发光 + 白字，无描边。
   static const double tool_badge_min_size = 20;
@@ -90,65 +90,65 @@ class TileQuestStyle {
   static const int press_up_ms = 280;
   static const double compact_title_size_cjk = 18;
   static const double compact_title_size_alphabetic = 18;
-  static const double portrait_bottom_spacing = 6;
-  static const double portrait_controls_gap = 4;
-  static const double board_bottom_spacing = 2;
+  static const double portrait_bottom_spacing = LayoutConfig.space_6;
+  static const double portrait_controls_gap = LayoutConfig.space_4;
+  static const double board_bottom_spacing = LayoutConfig.space_2;
   static const double toolbar_height = 44;
   static const double header_height = 52;
 
   /// 结果、重开确认与会话暂停共用的卡片边距及圆角。
-  static const double panel_inset = 24;
-  static const double panel_radius = 26;
+  static const double panel_inset = LayoutConfig.space_24;
+  static const double panel_radius = LayoutConfig.radius_26;
   static const double panel_max_width = 350;
   static const double session_panel_max_width = 330;
-  static const double result_panel_radius = 30;
-  static const double result_window_inset = 16;
+  static const double result_panel_radius = LayoutConfig.radius_30;
+  static const double result_window_inset = LayoutConfig.space_16;
   static const double restart_title_size_cjk = 22;
   static const double restart_title_size_alphabetic = 22;
-  static const Color modal_barrier = Color(0xFF07152D);
-  static const Color session_scrim = Color(0xE807152D);
-  static const Color result_scrim = Color(0xFF061126);
+  static const Color modal_barrier = ColorConstants.modal_barrier_ff07152d;
+  static const Color session_scrim = ColorConstants.session_scrim_e807152d;
+  static const Color result_scrim = ColorConstants.test_pages_tile_quest_modal_full_window_test_tone_ff061126;
   static const double result_scrim_opacity = .72;
   static const Duration result_duration = Duration(milliseconds: 1000);
   static const List<Color> result_panel_colors = [
-    Color(0xFF29476D),
-    Color(0xFF142846),
+    ColorConstants.result_scrim_ff29476d,
+    ColorConstants.result_scrim_ff142846,
   ];
-  static const Color result_statistics_background = Color(0xFF0C1D36);
-  static const Color result_star_shadow = Color(0xA9ECA936);
-  static const Color result_crest_glow = Color(0xFFADBBE8);
-  static const Color result_crest_glow_edge = Color(0xFF657BB6);
-  static const Color result_moon = Color(0xFFD8DFF7);
-  static const Color celebration_lilac = Color(0xFFC1B4FF);
+  static const Color result_statistics_background = ColorConstants.result_statistics_background_ff0c1d36;
+  static const Color result_star_shadow = ColorConstants.result_star_shadow_a9eca936;
+  static const Color result_crest_glow = ColorConstants.result_crest_glow_ffadbbe8;
+  static const Color result_crest_glow_edge = ColorConstants.result_crest_glow_edge_ff657bb6;
+  static const Color result_moon = ColorConstants.result_moon_ffd8dff7;
+  static const Color celebration_lilac = ColorConstants.celebration_lilac_ffc1b4ff;
 
   /// 主要与次要操作共享相同命中尺寸，文字沿用 CJK/非 CJK 正文样式。
-  static const double primary_button_height = 48;
-  static const double primary_button_radius = 16;
+  static const double primary_button_height = LayoutConfig.button_height;
+  static const double primary_button_radius = LayoutConfig.radius_16;
   static const double primary_button_icon_size = 19;
-  static const double primary_button_icon_gap = 6;
+  static const double primary_button_icon_gap = LayoutConfig.space_6;
   static const double primary_button_border_opacity = .25;
   static const List<Color> primary_button_colors = [
-    Color(0xFFFFE6A0),
-    Color(0xFFF4BC54),
+    ColorConstants.celebration_lilac_ffffe6a0,
+    ColorConstants.celebration_lilac_fff4bc54,
   ];
   static const List<Color> secondary_button_colors = [
-    Color(0xFF344F78),
-    Color(0xFF263E64),
+    ColorConstants.celebration_lilac_ff344f78,
+    ColorConstants.celebration_lilac_ff263e64,
   ];
 
   /// 主槽与备用槽都读取相同的圆角与描边材质。
-  static const double tray_well_radius = 19;
+  static const double tray_well_radius = LayoutConfig.radius_19;
   static const double tray_well_border_width = 1.5;
-  static const double slot_well_radius = 9;
-  static const Color tray_well_border = Color(0xFF9DBCDC);
-  static const Color slot_well_background = Color(0xFF0B1931);
-  static const Color slot_well_border = Color(0xFF7796BA);
-  static const Color reserve_well_background = Color(0xFF142544);
+  static const double slot_well_radius = LayoutConfig.radius_9;
+  static const Color tray_well_border = ColorConstants.tray_well_border_ff9dbcdc;
+  static const Color slot_well_background = ColorConstants.slot_well_background_ff0b1931;
+  static const Color slot_well_border = ColorConstants.slot_well_border_ff7796ba;
+  static const Color reserve_well_background = ColorConstants.pages_tile_quest_style_tone_ff142544;
 
   /// 保存错误使用全站危险色，混入场景底色后仍保持文字对比度。
   static Color save_error_background(bool dark) => Color.alphaBlend(
     ColorConstants.dangerColor.withValues(alpha: .26),
-    dark ? ink : const Color(0xFF264972),
+    dark ? ink : ColorConstants.pages_tile_quest_style_tone_ff264972,
   );
 
   /// 顶栏图片图标显示尺寸。
@@ -156,10 +156,10 @@ class TileQuestStyle {
 
   /// 设置展开/收起：声音与重置滑出滑入，logo 同步淡出。
   static const int header_expand_ms = 260;
-  static const double header_action_gap = 7;
+  static const double header_action_gap = LayoutConfig.space_7;
 
   /// 分享与声音之间更宽的间隔。
-  static const double header_share_gap = 14;
+  static const double header_share_gap = LayoutConfig.space_14;
   static const double tutorial_top = 52;
   static const double board_top = 64;
   static const double corner = 22;
@@ -228,36 +228,36 @@ class TileQuestStyle {
   static const double feedback_frame_window_ms = 80;
   static const Duration quick_duration = Duration(milliseconds: 180);
   static const Duration reveal_duration = Duration(milliseconds: 280);
-  static const Color cream = Color(0xFFFFF2CF);
-  static const Color gold = Color(0xFFFFD879);
-  static const Color ink = Color(0xFF14213E);
-  static const Color pale = Color(0xFFCFDFF7);
-  static const Color mint = Color(0xFF9FE9CC);
-  static const List<Color> undo_colors = [Color(0xFF60BBFF), Color(0xFF2775D8)];
+  static const Color cream = ColorConstants.game_cream;
+  static const Color gold = ColorConstants.gold_ffffd879;
+  static const Color ink = ColorConstants.ink_ff14213e;
+  static const Color pale = ColorConstants.pale_ffcfdff7;
+  static const Color mint = ColorConstants.mint_ff9fe9cc;
+  static const List<Color> undo_colors = [ColorConstants.mint_ff60bbff, ColorConstants.mint_ff2775d8];
   static const List<Color> shuffle_colors = [
-    Color(0xFF70DDA0),
-    Color(0xFF269373),
+    ColorConstants.mint_ff70dda0,
+    ColorConstants.mint_ff269373,
   ];
   static const List<Color> remove_colors = [
-    Color(0xFFDE91EE),
-    Color(0xFF9960C6),
+    ColorConstants.mint_ffde91ee,
+    ColorConstants.mint_ff9960c6,
   ];
 
   static List<Color> sky(bool dark) => dark
       ? [
-          const Color(0xFF0B1430),
-          const Color(0xFF172C52),
-          const Color(0xFF174653),
+          ColorConstants.pages_tile_quest_style_tone_ff0b1430,
+          ColorConstants.pages_tile_quest_style_tone_ff172c52,
+          ColorConstants.pages_tile_quest_style_tone_ff174653,
         ]
       : [
-          const Color(0xFF172A59),
-          const Color(0xFF355B88),
-          const Color(0xFF477C83),
+          ColorConstants.pages_tile_quest_style_tone_ff172a59,
+          ColorConstants.pages_tile_quest_style_tone_ff355b88,
+          ColorConstants.pages_tile_quest_style_tone_ff477c83,
         ];
 
   static List<Color> background_scrim(bool dark) => dark
-      ? const [Color(0x2907142D), Color(0x0D07142D), Color(0x4207142D)]
-      : const [Color(0x1A07142D), Color(0x0007142D), Color(0x2907142D)];
+      ? const [ColorConstants.mint_2907142d, ColorConstants.mint_0d07142d, ColorConstants.mint_4207142d]
+      : const [ColorConstants.mint_1a07142d, ColorConstants.mint_0007142d, ColorConstants.mint_2907142d];
 
   static TextStyle title(bool cjk) => TextStyle(
     color: cream,
@@ -276,7 +276,7 @@ class TileQuestStyle {
     fontSize: cjk ? body_size_cjk : body_size_alphabetic,
     height: cjk ? line_height_cjk : line_height_alphabetic,
     fontWeight: FontConfig.adjustedWeight(
-      emphasis ? FontWeight.w600 : FontWeight.w400,
+      emphasis ? FontConfig.adjustedWeight(FontWeight.w600) : FontConfig.adjustedWeight(FontWeight.w400),
     ),
   );
 
@@ -290,15 +290,15 @@ class TileQuestStyle {
 
   static BoxDecoration glass({bool dark = true, double radius = corner}) =>
       BoxDecoration(
-        color: (dark ? const Color(0xFF142544) : const Color(0xFF264972))
+        color: (dark ? ColorConstants.pages_tile_quest_style_tone_ff142544 : ColorConstants.pages_tile_quest_style_tone_ff264972)
             .withValues(alpha: 0.84),
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(
-          color: const Color(0xFFACCAE5).withValues(alpha: 0.25),
+          color: ColorConstants.pages_tile_quest_style_tone_ffaccae5.withValues(alpha: 0.25),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.16),
+            color: ColorConstants.shadowColor.withValues(alpha: 0.1608),
             blurRadius: 18,
             offset: const Offset(0, 7),
           ),

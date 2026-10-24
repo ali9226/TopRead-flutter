@@ -2,6 +2,7 @@
 
 import 'package:app/components/catalog_card/style.dart';
 import 'package:app/config/color_config.dart';
+import 'package:app/components/work_section_card/style.dart';
 import 'package:flutter/material.dart';
 
 export 'style.dart';
@@ -19,20 +20,26 @@ class CatalogCardSurface extends StatelessWidget {
   final bool selected;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: CatalogCardStyle.card_background(is_dark),
-    shape: RoundedRectangleBorder(
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(CatalogCardStyle.radius),
-      side: selected
-          ? BorderSide(
-              color: ColorConstants.dangerColor.withValues(
-                alpha: CatalogCardStyle.border_alpha,
-              ),
-              width: CatalogCardStyle.border_width,
-            )
-          : BorderSide.none,
+      boxShadow: WorkSectionCardStyle.shadows(is_dark),
     ),
-    clipBehavior: Clip.antiAlias,
-    child: child,
+    child: Material(
+      color: CatalogCardStyle.card_background(is_dark),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(CatalogCardStyle.radius),
+        side: selected
+            ? BorderSide(
+                color: ColorConstants.dangerColor.withValues(
+                  alpha: CatalogCardStyle.border_alpha,
+                ),
+                width: CatalogCardStyle.border_width,
+              )
+            : BorderSide.none,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
+    ),
   );
 }

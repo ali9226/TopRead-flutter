@@ -21,7 +21,7 @@ class BookshelfLogic {
   static Color resolve_tab_accent_color(int index) {
     /// 第一个 Tab（历史）使用清透蓝。
     if (index == 0) {
-      return const Color(0xFF8DB7FF);
+      return ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff;
     }
 
     /// 第二个 Tab（收藏）使用红色。
@@ -31,7 +31,7 @@ class BookshelfLogic {
 
     /// 第三个 Tab（关注）使用薄荷绿。
     if (index == 2) {
-      return const Color(0xFF7ED9B1);
+      return ColorConstants.pages_bookshelf_logic_tone;
     }
 
     return ColorConstants.resolveMessageTypeAccentColor(index);

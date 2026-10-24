@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/comics/editor/logic.dart';
@@ -34,14 +35,21 @@ class BasicInfoForm extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         /// 分区标题。
-        Text(tr('comics.basic_info'), style: ComicEditorStyle.section_title(context)),
+        Text(
+          tr('comics.basic_info'),
+          style: ComicEditorStyle.section_title(context),
+        ),
         const SizedBox(height: ComicEditorStyle.section_title_gap),
 
         /// 封面 + 标题/类型。
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            _CoverPicker(enabled: enabled, logic: logic, on_pick: on_pick_cover),
+            _CoverPicker(
+              enabled: enabled,
+              logic: logic,
+              on_pick: on_pick_cover,
+            ),
             const SizedBox(width: ComicEditorStyle.cover_gap),
             Expanded(
               child: Column(
@@ -104,8 +112,12 @@ class _CoverPicker extends StatelessWidget {
               height: ComicEditorStyle.cover_height,
               decoration: BoxDecoration(
                 color: ComicEditorStyle.input_fill(context),
-                borderRadius: BorderRadius.circular(ComicEditorStyle.cover_radius),
-                border: Border.all(color: ComicEditorStyle.input_border(context)),
+                borderRadius: BorderRadius.circular(
+                  ComicEditorStyle.cover_radius,
+                ),
+                border: Border.all(
+                  color: ComicEditorStyle.input_border(context),
+                ),
               ),
               clipBehavior: Clip.antiAlias,
               child: cover_url.isEmpty
@@ -117,7 +129,7 @@ class _CoverPicker extends StatelessWidget {
                           size: ComicEditorStyle.cover_icon_size,
                           color: ComicEditorStyle.input_hint(context),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: LayoutConfig.space_8),
                         Text(
                           tr('comics.cover'),
                           style: ComicsStyle.text(
@@ -131,17 +143,21 @@ class _CoverPicker extends StatelessWidget {
                   : Stack(
                       fit: StackFit.expand,
                       children: <Widget>[
-                        ComicImage(url: cover_url, semantic_label: tr('comics.cover')),
+                        ComicImage(
+                          url: cover_url,
+                          semantic_label: tr('comics.cover'),
+                        ),
+
                         /// 上传中蒙层提示。
                         if (logic.uploading_image)
                           ColoredBox(
-                            color: Colors.black.withValues(
-                              alpha: ComicEditorStyle.upload_mask_opacity,
-                            ),
+                            color: ColorConstants.lightTextColor.withValues(alpha: ComicEditorStyle.upload_mask_opacity),
                             child: const Center(
                               child: SizedBox.square(
                                 dimension: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               ),
                             ),
                           ),
@@ -150,7 +166,7 @@ class _CoverPicker extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: LayoutConfig.space_8),
         TextButton(
           onPressed: enabled ? on_pick : null,
           child: Text(
@@ -159,7 +175,7 @@ class _CoverPicker extends StatelessWidget {
               fontSize: ComicEditorStyle.cover_action_font_size,
               fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
               color: is_dark
-                  ? Colors.white.withValues(alpha: 0.75)
+                  ? ColorConstants.components_load_more_footer_index_tone_bfffffff
                   : ColorConstants.themeColor,
             ),
           ),
@@ -216,6 +232,7 @@ class _CategoryTags extends StatelessWidget {
       children: logic.categories.map((Map<String, dynamic> category) {
         final int id = int.tryParse('${category['id']}') ?? 0;
         final bool selected = logic.data.category_ids.contains(id);
+
         /// 用 ColorConstants.resolveTagColor 做多色标签，未选中时压低饱和。
         final Color accent = ColorConstants.resolveTagColor(id);
         return FilterChip(

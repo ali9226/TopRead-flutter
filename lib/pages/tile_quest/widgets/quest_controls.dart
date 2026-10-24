@@ -1,4 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import '../game/models.dart';
 import '../style.dart';
@@ -6,6 +7,7 @@ import 'package:app/config/font_config.dart';
 import 'quest_text.dart';
 import 'powerup_icon.dart';
 import 'scene_assets.dart';
+import 'package:app/config/color_config.dart';
 
 /// 顶栏按钮保留至少 44px 点击区域，文字由 tooltip 和语义朗读共同提供。
 /// 按下即缩小，松开弹性回弹，给出按压反馈。
@@ -17,10 +19,7 @@ class QuestIconButton extends StatefulWidget {
     this.icon,
     this.asset,
     this.icon_size = TileQuestStyle.header_icon_size,
-  }) : assert(
-         icon != null || asset != null,
-         'icon 或 asset 必须提供一个',
-       );
+  }) : assert(icon != null || asset != null, 'icon 或 asset 必须提供一个');
 
   /// Material 图标兜底或非图片按钮。
   final IconData? icon;
@@ -150,7 +149,7 @@ class _QuestHeaderState extends State<QuestHeader> {
                 label: quest_text(context, 'back', 'Back'),
                 on_tap: widget.on_back,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: LayoutConfig.space_10),
               // logo 始终靠左；展开设置时缩放淡出，收起再淡回。
               Expanded(
                 child: Align(
@@ -181,16 +180,15 @@ class _QuestHeaderState extends State<QuestHeader> {
                             filterQuality: FilterQuality.medium,
                             gaplessPlayback: true,
                             excludeFromSemantics: true,
-                            errorBuilder: (context, error, stack_trace) =>
-                                Text(
-                                  quest_text(context, 'title', 'Tile Quest'),
-                                  style: TileQuestStyle.title(cjk),
-                                ),
+                            errorBuilder: (context, error, stack_trace) => Text(
+                              quest_text(context, 'title', 'Tile Quest'),
+                              style: TileQuestStyle.title(cjk),
+                            ),
                           ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: LayoutConfig.space_8),
               QuestIconButton(
                 key: const ValueKey('tile_quest_share'),
                 asset: QuestSceneAssets.share,
@@ -246,9 +244,7 @@ class _QuestHeaderState extends State<QuestHeader> {
                 asset: _expanded
                     ? QuestSceneAssets.closure
                     : QuestSceneAssets.set_up,
-                icon: _expanded
-                    ? Icons.close_rounded
-                    : Icons.settings_rounded,
+                icon: _expanded ? Icons.close_rounded : Icons.settings_rounded,
                 label: _expanded
                     ? quest_text(context, 'close', 'Close')
                     : quest_text(context, 'settings', 'Settings'),
@@ -300,7 +296,9 @@ class _QuestToolButtonState extends State<QuestToolButton> {
 
   /// 右上角剩余次数角标：主题色圆形 + 外发光 + 白字，无描边。
   Widget _badge(List<Color> colors) {
-    final text_scale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.25);
+    final text_scale = MediaQuery.textScalerOf(
+      context,
+    ).scale(1).clamp(1.0, 1.25);
     final size = TileQuestStyle.tool_badge_min_size * text_scale;
     final glow = colors.last;
     return Container(
@@ -326,7 +324,7 @@ class _QuestToolButtonState extends State<QuestToolButton> {
             offset: const Offset(0, 1),
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: .18),
+            color: ColorConstants.shadowColor.withValues(alpha: 0.1804),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -336,7 +334,7 @@ class _QuestToolButtonState extends State<QuestToolButton> {
       child: Text(
         widget.remaining > 0 ? '${widget.remaining}' : '',
         style: TextStyle(
-          color: Colors.white,
+          color: ColorConstants.whiteColor,
           fontSize: TileQuestStyle.tool_badge_font * text_scale,
           height: .95,
           letterSpacing: -.4,
@@ -360,12 +358,12 @@ class _QuestToolButtonState extends State<QuestToolButton> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .22),
+            color: ColorConstants.shadowColor.withValues(alpha: 0.2196),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),
           BoxShadow(
-            color: Colors.white.withValues(alpha: .18),
+            color: ColorConstants.components_image_source_sheet_index_tone,
             blurRadius: 10,
             spreadRadius: 1,
           ),
@@ -416,8 +414,11 @@ class _QuestToolButtonState extends State<QuestToolButton> {
           end: Alignment.bottomRight,
           colors: [colors.first, colors.last],
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: .42), width: 1.2),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_20),
+        border: Border.all(
+          color: ColorConstants.pages_short_story_read_index_tone_6bffffff,
+          width: 1.2,
+        ),
         // 收紧投影，避免三个按钮的光晕连成整条光带。
         boxShadow: [
           BoxShadow(
@@ -433,7 +434,7 @@ class _QuestToolButtonState extends State<QuestToolButton> {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(19),
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_19),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -448,8 +449,8 @@ class _QuestToolButtonState extends State<QuestToolButton> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.white.withValues(alpha: .34),
-                      Colors.white.withValues(alpha: 0),
+                      ColorConstants.pages_top_up_widgets_top_up_hero_card_tone_57ffffff,
+                      ColorConstants.transparent_white,
                     ],
                   ),
                 ),
@@ -479,12 +480,11 @@ class _QuestToolButtonState extends State<QuestToolButton> {
       name,
       maxLines: 1,
       softWrap: false,
-      style: TileQuestStyle.body(cjk, color: Colors.white, emphasis: true),
+      style: TileQuestStyle.body(cjk, color: ColorConstants.whiteColor, emphasis: true),
     );
     Widget body() => LayoutBuilder(
       builder: (context, constraints) {
-        final narrow =
-            constraints.maxWidth < TileQuestStyle.narrow_tool_width;
+        final narrow = constraints.maxWidth < TileQuestStyle.narrow_tool_width;
         final compact =
             constraints.maxHeight < TileQuestStyle.tool_tall_threshold;
         return Padding(
@@ -607,7 +607,7 @@ class QuestPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.transparent,
+    color: ColorConstants.transparent,
     child: InkWell(
       onTap: on_tap,
       borderRadius: BorderRadius.circular(TileQuestStyle.primary_button_radius),
@@ -625,9 +625,7 @@ class QuestPrimaryButton extends StatelessWidget {
             TileQuestStyle.primary_button_radius,
           ),
           border: Border.all(
-            color: Colors.white.withValues(
-              alpha: TileQuestStyle.primary_button_border_opacity,
-            ),
+            color: ColorConstants.whiteColor.withValues(alpha: TileQuestStyle.primary_button_border_opacity),
           ),
         ),
         child: Row(

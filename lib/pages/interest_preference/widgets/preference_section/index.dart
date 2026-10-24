@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 
@@ -65,13 +66,15 @@ class PreferenceSection extends StatelessWidget {
                 style: TextStyle(
                   fontSize: InterestPreferenceStyle.sectionTitleSize,
                   fontWeight: InterestPreferenceStyle.sectionTitleWeight,
-                  color: InterestPreferenceStyle.sectionTitleColor(isDark: isDark),
+                  color: InterestPreferenceStyle.sectionTitleColor(
+                    isDark: isDark,
+                  ),
                 ),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: LayoutConfig.space_8),
             Text(
               easy.tr(hint_key),
               style: TextStyle(
@@ -81,7 +84,9 @@ class PreferenceSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: InterestPreferenceStyle.sectionTitleBottomSpacing),
+        const SizedBox(
+          height: InterestPreferenceStyle.sectionTitleBottomSpacing,
+        ),
 
         /// 标签网格。
         _build_chip_grid(
@@ -118,10 +123,13 @@ class PreferenceSection extends StatelessWidget {
     return LayoutBuilder(
       builder: (BuildContext ctx, BoxConstraints constraints) {
         final double availableWidth = constraints.maxWidth;
-        final int columns =
-            InterestPreferenceStyle.columnsByWidth(availableWidth);
-        final double chipWidth =
-            InterestPreferenceStyle.chipWidthByColumns(availableWidth, columns);
+        final int columns = InterestPreferenceStyle.columnsByWidth(
+          availableWidth,
+        );
+        final double chipWidth = InterestPreferenceStyle.chipWidthByColumns(
+          availableWidth,
+          columns,
+        );
         final double textAreaWidth = chipWidth - chip_h_padding * 2;
 
         /// TextPainter 计算每个标签的文字高度。
@@ -146,20 +154,22 @@ class PreferenceSection extends StatelessWidget {
         for (int i = 0; i < labels.length; i++) {
           final double rowHeight = rowHeights[rowIndex] ?? 0;
 
-          children.add(SizedBox(
-            height: rowHeight > 0 ? rowHeight : null,
-            child: SelectionChip(
-              label: labels[i],
-              selected: selectedSet.contains(itemIds[i]),
-              isDark: isDark,
-              fixedWidth: chipWidth,
-              horizontalPadding: chip_h_padding,
-              fontSize: chip_font_size,
-              maxLines: 2,
-              borderRadius: InterestPreferenceStyle.chipBorderRadius,
-              onTap: () => onToggle(i),
+          children.add(
+            SizedBox(
+              height: rowHeight > 0 ? rowHeight : null,
+              child: SelectionChip(
+                label: labels[i],
+                selected: selectedSet.contains(itemIds[i]),
+                isDark: isDark,
+                fixedWidth: chipWidth,
+                horizontalPadding: chip_h_padding,
+                fontSize: chip_font_size,
+                maxLines: 2,
+                borderRadius: InterestPreferenceStyle.chipBorderRadius,
+                onTap: () => onToggle(i),
+              ),
             ),
-          ));
+          );
 
           chipInRow++;
           if (chipInRow >= columns && i < labels.length - 1) {
@@ -207,8 +217,9 @@ class PreferenceSection extends StatelessWidget {
 
     for (int i = 0; i < textHeights.length; i += columns) {
       double maxHeight = 0;
-      final int end =
-          (i + columns > textHeights.length) ? textHeights.length : i + columns;
+      final int end = (i + columns > textHeights.length)
+          ? textHeights.length
+          : i + columns;
 
       for (int j = i; j < end; j++) {
         final double chipHeight = textHeights[j] + verticalPadding * 2;

@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:app/api/bookshelf.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/language_util/language_change_handler.dart';
+import 'package:app/config/color_config.dart';
 
 typedef HistoryListFetcher =
     Future<BookshelfListResult<ReadRecordItem>?> Function({
@@ -105,16 +106,16 @@ class BookshelfBookItem {
 
 /// 预定义的封面渐变色列表，用于没有封面图时的兜底展示。
 const List<List<Color>> _cover_gradient_colors = <List<Color>>[
-  <Color>[Color(0xFFF7C9C0), Color(0xFFF2E0A6)],
-  <Color>[Color(0xFFBBDCF7), Color(0xFFE4EFFA)],
-  <Color>[Color(0xFFD7C7F6), Color(0xFFF0EAFE)],
-  <Color>[Color(0xFFF7D1D7), Color(0xFFFCEBEC)],
-  <Color>[Color(0xFFE7D4BA), Color(0xFFF8EEE0)],
-  <Color>[Color(0xFFC6E6D7), Color(0xFFE8F6F0)],
-  <Color>[Color(0xFFD0DCF7), Color(0xFFE8EEFF)],
-  <Color>[Color(0xFFCFE8EC), Color(0xFFE9F5F7)],
-  <Color>[Color(0xFFF3D2C7), Color(0xFFFDEEEA)],
-  <Color>[Color(0xFFE2D7F4), Color(0xFFF3EEFB)],
+  <Color>[ColorConstants.stores_bookshelf_store_tone_fff7c9c0, ColorConstants.stores_bookshelf_store_tone_fff2e0a6],
+  <Color>[ColorConstants.stores_bookshelf_store_tone_ffbbdcf7, ColorConstants.stores_bookshelf_store_tone_ffe4effa],
+  <Color>[ColorConstants.stores_bookshelf_store_tone_ffd7c7f6, ColorConstants.stores_bookshelf_store_tone_fff0eafe],
+  <Color>[ColorConstants.stores_bookshelf_store_tone_fff7d1d7, ColorConstants.stores_bookshelf_store_tone_fffcebec],
+  <Color>[ColorConstants.stores_bookshelf_store_tone_ffe7d4ba, ColorConstants.stores_bookshelf_store_tone_fff8eee0],
+  <Color>[ColorConstants.stores_bookshelf_store_tone_ffc6e6d7, ColorConstants.stores_bookshelf_store_tone_ffe8f6f0],
+  <Color>[ColorConstants.stores_bookshelf_store_tone_ffd0dcf7, ColorConstants.stores_bookshelf_store_tone_ffe8eeff],
+  <Color>[ColorConstants.stores_bookshelf_store_tone_ffcfe8ec, ColorConstants.stores_bookshelf_store_tone_ffe9f5f7],
+  <Color>[ColorConstants.stores_bookshelf_store_tone_fff3d2c7, ColorConstants.stores_bookshelf_store_tone_fffdeeea],
+  <Color>[ColorConstants.stores_bookshelf_store_tone_ffe2d7f4, ColorConstants.stores_bookshelf_store_tone_fff3eefb],
 ];
 
 /// 书架页面全局数据仓库。

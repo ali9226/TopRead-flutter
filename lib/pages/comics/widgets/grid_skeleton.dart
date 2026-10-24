@@ -1,368 +1,275 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names
 
+import 'package:app/components/content_category_tag/style.dart';
+import 'package:app/components/work_detail_skeleton/index.dart';
+import 'package:app/config/font_config.dart';
 import 'package:app/pages/comics/style.dart';
+import 'package:app/util/language_util/index.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
-/// 漫画瀑布流首屏骨架屏。
-///
-/// 与 [ComicCard] 结构一一对应（封面比例、标题两行、简介两行、标签胶囊），
-/// 数据加载期间以流光动画占位，保证加载完成前后布局零跳动。
-/// 流光实现与首页推荐瀑布流骨架保持一致。
-class ComicsGridSkeleton extends StatefulWidget {
-  /// 当前是否为夜间主题。
-  final bool is_dark;
-
+/// 漫画卡片骨架与实际瀑布流共用列数、封面、字阶、行盒和标签尺寸。
+/// 动效仅重绘占位表面，不每帧重新构建网格；减少动画时保留静态占位。
+class ComicsGridSkeleton extends StatelessWidget {
   const ComicsGridSkeleton({super.key, required this.is_dark});
 
+  final bool is_dark;
+
+  /// 标题和简介使用有限的自然行数，保留真实卡片的疏密变化。
+  static const _card_data_pool = [
+    _SkeletonCardData(title_lines: 2, description_lines: 2, tag_count: 2),
+    _SkeletonCardData(title_lines: 1, description_lines: 2, tag_count: 1),
+    _SkeletonCardData(title_lines: 2, description_lines: 0, tag_count: 0),
+    _SkeletonCardData(title_lines: 1, description_lines: 2, tag_count: 2),
+    _SkeletonCardData(title_lines: 2, description_lines: 0, tag_count: 1),
+    _SkeletonCardData(title_lines: 1, description_lines: 2, tag_count: 1),
+  ];
+
   @override
-  State<ComicsGridSkeleton> createState() => _ComicsGridSkeletonState();
+  Widget build(BuildContext context) => Semantics(
+    label: tr('comics.loading'),
+    child: ExcludeSemantics(
+      child: SkeletonPulse(
+        is_dark: is_dark,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = (constraints.maxWidth / ComicsStyle.grid_card_width)
+                .floor()
+                .clamp(
+                  ComicCardStyle.grid_min_column_count,
+                  ComicCardStyle.grid_max_column_count,
+                );
+            // 使用真实网格的 masonry 排列，三列以上同样保持等宽与相等列距。
+            return MasonryGridView.count(
+              shrinkWrap: true,
+              primary: false,
+              padding: EdgeInsets.zero,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: columns,
+              mainAxisSpacing: ComicCardStyle.grid_item_spacing,
+              crossAxisSpacing: ComicCardStyle.grid_column_spacing,
+              itemCount: columns * ComicCardStyle.skeleton_row_count,
+              itemBuilder: (context, index) => _ComicSkeletonCard(
+                key: ValueKey('comic_grid_skeleton_card_$index'),
+                data: _card_data_pool[index % _card_data_pool.length],
+                is_dark: is_dark,
+                index: index,
+              ),
+            );
+          },
+        ),
+      ),
+    ),
+  );
 }
 
-class _ComicsGridSkeletonState extends State<ComicsGridSkeleton>
-    with SingleTickerProviderStateMixin {
-  /// 骨架屏流光动画控制器。
-  late final AnimationController _shimmer_controller;
+/// 一张卡片的外部几何来自 ComicCard；字形条居中放在真实行盒中。
+class _ComicSkeletonCard extends StatelessWidget {
+  const _ComicSkeletonCard({
+    super.key,
+    required this.data,
+    required this.is_dark,
+    required this.index,
+  });
 
-  /// 骨架卡片配置池，按列循环填充，模拟真实瀑布流的高度错落。
-  static const List<_SkeletonCardData> _card_data_pool =
-      <_SkeletonCardData>[
-        _SkeletonCardData(has_description: true, tag_count: 2),
-        _SkeletonCardData(has_description: true, tag_count: 1),
-        _SkeletonCardData(has_description: false, tag_count: 0),
-        _SkeletonCardData(has_description: true, tag_count: 2),
-        _SkeletonCardData(has_description: false, tag_count: 1),
-        _SkeletonCardData(has_description: true, tag_count: 1),
-      ];
-
-  @override
-  void initState() {
-    super.initState();
-
-    /// 以当前时间取模作为初始进度，避免所有骨架屏同相位闪烁。
-    final Duration animation_duration =
-        ComicCardStyle.skeleton_animation_duration;
-    final double initial_progress =
-        (DateTime.now().millisecondsSinceEpoch %
-            animation_duration.inMilliseconds) /
-        animation_duration.inMilliseconds;
-    _shimmer_controller = AnimationController(
-      vsync: this,
-      duration: animation_duration,
-      value: initial_progress,
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _shimmer_controller.dispose();
-    super.dispose();
-  }
+  final _SkeletonCardData data;
+  final bool is_dark;
+  final int index;
 
   @override
   Widget build(BuildContext context) {
-    /// 骨架条底色与高亮色。
-    final Color base_color = widget.is_dark
-        ? ComicCardStyle.skeleton_dark_base_color
-        : ComicCardStyle.skeleton_light_base_color;
-    final Color highlight_color = widget.is_dark
-        ? ComicCardStyle.skeleton_dark_highlight_color
-        : ComicCardStyle.skeleton_light_highlight_color;
+    final cjk = LanguageUtil.is_cjk_language(
+      Localizations.localeOf(context).languageCode,
+    );
+    final scaler = MediaQuery.textScalerOf(context);
+    final title_font_size = cjk
+        ? ComicCardStyle.title_font_size_cjk
+        : ComicCardStyle.title_font_size_alphabetic;
+    final description_font_size = cjk
+        ? ComicCardStyle.description_font_size_cjk
+        : ComicCardStyle.description_font_size_alphabetic;
+    final title_size = scaler.scale(title_font_size);
+    final description_size = scaler.scale(description_font_size);
+    // 用真实字体引擎测量段落，避免分数行高和文字缩放的舍入累计漂移。
+    final title_height = _paragraph_height(
+      context,
+      font_size: title_font_size,
+      line_height: cjk
+          ? ComicCardStyle.title_height_cjk
+          : ComicCardStyle.title_height_alphabetic,
+      lines: data.title_lines,
+      strong: true,
+    );
+    final description_height = _paragraph_height(
+      context,
+      font_size: description_font_size,
+      line_height: cjk
+          ? ComicCardStyle.description_height_cjk
+          : ComicCardStyle.description_height_alphabetic,
+      lines: data.description_lines,
+    );
+    // 标签复用真实 ContentCategoryTag 的尺寸，避免旧 18px 占位偏矮。
+    final tag_height =
+        _paragraph_height(
+          context,
+          font_size: cjk
+              ? ContentCategoryTagStyle.font_size_cjk
+              : ContentCategoryTagStyle.font_size_alphabetic,
+          line_height: cjk
+              ? ContentCategoryTagStyle.line_height_cjk
+              : ContentCategoryTagStyle.line_height_alphabetic,
+          lines: 1,
+        ) +
+        ContentCategoryTagStyle.padding_v * 2;
 
-    /// 卡片背景色。
-    final Color card_bg = widget.is_dark
-        ? ComicCardStyle.card_dark_bg
-        : ComicCardStyle.card_light_bg;
-
-    return AnimatedBuilder(
-      animation: _shimmer_controller,
-      builder: (BuildContext context, Widget? child) {
-        return LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            /// 与 [ComicsGrid] 相同的列数推算，保证骨架与真实网格密度一致。
-            final int columns =
-                (constraints.maxWidth / ComicsStyle.grid_card_width)
-                    .floor()
-                    .clamp(
-                      ComicCardStyle.grid_min_column_count,
-                      ComicCardStyle.grid_max_column_count,
-                    );
-
-            /// 每列骨架卡片配置，按池循环取值。
-            final List<List<_SkeletonCardData>> column_cards = List<
-              List<_SkeletonCardData>
-            >.generate(columns, (int column_index) {
-              return List<_SkeletonCardData>.generate(
-                ComicCardStyle.skeleton_row_count,
-                (int row_index) =>
-                    _card_data_pool[(column_index *
-                            ComicCardStyle.skeleton_row_count +
-                        row_index) %
-                    _card_data_pool.length],
-              );
-            });
-
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: List<Widget>.generate(columns, (int column_index) {
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      left: column_index == 0
-                          ? 0
-                          : ComicCardStyle.grid_column_spacing / 2,
-                      right: column_index == columns - 1
-                          ? 0
-                          : ComicCardStyle.grid_column_spacing / 2,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(ComicCardStyle.card_radius),
+      child: ColoredBox(
+        color: is_dark
+            ? ComicCardStyle.card_dark_bg
+            : ComicCardStyle.card_light_bg,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AspectRatio(
+              key: ValueKey('comic_grid_skeleton_cover_$index'),
+              aspectRatio: ComicsStyle.cover_ratio,
+              child: LayoutBuilder(
+                builder: (context, constraints) =>
+                    SkeletonBlock(height: constraints.maxHeight, radius: 0),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                ComicCardStyle.content_padding_h,
+                ComicCardStyle.content_padding_top,
+                ComicCardStyle.content_padding_h,
+                ComicCardStyle.content_padding_bottom,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _text_lines(
+                    lines: data.title_lines,
+                    paragraph_height: title_height,
+                    bar_height: title_size * ComicCardStyle.skeleton_ink_ratio,
+                    trailing_ratio:
+                        ComicCardStyle.skeleton_title_trailing_ratio,
+                  ),
+                  if (data.description_lines > 0) ...[
+                    SizedBox(
+                      height: cjk
+                          ? ComicCardStyle.description_top_spacing_cjk
+                          : ComicCardStyle.description_top_spacing_alphabetic,
                     ),
-                    child: Column(
-                      children: List<Widget>.generate(
-                        column_cards[column_index].length,
-                        (int row_index) {
-                          return Padding(
-                            padding: EdgeInsets.only(
-                              bottom:
-                                  row_index <
-                                      column_cards[column_index].length - 1
-                                  ? ComicCardStyle.grid_item_spacing
-                                  : 0,
-                            ),
-                            child: _build_skeleton_card(
-                              data: column_cards[column_index][row_index],
-                              card_bg: card_bg,
-                              base_color: base_color,
-                              highlight_color: highlight_color,
-                              delay:
-                                  column_index *
-                                      ComicCardStyle.skeleton_column_delay +
-                                  row_index *
-                                      ComicCardStyle.skeleton_row_delay,
-                            ),
-                          );
-                        },
+                    _text_lines(
+                      lines: data.description_lines,
+                      paragraph_height: description_height,
+                      bar_height:
+                          description_size * ComicCardStyle.skeleton_ink_ratio,
+                      trailing_ratio:
+                          ComicCardStyle.skeleton_description_trailing_ratio,
+                    ),
+                  ],
+                  if (data.tag_count > 0) ...[
+                    const SizedBox(height: ComicCardStyle.tag_top_spacing),
+                    Wrap(
+                      spacing: ComicCardStyle.tag_spacing,
+                      runSpacing: ComicCardStyle.tag_run_spacing,
+                      children: List.generate(
+                        data.tag_count,
+                        (tag_index) => SkeletonBlock(
+                          key: ValueKey(
+                            'comic_grid_skeleton_tag_${index}_$tag_index',
+                          ),
+                          width: ComicCardStyle.skeleton_tag_width,
+                          height: tag_height,
+                          radius: ContentCategoryTagStyle.radius,
+                        ),
                       ),
                     ),
-                  ),
-                );
-              }),
-            );
-          },
-        );
-      },
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  /// 构建单张漫画卡片骨架，结构与 [ComicCard] 对应。
-  ///
-  /// [data] 该骨架卡片的简介/标签占位配置。
-  /// [card_bg] 卡片背景色。
-  /// [base_color] 骨架条底色。
-  /// [highlight_color] 骨架条高亮色。
-  /// [delay] 该卡片的流光相位延迟。
-  Widget _build_skeleton_card({
-    required _SkeletonCardData data,
-    required Color card_bg,
-    required Color base_color,
-    required Color highlight_color,
-    required double delay,
+  /// 测量不会绘制的中性行，沿用真实卡片继承的字体与缩放策略。
+  double _paragraph_height(
+    BuildContext context, {
+    required double font_size,
+    required double line_height,
+    required int lines,
+    bool strong = false,
   }) {
-    final double animation_value = _shimmer_controller.value;
-
-    /// 标题条高度，与真实标题行高一致。
-    final double title_bar_height =
-        ComicCardStyle.title_font_size_cjk *
-        ComicCardStyle.title_height_cjk;
-
-    /// 简介条高度，与真实简介行高一致。
-    final double description_bar_height =
-        ComicCardStyle.description_font_size_cjk *
-        ComicCardStyle.description_height_cjk;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: card_bg,
-        borderRadius: BorderRadius.circular(ComicCardStyle.card_radius),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          /// 封面占位：与真实封面同比例，加载完成零跳动。
-          AspectRatio(
-            aspectRatio: ComicsStyle.cover_ratio,
-            child: _build_skeleton_bar(
-              width: double.infinity,
-              height: double.infinity,
-              radius: 0,
-              base_color: base_color,
-              highlight_color: highlight_color,
-              animation_value: animation_value,
-              delay: delay,
+    if (lines == 0) return 0;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: List.filled(lines, 'M').join('\n'),
+        style: DefaultTextStyle.of(context).style.merge(
+          TextStyle(
+            fontSize: font_size,
+            height: line_height,
+            fontWeight: FontConfig.adjustedWeight(
+              strong ? FontConfig.adjustedWeight(FontWeight.w500) : FontConfig.adjustedWeight(FontWeight.w400),
             ),
           ),
+        ),
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.localeOf(context),
+      maxLines: lines,
+    )..layout();
+    final height = painter.height;
+    painter.dispose();
+    return height;
+  }
 
-          /// 文字区占位，内边距与 [ComicCard] 一致。
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              ComicCardStyle.content_padding_h,
-              ComicCardStyle.content_padding_top,
-              ComicCardStyle.content_padding_h,
-              ComicCardStyle.content_padding_bottom,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                /// 标题第一行。
-                _build_skeleton_bar(
-                  width: double.infinity,
-                  height: title_bar_height,
-                  radius: ComicCardStyle.skeleton_title_radius,
-                  base_color: base_color,
-                  highlight_color: highlight_color,
-                  animation_value: animation_value,
-                  delay:
-                      delay + ComicCardStyle.skeleton_title_first_line_delay,
-                ),
-                const SizedBox(
-                  height: ComicCardStyle.skeleton_title_line_spacing,
-                ),
-
-                /// 标题第二行。
-                _build_skeleton_bar(
-                  width: ComicCardStyle.skeleton_title_second_line_width,
-                  height: title_bar_height,
-                  radius: ComicCardStyle.skeleton_title_radius,
-                  base_color: base_color,
-                  highlight_color: highlight_color,
-                  animation_value: animation_value,
-                  delay:
-                      delay + ComicCardStyle.skeleton_title_second_line_delay,
-                ),
-
-                /// 简介两行。
-                if (data.has_description) ...<Widget>[
-                  const SizedBox(
-                    height: ComicCardStyle.description_top_spacing_cjk,
-                  ),
-                  _build_skeleton_bar(
-                    width: double.infinity,
-                    height: description_bar_height,
-                    radius: ComicCardStyle.skeleton_description_radius,
-                    base_color: base_color,
-                    highlight_color: highlight_color,
-                    animation_value: animation_value,
-                    delay:
-                        delay +
-                        ComicCardStyle
-                            .skeleton_description_first_line_delay,
-                  ),
-                  const SizedBox(
-                    height: ComicCardStyle.skeleton_description_line_spacing,
-                  ),
-                  _build_skeleton_bar(
-                    width:
-                        ComicCardStyle.skeleton_description_second_line_width,
-                    height: description_bar_height,
-                    radius: ComicCardStyle.skeleton_description_radius,
-                    base_color: base_color,
-                    highlight_color: highlight_color,
-                    animation_value: animation_value,
-                    delay:
-                        delay +
-                        ComicCardStyle
-                            .skeleton_description_second_line_delay,
-                  ),
-                ],
-
-                /// 标签胶囊占位。
-                if (data.tag_count > 0) ...<Widget>[
-                  const SizedBox(height: ComicCardStyle.tag_top_spacing),
-                  Row(
-                    children: List<Widget>.generate(data.tag_count, (
-                      int index,
-                    ) {
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          right: index < data.tag_count - 1
-                              ? ComicCardStyle.tag_spacing
-                              : 0,
-                        ),
-                        child: _build_skeleton_bar(
-                          width: ComicCardStyle.skeleton_tag_width,
-                          height: ComicCardStyle.skeleton_tag_height,
-                          radius: ComicCardStyle.tag_radius,
-                          base_color: base_color,
-                          highlight_color: highlight_color,
-                          animation_value: animation_value,
-                          delay:
-                              delay +
-                              ComicCardStyle.skeleton_tag_initial_delay +
-                              index *
-                                  ComicCardStyle.skeleton_tag_interval_delay,
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ],
+  /// 占位线不额外添加行距，防止多行标题和简介累计增高。
+  Widget _text_lines({
+    required int lines,
+    required double paragraph_height,
+    required double bar_height,
+    required double trailing_ratio,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisSize: MainAxisSize.min,
+    children: List.generate(
+      lines,
+      (line) => SizedBox(
+        height: paragraph_height / lines,
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: FractionallySizedBox(
+            widthFactor: line == lines - 1 ? trailing_ratio : 1,
+            child: SkeletonBlock(
+              height: bar_height,
+              radius: ComicCardStyle.skeleton_text_radius,
             ),
           ),
-        ],
+        ),
       ),
-    );
-  }
-
-  /// 构建带流光循环动画的骨架条。
-  ///
-  /// [width] 骨架条宽度。
-  /// [height] 骨架条高度。
-  /// [radius] 骨架条圆角。
-  /// [base_color] 底色。
-  /// [highlight_color] 高亮色。
-  /// [animation_value] 当前流光进度（0~1）。
-  /// [delay] 流光相位延迟，制造波浪效果。
-  Widget _build_skeleton_bar({
-    required double width,
-    required double height,
-    required double radius,
-    required Color base_color,
-    required Color highlight_color,
-    required double animation_value,
-    required double delay,
-  }) {
-    /// 相位偏移后的流光进度。
-    final double adjusted_value = (animation_value + delay) % 1.0;
-
-    /// 三角波强度：0 → 1 → 0，产生明暗呼吸。
-    final double intensity = adjusted_value < 0.5
-        ? adjusted_value * 2
-        : (1.0 - adjusted_value) * 2;
-    final Color current_color = Color.lerp(
-      base_color,
-      highlight_color,
-      intensity,
-    )!;
-
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: current_color,
-        borderRadius: BorderRadius.circular(radius),
-      ),
-    );
-  }
+    ),
+  );
 }
 
-/// 单张骨架卡片的占位配置。
+/// 占位卡片只决定未知内容的自然行数，不携带虚构作品信息。
 class _SkeletonCardData {
-  /// 是否展示简介占位。
-  final bool has_description;
-
-  /// 标签占位数量。
-  final int tag_count;
-
   const _SkeletonCardData({
-    required this.has_description,
+    required this.title_lines,
+    required this.description_lines,
     required this.tag_count,
   });
+
+  final int title_lines;
+  final int description_lines;
+  final int tag_count;
 }

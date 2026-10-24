@@ -1,3 +1,5 @@
+import 'package:app/config/layout_config.dart';
+
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 /// 苹果审核模式下快捷登录按钮的样式配置。
@@ -12,25 +14,25 @@ class AppleReviewStyle {
   static const double button_height = 50;
 
   /// 按钮左右外边距。
-  static const double button_horizontal_margin = 32;
+  static const double button_horizontal_margin = LayoutConfig.space_32;
 
   /// 按钮圆角半径。
-  static const double button_border_radius = 12;
+  static const double button_border_radius = LayoutConfig.radius_12;
 
   /// 按钮之间的垂直间距。
-  static const double button_vertical_spacing = 12;
+  static const double button_vertical_spacing = LayoutConfig.space_12;
 
   /// 按钮内部左侧内边距（图标距左边的距离）。
-  static const double button_padding_left = 16;
+  static const double button_padding_left = LayoutConfig.space_16;
 
   /// 图标与文字之间的间距。
-  static const double icon_text_spacing = 12;
+  static const double icon_text_spacing = LayoutConfig.space_12;
 
   /// 图标尺寸。
-  static const double icon_size = 24;
+  static const double icon_size = LayoutConfig.icon_regular;
 
   /// 网络图标圆角。
-  static const double icon_border_radius = 4;
+  static const double icon_border_radius = LayoutConfig.radius_4;
 
   /// 按钮文字字号。
   static const double button_font_size = 16;
@@ -39,16 +41,16 @@ class AppleReviewStyle {
   static const double title_container_height = 30;
 
   /// 标题左右间距。
-  static const double title_horizontal_spacing = 10;
+  static const double title_horizontal_spacing = LayoutConfig.space_10;
 
   /// 标题字号。
   static const double title_font_size = 12;
 
   /// 列表顶部间距。
-  static const double list_top_spacing = 12;
+  static const double list_top_spacing = LayoutConfig.space_12;
 
   /// 按钮列表底部间距。
-  static const double list_bottom_spacing = 16;
+  static const double list_bottom_spacing = LayoutConfig.space_16;
 
   /// 两边的渐变条的宽度。
   static const double slogan_width = 50;

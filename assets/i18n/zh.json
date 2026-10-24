@@ -921,6 +921,7 @@
     "intro_title": "简介",
     "more": "更多",
     "collapse": "收起",
+    "review_rating": "评分 {rating} 分，满分 5 分",
     "hot_review_title": "热门书评",
     "more_review": "更多书评",
     "reading_title": "正文试读",
@@ -1259,6 +1260,9 @@
     "load_more": "加载更多"
   },
   "comics": {
+    "hot_comments": "热门评论",
+    "write_comment": "写评论",
+    "comments_load_failed": "评论加载失败，请稍后重试。",
     "chapter_count": "{count} 章",
     "language_count": "{count} 种语言",
     "page_count": "{count} 张图片",

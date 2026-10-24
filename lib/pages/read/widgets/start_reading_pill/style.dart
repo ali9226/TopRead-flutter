@@ -1,24 +1,26 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
+import 'package:app/config/color_config.dart';
 
 /// 开始阅读胶囊按钮样式常量
 class StartReadingPillStyle {
   /// 底部胶囊距离底部间距
-  static const double bottom_pill_bottom_spacing = 22;
+  static const double bottom_pill_bottom_spacing = LayoutConfig.space_22;
 
   /// 底部胶囊圆角
-  static const double bottom_pill_radius = 999;
+  static const double bottom_pill_radius = LayoutConfig.radius_pill;
 
   /// 底部胶囊横向内边距
-  static const double bottom_pill_horizontal_padding = 18;
+  static const double bottom_pill_horizontal_padding = LayoutConfig.space_18;
 
   /// 底部胶囊纵向内边距
-  static const double bottom_pill_vertical_padding = 12;
+  static const double bottom_pill_vertical_padding = LayoutConfig.space_12;
 
   /// 底部胶囊图标尺寸
-  static const double bottom_pill_icon_size = 16;
+  static const double bottom_pill_icon_size = LayoutConfig.icon_small;
 
   /// 底部胶囊图标右间距
-  static const double bottom_pill_icon_gap = 8;
+  static const double bottom_pill_icon_gap = LayoutConfig.space_8;
 
   /// 底部胶囊字号
   static const double bottom_pill_font_size = 14;
@@ -36,8 +38,8 @@ class StartReadingPillStyle {
   static const Offset bottom_pill_shadow_offset = Offset(0, 8);
 
   /// 夜间模式下的文字颜色
-  static const Color text_color_dark = Colors.white;
+  static const Color text_color_dark = ColorConstants.whiteColor;
 
   /// 日间模式下的文字颜色
-  static const Color text_color_light = Color(0xFF1F1A12);
+  static const Color text_color_light = ColorConstants.components_reader_top_bar_style_tone_ff1f1a12;
 }

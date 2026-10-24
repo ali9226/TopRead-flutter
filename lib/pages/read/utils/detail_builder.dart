@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/models/novel_info.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/pages/read/utils/read_models.dart';
+import 'package:app/util/language_util/language_change_handler.dart';
 
 /// 长篇阅读页详情构建器。
 ///
@@ -19,14 +20,12 @@ class DetailBuilder {
     required NovelReadingStore store,
     required int story_id,
     required String story_title,
+    String? locale,
   }) {
     final NovelInfo? info = store.novel_info.value;
 
     if (info == null) {
-      return _build_placeholder(
-        story_id: story_id,
-        story_title: story_title,
-      );
+      return _build_placeholder(story_id: story_id, story_title: story_title);
     }
 
     String word_count_subtitle = '';
@@ -37,6 +36,19 @@ class DetailBuilder {
     } else if (info.publish_status == 3) {
       word_count_subtitle = easy.tr('read.status_removed');
     }
+
+    // 当前语种决定数字缩写，不从旧单位翻译（如 "0K words"）推断数值。
+    final number_locale = easy.Intl.verifiedLocale(
+      locale ?? LanguageChangeHandler.current_language_code,
+      easy.NumberFormat.localeExists,
+      onFailure: (_) => 'en',
+    );
+    final number = easy.NumberFormat.compact(locale: number_locale);
+    final read_count = num.tryParse(info.read_count.trim());
+    final reading_value =
+        read_count != null && read_count.isFinite && read_count >= 0
+        ? number.format(read_count)
+        : '—';
 
     return ReadDetail(
       story_id: int.tryParse(info.id) ?? story_id,
@@ -59,13 +71,17 @@ class DetailBuilder {
           .toStringAsFixed(1),
       word_count_minor_text: easy.tr('read.word_count_unit'),
       word_count_subtitle_text: word_count_subtitle,
+      reading_value_text: reading_value,
+      reading_label_text: easy.tr('read.reading_unit'),
+      word_count_value_text: number.format(info.language_info.word_count),
+      word_count_label_text: easy.tr('read.chapter_word_count_suffix'),
+      status_text: word_count_subtitle,
       tag_list: info.category_list,
       intro_text: info.language_info.introduction,
       chapter_title:
           info.chapter_info?.title ??
-          (store.chapter_list.isNotEmpty
-              ? store.chapter_list.first.title
-              : ''),
+          (store.chapter_list.isNotEmpty ? store.chapter_list.first.title : ''),
+      comment_count: int.tryParse(info.comment_count),
       comment_list: info.comment_list
           .map(
             (c) => ReadComment(
@@ -106,10 +122,15 @@ class DetailBuilder {
       word_count_major_text: '0',
       word_count_minor_text: easy.tr('read.word_count_unit'),
       word_count_subtitle_text: easy.tr('image_text.loading'),
+      reading_value_text: '0',
+      reading_label_text: easy.tr('read.reading_unit'),
+      word_count_value_text: '0',
+      word_count_label_text: easy.tr('read.chapter_word_count_suffix'),
       tag_list: const <String>[],
       intro_text: easy.tr('image_text.loading'),
       chapter_title: '',
       comment_list: const <ReadComment>[],
+      comment_count: 0,
     );
   }
 

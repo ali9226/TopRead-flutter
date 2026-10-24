@@ -20,6 +20,7 @@ import '../_shared/work_recovery.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:get/get.dart';
+import 'package:app/config/color_config.dart';
 
 /* TODO 作品管理路由：已发布长篇资料与章节管理，资料即时生效，新章节独立设置发布时间。 */
 class CreatorWorkspacePage extends StatefulWidget {
@@ -232,7 +233,7 @@ class _CreatorWorkspacePageState extends State<CreatorWorkspacePage> {
       appBar: WindowAppBar(
         child: AppBar(
           backgroundColor: AuthorStyle.surface(is_dark),
-          surfaceTintColor: Colors.transparent,
+          surfaceTintColor: ColorConstants.transparent,
           foregroundColor: AuthorStyle.primary_text(is_dark),
           elevation: 0,
           title: Text(

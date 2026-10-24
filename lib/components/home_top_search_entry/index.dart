@@ -5,6 +5,7 @@ import 'package:app/config/font_config.dart';
 
 import 'package:app/components/home/style.dart';
 import 'package:app/stores/home_store.dart';
+import 'package:app/config/color_config.dart';
 
 /// 首页顶部搜索条。
 ///
@@ -59,21 +60,21 @@ class HomeTopSearchEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     /// 搜索条背景颜色。
     final Color background_color = is_dark
-        ? Colors.white.withValues(alpha: 0.12)
-        : Colors.black.withValues(alpha: 0.05);
+        ? ColorConstants.components_fixed_bottom_navigation_widgets_night_panel_decor_tone
+        : ColorConstants.components_home_top_search_entry_index_tone;
 
     /// 搜索条边框颜色。
     final Color border_color = is_dark
-        ? Colors.white.withValues(alpha: 0.16)
-        : Colors.white.withValues(alpha: 0.05);
+        ? ColorConstants.components_reading_banner_slide_index_tone_29ffffff
+        : ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff;
 
     /// 搜索条提示文字颜色。
     final Color text_color = is_dark
-        ? Colors.white.withValues(alpha: 0.78)
-        : const Color(0xFF697180);
+        ? ColorConstants.components_home_top_search_entry_index_tone_c7ffffff
+        : ColorConstants.components_home_top_search_entry_index_tone_ff697180;
 
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(Style.top_search_entry_radius),
         onTap: on_tap,

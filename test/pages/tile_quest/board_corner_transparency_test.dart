@@ -9,6 +9,7 @@ import 'package:app/pages/tile_quest/widgets/scene_layout.dart';
 import 'package:app/pages/tile_quest/widgets/shuffle_textures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/config/color_config.dart';
 
 class _Pixels {
   const _Pixels(this.bytes, this.width);
@@ -139,7 +140,7 @@ void main() {
           upper: upper,
           layout: layout,
           textures: textures,
-          background: Colors.red,
+          background: ColorConstants.pages_customer_service_chat_widgets_image_picker_page_tone,
           lower_removed: true,
         );
         final blue = await _paint(

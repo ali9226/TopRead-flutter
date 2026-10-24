@@ -42,17 +42,17 @@ class StoryRankCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     /// 标题颜色。
-    final Color title_color = is_dark ? Colors.white : Colors.black;
+    final Color title_color = is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor;
 
     /// 人气文字颜色。
     final Color popularity_color = is_dark
-        ? Colors.white.withValues(alpha: 0.50)
-        : const Color(0xFFB5B5B5);
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_80ffffff
+        : ColorConstants.components_story_rank_card_index_tone;
 
     /// 序号颜色。
     final Color ranking_index_color = ranking_index <= 3
         ? ColorConstants.resolveMessageTypeAccentColor(ranking_index - 1)
-        : (is_dark ? Colors.white : Colors.black);
+        : (is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,

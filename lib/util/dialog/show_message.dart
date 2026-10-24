@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'dart:async';
 import 'dart:math';
 
@@ -22,8 +23,10 @@ class ShowMessageWarmUp {
   static Future<void> warmUp({BuildContext? context}) async {
     if (_hasWarmedUp) return;
 
-    final OverlayState? overlayState =
-        Overlay.of(context ?? Get.context!, rootOverlay: true);
+    final OverlayState? overlayState = Overlay.of(
+      context ?? Get.context!,
+      rootOverlay: true,
+    );
     if (overlayState == null) return;
 
     _hasWarmedUp = true;
@@ -35,7 +38,7 @@ class ShowMessageWarmUp {
         return IgnorePointer(
           child: Offstage(
             child: Material(
-              color: Colors.transparent,
+              color: ColorConstants.transparent,
               child: Center(
                 child: _MessageDialogCard(
                   isDark: deviceInfo.theme.value == ThemeMode.dark,
@@ -106,7 +109,7 @@ Future<void> showMessage({
     context: rootContext,
     barrierDismissible: allowMaskDismiss,
     barrierLabel: 'dialog',
-    barrierColor: Colors.black.withValues(alpha: isDark ? 0.54 : 0.34),
+    barrierColor: ColorConstants.shadowColor.withValues(alpha: isDark ? 0.54 : 0.34),
     transitionDuration: const Duration(milliseconds: 180),
     pageBuilder: (context, animation, secondaryAnimation) {
       final double screenWidth = MediaQuery.of(context).size.width;
@@ -156,13 +159,14 @@ Future<void> showMessage({
             });
           }
 
-          final String? effectiveRightButtonText = rightButtonTextBuilder != null
+          final String? effectiveRightButtonText =
+              rightButtonTextBuilder != null
               ? rightButtonTextBuilder(countdownRemaining)
               : rightButtonText;
 
           return SafeArea(
             child: Center(
-              child:               _MessageDialogCard(
+              child: _MessageDialogCard(
                 isDark: isDark,
                 width: dialogWidth,
                 message: message,
@@ -337,21 +341,21 @@ class _MessageDialogCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color textColor = isDark ? Colors.white : const Color(0xFF222222);
+    final Color textColor = isDark ? ColorConstants.whiteColor : ColorConstants.lightTextColor;
     final Color subColor = isDark
-        ? Colors.white.withValues(alpha: 0.74)
-        : const Color(0xFF6B7280);
+        ? ColorConstants.util_dialog_show_message_tone
+        : ColorConstants.util_dialog_show_message_tone_ff6b7280;
 
     final double screenW = MediaQuery.sizeOf(context).width;
     final double cardW = width ?? min(screenW * 0.86, 408.0);
     final double rowInnerW = cardW - 40;
-    final bool twoButtons =
-        leftButtonText != null && rightButtonText != null;
-    final double slotW =
-        twoButtons ? (rowInnerW - 12) / 2 : rowInnerW;
-    const double kBtnHorizontalPadding = 10;
-    final double labelMaxW =
-        (slotW - 2 * kBtnHorizontalPadding - 8).clamp(32.0, 600.0);
+    final bool twoButtons = leftButtonText != null && rightButtonText != null;
+    final double slotW = twoButtons ? (rowInnerW - 12) / 2 : rowInnerW;
+    const double kBtnHorizontalPadding = LayoutConfig.space_10;
+    final double labelMaxW = (slotW - 2 * kBtnHorizontalPadding - 8).clamp(
+      32.0,
+      600.0,
+    );
     final TextDirection textDir = Directionality.of(context);
     final TextStyle leftLabelStyle = TextStyle(
       fontSize: 14,
@@ -367,14 +371,16 @@ class _MessageDialogCard extends StatelessWidget {
     );
     final String rightMeasureText =
         effectiveRightButtonText ?? rightButtonText ?? '';
-    final bool leftMultiline = leftButtonText != null &&
+    final bool leftMultiline =
+        leftButtonText != null &&
         _messageDialogButtonTextWraps(
           text: leftButtonText!,
           labelMaxWidth: labelMaxW,
           style: leftLabelStyle,
           textDirection: textDir,
         );
-    final bool rightMultiline = rightButtonText != null &&
+    final bool rightMultiline =
+        rightButtonText != null &&
         !isProcessing &&
         _messageDialogButtonTextWraps(
           text: rightMeasureText,
@@ -382,8 +388,9 @@ class _MessageDialogCard extends StatelessWidget {
           style: rightLabelStyle,
           textDirection: textDir,
         );
-    final double leftButtonMinHeight =
-        leftButtonText == null ? 48 : (leftMultiline ? 56 : 48);
+    final double leftButtonMinHeight = leftButtonText == null
+        ? 48
+        : (leftMultiline ? 56 : 48);
     final double rightButtonMinHeight = rightButtonText == null
         ? 48
         : (isProcessing ? 48 : (rightMultiline ? 56 : 48));
@@ -391,36 +398,36 @@ class _MessageDialogCard extends StatelessWidget {
     final double rightPadV = rightMultiline ? 10 : 12;
 
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       child: Container(
         width: width,
-        margin: const EdgeInsets.symmetric(horizontal: 20),
+        margin: const EdgeInsets.symmetric(horizontal: LayoutConfig.space_20),
         decoration: BoxDecoration(
-          color: isDark ? ColorConstants.nightHighlightColor : Colors.white,
+          color: isDark ? ColorConstants.nightHighlightColor : ColorConstants.whiteColor,
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isDark
-                ? const [Color(0xFF171926), Color(0xFF1C2230)]
-                : const [Color(0xFFFFFCF6), Color(0xFFFFFFFF)],
+                ? const [ColorConstants.nightHighlightColor, ColorConstants.pages_bill_widgets_bill_record_card_tone]
+                : const [ColorConstants.warm_card_gradient_start, ColorConstants.whiteColor],
           ),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_24),
           border: Border.all(
             color: isDark
-                ? const Color(0xFF8DB7FF).withValues(alpha: 0.14)
-                : ColorConstants.themeColor.withValues(alpha: 0.18),
+                ? ColorConstants.util_dialog_show_upgrade_dialog_tone
+                : ColorConstants.util_dialog_show_upgrade_dialog_tone_2ef8d02d,
           ),
           boxShadow: [
             BoxShadow(
               color: isDark
-                  ? Colors.black.withValues(alpha: 0.26)
-                  : const Color(0xFFD8E0EC).withValues(alpha: 0.18),
+                  ? ColorConstants.shadowColor.withValues(alpha: 0.2588)
+                  : ColorConstants.util_dialog_show_upgrade_dialog_tone_2ed8e0ec,
               blurRadius: 24,
               offset: const Offset(0, 12),
             ),
             if (isDark)
               BoxShadow(
-                color: const Color(0xFF8DB7FF).withValues(alpha: 0.10),
+                color: ColorConstants.util_dialog_show_upgrade_dialog_tone_1a8db7ff,
                 blurRadius: 20,
                 offset: const Offset(0, -2),
               ),
@@ -436,7 +443,7 @@ class _MessageDialogCard extends StatelessWidget {
                 height: 4,
                 decoration: BoxDecoration(
                   color: iconColor ?? ColorConstants.themeColor,
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(LayoutConfig.radius_pill),
                 ),
               ),
             ),
@@ -452,8 +459,8 @@ class _MessageDialogCard extends StatelessWidget {
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          const Color(0xFF8DB7FF).withValues(alpha: 0.16),
-                          Colors.transparent,
+                          ColorConstants.util_dialog_show_upgrade_dialog_tone_298db7ff,
+                          ColorConstants.transparent,
                         ],
                       ),
                     ),
@@ -461,7 +468,12 @@ class _MessageDialogCard extends StatelessWidget {
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              padding: const EdgeInsets.fromLTRB(
+                LayoutConfig.space_20,
+                LayoutConfig.space_24,
+                LayoutConfig.space_20,
+                LayoutConfig.space_20,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -470,23 +482,32 @@ class _MessageDialogCard extends StatelessWidget {
                     height: 52,
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withValues(alpha: 0.05)
-                          : (iconColor ?? ColorConstants.themeColor).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(18),
+                          ? ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff
+                          : (iconColor ?? ColorConstants.themeColor).withValues(
+                              alpha: 0.12,
+                            ),
+                      borderRadius: BorderRadius.circular(
+                        LayoutConfig.radius_18,
+                      ),
                       border: Border.all(
                         color: isDark
-                            ? Colors.white.withValues(alpha: 0.06)
-                            : (iconColor ?? ColorConstants.themeColor).withValues(alpha: 0.16),
+                            ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+                            : (iconColor ?? ColorConstants.themeColor)
+                                  .withValues(alpha: 0.16),
                       ),
                     ),
                     alignment: Alignment.center,
-                    child: iconWidget ?? Icon(
-                      iconData,
-                      size: 24,
-                      color: iconColor ?? (isDark ? Colors.white : const Color(0xFF6E5312)),
-                    ),
+                    child:
+                        iconWidget ??
+                        Icon(
+                          iconData,
+                          size: 24,
+                          color:
+                              iconColor ??
+                              (isDark ? ColorConstants.whiteColor : ColorConstants.util_dialog_show_message_tone_ff6e5312),
+                        ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: LayoutConfig.space_16),
                   Text(
                     message,
                     style: TextStyle(
@@ -498,7 +519,7 @@ class _MessageDialogCard extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   if (showHelperText) ...[
-                    const SizedBox(height: 6),
+                    const SizedBox(height: LayoutConfig.space_6),
                     Text(
                       easy.tr('constant.continue_after_confirm'),
                       style: TextStyle(
@@ -511,7 +532,7 @@ class _MessageDialogCard extends StatelessWidget {
                     ),
                   ],
                   if (leftButtonText != null || rightButtonText != null) ...[
-                    const SizedBox(height: 22),
+                    const SizedBox(height: LayoutConfig.space_22),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -529,14 +550,16 @@ class _MessageDialogCard extends StatelessWidget {
                                   ),
                                   side: BorderSide(
                                     color: isDark
-                                        ? Colors.white.withValues(alpha: 0.08)
-                                        : const Color(0xFFE0E6EF),
+                                        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff
+                                        : ColorConstants.util_dialog_show_upgrade_dialog_tone_ffe0e6ef,
                                   ),
                                   backgroundColor: isDark
-                                      ? Colors.white.withValues(alpha: 0.03)
-                                      : Colors.white,
+                                      ? ColorConstants.util_dialog_show_upgrade_dialog_tone_8ffffff
+                                      : ColorConstants.whiteColor,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(
+                                      LayoutConfig.radius_16,
+                                    ),
                                   ),
                                 ),
                                 child: _MessageDialogButtonLabel(
@@ -549,7 +572,7 @@ class _MessageDialogCard extends StatelessWidget {
                             ),
                           ),
                         if (leftButtonText != null && rightButtonText != null)
-                          const SizedBox(width: 12),
+                          const SizedBox(width: LayoutConfig.space_12),
                         if (rightButtonText != null)
                           Expanded(
                             child: Opacity(
@@ -563,13 +586,16 @@ class _MessageDialogCard extends StatelessWidget {
                                     vertical: rightPadV,
                                   ),
                                   elevation: 0,
-                                  backgroundColor: rightButtonColor ?? ColorConstants.themeColor,
-                                  foregroundColor:
-                                      rightButtonColor != null
-                                          ? Colors.white
-                                          : ColorConstants.lightTextColor,
+                                  backgroundColor:
+                                      rightButtonColor ??
+                                      ColorConstants.themeColor,
+                                  foregroundColor: rightButtonColor != null
+                                      ? ColorConstants.whiteColor
+                                      : ColorConstants.lightTextColor,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(
+                                      LayoutConfig.radius_16,
+                                    ),
                                   ),
                                 ),
                                 child: isProcessing
@@ -578,7 +604,7 @@ class _MessageDialogCard extends StatelessWidget {
                                         height: 18,
                                         child: CircularProgressIndicator(
                                           color: rightButtonColor != null
-                                              ? Colors.white
+                                              ? ColorConstants.whiteColor
                                               : ColorConstants.lightTextColor,
                                           strokeWidth: 2,
                                         ),
@@ -586,7 +612,7 @@ class _MessageDialogCard extends StatelessWidget {
                                     : _MessageDialogButtonLabel(
                                         text: rightMeasureText,
                                         color: rightButtonColor != null
-                                            ? Colors.white
+                                            ? ColorConstants.whiteColor
                                             : ColorConstants.lightTextColor,
                                         fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                                         multiline: rightMultiline,

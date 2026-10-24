@@ -1,3 +1,5 @@
+import 'package:app/config/layout_config.dart';
+
 /// 榜单小说条目卡片样式常量。
 class StoryRankCardStyle {
   /// 封面宽度。
@@ -7,16 +9,16 @@ class StoryRankCardStyle {
   static const double ranking_cover_height = 64;
 
   /// 封面圆角。
-  static const double ranking_cover_radius = 8;
+  static const double ranking_cover_radius = LayoutConfig.radius_8;
 
   /// 封面与内容间距。
-  static const double ranking_cover_to_content_gap = 5;
+  static const double ranking_cover_to_content_gap = LayoutConfig.space_5;
 
   /// 序号与内容间距。
-  static const double ranking_index_to_content_gap = 5;
+  static const double ranking_index_to_content_gap = LayoutConfig.space_5;
 
   /// 序号顶部边距。
-  static const double ranking_index_top_spacing = 1;
+  static const double ranking_index_top_spacing = LayoutConfig.space_1;
 
   /// 序号字号。
   static const double ranking_index_font_size = 13;

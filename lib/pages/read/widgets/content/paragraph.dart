@@ -47,7 +47,7 @@ class ReaderParagraphItem extends StatelessWidget {
           ? ContentStyle.reading_paragraph_height_cjk
           : ContentStyle.reading_paragraph_height_alphabetic,
       fontWeight: FontConfig.adjustedWeight(
-        item.is_title ? FontWeight.w500 : FontWeight.w400,
+        item.is_title ? FontConfig.adjustedWeight(FontWeight.w500) : FontConfig.adjustedWeight(FontWeight.w400),
       ),
     );
     if (item.is_title || on_comment == null) {

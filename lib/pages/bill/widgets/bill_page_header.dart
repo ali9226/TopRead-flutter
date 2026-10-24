@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:app/components/language_selection/index.dart';
 
 import '../style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 账单页固定头部。
 class BillPageHeader extends StatelessWidget {
@@ -18,7 +19,7 @@ class BillPageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

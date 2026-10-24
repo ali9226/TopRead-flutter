@@ -12,6 +12,9 @@ class ComicImage extends StatefulWidget {
   final BoxFit fit;
   final double? width;
   final double? height;
+
+  /// 缩略图按实际像素宽度解码；阅读器不传此值，保留完整图片清晰度。
+  final int? cache_width;
   const ComicImage({
     super.key,
     required this.url,
@@ -19,6 +22,7 @@ class ComicImage extends StatefulWidget {
     this.fit = BoxFit.cover,
     this.width,
     this.height,
+    this.cache_width,
   });
   @override
   State<ComicImage> createState() => _ComicImageState();
@@ -54,6 +58,7 @@ class _ComicImageState extends State<ComicImage> {
             width: widget.width,
             height: widget.height,
             fit: widget.fit,
+            memCacheWidth: widget.cache_width,
             fadeInDuration: const Duration(milliseconds: 180),
             placeholder: (context, url) => ColoredBox(
               color: ComicsStyle.outline(context),

@@ -4,6 +4,7 @@ import 'package:app/components/novel_cover/index.dart';
 import 'package:app/models/recommend_ranking_item.dart';
 import 'package:app/pages/ranking_full_list/style.dart';
 import 'package:app/util/text/text_layout_measure.dart';
+import 'package:app/config/color_config.dart';
 
 /// 完整榜单书籍卡片组件。
 ///
@@ -34,12 +35,12 @@ class BookshelfBookCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     /// 标题文字颜色。
-    final Color title_color = is_dark ? Colors.white : const Color(0xFF2B2F36);
+    final Color title_color = is_dark ? ColorConstants.whiteColor : ColorConstants.pages_bookshelf_widgets_bookshelf_book_card_tone;
 
     /// 底部信息文字颜色。
     final Color meta_text_color = is_dark
-        ? Colors.white.withValues(alpha: 0.52)
-        : const Color(0xFF6F7785);
+        ? ColorConstants.pages_bookshelf_widgets_bookshelf_book_card_tone_85ffffff
+        : ColorConstants.pages_bookshelf_widgets_bookshelf_book_card_tone_ff6f7785;
 
     /// 底部信息文字样式。
     final TextStyle meta_text_style = TextStyle(

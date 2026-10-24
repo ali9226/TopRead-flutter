@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -67,10 +68,7 @@ class _MiniAppbarState extends State<MiniAppbar>
 
     // 弹跳位移动画：在 -3px 到 3px 之间平滑过渡。
     _bounce_animation = Tween<double>(begin: -3, end: 3).animate(
-      CurvedAnimation(
-        parent: _bounce_controller,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _bounce_controller, curve: Curves.easeInOut),
     );
   }
 
@@ -107,12 +105,11 @@ class _MiniAppbarState extends State<MiniAppbar>
                   'assets/svg/right.svg',
                   width: 16,
                   height: 16,
-                  colorFilter:
-                      ColorFilter.mode(title_color, BlendMode.srcIn),
+                  colorFilter: ColorFilter.mode(title_color, BlendMode.srcIn),
                 ),
               ),
               onPressed: widget.on_back,
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(LayoutConfig.space_8),
               constraints: const BoxConstraints(),
             ),
 
@@ -122,8 +119,9 @@ class _MiniAppbarState extends State<MiniAppbar>
                 opacity: widget.show_title ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 200),
                 child: AnimatedSlide(
-                  offset:
-                      widget.show_title ? Offset.zero : const Offset(0, -0.5),
+                  offset: widget.show_title
+                      ? Offset.zero
+                      : const Offset(0, -0.5),
                   duration: const Duration(milliseconds: 200),
                   child: Text(
                     widget.title,
@@ -141,7 +139,7 @@ class _MiniAppbarState extends State<MiniAppbar>
 
             /// 金币图标（带重复上下弹跳动画）。
             Padding(
-              padding: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.only(right: LayoutConfig.space_12),
               child: AnimatedBuilder(
                 animation: _bounce_animation,
                 builder: (BuildContext context, Widget? child) {

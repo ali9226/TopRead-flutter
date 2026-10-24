@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:app/components/language_selection/index.dart';
 
 import '../style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 提现页顶部固定标题层。
 ///
@@ -27,7 +28,7 @@ class WithdrawPageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       child: Container(
         padding: const EdgeInsets.only(
           bottom: WithdrawStyle.headerBottomFadeSpacing,

@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'dart:async';
 import 'dart:math';
 
@@ -27,8 +28,10 @@ class PopUpInputWarmUp {
   static Future<void> warmUp({BuildContext? context}) async {
     if (_hasWarmedUp) return;
 
-    final OverlayState? overlayState =
-        Overlay.of(context ?? Get.context!, rootOverlay: true);
+    final OverlayState? overlayState = Overlay.of(
+      context ?? Get.context!,
+      rootOverlay: true,
+    );
     if (overlayState == null) return;
 
     _hasWarmedUp = true;
@@ -40,7 +43,7 @@ class PopUpInputWarmUp {
         return IgnorePointer(
           child: Offstage(
             child: Material(
-              color: Colors.transparent,
+              color: ColorConstants.transparent,
               child: Center(
                 child: _PopUpInputDialog(
                   deviceInfo: deviceInfo,
@@ -105,7 +108,7 @@ Future<void> popUpInput({
     context: dialogHostContext,
     barrierLabel: 'popUpInput',
     barrierDismissible: allowMaskDismiss,
-    barrierColor: Colors.black.withValues(alpha: 0.34),
+    barrierColor: ColorConstants.util_dialog_pop_up_input_tone,
     transitionDuration: const Duration(milliseconds: 160),
     pageBuilder: (context, animation, secondaryAnimation) {
       return _PopUpInputDialog(
@@ -213,40 +216,48 @@ class _PopUpInputDialogState extends State<_PopUpInputDialog> {
     final dialogWidth = min(screenWidth * 0.88, 400.0);
 
     return Material(
-      color: Colors.transparent,
+      color: ColorConstants.transparent,
       child: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          padding: const EdgeInsets.symmetric(
+            horizontal: LayoutConfig.space_20,
+            vertical: LayoutConfig.space_24,
+          ),
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: dialogWidth),
             child: Container(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+              padding: const EdgeInsets.fromLTRB(
+                LayoutConfig.space_20,
+                LayoutConfig.space_20,
+                LayoutConfig.space_20,
+                LayoutConfig.space_18,
+              ),
               decoration: BoxDecoration(
                 color: isDark
                     ? ColorConstants.nightHighlightColor
-                    : const Color(0xFFFFFCF7),
+                    : ColorConstants.util_dialog_pop_up_input_tone_fffffcf7,
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: isDark
-                      ? const [Color(0xFF171926), Color(0xFF1C2230)]
-                      : const [Color(0xFFFFFCF6), Color(0xFFFFFFFF)],
+                      ? const [ColorConstants.nightHighlightColor, ColorConstants.pages_bill_widgets_bill_record_card_tone]
+                      : const [ColorConstants.warm_card_gradient_start, ColorConstants.whiteColor],
                 ),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(LayoutConfig.radius_24),
                 border: Border.all(
                   color: isDark
-                      ? const Color(0xFF8DB7FF).withValues(alpha: 0.14)
-                      : const Color(0xFFF0E3B2),
+                      ? ColorConstants.util_dialog_show_upgrade_dialog_tone
+                      : ColorConstants.util_dialog_pop_up_input_tone_fff0e3b2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.14),
+                    color: ColorConstants.shadowColor.withValues(alpha: isDark ? 0.30 : 0.14),
                     blurRadius: 30,
                     offset: const Offset(0, 16),
                   ),
                   if (isDark)
                     BoxShadow(
-                      color: const Color(0xFF8DB7FF).withValues(alpha: 0.10),
+                      color: ColorConstants.util_dialog_show_upgrade_dialog_tone_1a8db7ff,
                       blurRadius: 20,
                       offset: const Offset(0, -2),
                     ),
@@ -266,8 +277,8 @@ class _PopUpInputDialogState extends State<_PopUpInputDialog> {
                             shape: BoxShape.circle,
                             gradient: RadialGradient(
                               colors: [
-                                const Color(0xFF8DB7FF).withValues(alpha: 0.16),
-                                Colors.transparent,
+                                ColorConstants.util_dialog_show_upgrade_dialog_tone_298db7ff,
+                                ColorConstants.transparent,
                               ],
                             ),
                           ),
@@ -282,7 +293,9 @@ class _PopUpInputDialogState extends State<_PopUpInputDialog> {
                       height: 4,
                       decoration: BoxDecoration(
                         color: ColorConstants.themeColor,
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.circular(
+                          LayoutConfig.radius_pill,
+                        ),
                       ),
                     ),
                   ),
@@ -290,18 +303,18 @@ class _PopUpInputDialogState extends State<_PopUpInputDialog> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 10),
+                      const SizedBox(height: LayoutConfig.space_10),
                       Text(
                         widget.message,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                           color: isDark
-                              ? Colors.white
+                              ? ColorConstants.whiteColor
                               : ColorConstants.lightTextColor,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: LayoutConfig.space_16),
                       TextField(
                         focusNode: _focusNode,
                         controller: _textController,
@@ -320,30 +333,36 @@ class _PopUpInputDialogState extends State<_PopUpInputDialog> {
                           ),
                           filled: true,
                           fillColor: isDark
-                              ? Colors.white.withValues(alpha: 0.05)
-                              : const Color(0xFFFFFDF8),
+                              ? ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff
+                              : ColorConstants.util_dialog_pop_up_input_tone_fffffdf8,
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 14,
+                            horizontal: LayoutConfig.space_14,
+                            vertical: LayoutConfig.space_14,
                           ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(
+                              LayoutConfig.radius_16,
+                            ),
                             borderSide: BorderSide(
                               color: isDark
-                                  ? Colors.white.withValues(alpha: 0.08)
-                                  : const Color(0xFFE7E5DE),
+                                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff
+                                  : ColorConstants.util_dialog_pop_up_input_tone_ffe7e5de,
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(
+                              LayoutConfig.radius_16,
+                            ),
                             borderSide: BorderSide(
                               color: isDark
-                                  ? Colors.white.withValues(alpha: 0.08)
-                                  : const Color(0xFFE7E5DE),
+                                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff
+                                  : ColorConstants.util_dialog_pop_up_input_tone_ffe7e5de,
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(
+                              LayoutConfig.radius_16,
+                            ),
                             borderSide: BorderSide(
                               color: ColorConstants.themeColor,
                               width: 1.4,
@@ -353,7 +372,7 @@ class _PopUpInputDialogState extends State<_PopUpInputDialog> {
                         style: TextStyle(
                           fontSize: 15,
                           color: isDark
-                              ? Colors.white
+                              ? ColorConstants.whiteColor
                               : ColorConstants.lightTextColor,
                         ),
                         minLines: 1,
@@ -361,7 +380,7 @@ class _PopUpInputDialogState extends State<_PopUpInputDialog> {
                       ),
                       if (widget.leftButtonText != null ||
                           widget.rightButtonText != null) ...[
-                        const SizedBox(height: 18),
+                        const SizedBox(height: LayoutConfig.space_18),
                         Row(
                           children: [
                             if (widget.leftButtonText != null)
@@ -374,14 +393,16 @@ class _PopUpInputDialogState extends State<_PopUpInputDialog> {
                                     minimumSize: const Size.fromHeight(48),
                                     side: BorderSide(
                                       color: isDark
-                                          ? Colors.white.withValues(alpha: 0.08)
-                                          : const Color(0xFFE2E8F0),
+                                          ? ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff
+                                          : ColorConstants.util_dialog_pop_up_input_tone_ffe2e8f0,
                                     ),
                                     backgroundColor: isDark
-                                        ? Colors.white.withValues(alpha: 0.03)
-                                        : Colors.white,
+                                        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_8ffffff
+                                        : ColorConstants.whiteColor,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(
+                                        LayoutConfig.radius_16,
+                                      ),
                                     ),
                                   ),
                                   child: Text(
@@ -389,7 +410,7 @@ class _PopUpInputDialogState extends State<_PopUpInputDialog> {
                                     style: TextStyle(
                                       fontSize: 15,
                                       color: isDark
-                                          ? Colors.white
+                                          ? ColorConstants.whiteColor
                                           : ColorConstants.lightTextColor,
                                     ),
                                   ),
@@ -397,7 +418,7 @@ class _PopUpInputDialogState extends State<_PopUpInputDialog> {
                               ),
                             if (widget.leftButtonText != null &&
                                 widget.rightButtonText != null)
-                              const SizedBox(width: 12),
+                              const SizedBox(width: LayoutConfig.space_12),
                             if (widget.rightButtonText != null)
                               Expanded(
                                 child: ElevatedButton(
@@ -427,7 +448,9 @@ class _PopUpInputDialogState extends State<_PopUpInputDialog> {
                                     foregroundColor:
                                         ColorConstants.lightTextColor,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(
+                                        LayoutConfig.radius_16,
+                                      ),
                                     ),
                                   ),
                                   child: _isProcessing
@@ -444,9 +467,7 @@ class _PopUpInputDialogState extends State<_PopUpInputDialog> {
                                         )
                                       : Text(
                                           widget.rightButtonText!,
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                          ),
+                                          style: const TextStyle(fontSize: 15),
                                         ),
                                 ),
                               ),

@@ -285,11 +285,7 @@ void main() {
           difficulty: difficulty,
         );
         final barrier = state.expert_barrier;
-        final required = difficulty == 10
-            ? 3
-            : difficulty >= 5
-            ? 1
-            : 0;
+        final required = difficulty == 10 ? 3 : 0;
         if (barrier == null) {
           expect(required, 0);
           expect(TileQuestValidator.validate_solution(state).valid, isTrue);

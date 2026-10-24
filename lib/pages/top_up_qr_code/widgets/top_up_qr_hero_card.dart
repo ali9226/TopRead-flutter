@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:app/config/font_config.dart';
 import 'package:flutter/material.dart';
@@ -41,8 +42,8 @@ class TopUpQrHeroCard extends StatelessWidget {
 
     // 右上记录入口按钮背景色。
     final Color recordsChipBackground = isDark
-        ? Colors.white.withValues(alpha: 0.10)
-        : Colors.white.withValues(alpha: 0.42);
+        ? ColorConstants.components_authorized_login_index_tone
+        : ColorConstants.pages_short_story_read_index_tone_6bffffff;
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -50,7 +51,7 @@ class TopUpQrHeroCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(Style.cardRadius),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.06),
+            color: ColorConstants.shadowColor.withValues(alpha: isDark ? 0.20 : 0.06),
             blurRadius: Style.cardShadowBlur,
             offset: const Offset(0, Style.cardShadowOffsetY),
           ),
@@ -66,8 +67,8 @@ class TopUpQrHeroCard extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: isDark
-                      ? const <Color>[Color(0xFF263046), Color(0xFF181C29)]
-                      : const <Color>[Color(0xFFFFF2B2), Color(0xFFF0D86B)],
+                      ? const <Color>[ColorConstants.night_hero_card_top_warm, ColorConstants.night_hero_gradient_deep]
+                      : const <Color>[ColorConstants.gold_gradient_start, ColorConstants.gold_gradient_end_alt],
                 ),
               ),
             ),
@@ -81,7 +82,7 @@ class TopUpQrHeroCard extends StatelessWidget {
               height: 116,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: isDark ? 0.06 : 0.22),
+                color: ColorConstants.whiteColor.withValues(alpha: isDark ? 0.06 : 0.22),
               ),
             ),
           ),
@@ -94,7 +95,7 @@ class TopUpQrHeroCard extends StatelessWidget {
               height: 88,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.black.withValues(alpha: isDark ? 0.10 : 0.05),
+                color: ColorConstants.lightTextColor.withValues(alpha: isDark ? 0.10 : 0.05),
               ),
             ),
           ),
@@ -111,7 +112,9 @@ class TopUpQrHeroCard extends StatelessWidget {
                         easy.tr('top_up_qr_code_page.amount_label'),
                         style: TextStyle(
                           color: isDark
-                              ? ColorConstants.whiteColor.withValues(alpha: 0.74)
+                              ? ColorConstants.whiteColor.withValues(
+                                  alpha: 0.74,
+                                )
                               : ColorConstants.lightTextColor.withValues(
                                   alpha: 0.72,
                                 ),
@@ -120,23 +123,25 @@ class TopUpQrHeroCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: LayoutConfig.space_12),
                     GestureDetector(
                       // 记录入口放在金额卡右上角，方便用户在付款流程中快速切去看历史记录。
                       onTap: onTapRecords,
                       behavior: HitTestBehavior.opaque,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                          horizontal: LayoutConfig.space_12,
+                          vertical: LayoutConfig.space_8,
                         ),
                         decoration: BoxDecoration(
                           color: recordsChipBackground,
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: BorderRadius.circular(
+                            LayoutConfig.radius_pill,
+                          ),
                           border: Border.all(
                             color: isDark
-                                ? Colors.white.withValues(alpha: 0.10)
-                                : Colors.white.withValues(alpha: 0.34),
+                                ? ColorConstants.components_authorized_login_index_tone
+                                : ColorConstants.pages_top_up_widgets_top_up_hero_card_tone_57ffffff,
                           ),
                         ),
                         child: Row(
@@ -150,7 +155,7 @@ class TopUpQrHeroCard extends StatelessWidget {
                                   ? ColorConstants.themeColor
                                   : amountTextColor,
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: LayoutConfig.space_6),
                             Text(
                               easy.tr('top_up_qr_code_page.records'),
                               style: TextStyle(
@@ -165,7 +170,7 @@ class TopUpQrHeroCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: LayoutConfig.space_6),
                 Text(
                   // 详情未就绪时先显示占位值，避免金额区域直接留空。
                   detail == null ? '--' : amountText,
@@ -175,7 +180,7 @@ class TopUpQrHeroCard extends StatelessWidget {
                     fontWeight: FontConfig.adjustedWeight(FontWeight.w900),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: LayoutConfig.space_8),
                 Text(
                   easy.tr('top_up_qr_code_page.amount_hint'),
                   style: TextStyle(

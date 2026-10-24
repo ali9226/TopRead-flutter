@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/bottom_sheet_drag_handle/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/config/font_config.dart';
@@ -22,11 +23,9 @@ Future<DateTime?> show_schedule_time_picker({
   return showModalBottomSheet<DateTime>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _ScheduleTimePickerSheet(
-      is_dark: is_dark,
-      initial_time: initial_time,
-    ),
+    backgroundColor: ColorConstants.transparent,
+    builder: (_) =>
+        _ScheduleTimePickerSheet(is_dark: is_dark, initial_time: initial_time),
   );
 }
 
@@ -59,7 +58,7 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
 
   /// 日期卡片尺寸常量
   static const double _date_card_width = 68;
-  static const double _date_card_gap = 10;
+  static const double _date_card_gap = LayoutConfig.space_10;
   static const double _date_section_padding = ScheduleTimeStyle.sheet_padding;
 
   @override
@@ -74,8 +73,9 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
     _selected_hour = _selection.selected_time.hour;
     _selected_minute = _selection.selected_time.minute;
     _hour_controller = FixedExtentScrollController(initialItem: _selected_hour);
-    _minute_controller =
-        FixedExtentScrollController(initialItem: _selected_minute);
+    _minute_controller = FixedExtentScrollController(
+      initialItem: _selected_minute,
+    );
     _date_scroll_controller = ScrollController();
 
     // 帧渲染完成后滚动到选中日期位置
@@ -125,7 +125,11 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
   DateTime get _current_result {
     final date = _dates[_selected_date_index];
     return DateTime(
-      date.year, date.month, date.day, _selected_hour, _selected_minute,
+      date.year,
+      date.month,
+      date.day,
+      _selected_hour,
+      _selected_minute,
     );
   }
 
@@ -155,9 +159,12 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
 
     // 计算目标偏移：将选中卡片居中
     final double item_extent = _date_card_width + _date_card_gap;
-    final double viewport_width = _date_scroll_controller.position.viewportDimension;
+    final double viewport_width =
+        _date_scroll_controller.position.viewportDimension;
     final double target_offset =
-        _selected_date_index * item_extent - (viewport_width / 2) + (item_extent / 2);
+        _selected_date_index * item_extent -
+        (viewport_width / 2) +
+        (item_extent / 2);
     final double clamped = target_offset.clamp(
       0.0,
       _date_scroll_controller.position.maxScrollExtent,
@@ -189,8 +196,8 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
   @override
   Widget build(BuildContext context) {
     final media_query = MediaQuery.of(context);
-    final max_height = media_query.size.height *
-        ScheduleTimeStyle.sheet_height_factor;
+    final max_height =
+        media_query.size.height * ScheduleTimeStyle.sheet_height_factor;
 
     return Container(
       constraints: BoxConstraints(maxHeight: max_height),
@@ -262,7 +269,9 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
 
   /// 构建日期选择区域。
   Widget _build_date_section() {
-    final accent = widget.is_dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
+    final accent = widget.is_dark
+        ? ColorConstants.themeColor
+        : ColorConstants.lightTextColor;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,14 +302,16 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
                   onTap: _show_back_to_today ? _jump_to_first : null,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
+                      horizontal: LayoutConfig.space_10,
+                      vertical: LayoutConfig.space_4,
                     ),
                     decoration: BoxDecoration(
                       color: accent.withValues(
                         alpha: widget.is_dark ? 0.12 : 0.06,
                       ),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(
+                        LayoutConfig.radius_20,
+                      ),
                       border: Border.all(
                         color: accent.withValues(
                           alpha: widget.is_dark ? 0.25 : 0.15,
@@ -310,12 +321,8 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.today_rounded,
-                          size: 14,
-                          color: accent,
-                        ),
-                        const SizedBox(width: 4),
+                        Icon(Icons.today_rounded, size: 14, color: accent),
+                        const SizedBox(width: LayoutConfig.space_4),
                         Text(
                           tr('creator_center.schedule_picker_back_today'),
                           style: TextStyle(
@@ -332,7 +339,7 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: LayoutConfig.space_12),
         SizedBox(
           height: 80,
           child: ListView.builder(
@@ -357,14 +364,12 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
                   margin: const EdgeInsets.only(right: _date_card_gap),
                   decoration: BoxDecoration(
                     color: is_selected
-                        ? accent.withValues(
-                            alpha: widget.is_dark ? 0.15 : 0.08)
+                        ? accent.withValues(alpha: widget.is_dark ? 0.15 : 0.08)
                         : AuthorStyle.secondary_surface(widget.is_dark),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
                     border: Border.all(
                       color: is_selected
-                          ? accent.withValues(
-                              alpha: widget.is_dark ? 0.4 : 0.3)
+                          ? accent.withValues(alpha: widget.is_dark ? 0.4 : 0.3)
                           : AuthorStyle.border(widget.is_dark),
                       width: is_selected ? 1.5 : 1,
                     ),
@@ -384,7 +389,7 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
                               : AuthorStyle.secondary_text(widget.is_dark),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: LayoutConfig.space_4),
                       Text(
                         '${date.day}',
                         style: TextStyle(
@@ -397,10 +402,9 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
                               : AuthorStyle.primary_text(widget.is_dark),
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: LayoutConfig.space_2),
                       Text(
-                        DateFormat.MMM(context.locale.toString())
-                            .format(date),
+                        DateFormat.MMM(context.locale.toString()).format(date),
                         style: TextStyle(
                           fontSize: 10,
                           color: is_selected
@@ -439,7 +443,7 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: LayoutConfig.space_12),
         Container(
           height: ScheduleTimeStyle.wheel_height,
           margin: const EdgeInsets.symmetric(
@@ -447,7 +451,7 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
           ),
           decoration: BoxDecoration(
             color: AuthorStyle.secondary_surface(widget.is_dark),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
           ),
           child: Row(
             children: [
@@ -457,8 +461,7 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
                   controller: _hour_controller,
                   item_count: 24,
                   selected_value: _selected_hour,
-                  on_changed: (value) =>
-                      setState(() => _selected_hour = value),
+                  on_changed: (value) => setState(() => _selected_hour = value),
                   format: (value) => value.toString().padLeft(2, '0'),
                 ),
               ),
@@ -497,24 +500,19 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
     required ValueChanged<int> on_changed,
     required String Function(int) format,
   }) {
-    final accent =
-        widget.is_dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
+    final accent = widget.is_dark
+        ? ColorConstants.themeColor
+        : ColorConstants.lightTextColor;
 
     return CupertinoPicker(
       scrollController: controller,
       itemExtent: ScheduleTimeStyle.wheel_row_height,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       selectionOverlay: Container(
         decoration: BoxDecoration(
           border: Border(
-            top: BorderSide(
-              color: accent.withValues(alpha: 0.2),
-              width: 1,
-            ),
-            bottom: BorderSide(
-              color: accent.withValues(alpha: 0.2),
-              width: 1,
-            ),
+            top: BorderSide(color: accent.withValues(alpha: 0.2), width: 1),
+            bottom: BorderSide(color: accent.withValues(alpha: 0.2), width: 1),
           ),
         ),
       ),
@@ -543,8 +541,9 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
 
   /// 构建底部操作按钮。
   Widget _build_action_buttons() {
-    final accent =
-        widget.is_dark ? ColorConstants.themeColor : ColorConstants.lightTextColor;
+    final accent = widget.is_dark
+        ? ColorConstants.themeColor
+        : ColorConstants.lightTextColor;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -561,10 +560,8 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
                 style: TextButton.styleFrom(
                   foregroundColor: AuthorStyle.secondary_text(widget.is_dark),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    side: BorderSide(
-                      color: AuthorStyle.border(widget.is_dark),
-                    ),
+                    borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
+                    side: BorderSide(color: AuthorStyle.border(widget.is_dark)),
                   ),
                 ),
                 child: Text(
@@ -577,7 +574,7 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: LayoutConfig.space_12),
           // 确认按钮
           Expanded(
             flex: 2,
@@ -589,14 +586,12 @@ class _ScheduleTimePickerSheetState extends State<_ScheduleTimePickerSheet> {
                   backgroundColor: accent,
                   foregroundColor: widget.is_dark
                       ? AuthorStyle.dark_surface
-                      : Colors.white,
-                  disabledBackgroundColor:
-                      accent.withValues(alpha: 0.3),
-                  disabledForegroundColor:
-                      accent.withValues(alpha: 0.5),
+                      : ColorConstants.whiteColor,
+                  disabledBackgroundColor: accent.withValues(alpha: 0.3),
+                  disabledForegroundColor: accent.withValues(alpha: 0.5),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(LayoutConfig.radius_14),
                   ),
                 ),
                 child: Text(

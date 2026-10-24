@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -22,10 +23,8 @@ Future<List<String>?> showCommentReport({
 }) async {
   final result = await showModalBottomSheet<List<String>>(
     context: context,
-    backgroundColor: Colors.transparent,
-    builder: (menu_context) => _CommentReportSheet(
-      is_dark: is_dark,
-    ),
+    backgroundColor: ColorConstants.transparent,
+    builder: (menu_context) => _CommentReportSheet(is_dark: is_dark),
   );
   return result;
 }
@@ -35,9 +34,7 @@ class _CommentReportSheet extends StatefulWidget {
   /// 是否为夜间主题。
   final bool is_dark;
 
-  const _CommentReportSheet({
-    required this.is_dark,
-  });
+  const _CommentReportSheet({required this.is_dark});
 
   @override
   State<_CommentReportSheet> createState() => _CommentReportSheetState();
@@ -73,7 +70,7 @@ class _CommentReportSheetState extends State<_CommentReportSheet> {
     final Color bgColor = widget.is_dark
         ? CommentActionsStyle.background_dark
         : CommentActionsStyle.background_light;
-    final Color textColor = widget.is_dark ? Colors.white : Colors.black;
+    final Color textColor = widget.is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor;
     final Color subtitleColor = CommentActionsStyle.subtitle_color;
 
     return Container(
@@ -102,7 +99,8 @@ class _CommentReportSheetState extends State<_CommentReportSheet> {
                       style: TextStyle(
                         fontSize: is_cjk
                             ? CommentActionsStyle.report_title_font_size_cjk
-                            : CommentActionsStyle.report_title_font_size_alphabetic,
+                            : CommentActionsStyle
+                                  .report_title_font_size_alphabetic,
                         fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                         color: textColor,
                       ),
@@ -155,12 +153,15 @@ class _CommentReportSheetState extends State<_CommentReportSheet> {
                     )
                   : SingleChildScrollView(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: CommentActionsStyle.report_horizontal_padding,
+                        horizontal:
+                            CommentActionsStyle.report_horizontal_padding,
                       ),
                       child: Wrap(
                         spacing: CommentActionsStyle.report_chip_spacing,
                         runSpacing: CommentActionsStyle.report_chip_spacing,
-                        children: List.generate(_complaint_list.length, (index) {
+                        children: List.generate(_complaint_list.length, (
+                          index,
+                        ) {
                           final item = _complaint_list[index];
                           return SelectionChip(
                             label: item['title'] ?? '',
@@ -213,7 +214,8 @@ class _CommentReportSheetState extends State<_CommentReportSheet> {
                           style: TextStyle(
                             fontSize: is_cjk
                                 ? CommentActionsStyle.button_font_size_cjk
-                                : CommentActionsStyle.button_font_size_alphabetic,
+                                : CommentActionsStyle
+                                      .button_font_size_alphabetic,
                             fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                             color: textColor,
                           ),
@@ -221,7 +223,7 @@ class _CommentReportSheetState extends State<_CommentReportSheet> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: LayoutConfig.space_12),
                   // 提交按钮
                   Expanded(
                     child: SizedBox(
@@ -247,19 +249,18 @@ class _CommentReportSheetState extends State<_CommentReportSheet> {
                               CommentActionsStyle.report_button_radius,
                             ),
                           ),
-                          disabledBackgroundColor:
-                              ColorConstants.themeColor.withValues(alpha: 0.4),
-                          disabledForegroundColor:
-                              ColorConstants.lightTextColor.withValues(
-                                alpha: 0.6,
-                              ),
+                          disabledBackgroundColor: ColorConstants.themeColor
+                              .withValues(alpha: 0.4),
+                          disabledForegroundColor: ColorConstants.lightTextColor
+                              .withValues(alpha: 0.6),
                         ),
                         child: Text(
                           tr('comment.report.submit'),
                           style: TextStyle(
                             fontSize: is_cjk
                                 ? CommentActionsStyle.button_font_size_cjk
-                                : CommentActionsStyle.button_font_size_alphabetic,
+                                : CommentActionsStyle
+                                      .button_font_size_alphabetic,
                             fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                           ),
                         ),
@@ -269,7 +270,7 @@ class _CommentReportSheetState extends State<_CommentReportSheet> {
                 ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: LayoutConfig.space_8),
           ],
         ),
       ),

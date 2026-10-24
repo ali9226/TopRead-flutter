@@ -225,9 +225,7 @@ class _UserInfoState extends State<UserInfo> {
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Container(
-                      color: Colors.black.withValues(
-                        alpha: Style.refresh_mask_opacity,
-                      ),
+                      color: ColorConstants.lightTextColor.withValues(alpha: Style.refresh_mask_opacity),
                       alignment: Alignment.center,
                       child: const CircularProgressIndicator(),
                     ),
@@ -297,7 +295,7 @@ class _UserInfoContentDecor extends StatelessWidget {
                             ? Style.decor_glow_one_dark_opacity
                             : Style.decor_glow_one_light_opacity,
                       ),
-                  Colors.transparent,
+                  ColorConstants.transparent,
                 ],
               ),
             ),
@@ -322,7 +320,7 @@ class _UserInfoContentDecor extends StatelessWidget {
                             ? Style.decor_glow_two_dark_opacity
                             : Style.decor_glow_two_light_opacity,
                       ),
-                  Colors.transparent,
+                  ColorConstants.transparent,
                 ],
               ),
             ),
@@ -342,7 +340,7 @@ class _UserInfoContentDecor extends StatelessWidget {
                   Style.decor_outline_one_radius,
                 ),
                 border: Border.all(
-                  color: (isDark ? Colors.white : ColorConstants.themeColor)
+                  color: (isDark ? ColorConstants.whiteColor : ColorConstants.themeColor)
                       .withValues(
                         alpha: isDark
                             ? Style.decor_outline_one_dark_opacity
@@ -376,7 +374,7 @@ class _UserInfoContentDecor extends StatelessWidget {
                               ? Style.decor_block_dark_opacity
                               : Style.decor_block_light_opacity,
                         ),
-                    Colors.transparent,
+                    ColorConstants.transparent,
                   ],
                 ),
               ),
@@ -393,14 +391,14 @@ class _UserInfoContentDecor extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.transparent,
-                  (isDark ? Colors.white : ColorConstants.themeColor)
+                  ColorConstants.transparent,
+                  (isDark ? ColorConstants.whiteColor : ColorConstants.themeColor)
                       .withValues(
                         alpha: isDark
                             ? Style.decor_line_one_dark_opacity
                             : Style.decor_line_one_light_opacity,
                       ),
-                  Colors.transparent,
+                  ColorConstants.transparent,
                 ],
               ),
             ),
@@ -416,7 +414,7 @@ class _UserInfoContentDecor extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.transparent,
+                  ColorConstants.transparent,
                   (isDark
                           ? Style.decor_line_two_dark_color
                           : Style.decor_line_two_light_color)
@@ -425,7 +423,7 @@ class _UserInfoContentDecor extends StatelessWidget {
                             ? Style.decor_line_two_dark_opacity
                             : Style.decor_line_two_light_opacity,
                       ),
-                  Colors.transparent,
+                  ColorConstants.transparent,
                 ],
               ),
             ),

@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 
@@ -13,18 +14,16 @@ class ProgressTextStyle {
   static const double container_bottom_inset = 0;
 
   /// 进度条文字左侧边距
-  static const double text_left_spacing = 30;
+  static const double text_left_spacing = LayoutConfig.space_30;
 
   /// 进度条文字底部外边距
-  static const double text_bottom_spacing = 10;
+  static const double text_bottom_spacing = LayoutConfig.space_10;
 
   /// 进度文字字号
   static const double font_size = 12;
 
   /// 进度文字字重
-  static final FontWeight font_weight = FontConfig.adjustedWeight(
-    FontWeight.w400,
-  );
+  static final FontWeight font_weight = FontConfig.adjustedWeight(FontWeight.w400);
 
   /// 进度文字阴影模糊半径
   static const double shadow_blur_radius = 6;
@@ -51,5 +50,5 @@ class ProgressTextStyle {
   static const double gradient_transparent_alpha = 0;
 
   /// 进度条文字右侧边距
-  static const double reading_progress_right_spacing = 16;
+  static const double reading_progress_right_spacing = LayoutConfig.space_16;
 }

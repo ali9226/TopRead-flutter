@@ -67,10 +67,10 @@ class BillRecordCard extends StatelessWidget {
 
     /// 深色模式下用偏冷的浅蓝色做局部高光，
     /// 让卡片边界在暗背景里更清楚。
-    const Color coldBlueAccent = Color(0xFF8DB7FF);
+    const Color coldBlueAccent = ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff;
 
     /// 深色模式下第二层装饰光斑使用的淡蓝色。
-    const Color nightGlowColor = Color(0xFFB8CCFF);
+    const Color nightGlowColor = ColorConstants.night_glow_color_ffb8ccff;
 
     return Container(
       /// 卡片与卡片之间的底部间距。
@@ -83,11 +83,11 @@ class BillRecordCard extends StatelessWidget {
           colors: isDark
               ? <Color>[
                   ColorConstants.nightHighlightColor,
-                  const Color(0xFF1C2230),
+                  ColorConstants.pages_bill_widgets_bill_record_card_tone,
                 ]
               : <Color>[
                   ColorConstants.themeColor.withValues(alpha: 0.12),
-                  Colors.white.withValues(alpha: 0.88),
+                  ColorConstants.components_reading_banner_slide_index_tone_e0ffffff,
                 ],
         ),
         borderRadius: BorderRadius.circular(Style.billCardRadius),
@@ -101,11 +101,9 @@ class BillRecordCard extends StatelessWidget {
         boxShadow: <BoxShadow>[
           BoxShadow(
             /// 阴影负责建立卡片悬浮感。
-            color: Colors.black.withValues(
-              alpha: isDark
+            color: ColorConstants.shadowColor.withValues(alpha: isDark
                   ? Style.billCardShadowDarkOpacity
-                  : Style.billCardShadowLightOpacity,
-            ),
+                  : Style.billCardShadowLightOpacity),
             blurRadius: Style.billCardShadowBlur,
             offset: const Offset(0, Style.billCardShadowOffsetY),
           ),
@@ -119,12 +117,8 @@ class BillRecordCard extends StatelessWidget {
           border: Border.all(
             /// 内层描边只做极轻微的玻璃高光感。
             color: isDark
-                ? Colors.white.withValues(
-                    alpha: Style.billCardInnerBorderDarkOpacity,
-                  )
-                : Colors.white.withValues(
-                    alpha: Style.billCardInnerBorderLightOpacity,
-                  ),
+                ? ColorConstants.whiteColor.withValues(alpha: Style.billCardInnerBorderDarkOpacity)
+                : ColorConstants.whiteColor.withValues(alpha: Style.billCardInnerBorderLightOpacity),
           ),
           gradient: LinearGradient(
             /// 内层渐变让卡片内容区更有体积，不至于显得平。
@@ -132,10 +126,10 @@ class BillRecordCard extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: isDark
                 ? <Color>[
-                    Colors.white.withValues(alpha: 0.04),
-                    Colors.white.withValues(alpha: 0.015),
+                    ColorConstants.pages_bill_widgets_bill_record_card_tone_affffff,
+                    ColorConstants.pages_bill_widgets_bill_record_card_tone_4ffffff,
                   ]
-                : <Color>[Colors.white, const Color(0xFFFFFBF0)],
+                : <Color>[ColorConstants.whiteColor, ColorConstants.pages_bill_widgets_bill_record_card_tone_fffffbf0],
           ),
         ),
         child: ClipRRect(
@@ -298,9 +292,7 @@ class BillRecordCard extends StatelessWidget {
                       height: 1,
                       color: isDark
                           ? coldBlueAccent.withValues(alpha: 0.16)
-                          : Colors.black.withValues(
-                              alpha: Style.billDividerLightOpacity,
-                            ),
+                          : ColorConstants.lightTextColor.withValues(alpha: Style.billDividerLightOpacity),
                     ),
                     const SizedBox(height: Style.billDividerSpacing),
                     _BillInfoRow(

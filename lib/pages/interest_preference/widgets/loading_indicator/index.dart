@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 
@@ -30,7 +31,7 @@ class LoadingIndicator extends StatelessWidget {
           ),
 
           /// 转圈与文字之间的间距。
-          const SizedBox(height: 16),
+          const SizedBox(height: LayoutConfig.space_16),
 
           /// 加载中提示文字，使用副标题颜色保持视觉一致。
           Text(

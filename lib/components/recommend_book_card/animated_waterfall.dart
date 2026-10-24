@@ -23,6 +23,7 @@ import 'package:app/util/ad_display_policy.dart';
 import 'package:app/util/percentage_probability.dart';
 import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/novel_navigation/index.dart';
+import 'package:app/config/color_config.dart';
 
 /// 推荐书籍瀑布流组件（带动画重排支持）。
 ///
@@ -101,12 +102,12 @@ class AnimatedRecommendWaterfallState
 
   /// 标签颜色池。
   static const List<Color> _tag_color_pool = <Color>[
-    Color(0xFF2FBF9B),
-    Color(0xFF5F8BFF),
-    Color(0xFFF56C6C),
-    Color(0xFFFF9F5A),
-    Color(0xFF8B7CFF),
-    Color(0xFFE6A23C),
+    ColorConstants.native_advertiser,
+    ColorConstants.native_attribution,
+    ColorConstants.dangerColor,
+    ColorConstants.palette_orange,
+    ColorConstants.palette_violet,
+    ColorConstants.palette_amber,
   ];
 
   @override

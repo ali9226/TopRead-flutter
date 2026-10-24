@@ -21,7 +21,8 @@ class Style {
   ///
   /// 用途：
   /// 真正渲染列表内容时，会在这个基础上叠加系统安全区边距。
-  static const double pageHorizontalPadding = LayoutConfig.page_horizontal_padding;
+  static const double pageHorizontalPadding =
+      LayoutConfig.page_horizontal_padding;
 
   /// 页面内容区域顶部边距。
   ///
@@ -33,13 +34,13 @@ class Style {
   ///
   /// 用途：
   /// 给底部内容和悬浮按钮预留呼吸空间。
-  static const double pageBottomPadding = 28;
+  static const double pageBottomPadding = LayoutConfig.space_28;
 
   /// 顶部 Hero 卡片和后续内容之间的垂直间距。
-  static const double heroBottomSpacing = 18;
+  static const double heroBottomSpacing = LayoutConfig.space_18;
 
   /// 列表底部操作区上方的小间距。
-  static const double listBottomSpacing = 8;
+  static const double listBottomSpacing = LayoutConfig.space_8;
 
   /// 固定头部渐变层的不透明度起点。
   ///
@@ -60,10 +61,10 @@ class Style {
   static const double loadingCardOpacity = 0.92;
 
   /// loading 小卡片内边距。
-  static const double loadingCardPadding = 18;
+  static const double loadingCardPadding = LayoutConfig.space_18;
 
   /// loading 小卡片圆角。
-  static const double loadingCardRadius = 18;
+  static const double loadingCardRadius = LayoutConfig.radius_18;
 
   /// 返回顶部按钮距离屏幕右边的基础间距。
   static const double backToTopRight = 18;
@@ -121,10 +122,15 @@ class Style {
   static const double decorCircleTwoOpacity = 0.08;
 
   /// Hero 卡片内边距。
-  static const EdgeInsets heroPadding = EdgeInsets.fromLTRB(20, 18, 20, 18);
+  static const EdgeInsets heroPadding = EdgeInsets.fromLTRB(
+    LayoutConfig.space_20,
+    LayoutConfig.space_18,
+    LayoutConfig.space_20,
+    LayoutConfig.space_18,
+  );
 
   /// Hero 卡片圆角。
-  static const double heroRadius = 28;
+  static const double heroRadius = LayoutConfig.radius_28;
 
   /// Hero 卡片阴影模糊值。
   static const double heroShadowBlur = 24;
@@ -154,21 +160,21 @@ class Style {
   static final FontWeight heroSubtitleWeight = FontConfig.adjustedWeight(FontWeight.w400);
 
   /// Hero 标题和副标题之间的垂直间距。
-  static const double heroTitleBottomSpacing = 8;
+  static const double heroTitleBottomSpacing = LayoutConfig.space_8;
 
   /// Hero 副标题在夜间模式下透明度。
   static const double heroSubtitleDarkOpacity = 0.68;
 
   /// 空状态卡片内边距。
   static const EdgeInsets emptyCardPadding = EdgeInsets.fromLTRB(
-    24,
-    36,
-    24,
-    28,
+    LayoutConfig.space_24,
+    LayoutConfig.space_36,
+    LayoutConfig.space_24,
+    LayoutConfig.space_28,
   );
 
   /// 空状态卡片圆角。
-  static const double emptyCardRadius = 26;
+  static const double emptyCardRadius = LayoutConfig.radius_26;
 
   /// 空状态卡片边框透明度。
   static const double emptyCardBorderDarkOpacity = 0.06;
@@ -204,23 +210,28 @@ class Style {
   static final FontWeight emptyTitleWeight = FontConfig.adjustedWeight(FontWeight.w500);
 
   /// 空状态区域垂直间距。
-  static const double emptyCircleBottomSpacing = 18;
-  static const double emptyActionTopSpacing = 16;
+  static const double emptyCircleBottomSpacing = LayoutConfig.space_18;
+  static const double emptyActionTopSpacing = LayoutConfig.space_16;
 
   /// 单条账单卡片底部外边距。
-  static const double billCardBottomMargin = 14;
+  static const double billCardBottomMargin = LayoutConfig.space_14;
 
   /// 单条账单卡片内边距。
-  static const EdgeInsets billCardPadding = EdgeInsets.fromLTRB(18, 18, 18, 16);
+  static const EdgeInsets billCardPadding = EdgeInsets.fromLTRB(
+    LayoutConfig.space_18,
+    LayoutConfig.space_18,
+    LayoutConfig.space_18,
+    LayoutConfig.space_16,
+  );
 
   /// 单条账单卡片圆角。
-  static const double billCardRadius = 24;
+  static const double billCardRadius = LayoutConfig.radius_24;
 
   /// 单条账单卡片外层描边厚度。
   static const double billCardOuterBorderWidth = 1.2;
 
   /// 单条账单卡片内层圆角。
-  static const double billCardInnerRadius = 22;
+  static const double billCardInnerRadius = LayoutConfig.radius_22;
 
   /// 单条账单卡片内层边框透明度。
   static const double billCardInnerBorderDarkOpacity = 0.05;
@@ -270,31 +281,32 @@ class Style {
   static const double billTypeOrbSize = 42;
 
   /// 账单头部图标尺寸。
-  static const double billTypeOrbIconSize = 24;
+  static const double billTypeOrbIconSize = LayoutConfig.icon_regular;
 
   /// 图标区和右侧信息区之间的横向间距。
-  static const double billHeaderSpacing = 14;
+  static const double billHeaderSpacing = LayoutConfig.space_14;
 
   /// 账单类型值和方向标签之间的垂直间距。
-  static const double billTypeValueBottomSpacing = 8;
+  static const double billTypeValueBottomSpacing = LayoutConfig.space_8;
 
   /// 金额方向标签与标题之间的垂直间距。
-  static const double billDirectionTopSpacing = 8;
+  static const double billDirectionTopSpacing = LayoutConfig.space_8;
 
   /// 金额方向标签左右内边距。
   static const EdgeInsets billDirectionBadgePadding = EdgeInsets.symmetric(
-    horizontal: 10,
-    vertical: 5,
+    horizontal: LayoutConfig.space_10,
+    vertical: LayoutConfig.space_5,
   );
 
   /// 金额方向标签圆角。
-  static const double billDirectionBadgeRadius = 999;
+  static const double billDirectionBadgeRadius = LayoutConfig.radius_pill;
 
   /// 金额方向标签字号。
   static const double billDirectionBadgeTextSize = 12;
 
   /// 金额方向标签字重。
-  static final FontWeight billDirectionBadgeTextWeight = FontConfig.adjustedWeight(FontWeight.w500);
+  static final FontWeight billDirectionBadgeTextWeight =
+      FontConfig.adjustedWeight(FontWeight.w500);
 
   /// 金额方向标签浅色模式背景透明度。
   static const double billDirectionBadgeLightOpacity = 0.14;
@@ -303,24 +315,24 @@ class Style {
   static const double billDirectionBadgeDarkOpacity = 0.22;
 
   /// 卡片分隔线和上下内容的垂直间距。
-  static const double billDividerSpacing = 14;
+  static const double billDividerSpacing = LayoutConfig.space_14;
 
   /// 卡片分隔线透明度。
   static const double billDividerDarkOpacity = 0.08;
   static const double billDividerLightOpacity = 0.06;
 
   /// 明细信息行之间的间距。
-  static const double infoRowSpacing = 10;
+  static const double infoRowSpacing = LayoutConfig.space_10;
 
   /// 副文案在夜间模式下的透明度。
   static const double billCardSubTextDarkOpacity = 0.58;
 
   /// 金额标签内边距与圆角。
   static const EdgeInsets amountBadgePadding = EdgeInsets.symmetric(
-    horizontal: 12,
-    vertical: 8,
+    horizontal: LayoutConfig.space_12,
+    vertical: LayoutConfig.space_8,
   );
-  static const double amountBadgeRadius = 16;
+  static const double amountBadgeRadius = LayoutConfig.radius_16;
 
   /// 金额标签背景透明度。
   static const double amountBadgeDarkOpacity = 0.12;
@@ -342,10 +354,10 @@ class Style {
   static const double amountBadgeLabelLightOpacity = 0.70;
 
   /// 金额区域主次文案间距。
-  static const double amountBadgeInnerSpacing = 6;
+  static const double amountBadgeInnerSpacing = LayoutConfig.space_6;
 
   /// 左侧账单 id 复制图标与文字之间的间距。
-  static const double billIdCopySpacing = 6;
+  static const double billIdCopySpacing = LayoutConfig.space_6;
 
   /// 左侧账单 id 复制图标尺寸。
   static const double billIdCopyIconSize = 14;
@@ -368,20 +380,20 @@ class Style {
   static const double infoValueDarkOpacity = 0.92;
 
   /// 明细行复制图标与文本间距。
-  static const double infoCopySpacing = 8;
+  static const double infoCopySpacing = LayoutConfig.space_8;
 
   /// 明细行复制图标顶部微调。
-  static const double infoCopyTopPadding = 1;
+  static const double infoCopyTopPadding = LayoutConfig.space_1;
 
   /// 明细行复制图标尺寸。
-  static const double infoCopyIconSize = 16;
+  static const double infoCopyIconSize = LayoutConfig.icon_small;
 
   /// 明细行复制图标在夜间模式下的透明度。
   static const double infoCopyDarkOpacity = 0.72;
 
   /// 底部“没有更多数据”区域的上下边距。
-  static const double noMoreTopPadding = 4;
-  static const double noMoreBottomPadding = 12;
+  static const double noMoreTopPadding = LayoutConfig.space_4;
+  static const double noMoreBottomPadding = LayoutConfig.space_12;
 
   /// “没有更多数据”文案字号与字重。
   static const double noMoreTextSize = 13;
@@ -392,7 +404,7 @@ class Style {
 
   /// 通用按钮高度与圆角。
   static const double actionButtonHeight = 52;
-  static const double actionButtonRadius = 18;
+  static const double actionButtonRadius = LayoutConfig.radius_18;
 
   /// 通用按钮字号与字重。
   static const double actionButtonTextSize = 15;

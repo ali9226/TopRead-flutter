@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -9,6 +10,7 @@ import 'package:app/stores/device_info.dart';
 import 'package:app/pages/short_story_read/style.dart';
 import 'package:app/pages/short_story_read/logic.dart';
 import 'package:app/util/device/save_body_font_size.dart';
+import 'package:app/config/color_config.dart';
 
 /// 自动阅读设置弹窗组件。
 ///
@@ -58,7 +60,9 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
       constraints: BoxConstraints(maxHeight: max_height),
       decoration: BoxDecoration(
         color: bg_color,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(LayoutConfig.radius_16),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -68,13 +72,23 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
 
           /// 速度调节区域（带吐司弹窗）。
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: const EdgeInsets.fromLTRB(
+              LayoutConfig.space_20,
+              LayoutConfig.space_16,
+              LayoutConfig.space_20,
+              0,
+            ),
             child: _buildSpeedSection(is_dark: is_dark),
           ),
 
           /// 退出自动阅读按钮。
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+            padding: const EdgeInsets.fromLTRB(
+              LayoutConfig.space_20,
+              LayoutConfig.space_24,
+              LayoutConfig.space_20,
+              LayoutConfig.space_24,
+            ),
             child: _buildExitButton(is_dark: is_dark),
           ),
         ],
@@ -101,7 +115,12 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
       children: <Widget>[
         BottomSheetDragHandle(is_dark: is_dark),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+          padding: const EdgeInsets.fromLTRB(
+            LayoutConfig.space_20,
+            LayoutConfig.space_16,
+            LayoutConfig.space_12,
+            LayoutConfig.space_12,
+          ),
           child: Row(
             children: <Widget>[
               Text(
@@ -117,7 +136,7 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
                 onTap: widget.on_close,
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(LayoutConfig.space_8),
                   child: SvgIcon(
                     name: 'close',
                     width: 16,
@@ -149,8 +168,8 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
         : ShortStoryReadStyle.bottom_bar_light_bg;
 
     final Color thumb_shadow_color = is_dark
-        ? Colors.black.withValues(alpha: 0.4)
-        : Colors.black.withValues(alpha: 0.15);
+        ? ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone
+        : ColorConstants.pages_home_widgets_tab_bar_skeleton_index_tone_26222222;
 
     return Obx(() {
       /// 当前速度百分比。
@@ -222,17 +241,17 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
               child: Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                    horizontal: LayoutConfig.space_12,
+                    vertical: LayoutConfig.space_6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.75),
-                    borderRadius: BorderRadius.circular(4),
+                    color: ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone_bf222222,
+                    borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
                   ),
                   child: Text(
                     '$percentage%',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: ColorConstants.whiteColor,
                       fontSize: 13,
                       fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                     ),
@@ -258,7 +277,7 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
               : ShortStoryReadStyle.secondary_light_color.withValues(
                   alpha: 0.08,
                 ),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_24),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -267,15 +286,15 @@ class _AutoReadSettingsSheetState extends State<AutoReadSettingsSheet> {
               name: 'quit',
               width: 18,
               height: 18,
-              color: Color(0xFFE54D4D),
+              color: ColorConstants.pages_read_widgets_auto_read_settings_sheet_index_tone_ffe54d4d,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: LayoutConfig.space_8),
             Text(
               tr('short_story_read.exit_auto_read'),
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-                color: Color(0xFFE54D4D),
+                color: ColorConstants.pages_read_widgets_auto_read_settings_sheet_index_tone_ffe54d4d,
               ),
             ),
           ],
@@ -320,7 +339,7 @@ class _CircleThumbShape extends SliderComponentShape {
     canvas.drawCircle(center + const Offset(0, 1), thumbSize / 2, shadow_paint);
 
     final Paint thumb_paint = Paint()
-      ..color = sliderTheme.thumbColor ?? Colors.white;
+      ..color = sliderTheme.thumbColor ?? ColorConstants.whiteColor;
     canvas.drawCircle(center, thumbSize / 2, thumb_paint);
   }
 }

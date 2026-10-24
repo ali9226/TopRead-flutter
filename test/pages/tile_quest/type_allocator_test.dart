@@ -69,50 +69,30 @@ void main() {
     },
   );
 
-  test('forced hidden keys cannot strand a near-full ordinary prefix', () {
-    final profile = DifficultyProfile.for_difficulty(9);
-    for (var seed = 0; seed < 80; seed++) {
-      final sequence = TileQuestTypeAllocator.initial(
-        profile,
-        opening_count: 30,
-        random: Random(seed),
-        delayed_match_groups: const [
-          [46, 49, 403],
-          [54, 433, 451],
-        ],
-      );
-      final counts = List<int>.filled(TileQuestConfig.max_tile_types, 0);
-      var occupancy = 0;
-      for (final type in sequence) {
-        counts[type] = (counts[type] + 1) % 3;
-        occupancy = counts.fold(0, (sum, count) => sum + count);
-        expect(occupancy, lessThan(TileQuestConfig.tray_capacity));
+  test('fair allocation keeps stock even and never strands the tray', () {
+    for (var difficulty = 1; difficulty <= 10; difficulty++) {
+      final profile = DifficultyProfile.for_difficulty(difficulty);
+      for (final seed in [0, 1, 17, 730]) {
+        final sequence = TileQuestTypeAllocator.initial(
+          profile,
+          opening_count: 18,
+          random: Random(seed),
+        );
+        final counts = List<int>.filled(profile.type_count, 0);
+        var occupancy = 0;
+        for (final type in sequence) {
+          counts[type]++;
+          occupancy = counts.fold<int>(0, (sum, count) => sum + count % 3);
+          expect(occupancy, lessThan(TileQuestConfig.tray_capacity));
+        }
+        expect(sequence, hasLength(profile.tile_count));
+        expect(counts.every((count) => count % 3 == 0), isTrue);
+        expect(sequence.toSet(), hasLength(profile.type_count));
+        // 公平化：不再有「全场仅3张」的稀有图，各图案数量大体均匀。
+        final minimum = counts.reduce(min);
+        final maximum = counts.reduce(max);
+        expect(minimum * 2, greaterThanOrEqualTo(maximum));
       }
-      expect(sequence, hasLength(profile.tile_count));
-      expect(occupancy, 0);
-      expect(sequence.toSet(), hasLength(profile.type_count));
-    }
-  });
-
-  test('four consecutive rare openings reserve the entire forced run', () {
-    final profile = DifficultyProfile.for_difficulty(9);
-    for (var seed = 0; seed < 80; seed++) {
-      final sequence = TileQuestTypeAllocator.initial(
-        profile,
-        opening_count: 24,
-        random: Random(seed),
-        delayed_match_groups: const [
-          [40, 41, 403],
-          [42, 43, 451],
-        ],
-      );
-      final counts = List<int>.filled(TileQuestConfig.max_tile_types, 0);
-      for (final type in sequence) {
-        counts[type] = (counts[type] + 1) % 3;
-        expect(counts.fold<int>(0, (sum, count) => sum + count), lessThan(7));
-      }
-      expect(counts.every((count) => count == 0), isTrue);
-      expect(sequence, hasLength(profile.tile_count));
     }
   });
 

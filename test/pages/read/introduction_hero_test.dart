@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:app/components/window_content_layout/index.dart';
+import 'package:app/components/title_with_story_id/index.dart';
 import 'package:app/pages/read/utils/read_models.dart';
 import 'package:app/pages/read/widgets/introduction_section/widgets/hero/index.dart';
 import 'package:app/stores/project_config_store.dart';
@@ -185,17 +186,40 @@ void main() {
         Rect bounds(String key) => tester.getRect(find.byKey(ValueKey(key)));
         final hero = bounds('novel_introduction_hero');
         final cover = bounds('novel_hero_cover');
-        final metadata = bounds('novel_hero_metadata');
+        final metadata = bounds('work_introduction_metadata');
         final title = bounds('novel_hero_title');
+        final poster = bounds('work_introduction_poster');
+        final author_style = tester
+            .widget<Text>(find.text(_detail(language).author_name))
+            .style!;
+        final title_style = tester
+            .widget<TitleWithStoryId>(
+              find.byKey(const ValueKey('novel_hero_title')),
+            )
+            .title_style;
+        expect(title_style.shadows, isNotEmpty);
+        expect(author_style.shadows, title_style.shadows);
         expect(hero.left, closeTo(0, 0.1));
         expect(hero.width, closeTo(size.width, 0.1));
         expect(cover.left, greaterThanOrEqualTo(hero.left));
-        expect(cover.right, lessThanOrEqualTo(metadata.left + 0.1));
-        for (final key in [
-          'novel_hero_title',
-          'novel_hero_author',
-          'novel_hero_stats',
-        ]) {
+        expect(poster.height, greaterThan(0));
+        if (find
+            .byKey(const ValueKey('work_introduction_panel'))
+            .evaluate()
+            .isNotEmpty) {
+          expect(title.top, greaterThanOrEqualTo(cover.bottom));
+          expect(
+            bounds('novel_hero_author').top,
+            greaterThanOrEqualTo(title.bottom),
+          );
+        } else {
+          expect(cover.right, lessThanOrEqualTo(metadata.left + 0.1));
+        }
+        final stats = bounds('novel_hero_stats');
+        expect(stats.top, greaterThanOrEqualTo(metadata.bottom));
+        expect(stats.right, lessThanOrEqualTo(hero.right));
+        expect(stats.bottom, lessThanOrEqualTo(hero.bottom));
+        for (final key in ['novel_hero_title', 'novel_hero_author']) {
           final rect = bounds(key);
           expect(rect.left, greaterThanOrEqualTo(metadata.left - 0.1));
           expect(rect.right, lessThanOrEqualTo(hero.right + 0.1));

@@ -16,6 +16,7 @@ import 'package:app/pages/tile_quest/widgets/session_pause.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/config/color_config.dart';
 
 class _Store implements TileQuestSaveStore {
   String? value;
@@ -37,11 +38,15 @@ class _Work implements TileQuestWorkService {
     required int seed,
     required int unlocked_level,
     String? challenge_id,
+    int? layout_seed,
+    num? difficulty,
   }) async => TileQuestGenerator.generate(
     level: level,
     seed: seed,
     unlocked_level: unlocked_level,
     challenge_id: challenge_id,
+    layout_seed: layout_seed,
+    difficulty: difficulty,
   );
 
   @override
@@ -195,7 +200,7 @@ void main() {
         _expect_blend(
           before,
           after,
-          const Color(0xFF061126).withValues(alpha: .72),
+          ColorConstants.test_pages_tile_quest_modal_full_window_test_tone_ff061126.withValues(alpha: .72),
         );
         final button = tester.getRect(
           find.byKey(const ValueKey('tile_quest_result_primary')),

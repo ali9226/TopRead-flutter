@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app/config/layout_config.dart';
+import 'package:app/config/color_config.dart';
 
 /// 推荐书籍卡片样式常量。
 ///
@@ -12,10 +13,10 @@ class RecommendBookCardStyle {
   static const double card_radius = LayoutConfig.card_radius;
 
   /// 卡片背景色（日间模式）。
-  static const Color card_light_bg = Colors.white;
+  static const Color card_light_bg = ColorConstants.whiteColor;
 
   /// 卡片背景色（夜间模式）。
-  static const Color card_dark_bg = Color(0xFF171C28);
+  static const Color card_dark_bg = ColorConstants.pages_home_widgets_tab_contents_recommend_tab_index_tone;
 
   // ==================== 长按交互 ====================
 
@@ -34,7 +35,7 @@ class RecommendBookCardStyle {
   // ==================== 遮罩层 ====================
 
   /// 遮罩层颜色。
-  static const Color overlay_color = Color(0x66000000);
+  static const Color overlay_color = ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone;
 
   /// 遮罩层动画时长（毫秒）。
   static const int overlay_animation_duration_ms = 200;
@@ -42,37 +43,38 @@ class RecommendBookCardStyle {
   // ==================== 不喜欢按钮 ====================
 
   /// 不喜欢按钮背景色（日间模式）。
-  static const Color dislike_button_light_bg = Color(0xFFF5F6FA);
+  static const Color dislike_button_light_bg = ColorConstants.pages_interest_preference_style_tone_fff5f6fa;
 
   /// 不喜欢按钮背景色（夜间模式）。
-  static const Color dislike_button_dark_bg = Color(0xFF171C28);
+  static const Color dislike_button_dark_bg = ColorConstants.pages_home_widgets_tab_contents_recommend_tab_index_tone;
 
   /// 不喜欢按钮文字色（日间模式）。
-  static const Color dislike_button_light_text = Color(0xFF222222);
+  static const Color dislike_button_light_text = ColorConstants.lightTextColor;
 
   /// 不喜欢按钮文字色（夜间模式）。
-  static const Color dislike_button_dark_text = Color(0xFF999AAA);
+  static const Color dislike_button_dark_text = ColorConstants.dark_secondary_text;
 
   /// 不喜欢按钮高度。
-  static const double dislike_button_height = 44.0;
+  static const double dislike_button_height =
+      LayoutConfig.compact_control_height;
 
   /// 不喜欢按钮圆角。
-  static const double dislike_button_radius = 8.0;
+  static const double dislike_button_radius = LayoutConfig.radius_8;
 
   /// 不喜欢按钮字号。
   static const double dislike_button_font_size = 14.0;
 
   /// 不喜欢按钮水平内边距。
-  static const double dislike_button_horizontal_padding = 12.0;
+  static const double dislike_button_horizontal_padding = LayoutConfig.space_12;
 
   /// 不喜欢按钮滑入动画曲线。
   static const Curve dislike_slide_curve = Curves.easeOutCubic;
 
   /// 不喜欢图标尺寸。
-  static const double dislike_icon_size = 16.0;
+  static const double dislike_icon_size = LayoutConfig.icon_small;
 
   /// 不喜欢图标与文字间距。
-  static const double dislike_icon_gap = 6.0;
+  static const double dislike_icon_gap = LayoutConfig.space_6;
 
   // ==================== 关闭按钮 ====================
 
@@ -80,7 +82,7 @@ class RecommendBookCardStyle {
   static const double close_button_size = 22.0;
 
   /// 关闭按钮圆角。
-  static const double close_button_radius = 11.0;
+  static const double close_button_radius = LayoutConfig.radius_11;
 
   /// 关闭图标尺寸（按钮的 50%）。
   static const double close_icon_size = close_button_size * 0.5;
@@ -92,16 +94,16 @@ class RecommendBookCardStyle {
   static const double close_button_right = 8.0;
 
   /// 关闭按钮背景色（日间模式 - 半透明黑色）。
-  static const Color close_button_light_bg = Color(0x40000000);
+  static const Color close_button_light_bg = ColorConstants.scrim_close_button;
 
   /// 关闭按钮背景色（夜间模式 - 半透明黑色）。
-  static const Color close_button_dark_bg = Color(0x40000000);
+  static const Color close_button_dark_bg = ColorConstants.scrim_close_button;
 
   /// 关闭图标颜色（日间模式 - 纯白色）。
-  static const Color close_icon_light_color = Colors.white;
+  static const Color close_icon_light_color = ColorConstants.whiteColor;
 
   /// 关闭图标颜色（夜间模式）。
-  static const Color close_icon_dark_color = Color(0xBFFFFFFF);
+  static const Color close_icon_dark_color = ColorConstants.components_load_more_footer_index_tone_bfffffff;
 
   // ==================== 删除动画 ====================
 
@@ -117,10 +119,15 @@ class RecommendBookCardStyle {
   // ==================== 内容区域 ====================
 
   /// 内容区域内边距。
-  static const EdgeInsets content_padding = EdgeInsets.fromLTRB(10, 10, 10, 12);
+  static const EdgeInsets content_padding = EdgeInsets.fromLTRB(
+    LayoutConfig.space_10,
+    LayoutConfig.space_10,
+    LayoutConfig.space_10,
+    LayoutConfig.space_12,
+  );
 
   /// 标题顶部间距。
-  static const double title_top_spacing = 10;
+  static const double title_top_spacing = LayoutConfig.space_10;
 
   /// 标题字号。
   static const double title_font_size = 15;
@@ -132,7 +139,7 @@ class RecommendBookCardStyle {
   static const int title_max_lines = 2;
 
   /// 简介顶部间距。
-  static const double description_top_spacing = 6;
+  static const double description_top_spacing = LayoutConfig.space_6;
 
   /// 简介字号。
   static const double description_font_size = 12;
@@ -144,19 +151,24 @@ class RecommendBookCardStyle {
   static const int description_max_lines = 2;
 
   /// 标签区域顶部间距。
-  static const double tag_top_spacing = 8;
+  static const double tag_top_spacing = LayoutConfig.space_8;
 
   /// 标签之间的横向间距。
-  static const double tag_spacing = 6;
+  static const double tag_spacing = LayoutConfig.space_6;
 
   /// 标签之间的纵向间距。
-  static const double tag_run_spacing = 6;
+  static const double tag_run_spacing = LayoutConfig.space_6;
 
   /// 标签内边距。
-  static const EdgeInsets tag_padding = EdgeInsets.fromLTRB(8, 4, 8, 4);
+  static const EdgeInsets tag_padding = EdgeInsets.fromLTRB(
+    LayoutConfig.space_8,
+    LayoutConfig.space_4,
+    LayoutConfig.space_8,
+    LayoutConfig.space_4,
+  );
 
   /// 标签圆角。
-  static const double tag_radius = 999;
+  static const double tag_radius = LayoutConfig.radius_pill;
 
   /// 标签字号。
   static const double tag_font_size = 11;
@@ -173,13 +185,23 @@ class RecommendBookCardStyle {
   static const double cover_badge_font_size = 10;
 
   /// 封面左上角角标内边距。
-  static const EdgeInsets cover_badge_padding = EdgeInsets.fromLTRB(6, 4, 6, 4);
+  static const EdgeInsets cover_badge_padding = EdgeInsets.fromLTRB(
+    LayoutConfig.space_6,
+    LayoutConfig.space_4,
+    LayoutConfig.space_6,
+    LayoutConfig.space_4,
+  );
 
   /// 封面左上角角标位置。
-  static const EdgeInsets cover_badge_margin = EdgeInsets.fromLTRB(8, 8, 0, 0);
+  static const EdgeInsets cover_badge_margin = EdgeInsets.fromLTRB(
+    LayoutConfig.space_8,
+    LayoutConfig.space_8,
+    0,
+    0,
+  );
 
   /// 封面左上角角标圆角。
-  static const double cover_badge_radius = 999;
+  static const double cover_badge_radius = LayoutConfig.radius_pill;
 
   /// 封面左上角角标背景透明度。
   static const double cover_badge_background_opacity = 0.56;
@@ -190,7 +212,12 @@ class RecommendBookCardStyle {
   static const double cover_meta_font_size = 11;
 
   /// 封面左下角附加信息位置。
-  static const EdgeInsets cover_meta_margin = EdgeInsets.fromLTRB(8, 0, 8, 8);
+  static const EdgeInsets cover_meta_margin = EdgeInsets.fromLTRB(
+    LayoutConfig.space_8,
+    0,
+    LayoutConfig.space_8,
+    LayoutConfig.space_8,
+  );
 
   /// 封面附加信息阴影透明度。
   static const double cover_meta_shadow_opacity = 0.30;
@@ -206,10 +233,13 @@ class RecommendBookCardStyle {
   // ==================== 瀑布流布局 ====================
 
   /// 左右两列之间的间距。
-  static const double column_spacing = 8;
+  static const double column_spacing = LayoutConfig.space_8;
+
+  /// 列间距的一半，双列骨架左右各让一半。
+  static const double half_column_spacing = column_spacing / 2;
 
   /// 同一列中卡片之间的纵向间距。
-  static const double item_spacing = 10;
+  static const double item_spacing = LayoutConfig.space_10;
 
   /// 单个卡片允许的最小宽度。
   static const double min_item_width = 150;
@@ -269,10 +299,10 @@ class RecommendBookCardStyle {
   static const double skeleton_right_column_delay = 0.08;
 
   /// 标题骨架圆角。
-  static const double skeleton_title_radius = 4;
+  static const double skeleton_title_radius = LayoutConfig.radius_4;
 
   /// 标题骨架两行之间的间距。
-  static const double skeleton_title_line_spacing = 4;
+  static const double skeleton_title_line_spacing = LayoutConfig.space_4;
 
   /// 标题骨架第二行宽度。
   static const double skeleton_title_second_line_width = 80;
@@ -284,10 +314,10 @@ class RecommendBookCardStyle {
   static const double skeleton_title_second_line_delay = 0.08;
 
   /// 简介骨架圆角。
-  static const double skeleton_description_radius = 3;
+  static const double skeleton_description_radius = LayoutConfig.radius_3;
 
   /// 简介骨架两行之间的间距。
-  static const double skeleton_description_line_spacing = 3;
+  static const double skeleton_description_line_spacing = LayoutConfig.space_3;
 
   /// 简介骨架第二行宽度。
   static const double skeleton_description_second_line_width = 100;
@@ -302,7 +332,7 @@ class RecommendBookCardStyle {
   static const double skeleton_tag_width = 44;
 
   /// 标签骨架上下内边距总和。
-  static const double skeleton_tag_vertical_padding = 8;
+  static const double skeleton_tag_vertical_padding = LayoutConfig.space_8;
 
   /// 第一个标签骨架的动画延迟。
   static const double skeleton_tag_initial_delay = 0.17;
@@ -311,22 +341,22 @@ class RecommendBookCardStyle {
   static const double skeleton_tag_interval_delay = 0.05;
 
   /// 日间主题骨架底色。
-  static const Color skeleton_light_base_color = Color(0xFFF0F1F5);
+  static const Color skeleton_light_base_color = ColorConstants.components_category_filter_index_tone_fff0f1f5;
 
   /// 日间主题骨架高亮色。
-  static const Color skeleton_light_highlight_color = Color(0xFFF8F8F8);
+  static const Color skeleton_light_highlight_color = ColorConstants.customer_service_sheet_style_input_bar_bg_light;
 
   /// 夜间主题骨架底色。
-  static const Color skeleton_dark_base_color = Color(0xFF252836);
+  static const Color skeleton_dark_base_color = ColorConstants.components_category_filter_index_tone;
 
   /// 夜间主题骨架高亮色。
-  static const Color skeleton_dark_highlight_color = Color(0xFF2F3346);
+  static const Color skeleton_dark_highlight_color = ColorConstants.skeleton_dark_highlight_color_ff2f3346;
 
   /// 加载更多指示器顶部间距。
-  static const double loading_indicator_top_spacing = 20.0;
+  static const double loading_indicator_top_spacing = LayoutConfig.space_20;
 
   /// 加载更多指示器底部间距。
-  static const double loading_indicator_bottom_spacing = 30.0;
+  static const double loading_indicator_bottom_spacing = LayoutConfig.space_30;
 
   /// 加载更多指示器尺寸。
   static const double loading_indicator_size = 18.0;

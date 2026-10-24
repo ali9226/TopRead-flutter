@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import 'index.dart';
+import 'package:app/config/color_config.dart';
 
 /// 独立的段评弹窗入口；调用方只负责引用文本、主题和提交操作。
 Future<void> show_paragraph_comment_composer(
@@ -17,7 +18,7 @@ Future<void> show_paragraph_comment_composer(
   isScrollControlled: true,
   // 背景延伸到窗口两侧，避免横屏安全区和宽屏限宽露出键盘后方的遮罩。
   useSafeArea: false,
-  backgroundColor: Colors.transparent,
+  backgroundColor: ColorConstants.transparent,
   constraints: const BoxConstraints(maxWidth: double.infinity),
   builder: (BuildContext sheet_context) {
     // 路由会移除 MediaQuery 的顶部 padding，直接读取窗口安全区保护顶部内容。

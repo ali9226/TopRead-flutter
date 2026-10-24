@@ -9,10 +9,11 @@ import 'package:app/pages/tile_quest/widgets/tile_surface_style.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/config/color_config.dart';
 
 const _asset_prefix = 'assets/img/tile_quest/icons/tile_';
-const _first_color = Color(0xffe8be90);
-const _second_color = Color(0xff63bca4);
+const _first_color = ColorConstants.pages_tile_quest_shuffle_textures_test_tone_ffe8be90;
+const _second_color = ColorConstants.pages_tile_quest_shuffle_textures_test_tone_ff63bca4;
 
 /// 使用确定的真实 PNG 验证像素，不依赖当前美术素材的颜色或透明度。
 Future<ByteData> _png(Color color) async {
@@ -75,7 +76,7 @@ class _TextureBundle extends CachingAssetBundle {
 }
 
 Future<_TextureBundle> _bundle() async => _TextureBundle({
-  QuestTileSkin.asset: await _skin_png(Colors.white),
+  QuestTileSkin.asset: await _skin_png(ColorConstants.whiteColor),
   _asset(0): await _png(_first_color),
   _asset(1): await _png(_second_color),
 });

@@ -32,7 +32,7 @@ class ReaderThemeOptions extends StatelessWidget {
             ? ReaderThemeOptionsStyle.label_cjk
             : ReaderThemeOptionsStyle.label_alphabetic,
         fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-        color: is_dark ? Colors.white : ReaderThemeOptionsStyle.day_ink,
+        color: is_dark ? ColorConstants.whiteColor : ReaderThemeOptionsStyle.day_ink,
       ),
     );
     return Row(
@@ -58,14 +58,14 @@ class ReaderThemeOptions extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: night
                         ? ReaderThemeOptionsStyle.night_surface
-                        : Colors.white,
+                        : ColorConstants.whiteColor,
                     borderRadius: BorderRadius.circular(
                       ReaderThemeOptionsStyle.radius,
                     ),
                     border: Border.all(
                       color: is_dark == night
                           ? ColorConstants.dangerColor
-                          : Colors.transparent,
+                          : ColorConstants.transparent,
                       width: ReaderThemeOptionsStyle.border_width,
                     ),
                   ),
@@ -82,7 +82,7 @@ class ReaderThemeOptions extends StatelessWidget {
                           : ReaderThemeOptionsStyle.option_alphabetic,
                       fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
                       color: night
-                          ? Colors.white
+                          ? ColorConstants.whiteColor
                           : ReaderThemeOptionsStyle.day_ink,
                     ),
                   ),

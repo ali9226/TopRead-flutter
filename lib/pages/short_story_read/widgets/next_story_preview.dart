@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 
 import 'package:app/config/color_config.dart';
@@ -80,13 +81,13 @@ class NextStoryPreview extends StatelessWidget {
         children: <Widget>[
           const SizedBox(height: 42),
           _buildBridgeDivider(),
-          const SizedBox(height: 30),
+          const SizedBox(height: LayoutConfig.space_30),
           _buildTitle(),
           if (next_story.tags.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: LayoutConfig.space_12),
             _buildTags(),
           ],
-          const SizedBox(height: 18),
+          const SizedBox(height: LayoutConfig.space_18),
           _buildPreviewText(),
         ],
       ),
@@ -119,7 +120,7 @@ class NextStoryPreview extends StatelessWidget {
             border_radius: 6,
             is_dark: is_dark,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: LayoutConfig.space_12),
           Expanded(child: titleText),
         ],
       );
@@ -145,19 +146,19 @@ class NextStoryPreview extends StatelessWidget {
       spacing: ShortStoryReadStyle.tag_spacing,
       runSpacing: ShortStoryReadStyle.tag_spacing,
       children: List<Widget>.generate(next_story.tags.length, (int index) {
-        final Color tag_color = ColorConstants
-                .tagColorList[(next_story.id * 7 + index * 3) %
-            ColorConstants.tagColorList.length];
+        final Color tag_color =
+            ColorConstants.tagColorList[(next_story.id * 7 + index * 3) %
+                ColorConstants.tagColorList.length];
         final Color tag_bg = tag_color.withValues(alpha: 0.12);
 
         return Container(
           padding: EdgeInsets.symmetric(
-            horizontal: is_cjk ? 6 : 8,
+            horizontal: is_cjk ? LayoutConfig.space_6 : LayoutConfig.space_8,
             vertical: ShortStoryReadStyle.tag_vertical_padding,
           ),
           decoration: BoxDecoration(
             color: tag_bg,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
           ),
           child: Text(
             next_story.tags[index],
@@ -199,14 +200,14 @@ class NextStoryPreview extends StatelessWidget {
   /// 构建当前篇和下一篇之间的衔接装饰。
   Widget _buildBridgeDivider() {
     final Color line_color = is_dark
-        ? Colors.white.withValues(alpha: 0.10)
-        : Colors.black.withValues(alpha: 0.08);
+        ? ColorConstants.components_authorized_login_index_tone
+        : ColorConstants.components_fixed_bottom_navigation_style_tone;
     final Color dot_color = is_dark
-        ? Colors.white.withValues(alpha: 0.28)
-        : Colors.black.withValues(alpha: 0.18);
+        ? ColorConstants.pages_short_story_read_widgets_next_story_preview_tone
+        : ColorConstants.pages_short_story_read_index_tone;
     final Color pill_bg = is_dark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.035);
+        ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
+        : ColorConstants.pages_short_story_read_widgets_next_story_preview_tone_9222222;
 
     Widget line() {
       return Expanded(
@@ -239,22 +240,22 @@ class NextStoryPreview extends StatelessWidget {
     return Row(
       children: <Widget>[
         line(),
-        const SizedBox(width: 12),
+        const SizedBox(width: LayoutConfig.space_12),
         Container(
           padding: EdgeInsets.symmetric(
-            horizontal: is_cjk ? 14 : 16,
-            vertical: 7,
+            horizontal: is_cjk ? LayoutConfig.space_14 : LayoutConfig.space_16,
+            vertical: LayoutConfig.space_7,
           ),
           decoration: BoxDecoration(
             color: pill_bg,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(LayoutConfig.radius_pill),
             border: Border.all(color: line_color),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               dot(4, 0.55),
-              const SizedBox(width: 7),
+              const SizedBox(width: LayoutConfig.space_7),
               Text(
                 reader_text('next_story'),
                 style: TextStyle(
@@ -265,12 +266,12 @@ class NextStoryPreview extends StatelessWidget {
                   height: 1.1,
                 ),
               ),
-              const SizedBox(width: 7),
+              const SizedBox(width: LayoutConfig.space_7),
               dot(4, 0.55),
             ],
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: LayoutConfig.space_12),
         line(),
       ],
     );

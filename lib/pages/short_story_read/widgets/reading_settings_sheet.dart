@@ -1,3 +1,4 @@
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/reader_theme_options/index.dart';
 import 'dart:async';
 import 'package:app/components/reader_theme_transition/index.dart';
@@ -90,7 +91,9 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
         constraints: BoxConstraints(maxHeight: max_height),
         decoration: BoxDecoration(
           color: bg_color,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(LayoutConfig.radius_16),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -101,7 +104,12 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
             /// 设置内容区域。
             Flexible(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                padding: const EdgeInsets.fromLTRB(
+                  LayoutConfig.space_20,
+                  LayoutConfig.space_16,
+                  LayoutConfig.space_20,
+                  LayoutConfig.space_24,
+                ),
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -109,12 +117,12 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
                       /// 第一行：字号调节。
                       _buildFontSizeRow(is_dark: is_dark),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: LayoutConfig.space_20),
 
                       /// 第二行：主题切换。
                       _buildThemeRow(is_dark: is_dark),
 
-                      const SizedBox(height: 24),
+                      const SizedBox(height: LayoutConfig.space_24),
 
                       /// 第三行：其它标题。
                       _buildOtherSection(is_dark: is_dark),
@@ -151,7 +159,12 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
       children: <Widget>[
         BottomSheetDragHandle(is_dark: is_dark),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+          padding: const EdgeInsets.fromLTRB(
+            LayoutConfig.space_20,
+            LayoutConfig.space_16,
+            LayoutConfig.space_12,
+            LayoutConfig.space_12,
+          ),
           child: Row(
             children: <Widget>[
               /// 标题文字（粗细 500）。
@@ -171,7 +184,7 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
                 onTap: widget.on_close,
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(LayoutConfig.space_8),
                   child: SvgPicture.asset(
                     'assets/svg/close.svg',
                     width: 16,
@@ -254,7 +267,7 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
           ),
         ),
 
-        const SizedBox(width: 16),
+        const SizedBox(width: LayoutConfig.space_16),
 
         /// 减少按钮（Expanded 等分）。
         Expanded(
@@ -268,7 +281,9 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
 
         /// 当前字号数字（带滚动动画）。
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: LayoutConfig.space_12,
+          ),
           child: _buildAnimatedFontSize(
             current_size: current_size,
             title_color: title_color,
@@ -356,7 +371,7 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
           ),
         ),
 
-        const SizedBox(width: 16),
+        const SizedBox(width: LayoutConfig.space_16),
 
         /// 自动阅读按钮（Expanded 占满剩余宽度）。
         Expanded(
@@ -372,7 +387,7 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
                     : ShortStoryReadStyle.secondary_light_color.withValues(
                         alpha: 0.10,
                       ),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(LayoutConfig.radius_18),
               ),
               child: Center(
                 child: Text(
@@ -430,7 +445,7 @@ class _ReadingSettingsSheetState extends State<ReadingSettingsSheet>
         height: 36,
         decoration: BoxDecoration(
           color: bg_color,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(LayoutConfig.radius_18),
         ),
         child: Center(
           child: SvgPicture.asset(

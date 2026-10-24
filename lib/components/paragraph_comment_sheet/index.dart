@@ -1,4 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
+import 'package:app/config/layout_config.dart';
 import 'package:app/components/bottom_sheet_drag_handle/index.dart';
 import 'package:app/components/login_required_dialog/index.dart';
 import 'package:app/components/paragraph_comment_composer/index.dart';
@@ -16,6 +17,7 @@ import 'style.dart';
 import 'widgets/actions.dart';
 import 'widgets/comment_item.dart';
 import 'widgets/input_bar.dart';
+import 'package:app/config/color_config.dart';
 
 export 'style.dart';
 
@@ -63,7 +65,7 @@ class ParagraphCommentDetailSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       builder: (_) => ParagraphCommentDetailSheet(
         novel_id: novel_id,
         paragraph_id: paragraph_id,
@@ -237,7 +239,9 @@ class _ParagraphCommentDetailSheetState
           SizedBox(
             height: 44,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(
+                horizontal: LayoutConfig.space_16,
+              ),
               child: Row(
                 children: [
                   // 标题 + 评论数。
@@ -251,22 +255,18 @@ class _ParagraphCommentDetailSheetState
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: widget.is_cjk ? 17 : 15,
-                              fontWeight: FontConfig.adjustedWeight(
-                                FontWeight.w500,
-                              ),
+                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                               color: title_color,
                             ),
                           ),
                         ),
                         if (_logic.comment_count > 0) ...[
-                          const SizedBox(width: 6),
+                          const SizedBox(width: LayoutConfig.space_6),
                           Text(
                             '${_logic.comment_count}',
                             style: TextStyle(
                               fontSize: widget.is_cjk ? 17 : 15,
-                              fontWeight: FontConfig.adjustedWeight(
-                                FontWeight.w500,
-                              ),
+                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
                               color: secondary_color,
                             ),
                           ),
@@ -346,7 +346,9 @@ class _ParagraphCommentDetailSheetState
       ),
       itemBuilder: (context, index) => index == _logic.comments.length
           ? Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                vertical: LayoutConfig.space_8,
+              ),
               child: TextButton(
                 key: const ValueKey('paragraph_load_more'),
                 onPressed: _logic.is_loading_more
@@ -366,7 +368,9 @@ class _ParagraphCommentDetailSheetState
               ),
             )
           : Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                vertical: LayoutConfig.space_4,
+              ),
               child: ParagraphCommentItem(
                 key: ValueKey('paragraph_comment_${_logic.comments[index].id}'),
                 comment: _logic.comments[index],

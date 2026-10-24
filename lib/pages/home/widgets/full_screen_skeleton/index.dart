@@ -9,6 +9,7 @@ import 'package:app/pages/home/widgets/full_screen_skeleton/style.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/style.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/widgets/ranking_section/style.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/widgets/ranking_section/widgets/ranking_section_skeleton.dart';
+import 'package:app/config/layout_config.dart';
 
 /// 首页全屏骨架。
 ///
@@ -88,7 +89,7 @@ class _FullScreenSkeletonState extends State<FullScreenSkeleton>
                   if (has_status_bar_spacing)
                     SizedBox(height: status_bar_height),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: LayoutConfig.space_16),
                     child: HomeHeaderBar(
                       is_dark: is_dark,
                       on_search_tap: widget.on_search_tap,
@@ -135,7 +136,7 @@ class _FullScreenSkeletonState extends State<FullScreenSkeleton>
       builder: (BuildContext context, Widget? child) {
         return ListView.builder(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.only(left: 16),
+          padding: const EdgeInsets.only(left: LayoutConfig.space_16),
           physics: const NeverScrollableScrollPhysics(),
           itemCount: FullScreenSkeletonStyle.tab_item_count,
           itemBuilder: (BuildContext context, int index) {

@@ -1,6 +1,8 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'package:app/models/comics.dart';
+import 'package:app/pages/comics/widgets/comic_surface.dart';
 import 'package:app/components/catalog_card/index.dart';
 import 'package:app/components/content_category_tag/index.dart';
 import 'package:app/components/window_content_layout/index.dart';
@@ -12,13 +14,14 @@ import 'package:app/util/language_util/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:app/config/color_config.dart';
 
 /// TODO 详情页补充面板统一使用安全区、限高滚动与日夜主题表面色。
 Future<void> _show_sheet(BuildContext context, String title, Widget body) =>
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorConstants.transparent,
       constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width),
       builder: (context) => WindowContentLayout(
         expand_height: false,
@@ -90,17 +93,18 @@ Future<void> show_comic_share_sheet(BuildContext context, ComicDetail detail) {
             fontWeight: ComicDetailStyle.weight_medium,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: LayoutConfig.space_12),
         SelectableText(
           uri.toString(),
           style: TextStyle(color: ComicDetailStyle.muted(context)),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: LayoutConfig.space_20),
         Builder(
           builder: (sheet_context) => FilledButton.icon(
             style: FilledButton.styleFrom(
               backgroundColor: ComicDetailStyle.accent(context),
-              foregroundColor: const Color(0xFF242428),
+              foregroundColor:
+                  ColorConstants.pages_comics_detail_widgets_detail_sheets_tone,
               minimumSize: const Size.fromHeight(48),
             ),
             onPressed: () async {
@@ -175,7 +179,7 @@ Future<void> show_comic_author_sheet(
           ),
         ),
       ),
-      const SizedBox(width: 16),
+      const SizedBox(width: LayoutConfig.space_16),
       Expanded(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,7 +191,7 @@ Future<void> show_comic_author_sheet(
                 fontWeight: ComicDetailStyle.weight_medium,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: LayoutConfig.space_8),
             Text(
               detail.comic.title,
               style: TextStyle(color: ComicDetailStyle.muted(context)),
@@ -245,7 +249,7 @@ class _RecommendationCard extends StatelessWidget {
       Localizations.localeOf(context).languageCode,
     );
     final dark = ComicDetailStyle.is_dark(context);
-    return CatalogCardSurface(
+    return ComicSurface(
       is_dark: dark,
       child: InkWell(
         onTap: on_open,

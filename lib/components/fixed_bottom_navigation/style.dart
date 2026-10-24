@@ -1,5 +1,6 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names
 
+import 'package:app/config/layout_config.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -19,7 +20,7 @@ class Style {
   static const double navigation_item_height = bar_height;
 
   /// 单个导航按钮点击半径。
-  static const double navigation_item_radius = 32;
+  static const double navigation_item_radius = LayoutConfig.radius_32;
 
   /// 图标统一承载槽位宽度。
   static const double icon_slot_width = 48;
@@ -85,7 +86,7 @@ class Style {
   static const double night_sunbeam_height = 92;
 
   /// 夜间模式右上角光束圆角。
-  static const double night_sunbeam_radius = 999;
+  static const double night_sunbeam_radius = LayoutConfig.radius_pill;
 
   /// 夜间模式右上角光束顶部偏移。
   static const double night_sunbeam_top = -12;
@@ -98,12 +99,12 @@ class Style {
 
   /// 亮色模式阴影颜色。
   static Color light_shadow_color() {
-    return Colors.black.withValues(alpha: 0.08);
+    return ColorConstants.components_fixed_bottom_navigation_style_tone;
   }
 
   /// 夜间模式阴影颜色。
   static Color dark_shadow_color() {
-    return Colors.black.withValues(alpha: 0.22);
+    return ColorConstants.components_fixed_bottom_navigation_style_tone_38222222;
   }
 
   /// 当前主题下的底部导航背景色。
@@ -118,25 +119,25 @@ class Style {
     return LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [const Color(0xFF20283A), ColorConstants.nightHighlightColor],
+      colors: [ColorConstants.components_fixed_bottom_navigation_style_tone_ff20283a, ColorConstants.nightHighlightColor],
     );
   }
 
   /// 点击波纹的主题色。
   static Color ripple_color() {
-    return ColorConstants.themeColor.withValues(alpha: 0.22);
+    return ColorConstants.components_fixed_bottom_navigation_style_tone_38f8d02d;
   }
 
   /// 夜间模式选中态图标颜色。
   static Color night_active_icon_color() {
-    return const Color(0xFFD0D4DB).withValues(alpha: 0.82);
+    return ColorConstants.components_fixed_bottom_navigation_style_tone_d1d0d4db;
   }
 
   /// 夜间模式未选中态图标颜色。
   ///
   /// 当前单独抽成变量，方便后续直接在这里调整夜间模式图标颜色。
   static Color night_inactive_icon_color() {
-    return const Color(0xFF888888);
+    return ColorConstants.hintColor;
   }
 
   /// 根据路径和状态返回图标尺寸。

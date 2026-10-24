@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:app/pages/short_story_read/style.dart';
+import 'package:app/config/color_config.dart';
 
 /// 正文页面右下角浮动按钮。
 ///
@@ -43,8 +44,8 @@ class ScrollToBottomButton extends StatelessWidget {
 
     /// 投影颜色。
     final Color shadow_color = is_dark
-        ? Colors.black.withValues(alpha: 0.35)
-        : Colors.black.withValues(alpha: 0.12);
+        ? ColorConstants.pages_short_story_read_widgets_scroll_to_bottom_button_tone
+        : ColorConstants.util_dialog_show_bottom_tip_tone_1f222222;
 
     return Opacity(
       opacity: opacity,
