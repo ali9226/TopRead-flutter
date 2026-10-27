@@ -2,6 +2,7 @@
 
 import 'package:app/config/font_config.dart';
 import 'package:app/config/color_config.dart';
+import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/comics/detail/widgets/reading_action_bar_style.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -38,9 +39,14 @@ class ComicReadingActionBar extends StatelessWidget {
     final surface = dark
         ? ComicReadingActionBarStyle.night_surface
         : ColorConstants.whiteColor;
-    final ink = dark ? ColorConstants.whiteColor : ComicReadingActionBarStyle.ink;
+    final ink = dark
+        ? ColorConstants.whiteColor
+        : ComicReadingActionBarStyle.ink;
     final library_label = tr(
       collected ? 'comics.collected' : 'comics.add_to_library',
+    );
+    final collection_action_label = tr(
+      collected ? 'favorite.action_remove' : 'favorite.action_add',
     );
     final reading_label = tr(
       !can_read
@@ -78,11 +84,15 @@ class ComicReadingActionBar extends StatelessWidget {
               ComicReadingActionBarStyle.radius,
             ),
             border: Border.all(
-              color: dark ? ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff : ColorConstants.whiteColor,
+              color: dark
+                  ? ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff
+                  : ColorConstants.whiteColor,
             ),
             boxShadow: [
               BoxShadow(
-                color: ColorConstants.pages_comics_detail_widgets_reading_action_bar_tone.withValues(alpha: dark ? 0.08 : 0.18),
+                color: ColorConstants
+                    .pages_comics_detail_widgets_reading_action_bar_tone
+                    .withValues(alpha: dark ? 0.08 : 0.18),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
               ),
@@ -98,12 +108,15 @@ class ComicReadingActionBar extends StatelessWidget {
                     button: true,
                     toggled: collected,
                     enabled: !collecting,
-                    label: library_label,
+                    label: collection_action_label,
                     child: Material(
                       color: ColorConstants.transparent,
                       child: InkWell(
                         key: const ValueKey('comic_library_action'),
                         onTap: collecting ? null : on_collect,
+                        splashFactory: NoSplash.splashFactory,
+                        splashColor: ColorConstants.transparent,
+                        highlightColor: ColorConstants.transparent,
                         borderRadius: BorderRadius.circular(
                           ComicReadingActionBarStyle.radius,
                         ),
@@ -121,13 +134,15 @@ class ComicReadingActionBar extends StatelessWidget {
                                 AnimatedSwitcher(
                                   duration:
                                       ComicReadingActionBarStyle.transition,
-                                  child: Icon(
-                                    collected
-                                        ? Icons.favorite_rounded
-                                        : Icons.favorite_border_rounded,
+                                  child: SvgIcon(
+                                    name: collected
+                                        ? 'user_selected'
+                                        : 'not_favorited',
                                     key: ValueKey(collected),
-                                    size: ComicReadingActionBarStyle.icon_size,
-                                    color: ColorConstants.dangerColor,
+                                    width: ComicReadingActionBarStyle.icon_size,
+                                    height:
+                                        ComicReadingActionBarStyle.icon_size,
+                                    color: collected ? null : ink,
                                   ),
                                 ),
                                 const SizedBox(
@@ -239,7 +254,9 @@ class ComicReadingActionBar extends StatelessWidget {
                                                     : ComicReadingActionBarStyle
                                                           .chapter_font_size_alphabetic,
                                                 fontWeight:
-                                                    FontConfig.adjustedWeight(FontWeight.w400),
+                                                    FontConfig.adjustedWeight(
+                                                      FontWeight.w400,
+                                                    ),
                                                 color:
                                                     ComicReadingActionBarStyle
                                                         .ink
@@ -265,7 +282,8 @@ class ComicReadingActionBar extends StatelessWidget {
                                             .arrow_size,
                                         child: Icon(
                                           Icons.chevron_right_rounded,
-                                          color: ColorConstants.pages_comics_detail_widgets_reading_action_bar_tone_ffffdf42,
+                                          color: ColorConstants
+                                              .pages_comics_detail_widgets_reading_action_bar_tone_ffffdf42,
                                         ),
                                       ),
                                     ),

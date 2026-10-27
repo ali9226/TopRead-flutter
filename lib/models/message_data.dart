@@ -73,6 +73,9 @@ class MessageData {
   /// 小说封面URL（后端关联查询获取）。
   final String novel_cover;
 
+  /// 漫画封面独立于小说封面，同号作品不会混用。
+  final String comic_cover;
+
   const MessageData({
     required this.id,
     required this.user_id,
@@ -86,6 +89,7 @@ class MessageData {
     required this.sender_name,
     required this.sender_avatar,
     this.novel_cover = '',
+    this.comic_cover = '',
   });
 
   /// 复制消息并覆盖指定字段。
@@ -103,6 +107,7 @@ class MessageData {
       sender_name: sender_name,
       sender_avatar: sender_avatar,
       novel_cover: novel_cover,
+      comic_cover: comic_cover,
     );
   }
 
@@ -121,6 +126,7 @@ class MessageData {
       sender_name: json['sender_name']?.toString() ?? '',
       sender_avatar: json['sender_avatar']?.toString() ?? '',
       novel_cover: json['novel_cover']?.toString() ?? '',
+      comic_cover: json['comic_cover']?.toString() ?? '',
     );
   }
 
@@ -129,6 +135,49 @@ class MessageData {
 
   /// 是否有小说封面。
   bool get has_novel_cover => novel_cover.isNotEmpty;
+
+  /// 漫画消息沿用互动类型分组，以内容命名空间决定封面、标题和跳转。
+  bool get is_comic => content_map['content_type'] == 'comic' || comic_id > 0;
+  int get comic_id => _parse_int(content_map['comic_id']);
+  int get comic_chapter_id => _parse_int(content_map['chapter_id']);
+  String get comic_title => content_map['comic_title']?.toString() ?? '';
+  String get work_cover => is_comic ? comic_cover : novel_cover;
+  String get work_title => is_comic ? comic_title : novel_title;
+
+  /// 点击漫画评论进入同一作品/章节的评论范围；收藏进入详情，避免将漫画 ID 用作小说 ID。
+  String? get destination_path {
+    if (is_comic) {
+      if (comic_id <= 0) return null;
+      if (type == MessageType.comment_reply ||
+          type == MessageType.comment_like) {
+        return Uri(
+          path: '/comics/comments',
+          queryParameters: {
+            'comic_id': '$comic_id',
+            if (comic_chapter_id > 0) 'chapter_id': '$comic_chapter_id',
+          },
+        ).toString();
+      }
+      return '/comics/detail?id=$comic_id';
+    }
+    if (novel_id <= 0) return null;
+    return Uri(
+      path: novel_publish_status == 4 ? '/short_story_read' : '/read',
+      queryParameters: {
+        'id': '$novel_id',
+        if (novel_publish_status != 4) 'title': novel_title,
+        if (comment_id > 0) 'comment_id': '$comment_id',
+      },
+    ).toString();
+  }
+
+  String get _comic_title_key => switch (type) {
+    MessageType.comment_reply =>
+      notification_scene == 'comic_comment' ? 'comic_comment' : 'comic_reply',
+    MessageType.comment_like => 'comic_like',
+    MessageType.novel_favorite => 'comic_collect',
+    _ => type_key,
+  };
 
   /// 是否是自己的操作记录（send_user == 0 表示自己操作的记录）。
   bool get is_self_record => send_user == 0;
@@ -203,6 +252,7 @@ class MessageData {
     if (type == MessageType.chat_reply) {
       return easy.tr('message.card_title.chat_reply');
     }
+    if (is_comic) return easy.tr('message.card_title.$_comic_title_key');
     if (type == MessageType.comment_reply &&
         notification_scene == 'novel_comment') {
       return easy.tr('message.card_title.novel_comment');
@@ -224,6 +274,11 @@ class MessageData {
 
     // TODO 根据类型和是否自己操作，选择对应的 i18n 模板
     final String suffix = is_self_record ? 'self' : 'other';
+    if (is_comic) {
+      return easy
+          .tr('message.card_subtitle.${_comic_title_key}_$suffix')
+          .replaceAll('{0}', comic_title);
+    }
     final String subtitle_type =
         type == MessageType.comment_reply &&
             notification_scene == 'novel_comment'

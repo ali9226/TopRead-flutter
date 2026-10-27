@@ -40,7 +40,7 @@ class ReadCommentItem extends StatelessWidget {
               ExcludeSemantics(
                 child: ReadReviewerAvatar(
                   avatar_url: comment.avatar_url,
-                  user_name: comment.user_name,
+                  user_id: comment.user_id,
                   is_dark: is_dark,
                 ),
               ),

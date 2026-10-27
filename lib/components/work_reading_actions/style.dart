@@ -33,7 +33,9 @@ class WorkReadingActionsStyle {
   static const double font_size_alphabetic = 13;
   static const double line_height_cjk = 1.35;
   static const double line_height_alphabetic = 1.4;
-  static final FontWeight label_weight = FontConfig.adjustedWeight(FontWeight.w600);
+  static final FontWeight label_weight = FontConfig.adjustedWeight(
+    FontWeight.w600,
+  );
   static const double min_inline_width = 240;
   static const double min_trailing_width = 160;
   static const double trailing_extent = 30;
@@ -51,35 +53,46 @@ class WorkReadingActionsStyle {
   static const Color primary_text = ColorConstants.primary_text_ff29240f;
   static const Color primary_edge = ColorConstants.primary_edge_bffff0af;
   static const Color top_highlight = ColorConstants.top_highlight_d9fff8d5;
-  static const Color trailing_background = ColorConstants.trailing_background_66fffade;
+  static const Color trailing_background =
+      ColorConstants.trailing_background_66fffade;
   static const Color trailing_border = ColorConstants.trailing_border_66fff6c9;
-  static const Color trailing_foreground = ColorConstants.trailing_foreground_ff4e3d0e;
+  static const Color trailing_foreground =
+      ColorConstants.trailing_foreground_ff4e3d0e;
   static const List<double> primary_gradient_stops = [0, 0.5, 1];
 
   static Color get primary => ColorConstants.themeColor;
   static LinearGradient get primary_gradient => LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [ColorConstants.components_work_reading_actions_style_tone, primary, ColorConstants.components_work_reading_actions_style_tone_fff2be27],
+    colors: [
+      ColorConstants.components_work_reading_actions_style_tone,
+      primary,
+      ColorConstants.components_work_reading_actions_style_tone_fff2be27,
+    ],
     stops: primary_gradient_stops,
   );
 
   /// 阴影只交代按钮离背景的距离，金色材质依靠渐变和顶沿高光呈现。
   static List<BoxShadow> primary_shadows(bool on_hero, bool dark) => [
     BoxShadow(
-      color: ColorConstants.shadowColor.withValues(alpha: on_hero || dark ? 0.16 : 0.09),
+      color: ColorConstants.shadowColor.withValues(
+        alpha: on_hero || dark ? 0.16 : 0.09,
+      ),
       blurRadius: 12,
       offset: const Offset(0, 4),
     ),
   ];
 
   static Color secondary_background(bool on_hero, bool dark) =>
-      (on_hero || dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor).withValues(
-        alpha: secondary_alpha,
-      );
+      (on_hero || dark
+              ? ColorConstants.whiteColor
+              : ColorConstants.lightTextColor)
+          .withValues(alpha: secondary_alpha);
 
   static LinearGradient secondary_gradient(bool on_hero, bool dark) {
-    final foreground = on_hero || dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor;
+    final foreground = on_hero || dark
+        ? ColorConstants.whiteColor
+        : ColorConstants.lightTextColor;
     return LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -91,11 +104,14 @@ class WorkReadingActionsStyle {
   }
 
   static Color secondary_border(bool on_hero, bool dark) =>
-      (on_hero || dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor).withValues(
-        alpha: on_hero || dark ? 0.14 : 0.075,
-      );
-  static Color secondary_foreground(bool on_hero, bool dark) =>
-      on_hero || dark ? ColorConstants.components_work_reading_actions_style_tone_ffe2e5eb : ColorConstants.components_work_reading_actions_style_tone_ff656e7a;
-  static Color selected_foreground(bool on_hero, bool dark) =>
-      on_hero || dark ? primary : ColorConstants.components_work_reading_actions_style_tone_ff987416;
+      (on_hero || dark
+              ? ColorConstants.whiteColor
+              : ColorConstants.lightTextColor)
+          .withValues(alpha: on_hero || dark ? 0.14 : 0.075);
+  static Color secondary_foreground(bool on_hero, bool dark) => on_hero || dark
+      ? ColorConstants.components_work_reading_actions_style_tone_ffe2e5eb
+      : ColorConstants.components_work_reading_actions_style_tone_ff656e7a;
+  static Color selected_foreground(bool on_hero, bool dark) => on_hero || dark
+      ? primary
+      : ColorConstants.components_work_reading_actions_style_tone_ff987416;
 }

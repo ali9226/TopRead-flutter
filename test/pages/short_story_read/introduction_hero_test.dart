@@ -17,6 +17,7 @@ import 'package:app/pages/short_story_read/widgets/introduction/synopsis.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:app/components/svg_icon/index.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -127,7 +128,9 @@ void main() {
           findsOneWidget,
         );
         expect(comment_taps, 0);
-        final favorite = find.byIcon(Icons.favorite_border_rounded);
+        final favorite = find.byWidgetPredicate(
+          (widget) => widget is SvgIcon && widget.name == 'not_favorited',
+        );
         await tester.ensureVisible(favorite);
         await tester.tap(favorite);
         expect(favorite_taps, 1);

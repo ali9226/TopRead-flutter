@@ -79,7 +79,7 @@ class _ComicReaderPageState extends State<ComicReaderPage>
     );
     _logic.addListener(_on_reading_changed);
     WidgetsBinding.instance.addObserver(this);
-    // 系统安全区保持稳定；阅读时仅动画覆盖层，避免显隐工具栏触发正文重排。
+    // 系统安全区保持稳定；工具栏显隐只调整画布可读高度，不重排图片宽度。
     unawaited(
       SystemChrome.setEnabledSystemUIMode(
         SystemUiMode.manual,
@@ -423,8 +423,19 @@ class _ComicReaderPageState extends State<ComicReaderPage>
               child: Stack(
                 children: [
                   Positioned.fill(
-                    // 画布始终占满同一个视口；工具栏只叠加绘制，不改变图片位置和进度。
-                    child: _build_canvas(context, reading),
+                    // 与顶栏使用同一时长/曲线：当前图片随顶栏下移，避免实色栏盖住正文。
+                    // 仅缩短纵向视口，保留原滚动控制器、图片宽度及章内阅读锚点。
+                    child: AnimatedPadding(
+                      padding: EdgeInsets.only(
+                        top: _logic.controls_visible
+                            ? media.viewPadding.top +
+                                  ComicReaderStyle.top_bar_height(context)
+                            : 0,
+                      ),
+                      duration: ComicReaderStyle.controls_duration(context),
+                      curve: ComicReaderStyle.controls_curve,
+                      child: _build_canvas(context, reading),
+                    ),
                   ),
                   Align(
                     alignment: Alignment.topCenter,

@@ -1,22 +1,18 @@
 import 'package:app/config/layout_config.dart';
 import 'dart:math';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'package:easy_localization/easy_localization.dart' as easy;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:gal/gal.dart';
 import 'package:get/get.dart' hide Trans;
-import 'package:app/models/rotation.dart';
 import 'package:app/stores/user_information.dart';
-import 'package:app/stores/share_store.dart';
 import 'package:app/components/share_sheet/style.dart';
 import 'package:app/components/share_sheet/widgets/share_poster_card.dart';
-import 'package:app/components/share_sheet/widgets/share_icon_item.dart';
-import 'package:app/components/svg_icon/index.dart';
-import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/config/color_config.dart';
+import 'package:app/components/share_sheet/layout_style.dart';
+import 'package:app/components/share_sheet/poster_export.dart';
+import 'package:app/components/share_sheet/share_feedback.dart';
+import 'package:app/components/share_sheet/share_work_url.dart';
+import 'package:app/components/share_sheet/widgets/share_channel_grid.dart';
+import 'package:app/components/window_content_layout/index.dart';
 
 /// 卡片预览弹窗组件。
 ///
@@ -47,6 +43,8 @@ class CardPreviewSheet extends StatefulWidget {
 
   /// 当前是否为夜间模式。
   final bool is_dark;
+  final WorkShareKind work_kind;
+  final String? language;
 
   const CardPreviewSheet({
     super.key,
@@ -56,6 +54,8 @@ class CardPreviewSheet extends StatefulWidget {
     required this.novel_cover_url,
     required this.novel_intro,
     required this.is_dark,
+    this.work_kind = WorkShareKind.novel,
+    this.language,
   });
 
   @override
@@ -63,9 +63,6 @@ class CardPreviewSheet extends StatefulWidget {
 }
 
 class _CardPreviewSheetState extends State<CardPreviewSheet> {
-  /// 分享渠道全局状态。
-  final ShareStore _share_store = Get.find<ShareStore>();
-
   /// 当前选中的卡片底色索引。
   int _current_color_index = 0;
 
@@ -142,7 +139,12 @@ class _CardPreviewSheetState extends State<CardPreviewSheet> {
 
     return Container(
       width: double.infinity,
-      height: MediaQuery.of(context).size.height * 0.85,
+      // 普通作品与选词海报均按内容定高，保持底部贴合而不留空画布。
+      constraints: BoxConstraints(
+        maxHeight:
+            MediaQuery.sizeOf(context).height *
+            ShareLayoutStyle.sheet_height_ratio,
+      ),
       decoration: BoxDecoration(
         color: background_color,
         borderRadius: const BorderRadius.only(
@@ -150,26 +152,37 @@ class _CardPreviewSheetState extends State<CardPreviewSheet> {
           topRight: Radius.circular(ShareSheetStyle.border_radius_top),
         ),
       ),
-      child: Column(
-        children: <Widget>[
-          /// 顶部拖拽指示条。
-          _buildDragBar(drag_bar_color),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            /// 顶部拖拽指示条。
+            _buildDragBar(drag_bar_color),
 
-          /// 标题「卡片预览」。
-          _buildTitle(title_color),
+            /// 标题「卡片预览」。
+            _buildTitle(title_color),
 
-          /// 卡片预览区域（可滑动切换底色）。
-          Expanded(child: _buildCardPager()),
+            /// 卡片预览区域（可滑动切换底色）。
+            SizedBox(
+              height: min(
+                ShareSheetStyle.poster_preview_max_height,
+                max(
+                  ShareLayoutStyle.min_preview_height,
+                  MediaQuery.sizeOf(context).height *
+                          ShareLayoutStyle.sheet_height_ratio -
+                      ShareLayoutStyle.preview_controls_reserved_height,
+                ),
+              ),
+              child: _buildCardPager(),
+            ),
 
-          /// 底部指示器。
-          _buildIndicator(),
+            /// 底部指示器。
+            _buildIndicator(),
 
-          /// 底部操作栏（分享图标 + 保存按钮）。
-          _buildBottomActionBar(),
-
-          /// 底部安全区域。
-          SizedBox(height: MediaQuery.of(context).padding.bottom + 10),
-        ],
+            /// 底部操作栏（分享图标 + 保存按钮）。
+            _buildBottomActionBar(),
+          ],
+        ),
       ),
     );
   }
@@ -233,6 +246,7 @@ class _CardPreviewSheetState extends State<CardPreviewSheet> {
 
         return PageView.builder(
           controller: _page_controller,
+          physics: _is_saving ? const NeverScrollableScrollPhysics() : null,
           itemCount: _gradient_colors.length,
           onPageChanged: (int index) {
             setState(() {
@@ -263,6 +277,8 @@ class _CardPreviewSheetState extends State<CardPreviewSheet> {
         novel_author: widget.novel_author,
         novel_cover_url: widget.novel_cover_url,
         novel_intro: widget.novel_intro,
+        work_kind: widget.work_kind,
+        language: widget.language,
         user_avatar_url: _user_avatar_url,
         user_nickname: _user_nickname,
         date_text: _formatDate(DateTime.now()),
@@ -343,7 +359,11 @@ class _CardPreviewSheetState extends State<CardPreviewSheet> {
 
   /// 点击色板圆点后平滑跳转到对应海报。
   void _onColorIndicatorTap(int index) {
-    if (index == _current_color_index || !_page_controller.hasClients) return;
+    if (_is_saving ||
+        index == _current_color_index ||
+        !_page_controller.hasClients) {
+      return;
+    }
 
     _page_controller.animateToPage(
       index,
@@ -354,9 +374,7 @@ class _CardPreviewSheetState extends State<CardPreviewSheet> {
 
   /// 构建底部操作栏（分享图标 + 保存到相册）。
   ///
-  /// 分享图标从 ShareStore 动态读取，使用 represent 字段加载本地 SVG 图标。
-  /// 竖屏一行4个，横屏一行6个，宽度平分，内容居中。
-  /// 第二行不足时靠左对齐。
+  /// 与其它分享入口读取同一渠道配置，大字和窄窗口自动换行。
   Widget _buildBottomActionBar() {
     // TODO 底部操作栏水平内边距，与卡片预览的左右间距保持一致
     const double action_bar_horizontal_padding =
@@ -366,17 +384,13 @@ class _CardPreviewSheetState extends State<CardPreviewSheet> {
       padding: EdgeInsets.symmetric(horizontal: action_bar_horizontal_padding),
       child: Column(
         children: <Widget>[
-          /// 分享图标网格（从 ShareStore 动态读取）。
-          Obx(() {
-            final List<Rotation> share_list = _share_store.rotation_list;
-
-            // TODO 根据屏幕方向决定每行图标数量
-            final bool is_landscape =
-                MediaQuery.of(context).orientation == Orientation.landscape;
-            final int cross_axis_count = is_landscape ? 6 : 4;
-
-            return _buildShareIconGrid(share_list, cross_axis_count);
-          }),
+          ShareChannelGrid(
+            work_id: widget.novel_id,
+            title: widget.novel_title,
+            is_dark: widget.is_dark,
+            work_kind: widget.work_kind,
+            language: widget.language,
+          ),
 
           /// 间距。
           const SizedBox(height: LayoutConfig.space_16),
@@ -391,89 +405,19 @@ class _CardPreviewSheetState extends State<CardPreviewSheet> {
     );
   }
 
-  /// 构建分享图标网格。
-  ///
-  /// [share_list] 分享渠道列表。
-  /// [cross_axis_count] 每行显示的图标数量。
-  Widget _buildShareIconGrid(List<Rotation> share_list, int cross_axis_count) {
-    // TODO 计算行数
-    final int row_count = (share_list.length / cross_axis_count).ceil();
-
-    return Column(
-      children: List.generate(row_count, (int row_index) {
-        final int start_index = row_index * cross_axis_count;
-        final int end_index = (start_index + cross_axis_count).clamp(
-          0,
-          share_list.length,
-        );
-        final List<Rotation> row_items = share_list.sublist(
-          start_index,
-          end_index,
-        );
-        final bool is_last_row = row_index == row_count - 1;
-
-        return Column(
-          children: [
-            // TODO 最后一行且不足时，靠左对齐并用空位填充
-            if (is_last_row && row_items.length < cross_axis_count)
-              Row(
-                children: [
-                  ...row_items.map(
-                    (Rotation item) =>
-                        Expanded(child: _buildShareIconItem(item)),
-                  ),
-                  // TODO 空位填充，保持宽度均分
-                  ...List.generate(
-                    cross_axis_count - row_items.length,
-                    (_) => const Expanded(child: SizedBox()),
-                  ),
-                ],
-              )
-            else
-              // TODO 完整行，宽度均分
-              Row(
-                children: row_items
-                    .map(
-                      (Rotation item) =>
-                          Expanded(child: _buildShareIconItem(item)),
-                    )
-                    .toList(),
-              ),
-
-            // TODO 行间距（最后一行不添加）
-            if (!is_last_row) const SizedBox(height: LayoutConfig.space_15),
-          ],
-        );
-      }),
-    );
-  }
-
-  /// 构建单个分享图标项。
-  Widget _buildShareIconItem(Rotation item) {
-    return ShareIconItem(
-      icon: null,
-      icon_widget: SvgIcon(
-        name: item.represent,
-        width: ShareSheetStyle.icon_inner_size,
-        height: ShareSheetStyle.icon_inner_size,
-        color: widget.is_dark ? ColorConstants.whiteColor : null,
-      ),
-      label: item.title,
-      icon_color: widget.is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor,
-      is_dark: widget.is_dark,
-      on_tap: () {
-        // TODO 对接真实分享：使用 item.jump 作为分享链接
-      },
-    );
-  }
-
   /// 构建「保存到相册」按钮。
   Widget _buildSaveButton() {
     return GestureDetector(
       onTap: _is_saving ? null : _onSaveToAlbum,
       child: Container(
         width: double.infinity,
-        height: ShareSheetStyle.save_button_height,
+        constraints: const BoxConstraints(
+          minHeight: ShareSheetStyle.save_button_height,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: LayoutConfig.space_16,
+          vertical: LayoutConfig.space_12,
+        ),
         decoration: BoxDecoration(
           color: ShareSheetStyle.save_button_bg_color,
           borderRadius: BorderRadius.circular(
@@ -501,12 +445,15 @@ class _CardPreviewSheetState extends State<CardPreviewSheet> {
                       color: ShareSheetStyle.save_button_text_color,
                     ),
                     const SizedBox(width: LayoutConfig.space_8),
-                    Text(
-                      easy.tr('share_sheet.save_to_album'),
-                      style: TextStyle(
-                        fontSize: ShareSheetStyle.save_button_font_size,
-                        fontWeight: ShareSheetStyle.save_button_font_weight,
-                        color: ShareSheetStyle.save_button_text_color,
+                    Flexible(
+                      child: Text(
+                        easy.tr('share_sheet.save_to_album'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: ShareSheetStyle.save_button_font_size,
+                          fontWeight: ShareSheetStyle.save_button_font_weight,
+                          color: ShareSheetStyle.save_button_text_color,
+                        ),
                       ),
                     ),
                   ],
@@ -522,69 +469,20 @@ class _CardPreviewSheetState extends State<CardPreviewSheet> {
   /// 然后保存到设备相册。
   Future<void> _onSaveToAlbum() async {
     if (_is_saving) return;
-
-    setState(() {
-      _is_saving = true;
+    setState(() => _is_saving = true);
+    final result = await save_share_poster(
+      boundary_key: _card_keys[_current_color_index],
+      image_name:
+          'topread_${widget.work_kind.name}_${widget.novel_id}_${DateTime.now().millisecondsSinceEpoch}',
+      is_current: () => mounted,
+    );
+    if (!mounted) return;
+    setState(() => _is_saving = false);
+    show_share_feedback(context, switch (result) {
+      PosterSaveResult.saved => 'share_sheet.save_success',
+      PosterSaveResult.access_denied => 'share_sheet.photo_permission_denied',
+      _ => 'share_sheet.save_failed',
     });
-
-    try {
-      if (kIsWeb) {
-        showBottomTip(easy.tr('share_sheet.save_failed'));
-        return;
-      }
-
-      /// 先请求系统相册的新增权限。用户拒绝时不继续执行耗时截图。
-      final bool has_access =
-          await Gal.hasAccess() || await Gal.requestAccess();
-      if (!has_access) {
-        showBottomTip(easy.tr('share_sheet.photo_permission_denied'));
-        return;
-      }
-
-      /// 等待当前色板页面完成绘制，确保网络图已加载到的最新画面被捕获。
-      await WidgetsBinding.instance.endOfFrame;
-
-      /// 只查找当前海报的边界，不会包含弹窗标题、色板或底部操作区。
-      final RenderRepaintBoundary? boundary =
-          _card_keys[_current_color_index].currentContext?.findRenderObject()
-              as RenderRepaintBoundary?;
-      if (boundary == null) {
-        showBottomTip(easy.tr('share_sheet.save_failed'));
-        return;
-      }
-
-      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      final ByteData? byte_data;
-      try {
-        byte_data = await image.toByteData(format: ui.ImageByteFormat.png);
-      } finally {
-        image.dispose();
-      }
-
-      if (byte_data == null) {
-        showBottomTip(easy.tr('share_sheet.save_failed'));
-        return;
-      }
-
-      final Uint8List png_bytes = byte_data.buffer.asUint8List();
-      final String image_name =
-          'topread_${widget.novel_id}_${DateTime.now().millisecondsSinceEpoch}';
-      await Gal.putImageBytes(png_bytes, name: image_name);
-      showBottomTip(easy.tr('share_sheet.save_success'));
-    } on GalException catch (error) {
-      final String message_key = error.type == GalExceptionType.accessDenied
-          ? 'share_sheet.photo_permission_denied'
-          : 'share_sheet.save_failed';
-      showBottomTip(easy.tr(message_key));
-    } catch (_) {
-      showBottomTip(easy.tr('share_sheet.save_failed'));
-    } finally {
-      if (mounted) {
-        setState(() {
-          _is_saving = false;
-        });
-      }
-    }
   }
 }
 
@@ -598,7 +496,7 @@ class _CardPreviewSheetState extends State<CardPreviewSheet> {
 /// - [novel_cover_url] 小说封面图地址。
 /// - [novel_intro] 小说简介。
 /// - [is_dark] 当前是否为夜间模式，不传则自动根据主题判断。
-void showCardPreviewSheet({
+Future<void> showCardPreviewSheet({
   required BuildContext context,
   required int novel_id,
   required String novel_title,
@@ -606,23 +504,32 @@ void showCardPreviewSheet({
   required String novel_cover_url,
   required String novel_intro,
   bool? is_dark,
+  WorkShareKind work_kind = WorkShareKind.novel,
+  String? language,
 }) {
   /// 是否为夜间模式。
   final bool current_is_dark =
       is_dark ?? Theme.of(context).brightness == Brightness.dark;
 
-  showModalBottomSheet(
+  return showModalBottomSheet<void>(
     context: context,
     backgroundColor: ColorConstants.transparent,
     isScrollControlled: true,
+    constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width),
     builder: (BuildContext ctx) {
-      return CardPreviewSheet(
-        novel_id: novel_id,
-        novel_title: novel_title,
-        novel_author: novel_author,
-        novel_cover_url: novel_cover_url,
-        novel_intro: novel_intro,
-        is_dark: current_is_dark,
+      return WindowContentLayout(
+        expand_height: false,
+        max_width: ShareLayoutStyle.max_width,
+        child: CardPreviewSheet(
+          novel_id: novel_id,
+          novel_title: novel_title,
+          novel_author: novel_author,
+          novel_cover_url: novel_cover_url,
+          novel_intro: novel_intro,
+          is_dark: current_is_dark,
+          work_kind: work_kind,
+          language: language,
+        ),
       );
     },
   );

@@ -5,7 +5,7 @@ import 'package:app/config/color_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// TODO 返回、分享沿用小说SVG；收藏支持原生心形，均保留弹性缩放和加载交互。
+/// TODO 返回、分享与星形收藏保留统一弹性缩放和加载交互。
 class ReaderTopBarAction extends StatefulWidget {
   const ReaderTopBarAction({
     super.key,
@@ -19,6 +19,7 @@ class ReaderTopBarAction extends StatefulWidget {
     this.loading = false,
     this.reverse = false,
     this.elastic = true,
+    this.ripple = true,
   }) : assert(asset != null || icon != null || icon_widget != null);
   final String? asset;
   final IconData? icon;
@@ -32,6 +33,9 @@ class ReaderTopBarAction extends StatefulWidget {
   final bool loading;
   final bool reverse;
   final bool elastic;
+
+  /// 收藏仅保留星形弹性反馈，其余动作继续沿用原有水波纹。
+  final bool ripple;
 
   @override
   State<ReaderTopBarAction> createState() => _ReaderTopBarActionState();
@@ -90,6 +94,16 @@ class _ReaderTopBarActionState extends State<ReaderTopBarAction>
       toggled: widget.selected,
       child: IconButton(
         tooltip: widget.label,
+        splashColor: widget.ripple ? null : ColorConstants.transparent,
+        highlightColor: widget.ripple ? null : ColorConstants.transparent,
+        style: widget.ripple
+            ? null
+            : const ButtonStyle(
+                overlayColor: WidgetStatePropertyAll(
+                  ColorConstants.transparent,
+                ),
+                splashFactory: NoSplash.splashFactory,
+              ),
         onPressed: widget.loading || widget.on_pressed == null
             ? null
             : () {

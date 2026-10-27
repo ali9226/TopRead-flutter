@@ -14,12 +14,16 @@ class ReaderBottomAction extends StatelessWidget {
     required this.on_pressed,
     this.icon_name,
     this.icon_widget,
+    this.show_ink_feedback = true,
   }) : assert(icon_name != null || icon_widget != null);
   final String label;
   final Color color;
   final VoidCallback? on_pressed;
   final String? icon_name;
   final Widget? icon_widget;
+
+  /// TODO 点赞已有独立回弹动画，可关闭按下水波纹；其它操作保持默认点击反馈。
+  final bool show_ink_feedback;
 
   @override
   Widget build(BuildContext context) => Tooltip(
@@ -32,6 +36,16 @@ class ReaderBottomAction extends StatelessWidget {
         color: ColorConstants.transparent,
         child: InkWell(
           onTap: on_pressed,
+          splashFactory: show_ink_feedback ? null : NoSplash.splashFactory,
+          splashColor: show_ink_feedback ? null : ColorConstants.transparent,
+          highlightColor: show_ink_feedback ? null : ColorConstants.transparent,
+          overlayColor: show_ink_feedback
+              ? null
+              : WidgetStateProperty.resolveWith<Color?>(
+                  (states) => states.contains(WidgetState.pressed)
+                      ? ColorConstants.transparent
+                      : null,
+                ),
           borderRadius: BorderRadius.circular(ReaderBottomActionStyle.radius),
           child: SizedBox(
             width: double.infinity,

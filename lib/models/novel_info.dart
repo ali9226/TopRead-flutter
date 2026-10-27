@@ -163,6 +163,41 @@ class NovelInfo {
     );
   }
 
+  /// TODO 只合并收藏字段，保留当前点赞/关注及其它最新数据，避免并发互动互相回滚。
+  NovelInfo replace_favorite({
+    required bool favorited,
+    required String count,
+  }) => NovelInfo(
+    id: id,
+    title: title,
+    subtitle: subtitle,
+    score: score,
+    focus_on: focus_on,
+    is_liked: is_liked,
+    is_favorited: favorited,
+    author_id: author_id,
+    source_type: source_type,
+    publish_status: publish_status,
+    recommend_status: recommend_status,
+    sorting: sorting,
+    read_count: read_count,
+    comment_count: comment_count,
+    like_count: like_count,
+    favorite_count: count,
+    latest_chapter_no: latest_chapter_no,
+    latest_update_time: latest_update_time,
+    remark: remark,
+    create_time: create_time,
+    update_time: update_time,
+    remove_status: remove_status,
+    remove_time: remove_time,
+    author_name: author_name,
+    author_avatar: author_avatar,
+    language_info: language_info,
+    category_list: category_list,
+    comment_list: comment_list,
+    chapter_info: chapter_info,
+  );
 
   /// 仅替换语种封面字段，返回新的 [NovelInfo]。
   NovelInfo replace_cover({
@@ -273,7 +308,6 @@ class NovelLanguageInfo {
       update_time: json['update_time']?.toString() ?? '',
     );
   }
-
 
   /// 仅替换封面字段，返回新的 [NovelLanguageInfo]。
   NovelLanguageInfo replace_cover({

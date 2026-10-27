@@ -9,6 +9,7 @@ import 'package:app/pages/comics/detail/widgets/chapter_catalog.dart';
 import 'package:app/pages/comics/detail/widgets/chapter_list.dart';
 import 'package:app/pages/comics/widgets/chapter_sheet/style.dart';
 import 'package:app/components/positioning/index.dart';
+import 'package:app/config/color_config.dart';
 import 'package:app/pages/comics/widgets/comic_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -178,6 +179,10 @@ void main() {
     );
     final button = find.byType(PositioningButton);
     expect(tester.widget<PositioningButton>(button).show, isFalse);
+    expect(
+      tester.widget<PositioningButton>(button).icon_color,
+      ColorConstants.dangerColor,
+    );
     scroll.jumpTo(0);
     await tester.pump();
     expect(tester.widget<PositioningButton>(button).show, isTrue);
@@ -241,6 +246,32 @@ void main() {
     final logic = _Logic();
     addTearDown(logic.dispose);
     await _mount(tester, logic, scale: 2.5);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('漫画当前章部分可见时隐藏定位，完全离屏才显示红色定位入口', (tester) async {
+    final logic = _Logic(count: 30);
+    final scroll = ScrollController();
+    addTearDown(logic.dispose);
+    addTearDown(scroll.dispose);
+    await _mount(tester, logic, scroll: scroll);
+    final current = tester.getRect(find.byKey(const ValueKey(2)));
+    final region = tester.getRect(
+      find.byKey(const ValueKey('comic_chapter_sheet_list_region')),
+    );
+    final partial_offset =
+        scroll.offset + current.top - region.top + current.height / 2;
+    scroll.jumpTo(partial_offset);
+    await tester.pumpAndSettle();
+    final button = find.byType(PositioningButton);
+    expect(tester.widget<PositioningButton>(button).show, isFalse);
+    scroll.jumpTo(partial_offset + current.height);
+    await tester.pumpAndSettle();
+    expect(tester.widget<PositioningButton>(button).show, isTrue);
+    expect(
+      tester.widget<PositioningButton>(button).icon_color,
+      ColorConstants.dangerColor,
+    );
     expect(tester.takeException(), isNull);
   });
 

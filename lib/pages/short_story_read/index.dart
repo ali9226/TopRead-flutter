@@ -5,14 +5,14 @@ import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 
 import 'package:app/api/bookshelf.dart';
 import 'package:app/components/comment_list/index.dart';
 import 'package:app/components/paragraph_selection/actions.dart';
 import 'package:app/models/story_paragraph.dart';
-import 'package:app/models/paragraph_text_selection.dart';
+import 'package:app/models/share_excerpt.dart';
+import 'package:app/components/share_sheet/share_work_url.dart';
 import 'package:app/models/short_story_item.dart';
 import 'package:app/stores/comment_navigation.dart';
 import 'package:app/stores/device_info.dart';
@@ -42,6 +42,7 @@ import 'package:app/config/ad_type_config.dart';
 import 'package:app/models/ad_config.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/services/ad_impression_reporter.dart';
+import 'package:app/services/reading_engagement/index.dart';
 
 /// 短篇小说阅读页面。
 ///
@@ -79,12 +80,13 @@ class ShortStoryReadPage extends StatefulWidget {
 }
 
 class _ShortStoryReadPageState extends State<ShortStoryReadPage>
-    with TickerProviderStateMixin, WidgetsBindingObserver     implements
-    StoryPullGestureHost,
-    StoryNativeAdHost,
-    StoryProgressHost,
-    StoryToolbarHost,
-    StoryAutoReadHost {
+    with TickerProviderStateMixin, WidgetsBindingObserver
+    implements
+        StoryPullGestureHost,
+        StoryNativeAdHost,
+        StoryProgressHost,
+        StoryToolbarHost,
+        StoryAutoReadHost {
   /// 设备信息仓库（用于获取当前主题模式）。
   final DeviceInfo device_info = Get.find<DeviceInfo>();
 
@@ -152,8 +154,6 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 是否由进度条拖动触发的滚动（为 true 时跳过导航栏显隐逻辑）。
   bool _is_progress_scrolling = false;
 
-
-
   /// FCM 推送评论导航监听器。
   Worker? _comment_navigation_worker;
 
@@ -163,12 +163,10 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 项目广告开关变更监听器。
   Worker? _ad_policy_worker;
 
-
-
-
-
   /// 阅读进度定时保存定时器。
   Timer? _progress_save_timer;
+  ReadingEngagementController? _reading_engagement;
+  ModalRoute<dynamic>? _reading_route;
 
   /// 阅读进度保存间隔（秒）。
   static const int _progress_save_interval_seconds = 10;
@@ -182,13 +180,6 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 当前是否正在恢复服务器阅读位置。
   bool _is_restoring_position = false;
-
-
-
-
-
-
-
 
   /// 当前逻辑实例的版本号，用于丢弃切换小说前发起的异步结果。
   int _logic_generation = 0;
@@ -280,6 +271,14 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       story_id: has_valid_story_id ? widget.story_id : 1,
     );
     _logic_generation = 1;
+    _reading_engagement = ReadingEngagementController(
+      identity: () {
+        final user = user_information.userInfo.value;
+        if (!user_information.isLoggedIn.value || user == null) return null;
+        return (user_id: user.id, novel_id: _logic.story_id);
+      },
+      is_body_visible: _is_timing_body_visible,
+    );
     _ad_policy_worker = ever(
       Get.find<ProjectConfigStore>().config_revision,
       (_) => _on_ad_policy_changed(),
@@ -299,7 +298,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     // TODO 从消息页跳转时，自动打开评论区并定位到指定评论
     if (widget.initial_comment_id > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _actions.on_comment_tap(scroll_to_comment_id: widget.initial_comment_id);
+        _actions.on_comment_tap(
+          scroll_to_comment_id: widget.initial_comment_id,
+        );
       });
     }
 
@@ -315,11 +316,50 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reading_route = ModalRoute.of(context);
+    _reading_engagement?.sample();
+  }
+
+  /// 简介、下一篇预览、恢复/切篇动画和任何覆盖正文的路由均不属于有效阅读。
+  bool _is_timing_body_visible() {
+    if (!mounted ||
+        _reading_route?.isCurrent != true ||
+        !_is_initialization_complete ||
+        _is_restoring_position ||
+        _is_transitioning ||
+        _logic.is_loading.value ||
+        _logic.is_error.value ||
+        _paragraph_actions.is_open ||
+        _is_paragraph_selection_active ||
+        _ad_gate.is_rewarded_ad_loading ||
+        !_scroll_controller.hasClients) {
+      return false;
+    }
+    final start = reading_start_scroll_offset(
+      scroll_controller: _scroll_controller,
+      body_start_key: _body_start_key,
+    );
+    if (start == null || _scroll_controller.offset < start - 1) return false;
+    final end = _current_story_end_key.currentContext?.findRenderObject();
+    return end is RenderBox &&
+        end.hasSize &&
+        end.localToGlobal(Offset.zero).dy >
+            MediaQuery.viewPaddingOf(context).top;
+  }
+
+  @override
   void dispose() {
+    _reading_engagement?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _progress_save_timer?.cancel();
     // 退出页面时保存一次阅读进度。
-    _progress.save_on_exit(logic: _logic, is_initialization_complete: _is_initialization_complete, has_user_engaged: _has_user_engaged);
+    _progress.save_on_exit(
+      logic: _logic,
+      is_initialization_complete: _is_initialization_complete,
+      has_user_engaged: _has_user_engaged,
+    );
     _logic.dispose(clear_catalog: true);
     _auto_read.dispose();
     _comment_navigation_worker?.dispose();
@@ -348,7 +388,13 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      unawaited(_progress.save_current(logic: _logic, is_initialization_complete: _is_initialization_complete, has_user_engaged: _has_user_engaged));
+      unawaited(
+        _progress.save_current(
+          logic: _logic,
+          is_initialization_complete: _is_initialization_complete,
+          has_user_engaged: _has_user_engaged,
+        ),
+      );
     }
     if ((state == AppLifecycleState.hidden ||
             state == AppLifecycleState.paused) &&
@@ -363,7 +409,11 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     _progress_save_timer?.cancel();
     _progress_save_timer = Timer.periodic(
       const Duration(seconds: _progress_save_interval_seconds),
-      (_) => _progress.save_current(logic: _logic, is_initialization_complete: _is_initialization_complete, has_user_engaged: _has_user_engaged),
+      (_) => _progress.save_current(
+        logic: _logic,
+        is_initialization_complete: _is_initialization_complete,
+        has_user_engaged: _has_user_engaged,
+      ),
     );
   }
 
@@ -378,7 +428,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   ///
   /// 未解锁时只显示配置比例的正文，滚动到折叠处不能记为全文完成。
   double get _visible_story_progress_limit {
-    return (_logic.is_story_unlocked.value || !_ad_gate.is_video_ad_gate_required)
+    return (_logic.is_story_unlocked.value ||
+            !_ad_gate.is_video_ad_gate_required)
         ? 1.0
         : ShortStoryReadStyle.locked_content_preview_ratio;
   }
@@ -465,7 +516,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 将远端广告平台开关同步到当前短篇的正文与广告位。
   void _on_ad_policy_changed() {
-    _ad_gate.on_policy_changed(sync_ad_access_policy: _logic.sync_ad_access_policy);
+    _ad_gate.on_policy_changed(
+      sync_ad_access_policy: _logic.sync_ad_access_policy,
+    );
   }
 
   /// 计算正文末尾对齐可视区域底部时的真实滚动偏移。
@@ -753,17 +806,20 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   /// 处理段落选中文字的分享操作。
   void _on_paragraph_share(StoryParagraph paragraph, TextSelection selection) {
     _auto_read.stop();
-    final String selected_text = selected_paragraph_text(
-      paragraph.text,
-      selection,
+    final excerpt = ShareExcerpt.from_selection(
+      paragraph_text: paragraph.text,
+      paragraph_start: paragraph.start_offset,
+      selection: selection,
     );
-    if (selected_text.trim().isEmpty) return;
+    if (excerpt == null) return;
     showTextSelectionPreviewSheet(
       context: context,
       novel_id: _logic.story_id,
       novel_title: _logic.title,
       novel_cover_url: _logic.story_data.value?.cover_url ?? '',
-      share_text: selected_text,
+      share_text: excerpt.selected_text,
+      excerpt: excerpt,
+      work_kind: WorkShareKind.short_story,
       is_dark: device_info.dark.value,
     );
   }
@@ -947,6 +1003,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     if (_is_transitioning || story_id == _logic.story_id) return;
 
     _is_transitioning = true;
+    _reading_engagement?.sample(force_pause: true);
     FocusManager.instance.primaryFocus?.unfocus();
     _is_paragraph_selection_active = false;
     _auto_read.stop();
@@ -1005,6 +1062,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       _logic = next_logic;
       _logic_generation++;
     });
+    _reading_engagement?.sample(force_pause: true);
 
     // 重新注册底部栏可见性监听（新逻辑实例需要新绑定）。
     _bind_bottom_bar_visibility();
@@ -1273,8 +1331,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     ShortStoryReadLogic logic,
     int generation,
     int attempt,
-  ) =>
-      _is_current_initialization(logic, generation, attempt);
+  ) => _is_current_initialization(logic, generation, attempt);
 
   @override
   set is_restoring_position(bool value) {
@@ -1386,8 +1443,6 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       cover_height: cover_height,
     );
   }
-
-
 
   // ==================== UI 构建 ====================
 
@@ -1539,7 +1594,6 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     );
   }
 
-
   /// 首次加载直接使用真实海报导航位置，避免旧导航与安全区重复叠加。
   Widget _buildSkeleton({
     required bool is_dark,
@@ -1581,6 +1635,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
           right: 0,
           child: FullAppbar(
             is_dark: is_dark,
+            title: _logic.title,
             on_back: _actions.on_back,
             on_favorite_tap: _actions.on_favorite_tap,
             on_share: _actions.on_share,

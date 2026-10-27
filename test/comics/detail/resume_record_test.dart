@@ -5,6 +5,7 @@ import 'package:app/models/comics.dart';
 import 'package:app/pages/comics/detail/logic.dart';
 import 'package:app/pages/comics/detail/resume_record.dart';
 import 'package:app/services/comics_progress/record.dart';
+import 'package:app/services/work_favorite_signals.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/models/user_info.dart';
 import 'package:flutter/foundation.dart';
@@ -65,6 +66,7 @@ const chapters = <ComicChapter>[
 ComicDetail fixture({
   Map<String, dynamic> server = const <String, dynamic>{},
   int language_id = 7,
+  bool is_collected = false,
 }) => ComicDetail(
   comic: comic,
   languages: const <ComicLanguage>[language_en, language_ja],
@@ -81,7 +83,7 @@ ComicDetail fixture({
             images: <ComicImageData>[],
           ),
         ],
-  is_collected: false,
+  is_collected: is_collected,
   read_record: server,
 );
 Map<String, dynamic> record({
@@ -102,6 +104,231 @@ Map<String, dynamic> record({
 
 void main() {
   tearDown(() => Get.reset());
+  test('漫画简介与独立阅读控制器只同步已确认收藏，并保留其他作品及点赞域隔离', () async {
+    final signals = WorkFavoriteSignals(), changes = ChangeNotifier();
+    final response = Completer<Map<String, dynamic>>();
+    var requests = 0;
+    ComicDetailLogic create(int id, {bool delayed = false}) => ComicDetailLogic(
+      id,
+      require_login: () => true,
+      progress_changes: changes,
+      favorite_signals: signals,
+      request: (_, parameters) {
+        requests++;
+        return delayed
+            ? response.future
+            : Future.value({'collected': parameters['collected']});
+      },
+      favorite_changed: () async {},
+    );
+    final description = create(42),
+        reader = create(42, delayed: true),
+        other = create(43);
+    addTearDown(() {
+      description.dispose();
+      reader.dispose();
+      other.dispose();
+      changes.dispose();
+      signals.dispose();
+    });
+    final saving = reader.collect();
+    expect(reader.collected, isTrue, reason: '当前页先显示乐观星形');
+    expect(reader.collecting, isTrue);
+    await reader.collect();
+    expect(requests, 1, reason: '在途收藏禁止连点');
+    expect(description.collected, isFalse, reason: '请求完成前不广播假成功');
+    response.complete({'collected': true});
+    await saving;
+    expect(reader.collected, isTrue);
+    expect(description.collected, isTrue);
+    expect(other.collected, isFalse);
+    signals.confirm(
+      const WorkFavoriteChange(
+        domain: WorkFavoriteDomain.novel,
+        work_id: 42,
+        favorited: false,
+        account_identity: '0:0',
+      ),
+    );
+    expect(description.collected, isTrue, reason: '小说同ID不影响漫画收藏');
+    signals.confirm(
+      const WorkFavoriteChange(
+        domain: WorkFavoriteDomain.comic,
+        work_id: 42,
+        favorited: false,
+        account_identity: 'other-account',
+      ),
+    );
+    expect(description.collected, isTrue, reason: '旧账号信号不能影响当前账号');
+    await description.collect();
+    expect(description.collected, isFalse);
+    expect(reader.collected, isFalse, reason: '取消收藏也同步回阅读页');
+  });
+
+  for (final initial in [false, true]) {
+    test('漫画收藏与取消收藏失败恢复原星形，保留错误提示 initial=$initial', () async {
+      final signals = WorkFavoriteSignals(), changes = ChangeNotifier();
+      final response = Completer<Map<String, dynamic>>();
+      final errors = <String>[];
+      var requests = 0, refreshes = 0;
+      final logic = ComicDetailLogic(
+        42,
+        progress_changes: changes,
+        favorite_signals: signals,
+        require_login: () => true,
+        request: (_, _) {
+          requests++;
+          return response.future;
+        },
+        favorite_changed: () async {
+          refreshes++;
+        },
+        on_collection_error: errors.add,
+      )..collected = initial;
+      addTearDown(() {
+        logic.dispose();
+        changes.dispose();
+        signals.dispose();
+      });
+      final saving = logic.collect();
+      expect(logic.collected, !initial);
+      expect(logic.collecting, isTrue);
+      await logic.collect();
+      expect(requests, 1);
+      response.completeError(StateError('offline'));
+      await saving;
+      expect(logic.collected, initial);
+      expect(logic.collecting, isFalse);
+      expect(errors.single, contains('offline'));
+      expect(refreshes, 0);
+      expect(signals.latest, isNull);
+    });
+  }
+
+  for (final detail_first in [false, true]) {
+    test('收藏期间发起的旧详情无论先后返回都不覆盖乐观或已确认星形 detail_first=$detail_first', () async {
+      final signals = WorkFavoriteSignals(), changes = ChangeNotifier();
+      final response = Completer<Map<String, dynamic>>();
+      final old_detail = Completer<ComicDetail>();
+      final errors = <String>[];
+      final logic = ComicDetailLogic(
+        42,
+        progress_changes: changes,
+        favorite_signals: signals,
+        require_login: () => true,
+        request: (_, _) => response.future,
+        fetch_detail: (_, {language}) => old_detail.future,
+        read_progress: (_, {user_id}) async => {},
+        favorite_changed: () async {},
+        on_collection_error: errors.add,
+      );
+      addTearDown(() {
+        logic.dispose();
+        changes.dispose();
+        signals.dispose();
+      });
+      final saving = logic.collect();
+      final refreshing = logic.load();
+      if (detail_first) {
+        old_detail.complete(fixture());
+        await refreshing;
+        expect(logic.collected, isTrue);
+        expect(logic.collecting, isTrue);
+      }
+      response.complete({'collected': true});
+      await saving;
+      if (!detail_first) {
+        old_detail.complete(fixture());
+        await refreshing;
+      }
+      expect(logic.collected, isTrue);
+      expect(errors, isEmpty, reason: '成功收藏不触发提示');
+    });
+  }
+
+  test('本地请求失败不能撤销另一页已确认的相同星形', () async {
+    final signals = WorkFavoriteSignals(), changes = ChangeNotifier();
+    final response = Completer<Map<String, dynamic>>();
+    final errors = <String>[];
+    final logic = ComicDetailLogic(
+      42,
+      progress_changes: changes,
+      favorite_signals: signals,
+      require_login: () => true,
+      request: (_, _) => response.future,
+      on_collection_error: errors.add,
+    );
+    addTearDown(() {
+      logic.dispose();
+      changes.dispose();
+      signals.dispose();
+    });
+    final saving = logic.collect();
+    signals.confirm(
+      const WorkFavoriteChange(
+        domain: WorkFavoriteDomain.comic,
+        work_id: 42,
+        favorited: true,
+        account_identity: '0:0',
+      ),
+    );
+    response.completeError(StateError('offline'));
+    await saving;
+    expect(logic.collected, isTrue);
+    expect(errors.single, contains('offline'));
+  });
+
+  test('跨页面收藏成功后迟到的旧详情不能撤销已同步的星形状态', () async {
+    final signals = WorkFavoriteSignals(), changes = ChangeNotifier();
+    final old = Completer<ComicDetail>();
+    final description = ComicDetailLogic(
+      42,
+      progress_changes: changes,
+      favorite_signals: signals,
+      fetch_detail: (_, {language}) => old.future,
+      read_progress: (_, {user_id}) async => {},
+    );
+    final reader = ComicDetailLogic(
+      42,
+      progress_changes: changes,
+      favorite_signals: signals,
+      require_login: () => true,
+      request: (_, _) async => {'collected': true},
+      favorite_changed: () async {},
+    );
+    addTearDown(() {
+      description.dispose();
+      reader.dispose();
+      changes.dispose();
+      signals.dispose();
+    });
+    final loading = description.load();
+    await reader.collect();
+    expect(description.collected, isTrue);
+    old.complete(fixture());
+    await loading;
+    expect(description.collected, isTrue);
+  });
+
+  test('收藏星形采用服务端确认结果，不能只按用户点击推断成功状态', () async {
+    final signals = WorkFavoriteSignals(), changes = ChangeNotifier();
+    final logic = ComicDetailLogic(
+      42,
+      progress_changes: changes,
+      favorite_signals: signals,
+      require_login: () => true,
+      request: (_, _) async => {'collected': false},
+      favorite_changed: () async {},
+    );
+    addTearDown(() {
+      logic.dispose();
+      changes.dispose();
+      signals.dispose();
+    });
+    await logic.collect();
+    expect(logic.collected, isFalse);
+    expect(signals.latest!.favorited, isFalse);
+  });
   test('UTC服务器记录比已同步本地记录新时使用服务器，页数按现存目录收敛', () {
     final value = resolve_comic_resume(
       fixture(server: record(page: 40, time: '2026-10-15 03:00:00')),
@@ -337,6 +564,35 @@ void main() {
     logic.dispose();
     changes.dispose();
   });
+  test('旧账号收藏在途时，新账号详情仍能显示自己的真实收藏状态', () async {
+    final user = Get.put(UserInformation());
+    user.saveUserInfo(UserInfo.fromJson(<String, dynamic>{'id': 1}));
+    final pending = Completer<Map<String, dynamic>>();
+    final changes = ChangeNotifier();
+    final logic = ComicDetailLogic(
+      42,
+      require_login: () => true,
+      progress_changes: changes,
+      fetch_detail: (_, {language}) async =>
+          fixture(is_collected: user.userInfo.value?.id == 2),
+      read_progress: (_, {user_id}) async => {},
+      request: (_, _) => pending.future,
+    );
+    addTearDown(() {
+      logic.dispose();
+      changes.dispose();
+    });
+    await logic.load();
+    final saving = logic.collect();
+    user.saveUserInfo(UserInfo.fromJson(<String, dynamic>{'id': 2}));
+    await Future<void>.delayed(Duration.zero);
+    expect(logic.collecting, isTrue);
+    expect(logic.collected, isTrue, reason: '不能把旧账号的在途状态当作新账号刷新屏障');
+    pending.complete({'collected': false});
+    await saving;
+    expect(logic.collected, isTrue);
+  });
+
   test('在途响应不读取或展示后来登录账号的本地进度', () async {
     final user = Get.put(UserInformation());
     user.saveUserInfo(UserInfo.fromJson(<String, dynamic>{'id': 1}));

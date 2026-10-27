@@ -2,6 +2,12 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:app/components/work_detail_skeleton/index.dart';
+import 'package:app/components/work_detail_skeleton/comic_chapters.dart';
+import 'package:app/models/comics.dart';
+import 'package:app/pages/comics/detail/widgets/chapter_preview/index.dart';
+import 'package:app/pages/comics/detail/widgets/chapter_preview/chapter_card.dart';
+import 'package:app/pages/comics/widgets/comic_image.dart';
+import 'package:app/components/work_about_section/style.dart';
 import 'package:app/components/work_introduction_hero/index.dart';
 import 'package:app/components/work_introduction_hero/style.dart';
 import 'package:app/pages/read/widgets/skeleton/content_skeleton.dart';
@@ -212,8 +218,62 @@ void main() {
           find.byKey(
             const ValueKey('work_detail_skeleton_comic_quick_actions'),
           ),
-          kind == WorkDetailSkeletonKind.comic ? findsOneWidget : findsNothing,
+          findsNothing,
         );
+        if (kind == WorkDetailSkeletonKind.comic) {
+          final synopsis = find.byKey(
+            const ValueKey('work_detail_skeleton_synopsis'),
+          );
+          final chapters = find.byKey(
+            const ValueKey('work_detail_skeleton_chapters'),
+          );
+          final comments = find.byKey(
+            const ValueKey('work_detail_skeleton_comic_comments'),
+          );
+          final recommendations = find.byKey(
+            const ValueKey('work_detail_skeleton_recommendations'),
+          );
+          expect(
+            tester.getRect(chapters).top,
+            greaterThan(tester.getRect(synopsis).bottom),
+          );
+          expect(
+            tester.getRect(comments).top,
+            greaterThan(tester.getRect(chapters).bottom),
+          );
+          expect(
+            tester.getRect(recommendations).top,
+            greaterThan(tester.getRect(comments).bottom),
+          );
+          expect(
+            find.descendant(
+              of: find.byKey(
+                const ValueKey('work_detail_skeleton_comic_synopsis_text'),
+              ),
+              matching: find.byType(SkeletonTextLine),
+            ),
+            findsNWidgets(2),
+          );
+        }
+        if (short_story) {
+          final reading = find.byKey(
+            const ValueKey('work_detail_skeleton_reading'),
+          );
+          expect(reading, findsOneWidget);
+          expect(tester.getRect(reading).height, greaterThan(200));
+          expect(
+            find.descendant(
+              of: reading,
+              matching: find.byType(SkeletonTextLine),
+            ),
+            findsNWidgets(10),
+          );
+          expect(
+            find.byType(SkeletonPulse),
+            findsOneWidget,
+            reason: '封面和正文共享一套动画，减少动画也必须整体停止',
+          );
+        }
         await _write_preview(
           tester,
           'skeleton_${kind.name}_390_${dark ? 'dark' : 'light'}',
@@ -221,6 +281,77 @@ void main() {
       });
     }
   }
+
+  testWidgets('漫画章节骨架与真实章节首图和单行标题轨道保持相同几何', (tester) async {
+    for (final size in [
+      const Size(390, 844),
+      const Size(720, 500),
+      const Size(466, 678),
+    ]) {
+      for (final scale in [1.0, 1.5]) {
+        final chapters = List.generate(
+          3,
+          (index) => ComicChapter(
+            id: index + 1,
+            title: 'Chapter ${index + 1}',
+            page_count: 2,
+            sort_order: index,
+            status: 'published',
+            images: const [],
+          ),
+        );
+        await _mount(
+          tester,
+          size: size,
+          text_scale: scale,
+          child: SingleChildScrollView(
+            child: ComicChapterPreview(
+              chapters: chapters,
+              completed: false,
+              on_chapters: () {},
+              on_open: (_) {},
+              horizontal_padding: WorkAboutSectionStyle.horizontal_padding,
+            ),
+          ),
+        );
+        final real_image = tester.getRect(
+          find.descendant(
+            of: find.byType(ComicChapterPreviewCard).first,
+            matching: find.byType(ComicImage),
+          ),
+        );
+        final real_rail = tester.getSize(
+          find.byKey(const ValueKey('comic_chapter_previews')),
+        );
+        await _mount(
+          tester,
+          size: size,
+          text_scale: scale,
+          child: const SingleChildScrollView(
+            child: SkeletonPulse(
+              is_dark: false,
+              child: ComicSkeletonChapters(cjk: true, is_dark: false),
+            ),
+          ),
+        );
+        final placeholder = tester.getRect(
+          find.byKey(const ValueKey('work_detail_skeleton_chapter_image_0')),
+        );
+        expect(placeholder.width, closeTo(real_image.width, .01));
+        expect(placeholder.height, closeTo(real_image.height, .01));
+        expect(placeholder.left, closeTo(real_image.left, .01));
+        expect(
+          tester
+              .getSize(
+                find.byKey(const ValueKey('work_detail_skeleton_chapter_rail')),
+              )
+              .height,
+          closeTo(real_rail.height, .01),
+        );
+        expect(tester.takeException(), isNull);
+      }
+    }
+  });
 
   for (final kind in WorkDetailSkeletonKind.values) {
     for (final locale in [const Locale('zh'), const Locale('en')]) {

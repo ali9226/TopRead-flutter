@@ -4,6 +4,7 @@ import 'package:app/components/expandable_synopsis/style.dart';
 import 'package:app/components/expandable_synopsis/toggle_button.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/components/work_section_card/index.dart';
+import 'package:app/components/work_about_section/index.dart';
 import 'package:app/pages/comics/detail/widgets/about_story/index.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -20,16 +21,19 @@ Future<void> _mount(
   double scale = 1,
   bool disable_animations = false,
   bool dark = false,
+  bool novel = false,
+  Size size = const Size(390, 844),
+  String description = _description,
 }) async {
   tester.view.devicePixelRatio = 1;
-  tester.view.physicalSize = const Size(390, 844);
+  tester.view.physicalSize = size;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   await tester.pumpWidget(
     MaterialApp(
       home: MediaQuery(
         data: MediaQueryData(
-          size: const Size(390, 844),
+          size: size,
           textScaler: TextScaler.linear(scale),
           disableAnimations: disable_animations,
         ),
@@ -37,11 +41,20 @@ Future<void> _mount(
           body: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(20),
-              child: ComicAboutStory(
-                description: _description,
-                embedded: true,
-                is_dark: dark,
-              ),
+              child: novel
+                  ? WorkAboutSection(
+                      description: description,
+                      tags: const [],
+                      is_dark: dark,
+                      key_prefix: 'novel_about',
+                      collapsed_lines: 2,
+                      compact_toggle: true,
+                    )
+                  : ComicAboutStory(
+                      description: description,
+                      embedded: true,
+                      is_dark: dark,
+                    ),
             ),
           ),
         ),
@@ -61,7 +74,7 @@ Future<void> _settle_frames(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('漫画简介标题不展开正文，仅点击箭头展开', (tester) async {
+  testWidgets('漫画简介标题保持静态，点击箭头展开正文', (tester) async {
     await _mount(tester);
     final viewport = find.byKey(const ValueKey('comic_about_viewport'));
     final collapsed = tester.getSize(viewport).height;
@@ -163,7 +176,7 @@ void main() {
     });
   }
 
-  testWidgets('漫画简介以小饰条标记上提标题，渐变仅覆盖第二行底部', (tester) async {
+  testWidgets('漫画简介饰条标题上提，双箭头衔接末行渐变并保留完整触控区', (tester) async {
     await _mount(tester);
     final heading = tester.getRect(
       find.byKey(const ValueKey('comic_about_header')),
@@ -180,8 +193,100 @@ void main() {
     );
     final fade = tester.getRect(find.byKey(const ValueKey('comic_about_fade')));
     expect(fade.bottom, closeTo(viewport.bottom, 0.01));
-    expect(fade.height, lessThan(viewport.height / 4));
-    expect(fade.top, greaterThan(viewport.top + viewport.height * 0.75));
+    expect(fade.height, greaterThan(viewport.height / 4));
+    expect(fade.top, greaterThan(viewport.top + viewport.height / 2));
+    final toggle = find.byKey(const ValueKey('comic_about_toggle'));
+    final svg = find.descendant(of: toggle, matching: find.byType(SvgPicture));
+    expect(tester.getRect(svg).top, lessThan(viewport.bottom));
+    expect(tester.getRect(svg).bottom, greaterThan(viewport.bottom));
+    expect(tester.getRect(toggle).height, 44);
+    // 重叠区域全部位于父布局内，图标本身与完整透明触控区均可以点按。
+    await tester.tap(svg);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byKey(const ValueKey('comic_about_viewport'))).height,
+      greaterThan(viewport.height),
+    );
+    expect(
+      tester.getRect(svg).top,
+      greaterThan(
+        tester
+            .getRect(find.byKey(const ValueKey('comic_about_viewport')))
+            .bottom,
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final novel in [false, true]) {
+    for (final size in [
+      const Size(390, 844),
+      const Size(844, 390),
+      const Size(466, 678),
+    ]) {
+      testWidgets('${novel ? '长篇' : '漫画'}简介正文双向切换无波纹 $size', (tester) async {
+        await _mount(
+          tester,
+          novel: novel,
+          size: size,
+          dark: size.width > size.height,
+          scale: size.width == 466 ? 2 : 1,
+        );
+        final prefix = novel ? 'novel_about' : 'comic_about';
+        final viewport = find.byKey(ValueKey('${prefix}_viewport'));
+        final body = tester.widget<InkWell>(
+          find.byKey(ValueKey('${prefix}_text')),
+        );
+        expect(body.onTap, isNotNull);
+        expect(body.splashFactory, NoSplash.splashFactory);
+        expect(
+          body.overlayColor?.resolve({WidgetState.pressed}),
+          Colors.transparent,
+        );
+        expect(
+          find.descendant(
+            of: find.byKey(ValueKey('${prefix}_toggle')),
+            matching: find.byType(InkWell),
+          ),
+          findsNothing,
+        );
+        final collapsed = tester.getSize(viewport).height;
+        await tester.tapAt(tester.getTopLeft(viewport) + const Offset(20, 10));
+        await tester.pumpAndSettle();
+        expect(tester.getSize(viewport).height, greaterThan(collapsed));
+        await tester.tapAt(tester.getTopLeft(viewport) + const Offset(20, 10));
+        await tester.pumpAndSettle();
+        expect(tester.getSize(viewport).height, closeTo(collapsed, 0.01));
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets('展开的超长简介正文仍可拖动页面，滚动不触发收起', (tester) async {
+    await _mount(
+      tester,
+      novel: true,
+      description: List.filled(80, _description).join('\n'),
+    );
+    final viewport = find.byKey(const ValueKey('novel_about_viewport'));
+    final collapsed = tester.getSize(viewport).height;
+    await tester.tapAt(tester.getTopLeft(viewport) + const Offset(20, 10));
+    await tester.pumpAndSettle();
+    final expanded = tester.getSize(viewport).height;
+    expect(expanded, greaterThan(844));
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.state<ScrollableState>(find.byType(Scrollable)).position.pixels,
+      greaterThan(100),
+    );
+    expect(tester.getSize(viewport).height, expanded);
+    await tester.tapAt(const Offset(40, 100));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(viewport).height, closeTo(collapsed, 0.01));
     expect(tester.takeException(), isNull);
   });
 

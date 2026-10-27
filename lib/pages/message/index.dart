@@ -59,13 +59,16 @@ class _MessagePageState extends State<MessagePage> {
   Worker? _tab_worker;
 
   /// 评论颜色（清透蓝）。
-  static const Color _comment_color = ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff;
+  static const Color _comment_color =
+      ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff;
 
   /// 点赞颜色（暖珊瑚）。
-  static const Color _like_color = ColorConstants.message_type_accent_color_list_ffff9e80;
+  static const Color _like_color =
+      ColorConstants.message_type_accent_color_list_ffff9e80;
 
   /// 收藏颜色（主题金）。
-  static const Color _favorite_color = ColorConstants.message_type_accent_color_list;
+  static const Color _favorite_color =
+      ColorConstants.message_type_accent_color_list;
 
   /// 客服回复颜色（清新绿）。
   static const Color _chat_reply_color = ColorConstants.successColor;
@@ -181,23 +184,9 @@ class _MessagePageState extends State<MessagePage> {
       return;
     }
 
-    final int novel_id = message.novel_id;
-    final int publish_status = message.novel_publish_status;
-    final int comment_id = message.comment_id;
-
-    if (novel_id <= 0) return;
-
-    // 先跳转，不阻塞
-    if (publish_status == 4) {
-      String path = '/short_story_read?id=$novel_id';
-      if (comment_id > 0) path += '&comment_id=$comment_id';
-      routerUtil(path: path, type: 'push');
-    } else {
-      String path =
-          '/read?id=$novel_id&title=${Uri.encodeComponent(message.novel_title)}';
-      if (comment_id > 0) path += '&comment_id=$comment_id';
-      routerUtil(path: path, type: 'push');
-    }
+    final path = message.destination_path;
+    if (path == null) return;
+    routerUtil(path: path, type: 'push');
 
     // 后台异步标记已读，不 await
     message_store.mark_as_read(message.id);
@@ -299,7 +288,8 @@ class _MessagePageState extends State<MessagePage> {
       final bool is_logged_in = user_information.isLoggedIn.value;
       final Color background_color = is_dark
           ? ColorConstants.nightBackgroundColor
-          : ColorConstants.components_category_filter_category_filter_bar_tone_fff6f7fb;
+          : ColorConstants
+                .components_category_filter_category_filter_bar_tone_fff6f7fb;
       final Color primary_text_color = is_dark
           ? ColorConstants.whiteColor
           : ColorConstants.lightTextColor;
@@ -343,7 +333,9 @@ class _MessagePageState extends State<MessagePage> {
                             style: TextStyle(
                               color: primary_text_color,
                               fontSize: MessageStyle.title_size,
-                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
+                              ),
                             ),
                           ),
                           const SizedBox(height: LayoutConfig.space_12),
@@ -398,7 +390,9 @@ class _MessagePageState extends State<MessagePage> {
                                 style: TextStyle(
                                   color: secondary_text_color,
                                   fontSize: 13,
-                                  fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                                  fontWeight: FontConfig.adjustedWeight(
+                                    FontWeight.w500,
+                                  ),
                                 ),
                               ),
                               if (message_store.unread_total.value > 0)
@@ -409,7 +403,9 @@ class _MessagePageState extends State<MessagePage> {
                                     style: TextStyle(
                                       color: ColorConstants.dangerColor,
                                       fontSize: 12,
-                                      fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                                      fontWeight: FontConfig.adjustedWeight(
+                                        FontWeight.w500,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -441,7 +437,9 @@ class _MessagePageState extends State<MessagePage> {
                                       style: TextStyle(
                                         color: secondary_text_color,
                                         fontSize: 13,
-                                        fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                                        fontWeight: FontConfig.adjustedWeight(
+                                          FontWeight.w400,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -536,7 +534,8 @@ class _MessagePageState extends State<MessagePage> {
     final Color start_color = is_dark
         ? Color.alphaBlend(
             accent_color.withValues(alpha: 0.20),
-            ColorConstants.pages_home_widgets_tab_contents_recommend_tab_index_tone,
+            ColorConstants
+                .pages_home_widgets_tab_contents_recommend_tab_index_tone,
           )
         : accent_color.withValues(alpha: 0.16);
     final Color end_color = is_dark
@@ -564,7 +563,9 @@ class _MessagePageState extends State<MessagePage> {
           ),
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: ColorConstants.shadowColor.withValues(alpha: is_dark ? 0.18 : 0.04),
+              color: ColorConstants.shadowColor.withValues(
+                alpha: is_dark ? 0.18 : 0.04,
+              ),
               blurRadius: 14,
               offset: const Offset(0, 8),
             ),
@@ -638,7 +639,9 @@ class _MessagePageState extends State<MessagePage> {
                             style: TextStyle(
                               color: accent_color,
                               fontSize: 11,
-                              fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -793,8 +796,8 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem>
                 accent_color: widget.accent_color,
                 message_type: widget.message.type,
                 is_unread: widget.message.is_unread,
-                novel_cover: widget.message.has_novel_cover
-                    ? widget.message.novel_cover
+                novel_cover: widget.message.work_cover.trim().isNotEmpty
+                    ? widget.message.work_cover
                     : null,
                 unread_count: widget.unread_count,
               ),

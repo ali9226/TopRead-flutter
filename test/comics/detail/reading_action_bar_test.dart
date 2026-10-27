@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/pages/comics/detail/widgets/reading_action_bar.dart';
+import 'package:app/components/svg_icon/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,6 +18,10 @@ class _Translations extends AssetLoader {
       'start_reading': 'Start reading',
       'unavailable': 'Not available',
       'chapter_position': 'Chapter {index}',
+    },
+    'favorite': {
+      'action_add': 'Save to library',
+      'action_remove': 'Remove from library',
     },
   };
 }
@@ -93,7 +98,19 @@ void main() {
         scale: 2,
       );
       expect(find.text('Chapter 12'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is SvgIcon && widget.name == 'not_favorited',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.favorite_border_rounded), findsNothing);
       expect(tester.takeException(), isNull);
+      final favorite = tester.widget<InkWell>(
+        find.byKey(const ValueKey('comic_library_action')),
+      );
+      expect(favorite.splashFactory, NoSplash.splashFactory);
+      expect(favorite.highlightColor, Colors.transparent);
       await tester.tap(find.byKey(const ValueKey('comic_library_action')));
       await tester.tap(find.byKey(const ValueKey('comic_reading_action')));
       expect(collected, 1);
@@ -115,6 +132,7 @@ void main() {
       ),
     );
     expect(find.text('Saved'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text('Not available'), findsOneWidget);
     expect(find.textContaining('Chapter'), findsNothing);
     await tester.tap(find.byKey(const ValueKey('comic_library_action')));

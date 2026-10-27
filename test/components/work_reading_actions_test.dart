@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:app/components/work_reading_actions/index.dart';
+import 'package:app/components/svg_icon/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,6 +22,7 @@ Future<void> _mount(
   WidgetTester tester, {
   bool continuing = false,
   bool loading = false,
+  bool favorited = false,
   bool can_read = true,
   bool compact = false,
   bool dark = true,
@@ -56,6 +58,7 @@ Future<void> _mount(
                     can_read: can_read,
                     compact: compact,
                     favorite_loading: loading,
+                    favorited: favorited,
                     on_hero: dark,
                     is_dark: dark,
                     read_key: const ValueKey('read'),
@@ -69,7 +72,7 @@ Future<void> _mount(
       ),
     ),
   );
-  // 收藏加载指示器持续动画，验证不依赖pumpAndSettle。
+  // 以有限帧验证星形和交互状态，不依赖动画是否结束。
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 200));
 }
@@ -128,6 +131,28 @@ void main() {
     expect(direction.right, lessThan(read.right));
     expect(read.right, lessThan(favorite.left));
     expect(favorite.height, closeTo(read.height, 0.01));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('收藏明确使用同一套空实星和收藏动作语义，不再冒充点赞爱心', (tester) async {
+    await _mount(tester);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is SvgIcon && widget.name == 'not_favorited',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Save to library'), findsOneWidget);
+    expect(find.byIcon(Icons.favorite_border_rounded), findsNothing);
+    expect(find.byIcon(Icons.favorite_rounded), findsNothing);
+    await _mount(tester, favorited: true);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is SvgIcon && widget.name == 'user_selected',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Remove from library'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -202,6 +227,7 @@ void main() {
       width: 210,
       compact: true,
       loading: true,
+      favorited: true,
       can_read: false,
       on_read: () => reads++,
       on_favorite: () => favorites++,
@@ -210,7 +236,21 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('favorite')));
     expect(reads, 0);
     expect(favorites, 0);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is SvgIcon && widget.name == 'user_selected',
+      ),
+      findsOneWidget,
+    );
+    final favorite = tester.widget<IconButton>(
+      find.byKey(const ValueKey('favorite')),
+    );
+    expect(favorite.style!.splashFactory, NoSplash.splashFactory);
+    expect(
+      favorite.style!.overlayColor!.resolve({WidgetState.pressed}),
+      Colors.transparent,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -228,7 +268,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('favorite')));
     expect(reads, 0);
     expect(favorites, 0);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

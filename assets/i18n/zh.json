@@ -647,7 +647,11 @@
       "comment_like": "点赞评论",
       "novel_like": "喜欢小说",
       "novel_favorite": "收藏小说",
-      "chat_reply": "在线客服"
+      "chat_reply": "在线客服",
+      "comic_comment": "漫画新评论",
+      "comic_reply": "漫画评论回复",
+      "comic_like": "漫画评论点赞",
+      "comic_collect": "收藏漫画"
     },
     "card_subtitle": {
       "system_self": "{0}",
@@ -661,7 +665,15 @@
       "novel_like_self": "你喜欢了《{0}》",
       "novel_like_other": "有人喜欢了你的作品《{0}》",
       "novel_favorite_self": "你收藏了《{0}》",
-      "novel_favorite_other": "有人收藏了你的作品《{0}》"
+      "novel_favorite_other": "有人收藏了你的作品《{0}》",
+      "comic_comment_self": "你评论了漫画《{0}》",
+      "comic_comment_other": "有人评论了你的漫画《{0}》",
+      "comic_reply_self": "你回复了漫画《{0}》中的一条评论",
+      "comic_reply_other": "有人回复了你在漫画《{0}》中的评论",
+      "comic_like_self": "你赞了漫画《{0}》中的一条评论",
+      "comic_like_other": "有人赞了你在漫画《{0}》中的评论",
+      "comic_collect_self": "你收藏了漫画《{0}》",
+      "comic_collect_other": "有人收藏了你的漫画《{0}》"
     },
     "time": {
       "just_now": "刚刚",
@@ -744,15 +756,22 @@
     "recommend_today": "今日推荐"
   },
   "search": {
-    "entry_hint": "搜索书名、作者、题材",
-    "page_title": "搜索",
-    "header_title": "搜书、作者、标签",
-    "input_hint": "输入关键词开始搜索",
+    "entry_hint": "搜索小说、漫画、作者",
+    "page_title": "搜索作品",
+    "header_title": "搜索作品",
+    "input_hint": "输入小说、漫画或作者关键词",
     "submit": "搜索",
     "hot_title": "热门搜索",
     "recommend_title": "热门推荐",
     "keyword_result_title": "“{keyword}” 搜索结果",
-    "search_result_title": "“{keyword}” 搜索结果"
+    "search_result_title": "“{keyword}” 搜索结果",
+    "type_novel": "小说",
+    "type_comic": "漫画",
+    "empty_result": "没有找到相关小说或漫画",
+    "load_failed": "部分作品加载失败，请重试",
+    "retry": "重试",
+    "completed": "完结",
+    "score": "{score}分"
   },
   "ranking_full_list": {
     "footer": {
@@ -1069,7 +1088,9 @@
   },
   "favorite": {
     "add_success": "收藏成功",
-    "remove_success": "已取消收藏"
+    "remove_success": "已取消收藏",
+    "action_add": "收藏",
+    "action_remove": "取消收藏"
   },
   "like_tip": {
     "add_success": "点赞成功",
@@ -1093,7 +1114,10 @@
     "excerpt_by": "{name} · 摘录",
     "read_together": "打开{app} · 与我共读",
     "qr_semantics": "书籍分享二维码",
-    "share_text": "我正在用{app}看《{title}》，快来一起看吧！"
+    "share_text": "我正在用{app}看《{title}》，快来一起看吧！",
+    "channel_unavailable": "暂时无法打开该分享渠道，请复制链接后分享",
+    "copy_failed": "复制失败，请重试",
+    "excerpt_truncated": "长选文已节选，省略处以 … 标记"
   },
   "notification_permission": {
     "message": "开启通知，不错过精彩内容更新",
@@ -1414,7 +1438,13 @@
     "reader_day": "日间",
     "reader_night": "夜间",
     "reader_catalog": "目录",
-    "unknown_author": "作者暂未提供"
+    "unknown_author": "作者暂未提供",
+    "discovery_more": "更多",
+    "discovery_shuffle": "换一批",
+    "discovery_shuffle_error": "换一批失败，请重试",
+    "discovery_title": "漫画分类",
+    "discovery_load_failed": "漫画加载失败，请重试",
+    "discovery_categories_failed": "分类加载失败，请重试"
   },
   "tile_quest": {
     "title": "Tile Quest",
@@ -1456,5 +1486,16 @@
     "action_error": "操作未完成，请重试。",
     "session_paused": "当前挑战已在另一个窗口打开。",
     "continue_game": "继续游戏"
+  },
+  "novel_discovery": {
+    "discovery_more": "更多",
+    "discovery_shuffle": "换一批",
+    "discovery_shuffle_error": "换一批失败，请重试",
+    "discovery_title": "小说分类",
+    "discovery_load_failed": "加载失败，请重试",
+    "discovery_categories_failed": "分类加载失败，请重试",
+    "empty": "暂时没有可阅读的小说",
+    "retry": "重试",
+    "loading": "加载中"
   }
 }

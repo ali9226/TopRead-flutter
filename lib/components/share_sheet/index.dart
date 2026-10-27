@@ -1,60 +1,25 @@
-import 'package:app/config/layout_config.dart';
-import 'package:easy_localization/easy_localization.dart' as easy;
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:get/get.dart';
-import 'package:app/models/rotation.dart';
-import 'package:app/stores/share_store.dart';
-import 'package:app/components/share_sheet/style.dart';
-import 'package:app/components/share_sheet/widgets/share_icon_item.dart';
+// ignore_for_file: non_constant_identifier_names
+
+import 'dart:async';
+
+import 'package:app/components/share_sheet/layout_style.dart';
+import 'package:app/components/share_sheet/share_work_url.dart';
 import 'package:app/components/share_sheet/widgets/card_preview_sheet.dart';
-import 'package:app/components/svg_icon/index.dart';
-import 'package:app/util/dialog/show_bottom_tip.dart';
+import 'package:app/components/share_sheet/widgets/share_channel_grid.dart';
+import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/config/color_config.dart';
+import 'package:app/config/layout_config.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart' as easy;
+import 'package:flutter/material.dart';
 
-/// 分享弹窗组件。
-///
-/// 从屏幕底部弹出的分享面板，展示分享渠道图标行。
-/// 第一个固定为「生成图片」，其余渠道从 ShareStore（redis/get type=24）动态读取，
-/// 最后一个固定为「复制链接」。
-///
-/// 使用方式：
-/// ```dart
-/// showShareSheet(
-///   context: context,
-///   novel_id: 123,
-///   novel_title: "小说标题",
-///   novel_cover_url: "https://...",
-///   novel_intro: "小说简介...",
-/// );
-/// ```
+import 'style.dart';
+
+export 'share_work_url.dart' show WorkShareKind;
+
+/// 长篇、短篇与漫画共用的分享入口；渠道只读取公共配置，不依赖远程列表或Get初始化。
 class ShareSheet extends StatelessWidget {
-  /// 小说ID。
-  final int novel_id;
-
-  /// 小说标题。
-  final String novel_title;
-
-  /// 小说作者名称。
-  final String novel_author;
-
-  /// 小说封面图地址。
-  final String novel_cover_url;
-
-  /// 小说简介。
-  final String novel_intro;
-
-  /// 当前是否为夜间模式。
-  final bool is_dark;
-
-  /// 关闭弹窗回调。
-  final VoidCallback on_close;
-
-  /// 分享渠道全局状态。
-  final ShareStore _share_store = Get.find<ShareStore>();
-
-  ShareSheet({
+  const ShareSheet({
     super.key,
     required this.novel_id,
     required this.novel_title,
@@ -63,278 +28,151 @@ class ShareSheet extends StatelessWidget {
     required this.novel_intro,
     required this.is_dark,
     required this.on_close,
+    this.work_kind = WorkShareKind.novel,
+    this.language,
   });
 
+  final int novel_id;
+  final String novel_title;
+  final String novel_author;
+  final String novel_cover_url;
+  final String novel_intro;
+  final bool is_dark;
+  final VoidCallback on_close;
+  final WorkShareKind work_kind;
+  final String? language;
+
   @override
-  Widget build(BuildContext context) {
-    /// 背景色。
-    final Color background_color = is_dark
+  Widget build(BuildContext context) => Material(
+    color: is_dark
         ? ShareSheetStyle.background_color_dark
-        : ShareSheetStyle.background_color_light;
-
-    /// 标题颜色。
-    final Color title_color = is_dark
-        ? ShareSheetStyle.title_color_dark
-        : ShareSheetStyle.title_color_light;
-
-    /// 拖拽指示条颜色。
-    final Color drag_bar_color = is_dark
-        ? ShareSheetStyle.drag_bar_color_dark
-        : ShareSheetStyle.drag_bar_color_light;
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: background_color,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(ShareSheetStyle.border_radius_top),
-          topRight: Radius.circular(ShareSheetStyle.border_radius_top),
-        ),
+        : ShareSheetStyle.background_color_light,
+    borderRadius: const BorderRadius.vertical(
+      top: Radius.circular(ShareSheetStyle.border_radius_top),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight:
+            MediaQuery.sizeOf(context).height *
+            ShareLayoutStyle.sheet_height_ratio,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          /// 顶部拖拽指示条。
-          _buildDragBar(drag_bar_color),
-
-          /// 标题「分享」。
-          _buildTitle(title_color),
-
-          /// 分享渠道图标行（动态数据）。
-          _buildShareIconRow(context),
-
-          /// 底部安全区域。
-          SizedBox(height: MediaQuery.of(context).padding.bottom + 10),
-        ],
-      ),
-    );
-  }
-
-  /// 构建顶部拖拽指示条。
-  Widget _buildDragBar(Color color) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.only(
-          top: LayoutConfig.space_12,
-          bottom: LayoutConfig.space_20,
-        ),
-        child: Container(
-          width: ShareSheetStyle.drag_bar_width,
-          height: ShareSheetStyle.drag_bar_height,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(
-              ShareSheetStyle.drag_bar_radius,
-            ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            LayoutConfig.space_20,
+            LayoutConfig.space_12,
+            LayoutConfig.space_20,
+            LayoutConfig.space_24,
           ),
-        ),
-      ),
-    );
-  }
-
-  /// 构建弹窗标题。
-  Widget _buildTitle(Color title_color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: LayoutConfig.space_24),
-      child: Text(
-        easy.tr('share_sheet.title'),
-        style: TextStyle(
-          fontSize: ShareSheetStyle.title_font_size,
-          fontWeight: ShareSheetStyle.title_font_weight,
-          color: title_color,
-        ),
-      ),
-    );
-  }
-
-  /// 构建分享渠道图标行。
-  ///
-  /// 布局顺序：生成图片 + 接口返回的分享渠道 + 复制链接。
-  /// 竖屏（宽 < 高）时一行 4 个，横屏时一行 6 个，图标平均分配宽度。
-  /// 最后一行不满时靠左对齐。
-  Widget _buildShareIconRow(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: LayoutConfig.space_16),
-      child: Obx(() {
-        /// 从 ShareStore 获取分享渠道列表。
-        final List<Rotation> share_list = _share_store.rotation_list;
-
-        /// 所有图标项。
-        final List<Widget> items = <Widget>[
-          /// 第一个固定：生成图片。
-          ShareIconItem(
-            icon: null,
-            icon_widget: SvgIcon(
-              name: 'image',
-              width: ShareSheetStyle.icon_inner_size,
-              height: ShareSheetStyle.icon_inner_size,
-              color: is_dark ? ColorConstants.whiteColor : null,
-            ),
-            label: easy.tr('share_sheet.generate_image'),
-            icon_color: ColorConstants.components_share_sheet_index_tone,
-            is_dark: is_dark,
-            on_tap: () => _onGenerateImage(context),
-          ),
-
-          /// 动态渲染接口返回的分享渠道。
-          ...share_list.map((Rotation item) {
-            return ShareIconItem(
-              icon: null,
-              icon_widget: SvgIcon(
-                name: item.represent,
-                width: ShareSheetStyle.icon_inner_size,
-                height: ShareSheetStyle.icon_inner_size,
-                color: is_dark ? ColorConstants.whiteColor : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: ShareSheetStyle.drag_bar_width,
+                height: ShareSheetStyle.drag_bar_height,
+                decoration: BoxDecoration(
+                  color: is_dark
+                      ? ShareSheetStyle.drag_bar_color_dark
+                      : ShareSheetStyle.drag_bar_color_light,
+                  borderRadius: BorderRadius.circular(
+                    ShareSheetStyle.drag_bar_radius,
+                  ),
+                ),
               ),
-              label: item.title,
-              icon_color: is_dark ? ColorConstants.whiteColor : ColorConstants.lightTextColor,
-              is_dark: is_dark,
-              on_tap: () => _onShareToChannel(context, item),
-            );
-          }),
-
-          /// 最后固定：复制链接。
-          ShareIconItem(
-            icon: null,
-            icon_widget: SvgIcon(
-              name: 'link',
-              width: ShareSheetStyle.icon_inner_size,
-              height: ShareSheetStyle.icon_inner_size,
-              color: is_dark ? ColorConstants.whiteColor : null,
-            ),
-            label: easy.tr('share_sheet.copy_link'),
-            icon_color: ColorConstants.components_share_sheet_index_tone_ffff8e53,
-            is_dark: is_dark,
-            on_tap: () => _onCopyLink(context),
-          ),
-        ];
-
-        return LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            /// 根据屏幕方向决定每行数量。
-            final Size screenSize = MediaQuery.sizeOf(context);
-            final int crossAxisCount = screenSize.width < screenSize.height
-                ? 4
-                : 6;
-
-            /// 按每行数量分组，逐行渲染。
-            final List<Widget> rows = <Widget>[];
-            for (int i = 0; i < items.length; i += crossAxisCount) {
-              final int rowEnd = (i + crossAxisCount).clamp(0, items.length);
-              final List<Widget> rowItems = <Widget>[];
-
-              /// 当前行的实际数量。
-              final int currentRowCount = rowEnd - i;
-              final bool isLastRowIncomplete =
-                  currentRowCount < crossAxisCount &&
-                  i + crossAxisCount >= items.length;
-
-              for (int j = i; j < rowEnd; j++) {
-                /// 最后一行不满时用固定宽度靠左，否则等分宽度。
-                if (isLastRowIncomplete) {
-                  rowItems.add(
-                    SizedBox(
-                      width: constraints.maxWidth / crossAxisCount,
-                      child: items[j],
+              const SizedBox(height: LayoutConfig.space_12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      easy.tr('share_sheet.title', context: context),
+                      style: TextStyle(
+                        color: is_dark
+                            ? ShareSheetStyle.title_color_dark
+                            : ShareSheetStyle.title_color_light,
+                        fontSize: ShareSheetStyle.title_font_size,
+                        fontWeight: ShareSheetStyle.title_font_weight,
+                      ),
                     ),
-                  );
-                } else {
-                  rowItems.add(Expanded(child: items[j]));
-                }
-              }
-
-              rows.add(Row(children: rowItems));
-
-              if (i + crossAxisCount < items.length) {
-                rows.add(const SizedBox(height: LayoutConfig.space_22));
-              }
-            }
-
-            return Column(mainAxisSize: MainAxisSize.min, children: rows);
-          },
-        );
-      }),
-    );
-  }
-
-  /// 点击「生成图片」，打开卡片预览弹窗。
-  ///
-  /// 直接打开卡片预览弹窗，覆盖在分享弹窗之上。
-  void _onGenerateImage(BuildContext context) {
-    showCardPreviewSheet(
-      context: context,
-      novel_id: novel_id,
-      novel_title: novel_title,
-      novel_author: novel_author,
-      novel_cover_url: novel_cover_url,
-      novel_intro: novel_intro,
-      is_dark: is_dark,
-    );
-  }
-
-  /// 点击「复制链接」，将分享链接复制到剪贴板。
-  void _onCopyLink(BuildContext context) {
-    final String share_text = easy.tr(
-      'share_sheet.share_text',
-      namedArgs: {'app': 'Novel', 'title': novel_title},
-    );
-    Clipboard.setData(ClipboardData(text: share_text));
-    showBottomTip(easy.tr('share_sheet.copy_success'));
-    on_close();
-  }
-
-  /// 点击分享到指定渠道（占位，后续对接真实分享）。
-  ///
-  /// 参数 [item] 为 ShareStore 中对应的 Rotation 数据，
-  /// 包含 title（渠道名称）、jump（跳转地址）等信息。
-  void _onShareToChannel(BuildContext context, Rotation item) {
-    // TODO 对接真实分享：使用 item.jump 作为分享链接
-    on_close();
-  }
+                  ),
+                  IconButton(
+                    onPressed: on_close,
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).closeButtonTooltip,
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: LayoutConfig.space_20),
+              ShareChannelGrid(
+                work_id: novel_id,
+                title: novel_title,
+                is_dark: is_dark,
+                work_kind: work_kind,
+                language: language,
+                on_generate_image: () => showCardPreviewSheet(
+                  context: context,
+                  novel_id: novel_id,
+                  novel_title: novel_title,
+                  novel_author: novel_author,
+                  novel_cover_url: novel_cover_url,
+                  novel_intro: novel_intro,
+                  work_kind: work_kind,
+                  language: language,
+                  is_dark: is_dark,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
-/// 显示分享弹窗的便捷方法。
-///
-/// 参数：
-/// - [context] BuildContext。
-/// - [novel_id] 小说ID。
-/// - [novel_title] 小说标题。
-/// - [novel_author] 小说作者名称。
-/// - [novel_cover_url] 小说封面图地址。
-/// - [novel_intro] 小说简介。
-/// - [is_dark] 当前是否为夜间模式，不传则自动根据主题判断。
-void showShareSheet({
+/// 公共弹窗容器随窗口限宽并避让Duo保留区域；内容可滚动，不因未来新增渠道溢出。
+Future<void> showShareSheet({
   required BuildContext context,
   required int novel_id,
   required String novel_title,
   String novel_author = '',
   required String novel_cover_url,
   required String novel_intro,
+  WorkShareKind work_kind = WorkShareKind.novel,
+  String? language,
   bool? is_dark,
 }) {
-  /// 用户打开分享面板时提前缓存封面，进入图片预览后可直接绘制和导出。
   if (novel_cover_url.trim().isNotEmpty) {
-    precacheImage(CachedNetworkImageProvider(novel_cover_url), context);
+    unawaited(
+      precacheImage(
+        CachedNetworkImageProvider(novel_cover_url),
+        context,
+        onError: (_, _) {},
+      ),
+    );
   }
-
-  /// 是否为夜间模式。
-  final bool current_is_dark =
-      is_dark ?? Theme.of(context).brightness == Brightness.dark;
-
-  showModalBottomSheet(
+  final dark = is_dark ?? Theme.of(context).brightness == Brightness.dark;
+  return showModalBottomSheet<void>(
     context: context,
     backgroundColor: ColorConstants.transparent,
     isScrollControlled: true,
-    builder: (BuildContext ctx) {
-      return ShareSheet(
+    constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width),
+    builder: (ctx) => WindowContentLayout(
+      expand_height: false,
+      max_width: ShareLayoutStyle.max_width,
+      child: ShareSheet(
         novel_id: novel_id,
         novel_title: novel_title,
         novel_author: novel_author,
         novel_cover_url: novel_cover_url,
         novel_intro: novel_intro,
-        is_dark: current_is_dark,
+        work_kind: work_kind,
+        language: language,
+        is_dark: dark,
         on_close: () => Navigator.pop(ctx),
-      );
-    },
+      ),
+    ),
   );
 }

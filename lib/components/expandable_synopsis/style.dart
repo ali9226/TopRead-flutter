@@ -35,13 +35,15 @@ class ExpandableSynopsisStyle {
   static const double compact_accent_gap = LayoutConfig.space_6;
   static const double compact_toggle_top_gap = LayoutConfig.space_4;
   static const double compact_toggle_icon_lift = LayoutConfig.space_6;
+  static const double compact_toggle_body_overlap = LayoutConfig.space_20;
   static const Color toggle_foreground = ColorConstants.lightTextColor;
+  static const Color interaction_overlay = ColorConstants.transparent;
 
   /// 遮罩只覆盖最后一行附近，不改变四行正文的实际布局高度。
   static const double fade_line_ratio = 1.1;
 
-  /// 两行预览只轻盖最后一行下半部，避免整行简介被渐变淹没。
-  static const double compact_fade_line_ratio = 0.45;
+  /// 渐变上沿进入末行，与贴近正文的双箭头衔接，首行保持完整可读。
+  static const double compact_fade_line_ratio = 0.65;
   static const double fade_middle_alpha = 0.12;
   static const double fade_bottom_alpha = 0.96;
   static const List<double> fade_stops = [0, 0.25, 1];

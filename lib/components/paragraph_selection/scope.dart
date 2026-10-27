@@ -40,6 +40,7 @@ class ParagraphSelectionScope extends StatefulWidget {
   final int content_offset;
   final bool is_dark;
   final Widget child;
+
   /// 段落间空白处的普通点击沿用阅读页动作。
   final ValueChanged<Offset>? on_tap_position;
 
@@ -73,8 +74,9 @@ class ParagraphSelectionScopeState extends State<ParagraphSelectionScope> {
 
   /// 长按选中当前作用域内的全部段落，替代默认的选词行为。
   void select_all() {
-    _area_key.currentState?.selectableRegion
-        .selectAll(SelectionChangedCause.longPress);
+    _area_key.currentState?.selectableRegion.selectAll(
+      SelectionChangedCause.longPress,
+    );
   }
 
   @override
@@ -118,6 +120,8 @@ class ParagraphSelectionScopeState extends State<ParagraphSelectionScope> {
       selected_text: quote,
       content_start: start,
       content_end: end,
+      source_content: widget.content,
+      source_offset: widget.content_offset,
     );
     final callback = share ? last.on_share : last.on_comment;
     if (callback == null) return;
@@ -171,7 +175,8 @@ class ParagraphSelectionScopeState extends State<ParagraphSelectionScope> {
               onTapUp: (details) {
                 final was_selected = has_selection;
                 clear_selection();
-                if (!was_selected) widget.on_tap_position?.call(details.globalPosition);
+                if (!was_selected)
+                  widget.on_tap_position?.call(details.globalPosition);
               },
               child: ParagraphSelectionAutoScroll(child: widget.child),
             ),

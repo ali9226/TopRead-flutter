@@ -384,15 +384,25 @@ class ReadingPageShell extends StatelessWidget {
                 ],
               ),
             ),
-            // 顶部导航栏
-            ReadTopBar(
-              is_dark: is_dark,
-              show: logic.show_navigation.value,
-              on_back: actions.on_back,
-              on_favorite_tap: actions.on_favorite,
-              on_share: actions.on_share ?? () {},
-              is_favorited: logic.is_favorited.value,
-              is_favorite_loading: logic.is_favorite_loading.value,
+            // 导航显隐单独订阅，不能依赖正文或进度变化带动本组件刷新。
+            Obx(
+              () => ReadTopBar(
+                is_dark: is_dark,
+                title:
+                    logic.current_chapter_index.value >= 0 &&
+                        logic.current_chapter_index.value <
+                            logic.chapter_list.length
+                    ? logic
+                          .chapter_list[logic.current_chapter_index.value]
+                          .title
+                    : '',
+                show: logic.show_navigation.value,
+                on_back: actions.on_back,
+                on_favorite_tap: actions.on_favorite,
+                on_share: actions.on_share ?? () {},
+                is_favorited: logic.is_favorited.value,
+                is_favorite_loading: logic.is_favorite_loading.value,
+              ),
             ),
             // 底部导航栏的进度由独立通知器驱动，正文不参与重建。
             ValueListenableBuilder<double>(
@@ -403,41 +413,43 @@ class ReadingPageShell extends StatelessWidget {
                     double progress_percent,
                     Widget? child,
                   ) {
-                    return ReadBottomBar(
-                      is_dark: is_dark,
-                      show: logic.show_navigation.value,
-                      progress: progress_percent / 100,
-                      chapter_list: logic.chapter_list,
-                      chapter_index_for_progress: (double value) {
-                        return logic.find_chapter_index_by_progress(
-                          value * 100,
-                        );
-                      },
-                      on_progress_changed_end: (double value) async {
-                        await actions.on_progress_jump(value * 100);
-                      },
-                      on_prev_chapter: actions.on_prev_chapter,
-                      on_next_chapter: actions.on_next_chapter,
-                      is_first_chapter: logic.is_first_chapter,
-                      is_last_chapter: logic.is_last_chapter,
-                      on_catalog_tap: () {
-                        logic.show_navigation.value = false;
-                        ReadDirectorySheet.show(
-                          context: context,
-                          logic: logic,
-                          is_dark: is_dark,
-                          current_chapter_progress_percent:
-                              state.cached_chapter_progress,
-                          on_chapter_tap: actions.on_catalog_chapter_tap,
-                        );
-                      },
-                      on_setting_tap: actions.on_setting_tap,
-                      comment_count: logic.comment_count,
-                      on_comment_tap: actions.on_open_comments,
-                      is_liked: logic.is_liked.value,
-                      like_count: logic.like_count.value,
-                      is_like_loading: logic.is_like_loading.value,
-                      on_like_tap: actions.on_like_tap,
+                    return Obx(
+                      () => ReadBottomBar(
+                        is_dark: is_dark,
+                        show: logic.show_navigation.value,
+                        progress: progress_percent / 100,
+                        chapter_list: logic.chapter_list,
+                        chapter_index_for_progress: (double value) {
+                          return logic.find_chapter_index_by_progress(
+                            value * 100,
+                          );
+                        },
+                        on_progress_changed_end: (double value) async {
+                          await actions.on_progress_jump(value * 100);
+                        },
+                        on_prev_chapter: actions.on_prev_chapter,
+                        on_next_chapter: actions.on_next_chapter,
+                        is_first_chapter: logic.is_first_chapter,
+                        is_last_chapter: logic.is_last_chapter,
+                        on_catalog_tap: () {
+                          logic.show_navigation.value = false;
+                          ReadDirectorySheet.show(
+                            context: context,
+                            logic: logic,
+                            is_dark: is_dark,
+                            current_chapter_progress_percent:
+                                state.cached_chapter_progress,
+                            on_chapter_tap: actions.on_catalog_chapter_tap,
+                          );
+                        },
+                        on_setting_tap: actions.on_setting_tap,
+                        comment_count: logic.comment_count,
+                        on_comment_tap: actions.on_open_comments,
+                        is_liked: logic.is_liked.value,
+                        like_count: logic.like_count.value,
+                        is_like_loading: logic.is_like_loading.value,
+                        on_like_tap: actions.on_like_tap,
+                      ),
                     );
                   },
             ),

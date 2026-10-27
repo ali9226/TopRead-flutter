@@ -14,6 +14,8 @@ import 'package:app/pages/read/style.dart';
 import 'package:app/pages/read/utils/chapter_cache.dart';
 import 'package:app/pages/read/widgets/content/paragraph.dart';
 import 'package:app/pages/read/widgets/main_list/index.dart';
+import 'package:app/pages/read/widgets/navigation_bars/bottom/index.dart';
+import 'package:app/pages/read/widgets/navigation_bars/top/index.dart';
 import 'package:app/pages/read/widgets/skeleton/content_skeleton.dart';
 import 'package:app/pages/read/widgets/skeleton/index.dart';
 import 'package:app/stores/device_info.dart';
@@ -279,6 +281,69 @@ void main() {
   });
   tearDown(Get.reset);
   tearDownAll(() => storage.delete(recursive: true));
+
+  testWidgets('长篇顶栏随当前章节变化显示章节标题', (tester) async {
+    final reader = await _mount_reader(tester);
+    String title() => tester.widget<ReadTopBar>(find.byType(ReadTopBar)).title;
+    expect(title(), 'Chapter 1');
+    reader.logic.current_chapter_index.value = 1;
+    await tester.pump();
+    expect(title(), 'Chapter 2');
+    reader.logic.current_chapter_index.value = -1;
+    await tester.pump();
+    expect(title(), isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('导航栏独立响应滚动方向，选词分享关闭后仍能再次上行展开', (tester) async {
+    final reader = await _mount_reader(tester);
+    final logic = reader.logic;
+    final main_list = reader.main_list(tester);
+    final progress = reader.state.reading_progress_percent;
+    final offset = logic.scroll_controller.offset;
+
+    Future<void> expect_bars(bool visible) async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(tester.widget<ReadTopBar>(find.byType(ReadTopBar)).show, visible);
+      expect(
+        tester.widget<ReadBottomBar>(find.byType(ReadBottomBar)).show,
+        visible,
+      );
+      final top_bar_bottom = tester.getBottomLeft(find.byType(ReadTopBar)).dy;
+      expect(top_bar_bottom, visible ? greaterThan(0) : lessThanOrEqualTo(0));
+      expect(tester.takeException(), isNull);
+    }
+
+    logic.sync_scroll_offset(400);
+    logic.on_scroll(409);
+    await expect_bars(false);
+    logic.on_scroll(400);
+    await expect_bars(true);
+    logic.on_scroll(409);
+    await expect_bars(false);
+    logic.on_scroll(400);
+    await expect_bars(true);
+
+    // 只改变方向状态，正文和进度均不刷新，避免掩盖缺失的 Rx 订阅。
+    expect(reader.main_list(tester), same(main_list));
+    expect(reader.state.reading_progress_percent, progress);
+    expect(logic.scroll_controller.offset, offset);
+
+    final item = logic.store.reading_items.firstWhere((item) => !item.is_title);
+    main_list.on_paragraph_share!(
+      item,
+      TextSelection(baseOffset: 0, extentOffset: item.text.length),
+    );
+    await expect_bars(false);
+    tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    logic.on_scroll(391);
+    await expect_bars(true);
+    expect(reader.state.reading_progress_percent, progress);
+    expect(logic.scroll_controller.offset, offset);
+  });
 
   testWidgets('真实长篇正文与封面切换时顶部遮罩保持挂载并连续淡入淡出', (tester) async {
     final reader = await _mount_reader(tester);

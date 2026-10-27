@@ -14,13 +14,12 @@ import 'package:app/components/floating_back_to_top/style.dart'
     as floating_back_to_top_style;
 import 'package:app/components/language_selection/index.dart';
 import 'package:app/components/recommend_book_card/animated_waterfall.dart';
-import 'package:app/components/recommend_book_card/book_list_item.dart';
-import 'package:app/components/recommend_book_card/logic.dart';
 import 'package:app/components/recommend_book_card/widgets/recommend_waterfall_skeleton.dart';
 import 'package:app/components/top_header_gradient/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:app/models/popular_search_item.dart';
 import 'package:app/models/recommend_ranking_item.dart';
+import 'package:app/models/work_search.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/home_store.dart';
 import 'package:app/util/language_util/index.dart';
@@ -33,8 +32,9 @@ import 'logic.dart';
 import 'style.dart';
 import 'package:app/pages/search/widgets/cycling_hint_overlay.dart';
 import 'package:app/pages/search/widgets/search_result_waterfall.dart';
+import 'package:app/pages/search/widgets/search_result_feedback.dart';
 
-/// 小说搜索页。
+/// 小说与漫画共用的作品搜索页。
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
 
@@ -74,7 +74,7 @@ class _SearchPageState extends State<SearchPage> {
   bool _has_submitted = false;
 
   /// 搜索结果列表。
-  List<BookListItem> _search_results = <BookListItem>[];
+  List<SearchResultItem> _search_results = <SearchResultItem>[];
 
   /// 是否正在加载搜索结果。
   bool _is_search_loading = false;
@@ -93,9 +93,6 @@ class _SearchPageState extends State<SearchPage> {
   /// 搜索结果随当前语种刷新。
   late final LanguageRefreshSubscription _language_refresh_subscription;
 
-  /// 每次加载的数据量。
-  static const int _page_size = 20;
-
   /// 距离底部多少像素时触发自动加载更多。
   static const double _load_more_trigger_distance = 800;
 
@@ -106,20 +103,10 @@ class _SearchPageState extends State<SearchPage> {
   final GlobalKey<AnimatedRecommendWaterfallState> _recommend_waterfall_key =
       GlobalKey();
 
-  /// 标签颜色池。
-  static const List<Color> _tag_color_pool = <Color>[
-    ColorConstants.native_advertiser,
-    ColorConstants.native_attribution,
-    ColorConstants.dangerColor,
-    ColorConstants.palette_orange,
-    ColorConstants.palette_violet,
-    ColorConstants.palette_amber,
-  ];
-
   @override
   void initState() {
     super.initState();
-    logic = Logic(context);
+    logic = Logic()..addListener(_on_search_results_changed);
     search_controller = TextEditingController();
     search_focus_node = FocusNode();
     _scroll_controller.addListener(_handle_scroll);
@@ -134,6 +121,8 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void dispose() {
     _search_request_generation++;
+    logic.removeListener(_on_search_results_changed);
+    logic.dispose();
     _language_refresh_subscription.dispose();
     _scroll_controller.removeListener(_handle_scroll);
     _scroll_controller.dispose();
@@ -142,16 +131,22 @@ class _SearchPageState extends State<SearchPage> {
     super.dispose();
   }
 
+  /// 首屏与分页均由逻辑层通知；页面只保留输入及 ID 直达状态。
+  void _on_search_results_changed() {
+    if (!mounted) return;
+    setState(() {
+      _search_results = List<SearchResultItem>.of(logic.items);
+      _is_search_loading =
+          logic.loading || (logic.loading_more && logic.items.isEmpty);
+      _is_loading_more = logic.loading_more;
+      _has_more = logic.has_more;
+    });
+  }
+
   /// 切换语种时立即隐藏旧结果，并让首屏、分页和 ID 查询的旧请求失效。
   void _prepare_language_refresh(LanguageRefreshContext refresh_context) {
     _search_request_generation++;
-    if (!mounted) return;
-    setState(() {
-      _search_results.clear();
-      _is_search_loading = _has_submitted;
-      _is_loading_more = false;
-      _has_more = true;
-    });
+    logic.reset(show_loading: _has_submitted);
   }
 
   /// 等待新语种配置准备完成，再以当前查询重新搜索。
@@ -183,7 +178,8 @@ class _SearchPageState extends State<SearchPage> {
     if (_has_submitted &&
         !_is_search_loading &&
         !_is_loading_more &&
-        _has_more) {
+        _has_more &&
+        !logic.has_error) {
       // 搜索结果的自动加载更多
       if (_scroll_controller.position.pixels >=
           _scroll_controller.position.maxScrollExtent -
@@ -230,134 +226,29 @@ class _SearchPageState extends State<SearchPage> {
     return _get_hint_text();
   }
 
-  /// 执行搜索操作。
+  /// 搜索关键词同时匹配小说与当前语种可阅读的漫画。
   Future<void> _perform_search(String search_keyword) async {
-    if (search_keyword.isEmpty) return;
-    final int request_generation = ++_search_request_generation;
-
+    if (search_keyword.trim().isEmpty) return;
+    _search_request_generation++;
     setState(() {
-      _is_search_loading = true;
-      _is_loading_more = false;
       _has_submitted = true;
-      _current_search_keyword = search_keyword;
+      _current_search_keyword = search_keyword.trim();
       _current_search_novel_id = null;
-      _search_results.clear();
-      _has_more = true;
     });
-
-    try {
-      final results = await postRequest<List<RecommendRankingItem>>(
-        path: 'novel_search/search',
-        showTips: false,
-        parameter: <String, dynamic>{
-          'keyword': search_keyword,
-          'limit': _page_size,
-        },
-        fromJsonList: (List<dynamic> json) =>
-            RecommendRankingItem.from_json_list(json),
-      );
-
-      if (!mounted || request_generation != _search_request_generation) {
-        return;
-      }
-
-      if (results.status && results.content != null) {
-        final List<BookListItem> search_results =
-            RecommendBookCardLogic.exclude_duplicate_items(
-              candidates: _map_to_book_list_items(results.content!),
-            );
-        setState(() {
-          _search_results = search_results;
-          _is_search_loading = false;
-          _has_more =
-              results.content!.length >= _page_size &&
-              search_results.isNotEmpty;
-        });
-      } else {
-        setState(() {
-          _is_search_loading = false;
-          _has_more = false;
-        });
-      }
-    } catch (e) {
-      if (!mounted || request_generation != _search_request_generation) {
-        return;
-      }
-      setState(() {
-        _is_search_loading = false;
-        _has_more = false;
-      });
-    }
+    await logic.search(
+      search_keyword,
+      language: easy.EasyLocalization.of(context)!.locale.languageCode,
+    );
   }
 
-  /// 加载更多搜索结果。
-  Future<void> _load_more_search() async {
-    if (_is_search_loading ||
-        _is_loading_more ||
-        !_has_more ||
-        _current_search_keyword.isEmpty) {
-      return;
-    }
-    final int request_generation = _search_request_generation;
-    final String search_keyword = _current_search_keyword;
-
-    setState(() {
-      _is_loading_more = true;
-    });
-
-    try {
-      // 收集已加载的小说 ID 作为排除参数。
-      final List<int> no_ids = _search_results
-          .map((BookListItem item) => item.story_id)
-          .toList();
-
-      final results = await postRequest<List<RecommendRankingItem>>(
-        path: 'novel_search/search',
-        showTips: false,
-        parameter: <String, dynamic>{
-          'keyword': search_keyword,
-          'limit': _page_size,
-          'no_ids': no_ids,
-        },
-        fromJsonList: (List<dynamic> json) =>
-            RecommendRankingItem.from_json_list(json),
-      );
-
-      if (!mounted || request_generation != _search_request_generation) {
-        return;
-      }
-
-      if (results.status && results.content != null) {
-        final List<BookListItem> new_items =
-            RecommendBookCardLogic.exclude_duplicate_items(
-              candidates: _map_to_book_list_items(results.content!),
-              existing_items: _search_results,
-            );
-        setState(() {
-          _search_results.addAll(new_items);
-          _is_loading_more = false;
-          _has_more =
-              results.content!.length >= _page_size && new_items.isNotEmpty;
-        });
-      } else {
-        setState(() {
-          _is_loading_more = false;
-        });
-      }
-    } catch (e) {
-      if (!mounted || request_generation != _search_request_generation) {
-        return;
-      }
-      setState(() {
-        _is_loading_more = false;
-      });
-    }
-  }
+  /// 两种作品各自延续分页，失败时由明确的重试入口重新请求原页。
+  Future<void> _load_more_search() => logic.load_more();
 
   /// 按小说ID搜索。
   Future<void> _perform_search_by_id(int novel_id) async {
     if (novel_id <= 0) return;
     final int request_generation = ++_search_request_generation;
+    logic.reset();
 
     setState(() {
       _is_search_loading = true;
@@ -411,54 +302,10 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-  /// 将推荐榜数据映射为 BookListItem 列表。
-  List<BookListItem> _map_to_book_list_items(
-    List<RecommendRankingItem> source,
-  ) {
-    return source.map((RecommendRankingItem item) {
-      final List<BookListTagItem> tags = item.category_list
-          .take(2)
-          .toList()
-          .asMap()
-          .entries
-          .map((MapEntry<int, String> entry) {
-            final Color color =
-                _tag_color_pool[(item.id * 7 + entry.key * 3) %
-                    _tag_color_pool.length];
-            return BookListTagItem(label: entry.value, color: color);
-          })
-          .toList();
-
-      String meta_text = '';
-      if (item.score > 0) {
-        final String scoreText = item.score
-            .toStringAsFixed(2)
-            .replaceAll(RegExp(r'0+$'), '')
-            .replaceAll(RegExp(r'\.$'), '');
-        meta_text = '$scoreText分';
-      }
-
-      return BookListItem(
-        id: 'search_${item.id}',
-        story_id: item.id,
-        type: BookListItemType.book,
-        title: item.title,
-        description: item.introduction,
-        cover_url: item.cover_url,
-        cover_width: item.cover_width,
-        cover_height: item.cover_height,
-        cover_badge: item.publish_status == 2 ? '完结' : '',
-        cover_meta_text: meta_text,
-        tag_list: tags,
-        ad_image_url_list: const <String>[],
-        publish_status: item.publish_status,
-      );
-    }).toList();
-  }
-
   /// 重置搜索状态，返回推荐列表。
   void _reset_search() {
     _search_request_generation++;
+    logic.reset();
     setState(() {
       _has_submitted = false;
       _is_search_loading = false;
@@ -599,7 +446,9 @@ class _SearchPageState extends State<SearchPage> {
                           style: TextStyle(
                             color: primary_text_color,
                             fontSize: title_size,
-                            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                            fontWeight: FontConfig.adjustedWeight(
+                              FontWeight.w500,
+                            ),
                           ),
                         ),
                         const SizedBox(height: Style.search_header_gap),
@@ -700,7 +549,9 @@ class _SearchPageState extends State<SearchPage> {
                                           color: primary_text_color,
                                           fontSize:
                                               Style.search_input_font_size,
-                                          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                                          fontWeight: FontConfig.adjustedWeight(
+                                            FontWeight.w500,
+                                          ),
                                         ),
                                       ),
                                       IgnorePointer(
@@ -722,7 +573,9 @@ class _SearchPageState extends State<SearchPage> {
                                                 fontSize: Style
                                                     .search_input_hint_font_size,
                                                 fontWeight:
-                                                    FontConfig.adjustedWeight(FontWeight.w400),
+                                                    FontConfig.adjustedWeight(
+                                                      FontWeight.w400,
+                                                    ),
                                               ),
                                             ),
                                           ),
@@ -742,7 +595,8 @@ class _SearchPageState extends State<SearchPage> {
                                           .search_submit_button_horizontal_padding,
                                     ),
                                     backgroundColor: ColorConstants.themeColor,
-                                    foregroundColor: ColorConstants.lightTextColor,
+                                    foregroundColor:
+                                        ColorConstants.lightTextColor,
                                     elevation: Style.zero,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(
@@ -764,7 +618,9 @@ class _SearchPageState extends State<SearchPage> {
                                     easy.tr('search.submit'),
                                     style: TextStyle(
                                       fontSize: search_submit_button_text_size,
-                                      fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                                      fontWeight: FontConfig.adjustedWeight(
+                                        FontWeight.w500,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -780,7 +636,9 @@ class _SearchPageState extends State<SearchPage> {
                             style: TextStyle(
                               color: primary_text_color,
                               fontSize: section_title_size,
-                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
+                              ),
                             ),
                           ),
                           const SizedBox(height: Style.section_title_top_gap),
@@ -802,8 +660,10 @@ class _SearchPageState extends State<SearchPage> {
                                     padding: chip_padding,
                                     decoration: BoxDecoration(
                                       color: is_dark
-                                          ? ColorConstants.whiteColor.withValues(alpha: Style
-                                                  .hot_keyword_dark_background_alpha)
+                                          ? ColorConstants.whiteColor.withValues(
+                                              alpha: Style
+                                                  .hot_keyword_dark_background_alpha,
+                                            )
                                           : Style.hot_keyword_light_background,
                                       borderRadius: BorderRadius.circular(
                                         Style.chip_radius,
@@ -814,7 +674,9 @@ class _SearchPageState extends State<SearchPage> {
                                       style: TextStyle(
                                         color: primary_text_color,
                                         fontSize: hot_keyword_text_size,
-                                        fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                                        fontWeight: FontConfig.adjustedWeight(
+                                          FontWeight.w400,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -829,7 +691,9 @@ class _SearchPageState extends State<SearchPage> {
                             style: TextStyle(
                               color: primary_text_color,
                               fontSize: section_title_size,
-                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
+                              ),
                             ),
                           ),
                           const SizedBox(height: Style.section_title_top_gap),
@@ -853,7 +717,9 @@ class _SearchPageState extends State<SearchPage> {
                             style: TextStyle(
                               color: primary_text_color,
                               fontSize: section_title_size,
-                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
+                              ),
                             ),
                           ),
                           const SizedBox(height: Style.section_title_top_gap),
@@ -861,7 +727,11 @@ class _SearchPageState extends State<SearchPage> {
                             // 搜索与热门推荐复用完整卡片骨架，包含封面、文字及分类占位。
                             RecommendWaterfallSkeleton(is_dark: is_dark)
                           else if (_search_results.isEmpty)
-                            _build_empty_result(secondary_text_color)
+                            SearchResultFeedback(
+                              is_dark: is_dark,
+                              has_error: logic.has_error,
+                              on_retry: _load_more_search,
+                            )
                           else ...[
                             SearchResultWaterfall(
                               items: _search_results,
@@ -937,6 +807,15 @@ class _SearchPageState extends State<SearchPage> {
 
   /// 构建加载更多底部组件。
   Widget _build_load_more_footer(bool is_dark) {
+    if (logic.has_error && !_is_loading_more) {
+      return SearchResultFeedback(
+        is_dark: is_dark,
+        has_error: true,
+        compact: true,
+        on_retry: _load_more_search,
+      );
+    }
+
     if (_is_loading_more) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: LayoutConfig.space_16),
@@ -947,7 +826,9 @@ class _SearchPageState extends State<SearchPage> {
             child: CircularProgressIndicator(
               strokeWidth: 2,
               valueColor: AlwaysStoppedAnimation<Color>(
-                is_dark ? ColorConstants.components_app_wrapper_index_tone : ColorConstants.components_home_header_bar_index_tone,
+                is_dark
+                    ? ColorConstants.components_app_wrapper_index_tone
+                    : ColorConstants.components_home_header_bar_index_tone,
               ),
             ),
           ),
@@ -962,7 +843,9 @@ class _SearchPageState extends State<SearchPage> {
           child: Text(
             easy.tr('home.book_list_footer.no_more'),
             style: TextStyle(
-              color: is_dark ? ColorConstants.components_app_wrapper_index_tone : ColorConstants.components_home_header_bar_index_tone,
+              color: is_dark
+                  ? ColorConstants.components_app_wrapper_index_tone
+                  : ColorConstants.components_home_header_bar_index_tone,
               fontSize: 14,
             ),
           ),
@@ -971,27 +854,5 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     return const SizedBox.shrink();
-  }
-
-  Widget _build_empty_result(Color secondary_text_color) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: LayoutConfig.space_60),
-        child: Column(
-          children: <Widget>[
-            Icon(
-              Icons.search_off_rounded,
-              size: 64,
-              color: secondary_text_color,
-            ),
-            const SizedBox(height: LayoutConfig.space_16),
-            Text(
-              easy.tr('common.empty_data'),
-              style: TextStyle(color: secondary_text_color, fontSize: 16),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

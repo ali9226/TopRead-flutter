@@ -4,6 +4,37 @@ import 'package:app/config/color_config.dart';
 
 /// 搜索页样式常量。
 class Style {
+  /// 类型标签与卡片间距，沿用现有分类标签的日夜及语种适配。
+  static const double result_type_gap = LayoutConfig.space_6;
+  static const Color novel_type_color = ColorConstants.native_advertiser;
+  static const Color comic_type_color = ColorConstants.palette_violet;
+  static const int result_category_count = 2;
+  static const List<Color> result_tag_colors = [
+    ColorConstants.native_advertiser,
+    ColorConstants.native_attribution,
+    ColorConstants.dangerColor,
+    ColorConstants.palette_orange,
+    ColorConstants.palette_violet,
+    ColorConstants.palette_amber,
+  ];
+
+  /// 搜索瀑布流沿用双列至三列布局，实际高度由子卡片测量。
+  static const double result_grid_gap = LayoutConfig.space_12;
+  static const double result_column_width = 160;
+  static const int result_min_columns = 2;
+  static const int result_max_columns = 3;
+  static const double result_estimated_height = 200;
+
+  /// 空态与重试区域的多语种字号、行高及留白。
+  static const double feedback_padding = LayoutConfig.space_60;
+  static const double feedback_compact_padding = LayoutConfig.space_16;
+  static const double feedback_gap = LayoutConfig.space_16;
+  static const double feedback_icon_size = 64;
+  static const double feedback_size_cjk = 15;
+  static const double feedback_size_alphabetic = 14;
+  static const double feedback_line_height_cjk = 1.5;
+  static const double feedback_line_height_alphabetic = 1.6;
+
   static const double zero = 0;
   static const double one = 1;
   static const double page_top_padding = LayoutConfig.space_16;
@@ -110,16 +141,26 @@ class Style {
   static const double top_glow_two_size = 170;
 
   /// 主题与装饰颜色。
-  static const Color light_page_background = ColorConstants.components_category_filter_category_filter_bar_tone_fff6f7fb;
-  static const Color dark_card_background = ColorConstants.pages_home_widgets_tab_contents_recommend_tab_index_tone;
-  static const Color top_glow_one_dark_color = ColorConstants.message_type_accent_color_list;
-  static const Color top_glow_two_dark_color = ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff;
-  static const Color hot_keyword_light_background = ColorConstants.hot_keyword_light_background_fff2e8d8;
-  static const Color cover_placeholder_dark_start = ColorConstants.cover_placeholder_dark_start_ff2a3244;
-  static const Color cover_placeholder_dark_end = ColorConstants.cover_placeholder_dark_end_ff1a1f2b;
-  static const Color cover_placeholder_light_start = ColorConstants.cover_placeholder_light_start_ffe5d2b6;
-  static const Color cover_placeholder_light_end = ColorConstants.cover_placeholder_light_end_ffdabf9a;
-  static const Color cover_placeholder_light_icon = ColorConstants.cover_placeholder_light_icon_ff7c664a;
+  static const Color light_page_background = ColorConstants
+      .components_category_filter_category_filter_bar_tone_fff6f7fb;
+  static const Color dark_card_background =
+      ColorConstants.pages_home_widgets_tab_contents_recommend_tab_index_tone;
+  static const Color top_glow_one_dark_color =
+      ColorConstants.message_type_accent_color_list;
+  static const Color top_glow_two_dark_color =
+      ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff;
+  static const Color hot_keyword_light_background =
+      ColorConstants.hot_keyword_light_background_fff2e8d8;
+  static const Color cover_placeholder_dark_start =
+      ColorConstants.cover_placeholder_dark_start_ff2a3244;
+  static const Color cover_placeholder_dark_end =
+      ColorConstants.cover_placeholder_dark_end_ff1a1f2b;
+  static const Color cover_placeholder_light_start =
+      ColorConstants.cover_placeholder_light_start_ffe5d2b6;
+  static const Color cover_placeholder_light_end =
+      ColorConstants.cover_placeholder_light_end_ffdabf9a;
+  static const Color cover_placeholder_light_icon =
+      ColorConstants.cover_placeholder_light_icon_ff7c664a;
   static const double secondary_text_dark_alpha = 0.62;
   static const double top_glow_one_dark_alpha = 0.13;
   static const double top_glow_one_light_alpha = 0.10;

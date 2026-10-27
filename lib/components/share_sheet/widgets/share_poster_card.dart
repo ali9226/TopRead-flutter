@@ -11,6 +11,7 @@ import 'package:app/components/share_sheet/style.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:app/config/color_config.dart';
+import 'package:app/components/share_sheet/share_work_url.dart';
 
 /// 可导出为图片的小说分享卡片。
 ///
@@ -56,6 +57,8 @@ class SharePosterCard extends StatelessWidget {
 
   /// 是否使用专为墨黑背景设计的高对比度文字配色。
   final bool use_dark_palette;
+  final WorkShareKind work_kind;
+  final String? language;
 
   const SharePosterCard({
     super.key,
@@ -72,6 +75,8 @@ class SharePosterCard extends StatelessWidget {
     required this.accent_color,
     required this.footer_color,
     this.use_dark_palette = false,
+    this.work_kind = WorkShareKind.novel,
+    this.language,
   });
 
   /// 当前海报的纸张颜色。
@@ -96,33 +101,38 @@ class SharePosterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: ShareSheetStyle.poster_design_width,
-      height: ShareSheetStyle.poster_design_height,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: canvas_colors,
-          ),
-          borderRadius: BorderRadius.circular(
-            ShareSheetStyle.preview_card_radius,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(ShareSheetStyle.poster_frame_width),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(
-              ShareSheetStyle.poster_content_radius,
+    // 海报是固定设计尺寸的图片，系统大字只影响操作控件，不改变最终导出画布。
+    return MediaQuery.withClampedTextScaling(
+      minScaleFactor: 1,
+      maxScaleFactor: 1,
+      child: SizedBox(
+        width: ShareSheetStyle.poster_design_width,
+        height: ShareSheetStyle.poster_design_height,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: canvas_colors,
             ),
-            child: ColoredBox(
-              color: _paper_color,
-              child: Column(
-                children: <Widget>[
-                  Expanded(child: _buildExcerptSection(context)),
-                  _buildBookSection(context),
-                ],
+            borderRadius: BorderRadius.circular(
+              ShareSheetStyle.preview_card_radius,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(ShareSheetStyle.poster_frame_width),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(
+                ShareSheetStyle.poster_content_radius,
+              ),
+              child: ColoredBox(
+                color: _paper_color,
+                child: Column(
+                  children: <Widget>[
+                    Expanded(child: _buildExcerptSection(context)),
+                    _buildBookSection(context),
+                  ],
+                ),
               ),
             ),
           ),
@@ -422,7 +432,10 @@ class SharePosterCard extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: use_dark_palette ? ColorConstants.components_share_sheet_widgets_share_poster_card_tone : ColorConstants.whiteColor,
+            color: use_dark_palette
+                ? ColorConstants
+                      .components_share_sheet_widgets_share_poster_card_tone
+                : ColorConstants.whiteColor,
             fontSize: 9,
             fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
             height: 1.35,
@@ -432,9 +445,13 @@ class SharePosterCard extends StatelessWidget {
     );
   }
 
-  /// 构建二维码；当前编码内容是可读的书籍分享信息。
+  /// 二维码与复制链接使用相同的真实作品地址，漫画/短篇不会被编码成小说。
   Widget _buildQrCode(BuildContext context, String app_title) {
-    final String qr_data = '$app_title | novel:$novel_id | $novel_title';
+    final String qr_data = share_work_url(
+      work_id: novel_id,
+      work_kind: work_kind,
+      language: language,
+    ).toString();
 
     return Container(
       width: ShareSheetStyle.poster_qr_size,
@@ -443,13 +460,17 @@ class SharePosterCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: ColorConstants.whiteColor,
         borderRadius: BorderRadius.circular(LayoutConfig.radius_8),
-        border: Border.all(color: ColorConstants.components_share_sheet_widgets_share_poster_card_tone_f222222),
+        border: Border.all(
+          color: ColorConstants
+              .components_share_sheet_widgets_share_poster_card_tone_f222222,
+        ),
       ),
       child: QrImageView(
         data: qr_data,
         padding: EdgeInsets.zero,
         gapless: true,
-        semanticsLabel: easy.tr('share_sheet.qr_semantics', context: context),
+        semanticsLabel:
+            '${easy.tr('share_sheet.qr_semantics', context: context)}: $qr_data',
         eyeStyle: QrEyeStyle(
           eyeShape: QrEyeShape.square,
           color: ShareSheetStyle.poster_qr_color,

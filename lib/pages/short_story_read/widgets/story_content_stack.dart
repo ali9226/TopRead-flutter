@@ -568,6 +568,7 @@ class StoryContentStack extends StatelessWidget {
           animation: state.scroll_controller,
           builder: (context, _) => Obx(
             () => ReaderOverlayLayer(
+              title: logic.title,
               show_top_bar:
                   state.scroll_controller.hasClients &&
                   state.scroll_controller.offset >

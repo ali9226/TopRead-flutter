@@ -2,6 +2,7 @@
 
 import 'package:app/components/reader_top_bar/action_button.dart';
 import 'package:app/components/reader_top_bar/style.dart';
+import 'package:app/components/svg_icon/index.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/config/color_config.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -33,7 +34,7 @@ class ReaderTopBar extends StatelessWidget {
   final bool loading;
   final bool show_share;
 
-  /// 漫画可复用短篇图形，其余调用方继续使用默认心形与单色分享。
+  /// 收藏统一复用短篇星形；调用方可覆盖图形，但不能把收藏显示为点赞爱心。
   final Widget? favorite_icon;
   final Widget? share_icon;
 
@@ -84,17 +85,27 @@ class ReaderTopBar extends StatelessWidget {
                         ),
                 ),
                 ReaderTopBarAction(
-                  icon_widget: favorite_icon,
-                  icon: favorite_icon != null
-                      ? null
-                      : favorited
-                      ? Icons.favorite_rounded
-                      : Icons.favorite_border_rounded,
-                  label: tr(favorited ? 'comics.collected' : 'comics.collect'),
-                  color: ColorConstants.dangerColor,
+                  icon_widget:
+                      favorite_icon ??
+                      SvgIcon(
+                        name: favorited ? 'user_selected' : 'not_favorited',
+                        width: ReaderTopBarStyle.icon,
+                        height: ReaderTopBarStyle.icon,
+                        color: favorited
+                            ? null
+                            : ReaderTopBarStyle.foreground(is_dark),
+                      ),
+                  label: tr(
+                    favorited
+                        ? 'favorite.action_remove'
+                        : 'favorite.action_add',
+                  ),
+                  color: ColorConstants.themeColor,
                   selected: favorited,
-                  loading: loading || favorite_loading,
-                  on_pressed: on_favorite,
+                  ripple: false,
+                  // 在途收藏继续显示乐观星形；初始内容加载仍使用原有占位。
+                  loading: loading,
+                  on_pressed: favorite_loading ? null : on_favorite,
                 ),
                 if (show_share)
                   ReaderTopBarAction(

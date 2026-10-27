@@ -28,5 +28,9 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>用于将您生成的作品分享图片保存到系统相册。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>用于访问系统相册并保存您生成的作品分享图片。</string>
 </dict>
 </plist>

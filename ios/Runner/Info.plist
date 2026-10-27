@@ -55,9 +55,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>用于拍摄头像照片或向在线客服发送照片。</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>用于将您生成的小说分享卡片保存到系统相册。</string>
+	<string>用于将您生成的作品分享图片保存到系统相册。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>用于访问系统相册并保存您生成的小说分享卡片。</string>
+	<string>用于访问系统相册并保存您生成的作品分享图片。</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This identifier is used to personalize ads and measure their performance.</string>
 	<key>SKAdNetworkItems</key>

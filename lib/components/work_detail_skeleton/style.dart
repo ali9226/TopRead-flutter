@@ -32,6 +32,10 @@ class WorkDetailSkeletonStyle {
   static const int preview_comment_count = 2;
   static const int comment_lines = 3;
   static const int synopsis_lines = 4;
+  static const int comic_synopsis_lines = 2;
+  static const int comic_rail_items = 3;
+  static const int comic_comment_lines = 2;
+  static const double comic_comment_name_height = 1.4;
   static const int title_lines = 2;
   static const int stat_count = 3;
   static const List<double> tag_widths_cjk = [46, 56, 46];

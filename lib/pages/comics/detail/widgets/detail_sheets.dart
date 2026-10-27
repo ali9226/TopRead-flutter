@@ -13,7 +13,7 @@ import 'package:app/pages/comics/widgets/comic_image.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:app/components/share_sheet/index.dart';
 import 'package:app/config/color_config.dart';
 
 /// TODO 详情页补充面板统一使用安全区、限高滚动与日夜主题表面色。
@@ -70,59 +70,21 @@ Future<void> _show_sheet(BuildContext context, String title, Widget body) =>
       ),
     );
 
-/// TODO 复制带当前语种的真实作品链接；复制成功后提供可感知反馈。
+/// TODO 三类作品共用分享渠道与图片导出；漫画地址保留当前译本语种。
 Future<void> show_comic_share_sheet(BuildContext context, ComicDetail detail) {
   final language = detail.selected_language;
-  final uri = Uri.parse(ComicDetailStyle.public_url).replace(
-    path: '/comics/detail',
-    queryParameters: {
-      'id': '${detail.comic.id}',
-      if (language != null) 'language': language.language,
-    },
-  );
-  return _show_sheet(
-    context,
-    tr('comics.share_heading'),
-    Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          language?.title ?? detail.comic.title,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: ComicDetailStyle.weight_medium,
-          ),
-        ),
-        const SizedBox(height: LayoutConfig.space_12),
-        SelectableText(
-          uri.toString(),
-          style: TextStyle(color: ComicDetailStyle.muted(context)),
-        ),
-        const SizedBox(height: LayoutConfig.space_20),
-        Builder(
-          builder: (sheet_context) => FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: ComicDetailStyle.accent(context),
-              foregroundColor:
-                  ColorConstants.pages_comics_detail_widgets_detail_sheets_tone,
-              minimumSize: const Size.fromHeight(48),
-            ),
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: uri.toString()));
-              if (!sheet_context.mounted) return;
-              Navigator.pop(sheet_context);
-              if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(tr('comics.copied'))));
-              }
-            },
-            icon: const Icon(Icons.link_rounded),
-            label: Text(tr('share_sheet.copy_link')),
-          ),
-        ),
-      ],
-    ),
+  return showShareSheet(
+    context: context,
+    novel_id: detail.comic.id,
+    novel_title: language?.title ?? detail.comic.title,
+    novel_author: detail.comic.author_name,
+    novel_cover_url: language?.cover_url.isNotEmpty == true
+        ? language!.cover_url
+        : detail.comic.cover_url,
+    novel_intro: language?.description ?? detail.comic.description,
+    work_kind: WorkShareKind.comic,
+    language: language?.language,
+    is_dark: ComicDetailStyle.is_dark(context),
   );
 }
 

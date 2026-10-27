@@ -39,6 +39,15 @@ mixin ReadInteractionMixin {
   /// 同步点赞状态到底层数据。
   void sync_like_state(bool new_status, int new_count);
 
+  /// TODO 生产沿用统一认证请求，离线回归可控制点赞/收藏响应次序，不接触真实账号。
+  Future<ResultsType<Map<String, dynamic>>> request_read_interaction(
+    String path,
+  ) => postRequest<Map<String, dynamic>>(
+    path: path,
+    parameter: <String, dynamic>{'novel_id': story_id},
+    fromJson: (Map<String, dynamic> json) => json,
+  );
+
   /// 切换点赞状态（乐观更新）。
   ///
   /// 立即切换本地状态，然后发起请求。
@@ -53,16 +62,13 @@ mixin ReadInteractionMixin {
     final bool previous_status = is_liked.value;
     final int previous_count = like_count.value;
     final bool optimistic_status = !previous_status;
-    final int optimistic_count = (previous_count + (optimistic_status ? 1 : -1)).clamp(0, 999999);
+    final int optimistic_count = (previous_count + (optimistic_status ? 1 : -1))
+        .clamp(0, 999999);
     sync_like_state(optimistic_status, optimistic_count);
 
     try {
       final ResultsType<Map<String, dynamic>> results =
-          await postRequest<Map<String, dynamic>>(
-            path: 'novel_like/click',
-            parameter: <String, dynamic>{'novel_id': story_id},
-            fromJson: (Map<String, dynamic> json) => json,
-          );
+          await request_read_interaction('novel_like/click');
 
       if (!results.status || results.content == null) {
         // 请求失败，回退状态。
@@ -73,8 +79,7 @@ mixin ReadInteractionMixin {
       final bool server_status = results.content!['like'] == true;
       // 服务端状态与乐观更新不一致时，以服务端为准。
       if (server_status != optimistic_status) {
-        final int server_count = (previous_count + (server_status ? 1 : -1)).clamp(0, 999999);
-        sync_like_state(server_status, server_count);
+        sync_like_state(server_status, previous_count);
       }
     } catch (_) {
       // 异常时回退状态。
@@ -106,49 +111,20 @@ mixin ReadInteractionMixin {
     NovelInfo? previous_info;
     if (info != null) {
       previous_info = info;
-      final int delta = optimistic_status ? 1 : -1;
-      final int new_count = (int.tryParse(info.favorite_count) ?? 0) + delta;
-      final updated = NovelInfo(
-        id: info.id,
-        title: info.title,
-        subtitle: info.subtitle,
-        score: info.score,
-        focus_on: info.focus_on,
-        is_liked: info.is_liked,
-        is_favorited: optimistic_status,
-        author_id: info.author_id,
-        source_type: info.source_type,
-        publish_status: info.publish_status,
-        recommend_status: info.recommend_status,
-        sorting: info.sorting,
-        read_count: info.read_count,
-        comment_count: info.comment_count,
-        like_count: info.like_count,
-        favorite_count: new_count.toString(),
-        latest_chapter_no: info.latest_chapter_no,
-        latest_update_time: info.latest_update_time,
-        remark: info.remark,
-        create_time: info.create_time,
-        update_time: info.update_time,
-        remove_status: info.remove_status,
-        remove_time: info.remove_time,
-        author_name: info.author_name,
-        author_avatar: info.author_avatar,
-        language_info: info.language_info,
-        category_list: info.category_list,
-        comment_list: info.comment_list,
-        chapter_info: info.chapter_info,
+      final previous_count = int.tryParse(info.favorite_count) ?? 0;
+      final new_count = optimistic_status
+          ? previous_count + 1
+          : (previous_count > 0 ? previous_count - 1 : 0);
+      final updated = info.replace_favorite(
+        favorited: optimistic_status,
+        count: new_count.toString(),
       );
       store.set_novel_info(updated);
     }
 
     try {
       final ResultsType<Map<String, dynamic>> results =
-          await postRequest<Map<String, dynamic>>(
-            path: 'novel_favorite/click',
-            parameter: <String, dynamic>{'novel_id': story_id},
-            fromJson: (Map<String, dynamic> json) => json,
-          );
+          await request_read_interaction('novel_favorite/click');
 
       if (!results.status || results.content == null) {
         // 请求失败，回退状态。
@@ -157,44 +133,22 @@ mixin ReadInteractionMixin {
       }
 
       final dynamic raw_server_status = results.content!['favorite'];
-      final bool server_status = raw_server_status == true || raw_server_status == 1;
+      final bool server_status =
+          raw_server_status == true || raw_server_status == 1;
       // 服务端状态与乐观更新不一致时，以服务端为准。
       if (server_status != optimistic_status) {
         is_favorited.value = server_status;
-        if (previous_info != null) {
-          final int server_delta = server_status ? 1 : -1;
-          final int server_count = (int.tryParse(previous_info.favorite_count) ?? 0) + server_delta;
-          store.set_novel_info(NovelInfo(
-            id: previous_info.id,
-            title: previous_info.title,
-            subtitle: previous_info.subtitle,
-            score: previous_info.score,
-            focus_on: previous_info.focus_on,
-            is_liked: previous_info.is_liked,
-            is_favorited: server_status,
-            author_id: previous_info.author_id,
-            source_type: previous_info.source_type,
-            publish_status: previous_info.publish_status,
-            recommend_status: previous_info.recommend_status,
-            sorting: previous_info.sorting,
-            read_count: previous_info.read_count,
-            comment_count: previous_info.comment_count,
-            like_count: previous_info.like_count,
-            favorite_count: server_count.toString(),
-            latest_chapter_no: previous_info.latest_chapter_no,
-            latest_update_time: previous_info.latest_update_time,
-            remark: previous_info.remark,
-            create_time: previous_info.create_time,
-            update_time: previous_info.update_time,
-            remove_status: previous_info.remove_status,
-            remove_time: previous_info.remove_time,
-            author_name: previous_info.author_name,
-            author_avatar: previous_info.author_avatar,
-            language_info: previous_info.language_info,
-            category_list: previous_info.category_list,
-            comment_list: previous_info.comment_list,
-            chapter_info: previous_info.chapter_info,
-          ));
+        final current = store.novel_info.value;
+        if (previous_info != null &&
+            current != null &&
+            current.id == previous_info.id) {
+          // 两态纠正意味着回到操作前状态，收藏数不应重复加减或覆盖最新点赞。
+          store.set_novel_info(
+            current.replace_favorite(
+              favorited: server_status,
+              count: previous_info.favorite_count,
+            ),
+          );
         }
       }
 
@@ -217,8 +171,16 @@ mixin ReadInteractionMixin {
   /// 回退收藏状态。
   void _revert_favorite(bool previous_status, NovelInfo? previous_info) {
     is_favorited.value = previous_status;
-    if (previous_info != null) {
-      store.set_novel_info(previous_info);
+    final current = store.novel_info.value;
+    if (previous_info != null &&
+        current != null &&
+        current.id == previous_info.id) {
+      store.set_novel_info(
+        current.replace_favorite(
+          favorited: previous_status,
+          count: previous_info.favorite_count,
+        ),
+      );
     }
   }
 

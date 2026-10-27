@@ -113,6 +113,9 @@ class _CatalogSheetState extends State<CatalogSheet> {
   /// 当前阅读小说是否在可视区域内。
   bool _is_current_visible = true;
 
+  /// 滚动通知先于本帧列表布局，等待实际绘制位置更新后再判定可见性。
+  bool _visibility_check_scheduled = false;
+
   @override
   void initState() {
     super.initState();
@@ -159,7 +162,6 @@ class _CatalogSheetState extends State<CatalogSheet> {
             curve: Curves.easeOutCubic,
           );
           if (!mounted) return false;
-          _check_current_visibility();
           return true;
         }
 
@@ -183,10 +185,10 @@ class _CatalogSheetState extends State<CatalogSheet> {
           curve: attempt == 0 ? Curves.easeInOutCubic : Curves.easeOutCubic,
         );
       }
-      _check_current_visibility();
       return false;
     } finally {
       _is_locating_current = false;
+      _schedule_visibility_check();
     }
   }
 
@@ -296,7 +298,16 @@ class _CatalogSheetState extends State<CatalogSheet> {
     }
 
     // 检测当前阅读小说是否在可视区域内。
-    _check_current_visibility();
+    _schedule_visibility_check();
+  }
+
+  void _schedule_visibility_check() {
+    if (!mounted || _visibility_check_scheduled) return;
+    _visibility_check_scheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _visibility_check_scheduled = false;
+      _check_current_visibility();
+    });
   }
 
   /// 检测当前阅读小说是否在可视区域内。
@@ -304,7 +315,13 @@ class _CatalogSheetState extends State<CatalogSheet> {
   /// 通过 GlobalKey 获取当前阅读小说的 RenderBox，
   /// 判断其是否在 ListView 的可视范围内。
   void _check_current_visibility() {
-    if (!mounted) return;
+    if (!mounted ||
+        _is_locating_current ||
+        _initial_positioning_scheduled ||
+        !_scroll_controller.hasClients ||
+        !_scroll_controller.position.hasContentDimensions) {
+      return;
+    }
     final BuildContext? item_context = _item_key_for(
       widget.current_story_id,
     ).currentContext;
@@ -333,10 +350,9 @@ class _CatalogSheetState extends State<CatalogSheet> {
         render_object.localToGlobal(Offset.zero) & render_object.size;
     final Rect viewport_rect =
         viewport_object.localToGlobal(Offset.zero) & viewport_object.size;
-    final double margin = ShortStoryReadStyle.catalog_item_visibility_margin;
-    final bool is_visible =
-        item_rect.top >= viewport_rect.top + margin &&
-        item_rect.bottom <= viewport_rect.bottom - margin;
+    // 首项只有 8px 列表留白，不能再要求额外 12px 安全边距；高卡片部分
+    // 进入视口时也已能辨认当前作品，仅在整张卡片离屏后提供返回入口。
+    final bool is_visible = item_rect.overlaps(viewport_rect);
 
     if (_is_current_visible != is_visible) {
       setState(() {
@@ -429,6 +445,7 @@ class _CatalogSheetState extends State<CatalogSheet> {
   /// 可滚动的卡片列表，底部包含加载更多组件。
   /// 首次数据加载完成后自动滚动到当前阅读的小说。
   Widget _buildStoryList({required bool is_dark}) {
+    _schedule_visibility_check();
     if (!_has_scrolled_to_current && !_initial_positioning_scheduled) {
       _initial_positioning_scheduled = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {

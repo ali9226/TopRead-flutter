@@ -25,7 +25,12 @@ class _Assets extends AssetLoader {
           as Map<String, dynamic>;
 }
 
-Widget _bar(String kind) {
+Widget _bar(
+  String kind, {
+  VoidCallback? on_like_tap,
+  bool liked = false,
+  bool loading = false,
+}) {
   void action() {}
   return switch (kind) {
     'novel' => ReadBottomBar(
@@ -43,10 +48,10 @@ Widget _bar(String kind) {
       on_setting_tap: action,
       on_comment_tap: action,
       comment_count: 0,
-      is_liked: false,
+      is_liked: liked,
       like_count: 0,
-      is_like_loading: false,
-      on_like_tap: action,
+      is_like_loading: loading,
+      on_like_tap: on_like_tap ?? action,
     ),
     'short' => Positioned(
       left: 0,
@@ -56,11 +61,11 @@ Widget _bar(String kind) {
         is_dark: false,
         comment_count: 0,
         like_count: 0,
-        is_liked: false,
-        is_like_loading: false,
+        is_liked: liked,
+        is_like_loading: loading,
         on_catalog_tap: action,
         on_comment_tap: action,
-        on_like_tap: action,
+        on_like_tap: on_like_tap ?? action,
         on_setting_tap: action,
       ),
     ),
@@ -89,6 +94,105 @@ void main() {
     await EasyLocalization.ensureInitialized();
   });
   tearDown(Get.reset);
+
+  for (final kind in ['novel', 'short']) {
+    testWidgets('$kind 底栏仅点赞去掉水波纹，保留图标回弹、触控和加载禁用', (tester) async {
+      Get.put(ProjectConfigStore()).save_config(
+        ProjectConfig.from_json({'comment_switch': SwitchValue.on}),
+      );
+      var liked = false, loading = false;
+      var taps = 0;
+      late StateSetter update;
+      await tester.pumpWidget(
+        EasyLocalization(
+          supportedLocales: const [Locale('en')],
+          path: 'assets/i18n',
+          assetLoader: const _Assets(),
+          startLocale: const Locale('en'),
+          saveLocale: false,
+          child: Builder(
+            builder: (context) => MaterialApp(
+              locale: context.locale,
+              localizationsDelegates: context.localizationDelegates,
+              supportedLocales: context.supportedLocales,
+              theme: ThemeData(splashFactory: InkRipple.splashFactory),
+              home: Scaffold(
+                body: StatefulBuilder(
+                  builder: (context, setState) {
+                    update = setState;
+                    return Stack(
+                      children: [
+                        _bar(
+                          kind,
+                          liked: liked,
+                          loading: loading,
+                          on_like_tap: () {
+                            setState(() {
+                              taps++;
+                              liked = !liked;
+                            });
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final actions = find.byType(ReaderBottomAction);
+      final like = actions.last;
+      final ink = find.descendant(of: like, matching: find.byType(InkWell));
+      final like_ink = tester.widget<InkWell>(ink);
+      expect(like_ink.splashFactory, same(NoSplash.splashFactory));
+      expect(
+        like_ink.overlayColor?.resolve({WidgetState.pressed}),
+        Colors.transparent,
+      );
+      expect(like_ink.onTap, isNotNull);
+      expect(
+        tester.getSize(like).height,
+        greaterThanOrEqualTo(ReaderBottomActionStyle.target),
+      );
+      final catalog_ink = tester.widget<InkWell>(
+        find.descendant(of: actions.first, matching: find.byType(InkWell)),
+      );
+      expect(catalog_ink.splashFactory, isNull, reason: '目录等其它按钮继续使用原来的主题反馈');
+      await tester.tap(like);
+      await tester.pump();
+      expect(taps, 1);
+      expect(liked, isTrue);
+      final icon = find.descendant(
+        of: like,
+        matching: find.byType(ReaderActionIcon),
+      );
+      expect(tester.widget<ReaderActionIcon>(icon).name, 'love_02');
+      expect(
+        find.descendant(
+          of: like,
+          matching: find.byType(TweenAnimationBuilder<double>),
+        ),
+        findsOneWidget,
+      );
+      await tester.pumpAndSettle();
+      update(() => loading = true);
+      await tester.pump();
+      expect(
+        tester
+            .widget<InkWell>(
+              find.descendant(of: like, matching: find.byType(InkWell)),
+            )
+            .onTap,
+        isNull,
+      );
+      await tester.tap(like);
+      expect(taps, 1);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
 
   for (final scale in [1.0, 2.0]) {
     testWidgets('三种阅读底栏四等分、图标与文字基线、安全区完全对齐 $scale', (tester) async {

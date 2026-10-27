@@ -117,8 +117,8 @@ class _ComicChapterCatalogState extends State<ComicChapterCatalog> {
     final bottom = top + _row_extent - ComicChapterCatalogStyle.card_gap;
     final visible =
         index < 0 ||
-        (top >= position.pixels - 0.5 &&
-            bottom <= position.pixels + position.viewportDimension + 0.5);
+        (bottom > position.pixels &&
+            top < position.pixels + position.viewportDimension);
     if (visible != _current_visible) {
       setState(() => _current_visible = visible);
     }
@@ -318,6 +318,7 @@ class _ComicChapterCatalogState extends State<ComicChapterCatalog> {
                     key: const ValueKey('comic_chapter_sheet_location'),
                     show: chapters.isNotEmpty && !_current_visible,
                     is_dark: dark,
+                    icon_color: ColorConstants.dangerColor,
                     right: ComicChapterCatalogStyle.location_inset,
                     bottom:
                         ComicChapterCatalogStyle.location_inset +

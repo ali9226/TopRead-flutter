@@ -13,6 +13,9 @@ class ComicImage extends StatefulWidget {
   final double? width;
   final double? height;
 
+  /// 列表可提供与封面尺寸一致的动画占位；未指定时沿用原有加载提示。
+  final WidgetBuilder? loading_placeholder;
+
   /// 缩略图按实际像素宽度解码；阅读器不传此值，保留完整图片清晰度。
   final int? cache_width;
   const ComicImage({
@@ -23,6 +26,7 @@ class ComicImage extends StatefulWidget {
     this.width,
     this.height,
     this.cache_width,
+    this.loading_placeholder,
   });
   @override
   State<ComicImage> createState() => _ComicImageState();
@@ -60,15 +64,17 @@ class _ComicImageState extends State<ComicImage> {
             fit: widget.fit,
             memCacheWidth: widget.cache_width,
             fadeInDuration: const Duration(milliseconds: 180),
-            placeholder: (context, url) => ColoredBox(
-              color: ComicsStyle.outline(context),
-              child: const Center(
-                child: SizedBox.square(
-                  dimension: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+            placeholder: (context, url) =>
+                widget.loading_placeholder?.call(context) ??
+                ColoredBox(
+                  color: ComicsStyle.outline(context),
+                  child: const Center(
+                    child: SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
                 ),
-              ),
-            ),
             errorWidget: (context, url, error) => ColoredBox(
               color: ComicsStyle.outline(context),
               child: Center(

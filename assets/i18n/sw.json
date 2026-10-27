@@ -618,7 +618,11 @@
       "comment_like": "Like Maoni",
       "novel_like": "Like Riwaya",
       "novel_favorite": "Riwaya Kipendwa",
-      "chat_reply": "Msaada Mtandaoni"
+      "chat_reply": "Msaada Mtandaoni",
+      "comic_comment": "Maoni mapya ya katuni",
+      "comic_reply": "Jibu la maoni ya katuni",
+      "comic_like": "Maoni ya katuni yamependwa",
+      "comic_collect": "Katuni imehifadhiwa"
     },
     "card_subtitle": {
       "system_self": "{0}",
@@ -632,7 +636,15 @@
       "novel_like_self": "Ulikuja like \"{0}\"",
       "novel_like_other": "Mtu alikuja like riwaya yako \"{0}\"",
       "novel_favorite_self": "Uliweka \"{0}\" kipendwa",
-      "novel_favorite_other": "Mtu aliweka riwaya yako \"{0}\" kipendwa"
+      "novel_favorite_other": "Mtu aliweka riwaya yako \"{0}\" kipendwa",
+      "comic_comment_self": "Umetoa maoni kwenye katuni \"{0}\"",
+      "comic_comment_other": "Mtu ametoa maoni kwenye katuni yako \"{0}\"",
+      "comic_reply_self": "Umejibu maoni kwenye katuni \"{0}\"",
+      "comic_reply_other": "Mtu amejibu maoni yako kwenye katuni \"{0}\"",
+      "comic_like_self": "Umependa maoni kwenye katuni \"{0}\"",
+      "comic_like_other": "Mtu amependa maoni yako kwenye katuni \"{0}\"",
+      "comic_collect_self": "Umehifadhi katuni \"{0}\"",
+      "comic_collect_other": "Mtu amehifadhi katuni yako \"{0}\""
     },
     "time": {
       "just_now": "Sasa hivi",
@@ -715,15 +727,22 @@
     "recommend_today": "Mapendekezo ya Leo"
   },
   "search": {
-    "entry_hint": "Tafuta vitabu, waandishi, aina",
-    "page_title": "Tafuta",
-    "header_title": "Vitabu, waandishi, lebo",
-    "input_hint": "Andika maneno ya kutafuta",
+    "entry_hint": "Tafuta riwaya, katuni, waandishi",
+    "page_title": "Tafuta kazi",
+    "header_title": "Tafuta kazi",
+    "input_hint": "Tafuta riwaya, katuni au waandishi",
     "submit": "Tafuta",
     "hot_title": "Utafutaji maarufu",
     "recommend_title": "Maarufu",
     "keyword_result_title": "Matokeo ya \"{keyword}\"",
-    "search_result_title": "Matokeo ya \"{keyword}\""
+    "search_result_title": "Matokeo ya \"{keyword}\"",
+    "type_novel": "Riwaya",
+    "type_comic": "Katuni",
+    "empty_result": "Hakuna riwaya au katuni zinazolingana",
+    "load_failed": "Baadhi ya matokeo hayakupakiwa. Jaribu tena.",
+    "retry": "Jaribu tena",
+    "completed": "Imekamilika",
+    "score": "Ukadiriaji: {score}"
   },
   "ranking_full_list": {
     "footer": {
@@ -1039,7 +1058,9 @@
   },
   "favorite": {
     "add_success": "Imeongezwa kwenye vipendwa",
-    "remove_success": "Imeondolewa kwenye vipendwa"
+    "remove_success": "Imeondolewa kwenye vipendwa",
+    "action_add": "Hifadhi kwenye maktaba",
+    "action_remove": "Ondoa kwenye maktaba"
   },
   "like_tip": {
     "add_success": "Imependwa",
@@ -1063,7 +1084,10 @@
     "excerpt_by": "{name} · Dondoo",
     "read_together": "Fungua {app} · Soma nami",
     "qr_semantics": "Msimbo wa QR wa kushiriki kitabu",
-    "share_text": "Ninasoma \"{title}\" kwenye {app}, kuja uone!"
+    "share_text": "Ninasoma \"{title}\" kwenye {app}, kuja uone!",
+    "channel_unavailable": "Haiwezekani kufungua njia hii. Nakili kiungo ili kushiriki.",
+    "copy_failed": "Imeshindwa kunakili kiungo. Jaribu tena.",
+    "excerpt_truncated": "Dondoo refu limefupishwa; … huonyesha maandishi yaliyoachwa."
   },
   "notification_permission": {
     "message": "Washa arifa ili kubaki na habari",
@@ -1405,7 +1429,13 @@
     "reader_day": "Mchana",
     "reader_night": "Usiku",
     "reader_catalog": "Sura",
-    "unknown_author": "Mwandishi hajatajwa"
+    "unknown_author": "Mwandishi hajatajwa",
+    "discovery_more": "Zaidi",
+    "discovery_shuffle": "Badilisha",
+    "discovery_shuffle_error": "Imeshindikana kubadilisha chaguo hili. Jaribu tena.",
+    "discovery_title": "Aina za manga",
+    "discovery_load_failed": "Imeshindikana kupakia manga. Jaribu tena.",
+    "discovery_categories_failed": "Imeshindikana kupakia aina. Jaribu tena."
   },
   "tile_quest": {
     "title": "Tile Quest",
@@ -1447,5 +1477,16 @@
     "action_error": "Hatua hii haikukamilika. Jaribu tena.",
     "session_paused": "Changamoto hii imefunguliwa katika dirisha lingine.",
     "continue_game": "Endelea"
+  },
+  "novel_discovery": {
+    "discovery_more": "Zaidi",
+    "discovery_shuffle": "Chaguo mpya",
+    "discovery_shuffle_error": "Imeshindwa kupata chaguo mpya. Jaribu tena.",
+    "discovery_title": "Vinjari riwaya",
+    "discovery_load_failed": "Imeshindwa kupakia riwaya. Jaribu tena.",
+    "discovery_categories_failed": "Imeshindwa kupakia aina. Jaribu tena.",
+    "empty": "Hakuna riwaya zinazopatikana kwa sasa",
+    "retry": "Jaribu tena",
+    "loading": "Inapakia"
   }
 }

@@ -11,8 +11,12 @@ import 'package:app/components/network_cover_image/index.dart';
 import 'package:app/components/novel_cover/index.dart';
 import 'package:app/components/share_sheet/style.dart';
 import 'package:app/config/font_config.dart';
-import 'package:app/util/language_util/index.dart';
 import 'package:app/config/color_config.dart';
+import 'package:app/models/share_excerpt.dart';
+import 'package:app/components/share_sheet/fit_share_excerpt.dart';
+import 'package:app/components/share_sheet/selection_poster_metrics.dart';
+import 'package:app/components/share_sheet/selection_poster_style.dart';
+import 'package:app/components/share_sheet/share_work_url.dart';
 
 /// 段落选中文字的分享海报卡片。
 ///
@@ -42,6 +46,10 @@ class TextSelectionPosterCard extends StatelessWidget {
   /// 用户选中的段落文字，展示在摘录区域。
   final String share_text;
 
+  /// 精确选区与浅色语境；旧入口未提供时只展示原始选文。
+  final ShareExcerpt? excerpt;
+  final WorkShareKind work_kind;
+
   final String user_avatar_url;
   final String user_nickname;
   final String date_text;
@@ -58,6 +66,8 @@ class TextSelectionPosterCard extends StatelessWidget {
     this.novel_author = '',
     required this.novel_cover_url,
     required this.share_text,
+    this.excerpt,
+    this.work_kind = WorkShareKind.novel,
     required this.user_avatar_url,
     required this.user_nickname,
     required this.date_text,
@@ -90,9 +100,13 @@ class TextSelectionPosterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final design_size = selection_poster_design_size(
+      context,
+      excerpt ?? ShareExcerpt.selected_only(share_text),
+    );
     return SizedBox(
-      width: ShareSheetStyle.poster_design_width,
-      height: ShareSheetStyle.poster_design_height,
+      width: design_size.width,
+      height: design_size.height,
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -127,11 +141,6 @@ class TextSelectionPosterCard extends StatelessWidget {
 
   /// 构建以选中文字为视觉中心的摘录区域。
   Widget _build_excerpt_section(BuildContext context) {
-    final bool is_cjk = LanguageUtil.is_cjk_language(
-      easy.EasyLocalization.of(context)?.locale.languageCode ?? 'en',
-    );
-    final String excerpt_text = share_text.trim();
-
     return Padding(
       padding: ShareSheetStyle.poster_excerpt_padding,
       child: Column(
@@ -147,25 +156,70 @@ class TextSelectionPosterCard extends StatelessWidget {
                 fontWeight: FontConfig.adjustedWeight(FontWeight.w700),
                 height: 0.9,
               ),
+              textScaler: TextScaler.noScaling,
             ),
           ),
           Expanded(
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: Text(
-                excerpt_text,
-                maxLines: ShareSheetStyle.poster_excerpt_max_lines,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: _primary_text_color,
-                  fontSize: is_cjk
-                      ? ShareSheetStyle.poster_excerpt_font_size_cjk
-                      : ShareSheetStyle.poster_excerpt_font_size_alphabetic,
-                  fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                  height: is_cjk ? 1.58 : 1.42,
-                  letterSpacing: is_cjk ? 0.2 : 0,
-                ),
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final scaler = MediaQuery.textScalerOf(context);
+                final style = selection_excerpt_text_style(context);
+                final fitted = fit_share_excerpt(
+                  excerpt: excerpt ?? ShareExcerpt.selected_only(share_text),
+                  style: style,
+                  selected_color: _primary_text_color,
+                  context_color: _secondary_text_color,
+                  width: constraints.maxWidth,
+                  height: constraints.maxHeight,
+                  direction: Directionality.of(context),
+                  scaler: scaler,
+                  locale: Localizations.localeOf(context),
+                  truncation_reserve:
+                      scaler.scale(SelectionPosterStyle.truncation_font_size) *
+                          SelectionPosterStyle.truncation_line_height +
+                      LayoutConfig.space_4,
+                );
+                return Align(
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      RichText(
+                        key: const ValueKey('selection_share_excerpt'),
+                        text: fitted.span,
+                        textScaler: scaler,
+                        locale: Localizations.localeOf(context),
+                      ),
+                      if (fitted.selection_truncated)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: LayoutConfig.space_4,
+                          ),
+                          child: Text(
+                            easy.tr(
+                              'share_sheet.excerpt_truncated',
+                              context: context,
+                            ),
+                            key: const ValueKey('selection_share_truncation'),
+                            style: TextStyle(
+                              color: _secondary_text_color,
+                              fontSize:
+                                  SelectionPosterStyle.truncation_font_size,
+                              height:
+                                  SelectionPosterStyle.truncation_line_height,
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w400,
+                              ),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: ShareSheetStyle.poster_excerpt_user_spacing),
@@ -201,15 +255,19 @@ class TextSelectionPosterCard extends StatelessWidget {
                   color: _primary_text_color,
                   fontSize: ShareSheetStyle.poster_nickname_font_size,
                   fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
+                  height: 1.2,
                 ),
               ),
               const SizedBox(height: LayoutConfig.space_3),
               Text(
                 date_text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: _secondary_text_color,
                   fontSize: ShareSheetStyle.poster_date_font_size,
                   fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                  height: 1.2,
                 ),
               ),
             ],
@@ -292,7 +350,7 @@ class TextSelectionPosterCard extends StatelessWidget {
       clipBehavior: Clip.none,
       children: <Widget>[
         Container(
-          height: ShareSheetStyle.poster_footer_height,
+          height: selection_poster_footer_height(context),
           color: footer_color,
           padding: ShareSheetStyle.poster_footer_padding,
           child: Row(
@@ -324,6 +382,7 @@ class TextSelectionPosterCard extends StatelessWidget {
                         color: _secondary_text_color,
                         fontSize: ShareSheetStyle.poster_author_font_size,
                         fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                        height: 1.2,
                       ),
                     ),
                     const SizedBox(height: LayoutConfig.space_7),
@@ -339,13 +398,14 @@ class TextSelectionPosterCard extends StatelessWidget {
                         color: accent_color,
                         fontSize: ShareSheetStyle.poster_cta_font_size,
                         fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
+                        height: 1.2,
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: ShareSheetStyle.poster_qr_spacing),
-              _build_qr_code(context, app_title),
+              _build_qr_code(context),
             ],
           ),
         ),
@@ -406,7 +466,10 @@ class TextSelectionPosterCard extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: use_dark_palette ? ColorConstants.components_share_sheet_widgets_share_poster_card_tone : ColorConstants.whiteColor,
+            color: use_dark_palette
+                ? ColorConstants
+                      .components_share_sheet_widgets_share_poster_card_tone
+                : ColorConstants.whiteColor,
             fontSize: 9,
             fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
             height: 1.35,
@@ -417,8 +480,12 @@ class TextSelectionPosterCard extends StatelessWidget {
   }
 
   /// 构建二维码。
-  Widget _build_qr_code(BuildContext context, String app_title) {
-    final String qr_data = '$app_title | novel:$novel_id | $novel_title';
+  Widget _build_qr_code(BuildContext context) {
+    final String qr_data = share_work_url(
+      work_id: novel_id,
+      work_kind: work_kind,
+      language: Localizations.localeOf(context).languageCode,
+    ).toString();
 
     return Container(
       width: ShareSheetStyle.poster_qr_size,
@@ -427,7 +494,10 @@ class TextSelectionPosterCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: ColorConstants.whiteColor,
         borderRadius: BorderRadius.circular(LayoutConfig.radius_8),
-        border: Border.all(color: ColorConstants.components_share_sheet_widgets_share_poster_card_tone_f222222),
+        border: Border.all(
+          color: ColorConstants
+              .components_share_sheet_widgets_share_poster_card_tone_f222222,
+        ),
       ),
       child: QrImageView(
         data: qr_data,

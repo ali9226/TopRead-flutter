@@ -1,7 +1,10 @@
 import 'package:app/config/layout_config.dart';
 import 'package:app/components/window_content_layout/index.dart';
+import 'package:app/components/reader_top_bar/share_icon.dart';
+import 'package:app/components/reader_top_bar/style.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:easy_localization/easy_localization.dart' as easy;
 
 import 'package:app/components/svg_icon/index.dart';
 import 'package:app/pages/short_story_read/style.dart';
@@ -10,10 +13,13 @@ import 'package:app/config/color_config.dart';
 
 /// 完整导航栏组件。
 ///
-/// 返回按钮 + 书架图标 + 收藏按钮 + 分享按钮。
+/// 返回按钮、作品标题、收藏按钮和分享按钮。
 class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
   /// 是否为夜间模式。
   final bool is_dark;
+
+  /// 当前短篇作品标题，使用剩余空间单行省略。
+  final String title;
 
   /// 返回按钮点击回调。
   final VoidCallback on_back;
@@ -46,6 +52,7 @@ class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
     required this.on_share,
     required this.is_favorited,
     required this.status_bar_height,
+    this.title = '',
     this.is_favorite_loading = false,
     this.is_loading = false,
   });
@@ -79,7 +86,8 @@ class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
     /// 骨架屏高亮色。
     final Color skeleton_highlight_color = is_dark
         ? ColorConstants.pages_short_story_read_widgets_full_appbar_tone
-        : ColorConstants.pages_short_story_read_widgets_full_appbar_tone_fff7f9fc;
+        : ColorConstants
+              .pages_short_story_read_widgets_full_appbar_tone_fff7f9fc;
 
     return Container(
       padding: EdgeInsets.only(top: status_bar_height),
@@ -106,7 +114,19 @@ class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
                 constraints: const BoxConstraints(),
               ),
 
-              const Spacer(),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: left_icon_color,
+                    fontSize: ReaderTopBarStyle.title_size(context),
+                    height: ReaderTopBarStyle.title_line_height,
+                    fontWeight: ReaderTopBarStyle.medium,
+                  ),
+                ),
+              ),
 
               /// 收藏按钮（加载时显示骨架屏，完成后显示真实图标）。
               is_loading
@@ -120,32 +140,49 @@ class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
                         highlight_color: skeleton_highlight_color,
                       ),
                     )
-                  : GestureDetector(
-                      onTap: is_favorite_loading ? null : on_favorite_tap,
-                      behavior: HitTestBehavior.opaque,
-                      child: Padding(
-                        padding: const EdgeInsets.only(
-                          right: LayoutConfig.space_20,
+                  : Semantics(
+                      button: true,
+                      enabled: !is_favorite_loading,
+                      toggled: is_favorited,
+                      child: Tooltip(
+                        message: easy.tr(
+                          is_favorited
+                              ? 'favorite.action_remove'
+                              : 'favorite.action_add',
                         ),
-                        child: TweenAnimationBuilder<double>(
-                          duration: const Duration(milliseconds: 400),
-                          curve: Curves.elasticOut,
-                          tween: Tween<double>(begin: 0.6, end: 1.0),
-                          builder: (context, scale, child) {
-                            return Transform.scale(scale: scale, child: child);
-                          },
-                          key: ValueKey(is_favorited),
-                          child: SvgIcon(
-                            name: is_favorited
-                                ? 'user_selected'
-                                : 'not_favorited',
-                            width: 22,
-                            height: 22,
-                            color: is_favorited
-                                ? (is_dark
-                                      ? ColorConstants.components_fixed_bottom_navigation_style_tone_ffd0d4db.withValues(alpha: 0.82)
-                                      : null)
-                                : right_icon_color,
+                        child: GestureDetector(
+                          onTap: is_favorite_loading ? null : on_favorite_tap,
+                          behavior: HitTestBehavior.opaque,
+                          child: Padding(
+                            padding: const EdgeInsets.only(
+                              right: LayoutConfig.space_20,
+                            ),
+                            child: TweenAnimationBuilder<double>(
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.elasticOut,
+                              tween: Tween<double>(begin: 0.6, end: 1.0),
+                              builder: (context, scale, child) {
+                                return Transform.scale(
+                                  scale: scale,
+                                  child: child,
+                                );
+                              },
+                              key: ValueKey(is_favorited),
+                              child: SvgIcon(
+                                name: is_favorited
+                                    ? 'user_selected'
+                                    : 'not_favorited',
+                                width: 22,
+                                height: 22,
+                                color: is_favorited
+                                    ? (is_dark
+                                          ? ColorConstants
+                                                .components_fixed_bottom_navigation_style_tone_ffd0d4db
+                                                .withValues(alpha: 0.82)
+                                          : null)
+                                    : right_icon_color,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -175,14 +212,7 @@ class FullAppbar extends StatelessWidget implements PreferredSizeWidget {
                           padding: const EdgeInsets.only(
                             right: LayoutConfig.space_16,
                           ),
-                          child: SvgIcon(
-                            name: 'share',
-                            width: 20,
-                            height: 20,
-                            color: is_dark
-                                ? ColorConstants.components_fixed_bottom_navigation_style_tone_ffd0d4db.withValues(alpha: 0.82)
-                                : right_icon_color,
-                          ),
+                          child: ReaderShareIcon(is_dark: is_dark),
                         ),
                       );
               }),

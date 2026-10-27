@@ -7,6 +7,7 @@ import 'package:app/pages/comics/detail/resume_record.dart';
 import 'package:app/pages/comics/logic.dart';
 import 'package:app/services/comics_progress/service.dart';
 import 'package:app/services/bookshelf_sync_service.dart';
+import 'package:app/services/work_favorite_signals.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/router/router_util.dart';
@@ -30,8 +31,10 @@ class ComicDetailLogic extends ComicsController {
   final Future<Map<String, dynamic>> Function(String, Map<String, dynamic>)
   _request;
   final Future<void> Function(int?) _favorite_changed;
+  final WorkFavoriteSignals _favorite_signals;
   final bool Function() _require_login;
   final void Function(String) _navigate;
+  final void Function(String) _on_collection_error;
   Worker? _identity_worker;
 
   ComicDetailLogic(
@@ -42,8 +45,10 @@ class ComicDetailLogic extends ComicsController {
     Future<Map<String, dynamic>> Function(String, Map<String, dynamic>)?
     request,
     Future<void> Function()? favorite_changed,
+    WorkFavoriteSignals? favorite_signals,
     bool Function()? require_login,
     void Function(String)? navigate,
+    void Function(String)? on_collection_error,
   }) : _fetch_detail = fetch_detail ?? comics_detail,
        _read_progress =
            read_progress ?? ComicsProgressService.instance.read_record,
@@ -54,8 +59,11 @@ class ComicDetailLogic extends ComicsController {
                  BookshelfSyncService.favorite_changed(auth_revision: revision))
            : ((_) => favorite_changed()),
        _require_login = require_login ?? comics_require_login,
+       _favorite_signals = favorite_signals ?? WorkFavoriteSignals.instance,
+       _on_collection_error = on_collection_error ?? showBottomTip,
        _navigate = navigate ?? ((path) => routerUtil(path: path)) {
     _progress_changes.addListener(_on_progress_changed);
+    _favorite_signals.addListener(_on_favorite_signal);
     if (Get.isRegistered<UserInformation>()) {
       final user = Get.find<UserInformation>();
       _identity_worker = everAll(
@@ -100,6 +108,7 @@ class ComicDetailLogic extends ComicsController {
   List<ComicItem> similar_comics = <ComicItem>[];
   bool loading = true;
   bool collecting = false;
+  String? _collecting_identity;
   bool collected = false;
   int _request_id = 0;
   int _progress_request_id = 0;
@@ -156,8 +165,9 @@ class ComicDetailLogic extends ComicsController {
       detail = value;
       selected_code = value.selected_language?.language ?? selected_code;
       _loaded_identity = identity;
-      // 背景刷新发出的旧快照不能撤销已经成功的收藏操作。
-      if (collection_revision == _collection_revision) {
+      // 同账号的旧快照不能撤销在途或已确认的收藏；新账号仍可加载真实状态。
+      if (_collecting_identity != identity &&
+          collection_revision == _collection_revision) {
         collected = value.is_collected;
       }
     } catch (failure) {
@@ -189,6 +199,23 @@ class ComicDetailLogic extends ComicsController {
     unawaited(refresh_progress());
   }
 
+  /// TODO 独立的阅读/简介控制器只接受同账号、同漫画的已确认收藏，不影响任何点赞状态。
+  void _on_favorite_signal() {
+    final change = _favorite_signals.latest;
+    if (disposed ||
+        change == null ||
+        change.domain != WorkFavoriteDomain.comic ||
+        change.work_id != comic_id ||
+        change.account_identity != _identity()) {
+      return;
+    }
+    // 相同星形也可能是另一页刚确认的结果，必须使本地在途失败回退失效。
+    _collection_revision++;
+    if (collected == change.favorited) return;
+    collected = change.favorited;
+    emit();
+  }
+
   /// reader服务写入内存后主动通知；从阅读页回来无需重新拉取整个目录。
   Future<void> refresh_progress() async {
     if (disposed || detail == null) return;
@@ -216,16 +243,31 @@ class ComicDetailLogic extends ComicsController {
         ? Get.find<UserInformation>().auth_revision
         : null;
     final requested_collected = !collected;
+    final previous_collected = collected;
+    final collection_revision = ++_collection_revision;
+    collected = requested_collected;
     collecting = true;
+    _collecting_identity = identity;
     emit();
     try {
-      await _request('collect', <String, dynamic>{
+      final response = await _request('collect', <String, dynamic>{
         'comic_id': comic_id,
         'collected': requested_collected,
       });
       if (identity != _identity()) return;
+      final confirmed = response.containsKey('collected')
+          ? comics_bool(response['collected'])
+          : requested_collected;
       _collection_revision++;
-      if (!disposed) collected = requested_collected;
+      if (!disposed) collected = confirmed;
+      _favorite_signals.confirm(
+        WorkFavoriteChange(
+          domain: WorkFavoriteDomain.comic,
+          work_id: comic_id,
+          favorited: confirmed,
+          account_identity: identity,
+        ),
+      );
       unawaited(
         _favorite_changed(auth_revision).catchError((Object failure) {
           /* 收藏已成功，书架可在下一次激活时重试刷新。 */
@@ -233,10 +275,16 @@ class ComicDetailLogic extends ComicsController {
       );
     } catch (failure) {
       if (!disposed && identity == _identity()) {
-        showBottomTip(failure.toString());
+        // 后来收到的跨页确认优先；只回退本次仍然有效的乐观更新。
+        if (_collection_revision == collection_revision) {
+          collected = previous_collected;
+          _collection_revision++;
+        }
+        _on_collection_error(failure.toString());
       }
     } finally {
       collecting = false;
+      _collecting_identity = null;
       emit();
     }
   }
@@ -267,6 +315,7 @@ class ComicDetailLogic extends ComicsController {
   @override
   void dispose() {
     _progress_changes.removeListener(_on_progress_changed);
+    _favorite_signals.removeListener(_on_favorite_signal);
     _identity_worker?.dispose();
     super.dispose();
   }

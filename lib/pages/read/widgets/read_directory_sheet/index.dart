@@ -71,6 +71,7 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
   bool _show_position_button = false;
   bool _did_initial_scroll = false;
   int _reveal_attempt_count = 0;
+  bool _visibility_check_scheduled = false;
 
   @override
   void initState() {
@@ -109,7 +110,12 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
   }
 
   void _on_scroll() {
-    _update_position_button();
+    if (_visibility_check_scheduled) return;
+    _visibility_check_scheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _visibility_check_scheduled = false;
+      _update_position_button();
+    });
   }
 
   /// 基于真实渲染位置判断当前章节是否在目录列表可视区域内。
@@ -117,7 +123,11 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
   /// 章节标题允许多行以后，列表项高度不再固定，不能再用 index * itemHeight 判断。
   /// 这里直接读取当前章节 RenderBox 和 ListView 视口 RenderBox 的全局坐标。
   void _update_position_button() {
-    if (!_scroll_controller.hasClients || !mounted) return;
+    if (!mounted ||
+        !_scroll_controller.hasClients ||
+        !_scroll_controller.position.hasContentDimensions) {
+      return;
+    }
 
     final bool should_show = !_is_current_chapter_visible();
     if (_show_position_button != should_show) {
@@ -144,7 +154,9 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
     if (item_render_object is! RenderBox ||
         viewport_render_object is! RenderBox ||
         !item_render_object.attached ||
-        !viewport_render_object.attached) {
+        !viewport_render_object.attached ||
+        !item_render_object.hasSize ||
+        !viewport_render_object.hasSize) {
       return false;
     }
 
@@ -153,15 +165,11 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
       Offset.zero,
     );
 
-    final double item_top = item_top_left.dy;
-    final double item_bottom = item_top + item_render_object.size.height;
-    final double viewport_top = viewport_top_left.dy;
-    final double viewport_bottom =
-        viewport_top + viewport_render_object.size.height;
-    final double margin = ReadDirectorySheetStyle.chapter_visibility_margin;
-
-    return item_top >= viewport_top + margin &&
-        item_bottom <= viewport_bottom - margin;
+    // 与短篇目录保持相同语义：条目仍能看见时不显示返回入口，首章的
+    // 列表内边距也不应被额外安全边距误判为离屏。
+    return (item_top_left & item_render_object.size).overlaps(
+      viewport_top_left & viewport_render_object.size,
+    );
   }
 
   /// 滚动到当前章节。
@@ -340,7 +348,11 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
                   child: Text(
                     tr('read.no_notes'),
                     style: TextStyle(
-                      color: widget.is_dark ? ColorConstants.pages_read_widgets_read_directory_sheet_index_tone : ColorConstants.pages_customer_service_chat_widgets_message_bubble_tone,
+                      color: widget.is_dark
+                          ? ColorConstants
+                                .pages_read_widgets_read_directory_sheet_index_tone
+                          : ColorConstants
+                                .pages_customer_service_chat_widgets_message_bubble_tone,
                       fontSize: 15,
                     ),
                   ),
@@ -548,8 +560,10 @@ class _ReadDirectorySheetState extends State<ReadDirectorySheet>
                       Icons.chevron_right_rounded,
                       size: 18,
                       color: widget.is_dark
-                          ? ColorConstants.components_authorized_login_apple_review_index_tone
-                          : ColorConstants.pages_short_story_read_widgets_collapse_button_tone_1a222222,
+                          ? ColorConstants
+                                .components_authorized_login_apple_review_index_tone
+                          : ColorConstants
+                                .pages_short_story_read_widgets_collapse_button_tone_1a222222,
                     ),
                   ),
               ],

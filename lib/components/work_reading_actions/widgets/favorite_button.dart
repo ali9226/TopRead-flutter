@@ -1,8 +1,9 @@
 import 'package:app/config/color_config.dart';
+import 'package:app/components/svg_icon/index.dart';
 import 'package:flutter/material.dart';
 import '../style.dart';
 
-/// 收藏沿用独立加载/选中状态，半透明小块在金色主按钮旁保持次要层级。
+/// 收藏请求期间保持乐观星形并禁用重复点击，不展示水波纹或进度圈。
 class WorkFavoriteButton extends StatelessWidget {
   const WorkFavoriteButton({
     super.key,
@@ -54,7 +55,11 @@ class WorkFavoriteButton extends StatelessWidget {
             key: action_key,
             onPressed: loading ? null : on_pressed,
             tooltip: label,
+            splashColor: ColorConstants.transparent,
+            highlightColor: ColorConstants.transparent,
             style: IconButton.styleFrom(
+              overlayColor: ColorConstants.transparent,
+              splashFactory: NoSplash.splashFactory,
               minimumSize: Size.square(
                 compact
                     ? WorkReadingActionsStyle.compact_height
@@ -62,30 +67,30 @@ class WorkFavoriteButton extends StatelessWidget {
               ),
               shape: RoundedRectangleBorder(borderRadius: radius),
               foregroundColor: favorited
-                  ? ColorConstants.dangerColor
+                  ? WorkReadingActionsStyle.selected_foreground(
+                      on_hero,
+                      is_dark,
+                    )
                   : WorkReadingActionsStyle.secondary_foreground(
                       on_hero,
                       is_dark,
                     ),
             ),
-            icon: loading
-                ? SizedBox.square(
-                    dimension: compact
-                        ? WorkReadingActionsStyle.compact_spinner_size
-                        : WorkReadingActionsStyle.spinner_size,
-                    child: CircularProgressIndicator(
-                      strokeWidth: WorkReadingActionsStyle.spinner_stroke,
-                      color: ColorConstants.dangerColor,
+            icon: SvgIcon(
+              name: favorited ? 'user_selected' : 'not_favorited',
+              width: compact
+                  ? WorkReadingActionsStyle.compact_icon_size
+                  : WorkReadingActionsStyle.icon_size,
+              height: compact
+                  ? WorkReadingActionsStyle.compact_icon_size
+                  : WorkReadingActionsStyle.icon_size,
+              color: favorited
+                  ? null
+                  : WorkReadingActionsStyle.secondary_foreground(
+                      on_hero,
+                      is_dark,
                     ),
-                  )
-                : Icon(
-                    favorited
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    size: compact
-                        ? WorkReadingActionsStyle.compact_icon_size
-                        : WorkReadingActionsStyle.icon_size,
-                  ),
+            ),
           ),
         ),
       ),

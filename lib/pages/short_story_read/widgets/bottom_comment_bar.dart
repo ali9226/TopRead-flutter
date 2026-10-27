@@ -182,8 +182,9 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
                         Get.find<ProjectConfigStore>()
                             .current
                             .is_comment_enabled;
-                    if (!is_comment_enabled)
+                    if (!is_comment_enabled) {
                       return const Expanded(child: SizedBox.shrink());
+                    }
 
                     return Expanded(
                       child: _buildActionItem(
@@ -237,8 +238,10 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
 
     /// 滑块阴影颜色。
     final Color thumb_shadow_color = widget.is_dark
-        ? ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone
-        : ColorConstants.pages_home_widgets_tab_bar_skeleton_index_tone_26222222;
+        ? ColorConstants
+              .pages_short_story_read_widgets_auto_read_settings_sheet_tone
+        : ColorConstants
+              .pages_home_widgets_tab_bar_skeleton_index_tone_26222222;
 
     /// 文字字号。
     final double font_size = is_cjk
@@ -543,7 +546,8 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
                   LayoutConfig.space_2,
             ),
             decoration: BoxDecoration(
-              color: ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone_bf222222,
+              color: ColorConstants
+                  .pages_short_story_read_widgets_auto_read_settings_sheet_tone_bf222222,
               borderRadius: BorderRadius.circular(
                 ShortStoryReadStyle.progress_popup_radius,
               ),
@@ -564,7 +568,10 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
               ShortStoryReadStyle.progress_popup_arrow_size * 2,
               ShortStoryReadStyle.progress_popup_arrow_size,
             ),
-            painter: _ArrowPainter(color: ColorConstants.pages_short_story_read_widgets_bottom_comment_bar_tone),
+            painter: _ArrowPainter(
+              color: ColorConstants
+                  .pages_short_story_read_widgets_bottom_comment_bar_tone,
+            ),
           ),
         ],
       ),
@@ -614,6 +621,7 @@ class _BottomCommentBarState extends State<BottomCommentBar> {
     return ReaderBottomAction(
       label: NumberFormatUtil.format_count(widget.like_count),
       color: current_color,
+      show_ink_feedback: false,
       on_pressed: widget.is_like_loading ? null : widget.on_like_tap,
       icon_widget: TweenAnimationBuilder<double>(
         duration: const Duration(milliseconds: 560),

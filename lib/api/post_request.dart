@@ -6,6 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:app/api/dio_client.dart';
 import 'package:app/api/results_type.dart';
 import 'package:app/config/constant.dart';
+import 'package:app/services/recommendation_refresh/index.dart';
+import 'package:app/stores/user_information.dart';
+import 'package:get/get.dart' hide Response;
 import 'package:app/util/device/app_environment.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/encryption/get_encryption.dart';
@@ -36,6 +39,10 @@ Future<ResultsType<T>> postRequest<T>({
   T Function(Map<String, dynamic> json)? fromJson,
   T Function(List<dynamic> json)? fromJsonList,
 }) async {
+  final request_user = Get.isRegistered<UserInformation>()
+      ? Get.find<UserInformation>()
+      : null;
+  final request_auth_revision = request_user?.auth_revision;
   final ResultsType<T> results = ResultsType<T>();
   String message = _resolvePostRequestMessage(
     locale: LanguageUtil.get_fallback_language_code(),
@@ -152,6 +159,15 @@ Future<ResultsType<T>> postRequest<T>({
         showBottomTip(results.message);
       }
       return results;
+    }
+
+    // 兴趣更新以服务器业务成功为准，旧账号的延迟响应不刷新新账号推荐。
+    if (request_user == null ||
+        request_user.is_auth_revision_current(request_auth_revision!)) {
+      RecommendationRefreshSignals.instance.record_success(
+        path,
+        parameters: parameter,
+      );
     }
 
     if (!data.containsKey('content') || data['content'] == null) {

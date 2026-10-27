@@ -649,7 +649,11 @@
       "comment_like": "Commentaire aimé",
       "novel_like": "Roman aimé",
       "novel_favorite": "Roman favori",
-      "chat_reply": "Support en ligne"
+      "chat_reply": "Support en ligne",
+      "comic_comment": "Nouveau commentaire BD",
+      "comic_reply": "Réponse sur une BD",
+      "comic_like": "Commentaire BD aimé",
+      "comic_collect": "BD ajoutée aux favoris"
     },
     "card_subtitle": {
       "system_self": "{0}",
@@ -663,7 +667,15 @@
       "novel_like_self": "Vous avez aimé « {0} »",
       "novel_like_other": "Quelqu'un a aimé votre roman « {0} »",
       "novel_favorite_self": "Vous avez ajouté « {0} » en favori",
-      "novel_favorite_other": "Quelqu'un a ajouté votre roman « {0} » en favori"
+      "novel_favorite_other": "Quelqu'un a ajouté votre roman « {0} » en favori",
+      "comic_comment_self": "Vous avez commenté la BD « {0} »",
+      "comic_comment_other": "Quelqu’un a commenté votre BD « {0} »",
+      "comic_reply_self": "Vous avez répondu à un commentaire dans la BD « {0} »",
+      "comic_reply_other": "Quelqu’un a répondu à votre commentaire dans la BD « {0} »",
+      "comic_like_self": "Vous avez aimé un commentaire dans la BD « {0} »",
+      "comic_like_other": "Quelqu’un a aimé votre commentaire dans la BD « {0} »",
+      "comic_collect_self": "Vous avez ajouté la BD « {0} » aux favoris",
+      "comic_collect_other": "Quelqu’un a ajouté votre BD « {0} » aux favoris"
     },
     "time": {
       "just_now": "À l'instant",
@@ -746,15 +758,22 @@
     "recommend_today": "Recommandations du jour"
   },
   "search": {
-    "entry_hint": "Rechercher des titres, auteurs, genres",
-    "page_title": "Recherche",
-    "header_title": "Livres, auteurs, tags",
-    "input_hint": "Saisissez des mots-clés",
+    "entry_hint": "Romans, BD, auteurs",
+    "page_title": "Rechercher une œuvre",
+    "header_title": "Rechercher une œuvre",
+    "input_hint": "Romans, BD ou auteurs",
     "submit": "Rechercher",
     "hot_title": "Recherches populaires",
     "recommend_title": "Populaires",
     "keyword_result_title": "Résultats pour « {keyword} »",
-    "search_result_title": "Résultats pour « {keyword} »"
+    "search_result_title": "Résultats pour « {keyword} »",
+    "type_novel": "Roman",
+    "type_comic": "BD",
+    "empty_result": "Aucun roman ni BD trouvé",
+    "load_failed": "Certains résultats n’ont pas pu être chargés. Réessayez.",
+    "retry": "Réessayer",
+    "completed": "Terminé",
+    "score": "Note : {score}"
   },
   "ranking_full_list": {
     "footer": {
@@ -1070,7 +1089,9 @@
   },
   "favorite": {
     "add_success": "Ajouté aux favoris",
-    "remove_success": "Retiré des favoris"
+    "remove_success": "Retiré des favoris",
+    "action_add": "Ajouter à la bibliothèque",
+    "action_remove": "Retirer de la bibliothèque"
   },
   "like_tip": {
     "add_success": "Aimé",
@@ -1094,7 +1115,10 @@
     "excerpt_by": "{name} · Extrait",
     "read_together": "Ouvrir {app} · Lire avec moi",
     "qr_semantics": "Code QR de partage du livre",
-    "share_text": "Je lis « {title} » sur {app}, venez voir !"
+    "share_text": "Je lis « {title} » sur {app}, venez voir !",
+    "channel_unavailable": "Impossible d’ouvrir ce canal. Copiez le lien pour le partager.",
+    "copy_failed": "Impossible de copier le lien. Réessayez.",
+    "excerpt_truncated": "Extrait long abrégé ; … indique les passages omis."
   },
   "notification_permission": {
     "message": "Activez les notifications pour rester informé",
@@ -1437,7 +1461,13 @@
     "reader_day": "Jour",
     "reader_night": "Nuit",
     "reader_catalog": "Chapitres",
-    "unknown_author": "Auteur non renseigné"
+    "unknown_author": "Auteur non renseigné",
+    "discovery_more": "Plus",
+    "discovery_shuffle": "Renouveler",
+    "discovery_shuffle_error": "Impossible de renouveler cette sélection. Réessayez.",
+    "discovery_title": "Catégories de mangas",
+    "discovery_load_failed": "Impossible de charger les mangas. Réessayez.",
+    "discovery_categories_failed": "Impossible de charger les catégories. Réessayez."
   },
   "tile_quest": {
     "title": "Tile Quest",
@@ -1479,5 +1509,16 @@
     "action_error": "Impossible de terminer cette action. Réessayez.",
     "session_paused": "Ce défi est ouvert dans une autre fenêtre.",
     "continue_game": "Continuer"
+  },
+  "novel_discovery": {
+    "discovery_more": "Voir plus",
+    "discovery_shuffle": "Autres choix",
+    "discovery_shuffle_error": "Impossible de renouveler les choix. Réessayez.",
+    "discovery_title": "Explorer les romans",
+    "discovery_load_failed": "Impossible de charger les romans. Réessayez.",
+    "discovery_categories_failed": "Impossible de charger les catégories. Réessayez.",
+    "empty": "Aucun roman disponible pour le moment",
+    "retry": "Réessayer",
+    "loading": "Chargement"
   }
 }

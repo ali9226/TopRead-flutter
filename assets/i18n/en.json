@@ -647,7 +647,11 @@
       "comment_like": "Liked Comment",
       "novel_like": "Liked Novel",
       "novel_favorite": "Favorited Novel",
-      "chat_reply": "Online Support"
+      "chat_reply": "Online Support",
+      "comic_comment": "New Comic Comment",
+      "comic_reply": "Comic Comment Reply",
+      "comic_like": "Liked Comic Comment",
+      "comic_collect": "Favorited Comic"
     },
     "card_subtitle": {
       "system_self": "{0}",
@@ -661,7 +665,15 @@
       "novel_like_self": "You liked \"{0}\"",
       "novel_like_other": "Someone liked your novel \"{0}\"",
       "novel_favorite_self": "You favorited \"{0}\"",
-      "novel_favorite_other": "Someone favorited your novel \"{0}\""
+      "novel_favorite_other": "Someone favorited your novel \"{0}\"",
+      "comic_comment_self": "You commented on the comic \"{0}\"",
+      "comic_comment_other": "Someone commented on your comic \"{0}\"",
+      "comic_reply_self": "You replied to a comment in the comic \"{0}\"",
+      "comic_reply_other": "Someone replied to your comment in the comic \"{0}\"",
+      "comic_like_self": "You liked a comment in the comic \"{0}\"",
+      "comic_like_other": "Someone liked your comment in the comic \"{0}\"",
+      "comic_collect_self": "You favorited the comic \"{0}\"",
+      "comic_collect_other": "Someone favorited your comic \"{0}\""
     },
     "time": {
       "just_now": "Just now",
@@ -744,15 +756,22 @@
     "recommend_today": "Today's Picks"
   },
   "search": {
-    "entry_hint": "Search books, authors, genres",
-    "page_title": "Search",
-    "header_title": "Books, authors, tags",
-    "input_hint": "Enter keywords",
+    "entry_hint": "Search novels, comics, authors",
+    "page_title": "Search works",
+    "header_title": "Search works",
+    "input_hint": "Search novels, comics or authors",
     "submit": "Search",
     "hot_title": "Hot Searches",
     "recommend_title": "Hot Picks",
     "keyword_result_title": "Results for \"{keyword}\"",
-    "search_result_title": "Results for \"{keyword}\""
+    "search_result_title": "Results for \"{keyword}\"",
+    "type_novel": "Novel",
+    "type_comic": "Comic",
+    "empty_result": "No matching novels or comics",
+    "load_failed": "Some results could not be loaded. Please retry.",
+    "retry": "Retry",
+    "completed": "Completed",
+    "score": "{score} rating"
   },
   "ranking_full_list": {
     "footer": {
@@ -1069,7 +1088,9 @@
   },
   "favorite": {
     "add_success": "Added to favorites",
-    "remove_success": "Removed from favorites"
+    "remove_success": "Removed from favorites",
+    "action_add": "Save to library",
+    "action_remove": "Remove from library"
   },
   "like_tip": {
     "add_success": "Liked",
@@ -1093,7 +1114,10 @@
     "excerpt_by": "{name} · Excerpt",
     "read_together": "Open {app} · Read with me",
     "qr_semantics": "Book sharing QR code",
-    "share_text": "I'm reading \"{title}\" on {app}, come check it out!"
+    "share_text": "I'm reading \"{title}\" on {app}, come check it out!",
+    "channel_unavailable": "Unable to open this channel. Copy the link to share it.",
+    "copy_failed": "Could not copy the link. Please try again.",
+    "excerpt_truncated": "Long excerpt shortened; … marks omitted text."
   },
   "notification_permission": {
     "message": "Enable notifications to stay updated",
@@ -1414,7 +1438,13 @@
     "reader_day": "Day",
     "reader_night": "Night",
     "reader_catalog": "Catalog",
-    "unknown_author": "Author unavailable"
+    "unknown_author": "Author unavailable",
+    "discovery_more": "More",
+    "discovery_shuffle": "Shuffle",
+    "discovery_shuffle_error": "Could not refresh this selection. Please try again.",
+    "discovery_title": "Manga genres",
+    "discovery_load_failed": "Comics could not be loaded. Please try again.",
+    "discovery_categories_failed": "Genres could not be loaded. Please try again."
   },
   "tile_quest": {
     "title": "Tile Quest",
@@ -1456,5 +1486,16 @@
     "action_error": "Could not complete this action. Please try again.",
     "session_paused": "This challenge is open in another window.",
     "continue_game": "Continue"
+  },
+  "novel_discovery": {
+    "discovery_more": "More",
+    "discovery_shuffle": "Refresh picks",
+    "discovery_shuffle_error": "Could not refresh picks. Try again.",
+    "discovery_title": "Browse novels",
+    "discovery_load_failed": "Could not load novels. Try again.",
+    "discovery_categories_failed": "Could not load categories. Try again.",
+    "empty": "No novels available yet",
+    "retry": "Retry",
+    "loading": "Loading"
   }
 }

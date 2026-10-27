@@ -51,7 +51,7 @@ class WorkReadingActions extends StatelessWidget {
           : 'comics.start_reading',
     );
     final favorite_label = tr(
-      favorited ? 'comics.collected' : 'comics.collect',
+      favorited ? 'favorite.action_remove' : 'favorite.action_add',
     );
     final primary = on_read == null
         ? null

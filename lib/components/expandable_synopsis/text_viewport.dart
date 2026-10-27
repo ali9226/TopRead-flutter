@@ -26,6 +26,8 @@ class ExpandableSynopsisTextViewport extends StatelessWidget {
   final String description;
   final bool expanded;
   final TextStyle style;
+
+  /// 兼容已有调用名；启用正文点击时，收起与展开两种状态均调用切换。
   final VoidCallback on_collapse;
   final int collapsed_lines;
 
@@ -98,7 +100,11 @@ class ExpandableSynopsisTextViewport extends StatelessWidget {
           maxHeight: full_height,
           child: InkWell(
             key: ValueKey('${key_prefix}_text'),
-            onTap: expanded && collapse_on_text_tap ? on_collapse : null,
+            onTap: truncated && collapse_on_text_tap ? on_collapse : null,
+            splashFactory: NoSplash.splashFactory,
+            overlayColor: const WidgetStatePropertyAll(
+              ExpandableSynopsisStyle.interaction_overlay,
+            ),
             child: Text(
               description,
               maxLines: null,

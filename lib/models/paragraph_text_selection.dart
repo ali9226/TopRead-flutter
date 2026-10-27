@@ -16,12 +16,20 @@ class ParagraphTextSelection extends TextSelection {
   /// 完整正文中最后一个选中字符之后的 UTF-16 偏移。
   final int content_end;
 
+  /// 创建选区时实际可见的正文快照；分享上下文只从此范围取，不读取未解锁正文。
+  final String? source_content;
+
+  /// 可见正文在完整正文内的UTF-16起点，用于预览范围恢复准确坐标。
+  final int source_offset;
+
   const ParagraphTextSelection({
     required super.baseOffset,
     required super.extentOffset,
     required this.selected_text,
     required this.content_start,
     required this.content_end,
+    this.source_content,
+    this.source_offset = 0,
     super.affinity,
     super.isDirectional,
   });

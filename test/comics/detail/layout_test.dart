@@ -21,6 +21,7 @@ import 'package:app/stores/language_store.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:app/components/svg_icon/index.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -572,7 +573,12 @@ void main() {
     logic.collected = true;
     logic.notifyListeners();
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.favorite_rounded), findsWidgets);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is SvgIcon && widget.name == 'user_selected',
+      ),
+      findsWidgets,
+    );
     expect(find.text('Saved'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -601,6 +607,63 @@ void main() {
         ),
       );
       expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final scenario in const [
+    (Size(390, 844), false),
+    (Size(844, 390), true),
+    (Size(466, 678), true),
+  ]) {
+    testWidgets('真实漫画目录列表贯穿底部，安全区仅保留在列表内容内 $scenario', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = scenario.$1;
+      tester.view.padding = const FakeViewPadding(bottom: 34);
+      tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      final logic = _Logic('en');
+      addTearDown(logic.dispose);
+      await mount(
+        tester,
+        Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => show_comic_chapter_sheet(
+                context,
+                comic_id: 42,
+                controller: logic,
+              ),
+              child: const Text('Open chapters'),
+            ),
+          ),
+        ),
+        dark: scenario.$2,
+      );
+      await tester.tap(find.text('Open chapters'));
+      await tester.pumpAndSettle();
+      for (final key in [
+        'comic_chapter_sheet_surface',
+        'comic_chapter_sheet_list_region',
+      ]) {
+        expect(
+          tester.getBottomLeft(find.byKey(ValueKey(key))).dy,
+          closeTo(scenario.$1.height, 0.1),
+          reason: '背景和可滚动视口都必须延伸到窗口底部',
+        );
+      }
+      final list = tester.widget<CustomScrollView>(
+        find.byKey(const PageStorageKey('comic_chapters_scroll')),
+      );
+      final tail = list.slivers.whereType<SliverPadding>().last;
+      expect(
+        tail.padding.resolve(ui.TextDirection.ltr).bottom,
+        greaterThanOrEqualTo(34),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
     });
   }
 

@@ -6,6 +6,7 @@ import 'package:app/pages/home/widgets/tab_contents/recommend_tab/index.dart';
 import 'package:app/pages/home/widgets/tab_contents/short_story_tab/index.dart';
 import 'package:app/pages/home/widgets/tab_contents/comics_tab/index.dart';
 import 'package:app/pages/home/widgets/tab_contents/default_tab/index.dart';
+import 'package:app/pages/home/widgets/tab_contents/novels_tab/index.dart';
 import 'package:app/stores/home_store.dart';
 import 'package:app/models/home_classification.dart';
 
@@ -21,33 +22,45 @@ class HomeTabs extends StatelessWidget {
     final List<HomeClassification> classification_list =
         _get_classification_list();
 
-    return TabBarView(
-      controller: tab_controller,
-      physics: const BouncingScrollPhysics(),
-      children: List<Widget>.generate(titles.length, (int index) {
-        final int classification_id = index < classification_list.length
-            ? classification_list[index].id
-            : _get_default_id_by_index(index);
+    return AnimatedBuilder(
+      animation: tab_controller,
+      builder: (context, _) => TabBarView(
+        controller: tab_controller,
+        physics: const BouncingScrollPhysics(),
+        children: List<Widget>.generate(titles.length, (int index) {
+          final int classification_id = index < classification_list.length
+              ? classification_list[index].id
+              : _get_default_id_by_index(index);
 
-        if (classification_id == 143) {
-          return const RecommendTabContent(key: ValueKey('recommend_tab'));
-        }
-        if (classification_id == 145) {
-          return const ShortStoryTabContent(key: ValueKey('short_story_tab'));
-        }
-        // 漫画分类：展示漫画列表。
-        if (classification_id == 146) {
-          return const ComicsTabContent(key: ValueKey('comics_tab'));
-        }
-        final String classification_scope = classification_id > 0
-            ? '$classification_id'
-            : 'fallback_$index';
-        return DefaultTabContent(
-          key: ValueKey('default_tab_$classification_scope'),
-          title: titles[index],
-          waterfall_id: 'home_classification_$classification_scope',
-        );
-      }),
+          if (classification_id == 143) {
+            return const RecommendTabContent(key: ValueKey('recommend_tab'));
+          }
+          if (classification_id == 144) {
+            return NovelsTabContent(
+              key: const ValueKey('novels_tab'),
+              is_active: tab_controller.index == index,
+            );
+          }
+          if (classification_id == 145) {
+            return const ShortStoryTabContent(key: ValueKey('short_story_tab'));
+          }
+          // 漫画分类：展示漫画列表。
+          if (classification_id == 146) {
+            return ComicsTabContent(
+              key: const ValueKey('comics_tab'),
+              is_active: tab_controller.index == index,
+            );
+          }
+          final String classification_scope = classification_id > 0
+              ? '$classification_id'
+              : 'fallback_$index';
+          return DefaultTabContent(
+            key: ValueKey('default_tab_$classification_scope'),
+            title: titles[index],
+            waterfall_id: 'home_classification_$classification_scope',
+          );
+        }),
+      ),
     );
   }
 
@@ -60,6 +73,7 @@ class HomeTabs extends StatelessWidget {
 
   int _get_default_id_by_index(int index) {
     if (index == 0) return 143;
+    if (index == 1) return 144;
     if (index == 5) return 145;
     return 0;
   }

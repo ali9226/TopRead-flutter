@@ -10,6 +10,7 @@ import 'package:app/config/color_config.dart';
 class ReaderTopBarStyle {
   static const double target = LayoutConfig.touch_target_size;
   static const double icon = 22;
+  static const double share_icon_size = 20;
   static const double spinner = 18;
   static const double stroke = 2;
   static const double horizontal_padding = LayoutConfig.space_8;
@@ -33,13 +34,21 @@ class ReaderTopBarStyle {
   static bool reduce_motion(BuildContext context) =>
       MediaQuery.disableAnimationsOf(context) ||
       MediaQuery.accessibleNavigationOf(context);
-  static Color background(bool dark) =>
-      dark ? ColorConstants.components_reader_top_bar_style_tone : ColorConstants.whiteColor;
-  static Color foreground(bool dark) =>
-      dark ? ColorConstants.whiteColor : ColorConstants.components_reader_top_bar_style_tone_ff1f1a12;
-  static Color secondary(bool dark) =>
-      dark ? ColorConstants.components_reader_bottom_action_style_tone_b2ffffff : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56;
-  static Color border(bool dark) =>
-      dark ? ColorConstants.components_reader_top_bar_style_tone_ff21262d : ColorConstants.components_reader_top_bar_style_tone_ffeeeeee;
+  static Color background(bool dark) => dark
+      ? ColorConstants.components_reader_top_bar_style_tone
+      : ColorConstants.whiteColor;
+  static Color foreground(bool dark) => dark
+      ? ColorConstants.whiteColor
+      : ColorConstants.components_reader_top_bar_style_tone_ff1f1a12;
+  static Color secondary(bool dark) => dark
+      ? ColorConstants.components_reader_bottom_action_style_tone_b2ffffff
+      : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56;
+  static Color share_icon_color(bool dark) => dark
+      ? ColorConstants.components_fixed_bottom_navigation_style_tone_ffd0d4db
+            .withValues(alpha: 0.82)
+      : ColorConstants.components_cute_mascot_index_tone_ff1a1a1a;
+  static Color border(bool dark) => dark
+      ? ColorConstants.components_reader_top_bar_style_tone_ff21262d
+      : ColorConstants.components_reader_top_bar_style_tone_ffeeeeee;
   static FontWeight get medium => FontConfig.adjustedWeight(FontWeight.w500);
 }

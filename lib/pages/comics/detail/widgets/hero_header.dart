@@ -107,8 +107,8 @@ class ComicDetailHeroHeader extends StatelessWidget {
                 label: easy.tr('comics.views'),
               ),
               WorkHeroStat(
-                icon: Icons.favorite_rounded,
-                icon_color: ColorConstants.dangerColor,
+                icon: Icons.star_outline_rounded,
+                icon_color: ColorConstants.themeColor,
                 value: ComicDetailStyle.format_count(
                   detail.comic.favorite_count,
                 ),

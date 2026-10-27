@@ -176,8 +176,9 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
                           Get.find<ProjectConfigStore>()
                               .current
                               .is_comment_enabled;
-                      if (!is_comment_enabled)
+                      if (!is_comment_enabled) {
                         return const Expanded(child: SizedBox.shrink());
+                      }
 
                       return Expanded(
                         child: _buildActionItem(
@@ -206,17 +207,21 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
     /// 禁用状态文字颜色。
     final Color disabled_text_color = widget.is_dark
         ? ColorConstants.pages_home_widgets_tab_bar_skeleton_index_tone
-        : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56.withValues(alpha: 0.4);
+        : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56
+              .withValues(alpha: 0.4);
 
     /// 进度条轨道颜色。
     final Color track_color = widget.is_dark
         ? ColorConstants.components_authorized_login_apple_review_index_tone
-        : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56.withValues(alpha: 0.15);
+        : ColorConstants.components_reader_top_bar_style_tone_ff7a6a56
+              .withValues(alpha: 0.15);
 
     /// 滑块阴影颜色。
     final Color thumb_shadow_color = widget.is_dark
-        ? ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone
-        : ColorConstants.pages_home_widgets_tab_bar_skeleton_index_tone_26222222;
+        ? ColorConstants
+              .pages_short_story_read_widgets_auto_read_settings_sheet_tone
+        : ColorConstants
+              .pages_home_widgets_tab_bar_skeleton_index_tone_26222222;
 
     return Stack(
       clipBehavior: Clip.none,
@@ -485,7 +490,8 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
               vertical: LayoutConfig.space_4,
             ),
             decoration: BoxDecoration(
-              color: ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone_bf222222,
+              color: ColorConstants
+                  .pages_short_story_read_widgets_auto_read_settings_sheet_tone_bf222222,
               borderRadius: BorderRadius.circular(LayoutConfig.radius_4),
             ),
             child: Column(
@@ -504,7 +510,8 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
                   Text(
                     chapter_text,
                     style: TextStyle(
-                      color: ColorConstants.pages_read_widgets_navigation_bars_bottom_index_tone_ccffffff,
+                      color: ColorConstants
+                          .pages_read_widgets_navigation_bars_bottom_index_tone_ccffffff,
                       fontSize: 10,
                     ),
                   ),
@@ -514,7 +521,10 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
           ),
           CustomPaint(
             size: const Size(12, 6),
-            painter: _ArrowPainter(color: ColorConstants.pages_short_story_read_widgets_bottom_comment_bar_tone),
+            painter: _ArrowPainter(
+              color: ColorConstants
+                  .pages_short_story_read_widgets_bottom_comment_bar_tone,
+            ),
           ),
         ],
       ),
@@ -544,6 +554,7 @@ class _ReadBottomBarState extends State<ReadBottomBar> {
     return ReaderBottomAction(
       label: '${widget.like_count}',
       color: current_color,
+      show_ink_feedback: false,
       on_pressed: widget.is_like_loading ? null : widget.on_like_tap,
       icon_widget: TweenAnimationBuilder<double>(
         duration: const Duration(milliseconds: 560),

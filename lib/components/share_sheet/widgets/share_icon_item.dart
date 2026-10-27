@@ -2,6 +2,7 @@ import 'package:app/config/layout_config.dart';
 import 'package:flutter/material.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/components/share_sheet/style.dart';
+import 'package:app/components/share_sheet/layout_style.dart';
 
 /// 分享图标按钮组件。
 ///
@@ -52,37 +53,48 @@ class ShareIconItem extends StatelessWidget {
         ? ShareSheetStyle.icon_label_color_dark
         : ShareSheetStyle.icon_label_color_light;
 
-    return GestureDetector(
-      onTap: on_tap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          /// 纯图标（无圆形背景）。
-          SizedBox(
-            width: ShareSheetStyle.icon_size,
-            child:
-                icon_widget ??
-                Icon(
-                  icon,
-                  size: ShareSheetStyle.icon_inner_size,
-                  color: icon_color,
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: on_tap,
+        borderRadius: BorderRadius.circular(LayoutConfig.radius_12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: ShareLayoutStyle.min_tap_extent,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              /// 纯图标（无圆形背景）。
+              SizedBox(
+                width: ShareSheetStyle.icon_size,
+                child:
+                    icon_widget ??
+                    Icon(
+                      icon,
+                      size: ShareSheetStyle.icon_inner_size,
+                      color: icon_color,
+                    ),
+              ),
+
+              /// 图标与文字之间的间距。
+              const SizedBox(height: LayoutConfig.space_2),
+
+              /// 文字标签（不截断，自动撑开宽度）。
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: ShareSheetStyle.icon_label_font_size,
+                  fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                  color: label_color,
                 ),
+              ),
+            ],
           ),
-
-          /// 图标与文字之间的间距。
-          const SizedBox(height: LayoutConfig.space_2),
-
-          /// 文字标签（不截断，自动撑开宽度）。
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: ShareSheetStyle.icon_label_font_size,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-              color: label_color,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

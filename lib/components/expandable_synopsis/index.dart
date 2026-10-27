@@ -7,6 +7,7 @@ import './style.dart';
 import './text_viewport.dart';
 import './toggle_button.dart';
 import './compact_heading.dart';
+import './body_layout.dart';
 
 /// 跨作品类型复用的简介卡片；标题位置固定，正文支持连续裁切展开和收起。
 class ExpandableSynopsis extends StatefulWidget {
@@ -150,6 +151,10 @@ class _ExpandableSynopsisState extends State<ExpandableSynopsis> {
               retain_when_above_viewport: true,
               child: InkWell(
                 onTap: show_toggle && !widget.compact_toggle ? _toggle : null,
+                splashFactory: NoSplash.splashFactory,
+                overlayColor: const WidgetStatePropertyAll(
+                  ExpandableSynopsisStyle.interaction_overlay,
+                ),
                 child: widget.compact_toggle
                     ? CompactSynopsisHeading(
                         title: title,
@@ -163,65 +168,64 @@ class _ExpandableSynopsisState extends State<ExpandableSynopsis> {
                   ? ExpandableSynopsisStyle.compact_title_gap
                   : ExpandableSynopsisStyle.embedded_title_gap,
             ),
-            WindowReservedRegionPadding(
-              mode: WindowReservedRegionPaddingMode.heading,
-              retain_when_above_viewport: true,
-              child: LayoutBuilder(
-                builder: (context, text_constraints) {
-                  // 文字按避让后的真实宽度决定是否超过预览行数；按钮不继承正文边距。
-                  final text_painter = TextPainter(
-                    text: TextSpan(
-                      text: description,
-                      style: DefaultTextStyle.of(
-                        context,
-                      ).style.merge(text_style),
-                    ),
-                    textDirection: Directionality.of(context),
-                    textScaler: MediaQuery.textScalerOf(context),
-                    locale: Localizations.maybeLocaleOf(context),
-                    maxLines: widget.collapsed_lines,
-                  )..layout(maxWidth: text_constraints.maxWidth);
-                  final text_can_expand = text_painter.didExceedMaxLines;
-                  text_painter.dispose();
-                  _report_embedded_overflow(text_can_expand);
-                  return ExpandableSynopsisTextViewport(
-                    description: description,
-                    expanded: _expanded,
-                    on_collapse: _toggle,
-                    key_prefix: widget.key_prefix,
-                    style: text_style,
-                    collapsed_lines: widget.collapsed_lines,
-                    fade_line_ratio: widget.compact_toggle
-                        ? ExpandableSynopsisStyle.compact_fade_line_ratio
-                        : ExpandableSynopsisStyle.fade_line_ratio,
-                    fade_surface_color:
-                        widget.surface_color ??
-                        WorkSectionCardStyle.background(widget.is_dark),
-                  );
-                },
-              ),
-            ),
-            if (show_toggle) ...[
-              SizedBox(
-                height: widget.compact_toggle
-                    ? ExpandableSynopsisStyle.compact_toggle_top_gap
-                    : ExpandableSynopsisStyle.toggle_top_gap,
-              ),
-              WindowReservedRegionPadding(
+            SynopsisBodyLayout(
+              compact: widget.compact_toggle,
+              expanded: _expanded,
+              body: WindowReservedRegionPadding(
                 mode: WindowReservedRegionPaddingMode.heading,
                 retain_when_above_viewport: true,
-                child: Center(
-                  child: SynopsisToggleButton(
-                    expanded: _expanded,
-                    label: label,
-                    key_prefix: widget.key_prefix,
-                    on_pressed: _toggle,
-                    compact: widget.compact_toggle,
-                    is_dark: widget.is_dark,
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, text_constraints) {
+                    // 文字按避让后的真实宽度决定是否超过预览行数；按钮不继承正文边距。
+                    final text_painter = TextPainter(
+                      text: TextSpan(
+                        text: description,
+                        style: DefaultTextStyle.of(
+                          context,
+                        ).style.merge(text_style),
+                      ),
+                      textDirection: Directionality.of(context),
+                      textScaler: MediaQuery.textScalerOf(context),
+                      locale: Localizations.maybeLocaleOf(context),
+                      maxLines: widget.collapsed_lines,
+                    )..layout(maxWidth: text_constraints.maxWidth);
+                    final text_can_expand = text_painter.didExceedMaxLines;
+                    text_painter.dispose();
+                    _report_embedded_overflow(text_can_expand);
+                    return ExpandableSynopsisTextViewport(
+                      description: description,
+                      expanded: _expanded,
+                      on_collapse: _toggle,
+                      key_prefix: widget.key_prefix,
+                      style: text_style,
+                      collapsed_lines: widget.collapsed_lines,
+                      fade_line_ratio: widget.compact_toggle
+                          ? ExpandableSynopsisStyle.compact_fade_line_ratio
+                          : ExpandableSynopsisStyle.fade_line_ratio,
+                      fade_surface_color:
+                          widget.surface_color ??
+                          WorkSectionCardStyle.background(widget.is_dark),
+                    );
+                  },
                 ),
               ),
-            ],
+              toggle: !show_toggle
+                  ? null
+                  : WindowReservedRegionPadding(
+                      mode: WindowReservedRegionPaddingMode.heading,
+                      retain_when_above_viewport: true,
+                      child: Center(
+                        child: SynopsisToggleButton(
+                          expanded: _expanded,
+                          label: label,
+                          key_prefix: widget.key_prefix,
+                          on_pressed: _toggle,
+                          compact: widget.compact_toggle,
+                          is_dark: widget.is_dark,
+                        ),
+                      ),
+                    ),
+            ),
           ],
         );
       },
@@ -254,6 +258,10 @@ class _ExpandableSynopsisState extends State<ExpandableSynopsis> {
               '${widget.key_prefix}_${_expanded ? 'collapse' : 'header'}',
             ),
             onTap: widget.compact_toggle ? null : _toggle,
+            splashFactory: NoSplash.splashFactory,
+            overlayColor: const WidgetStatePropertyAll(
+              ExpandableSynopsisStyle.interaction_overlay,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(
                 minHeight: ExpandableSynopsisStyle.action_extent,
@@ -290,42 +298,46 @@ class _ExpandableSynopsisState extends State<ExpandableSynopsis> {
             ),
           ),
           const SizedBox(height: ExpandableSynopsisStyle.title_gap),
-          ExpandableSynopsisTextViewport(
-            description: description,
+          SynopsisBodyLayout(
+            compact: widget.compact_toggle,
             expanded: _expanded,
-            on_collapse: _toggle,
-            key_prefix: widget.key_prefix,
-            collapsed_lines: widget.collapsed_lines,
-            fade_line_ratio: widget.compact_toggle
-                ? ExpandableSynopsisStyle.compact_fade_line_ratio
-                : ExpandableSynopsisStyle.fade_line_ratio,
-            fade_surface_color:
-                widget.surface_color ??
-                WorkSectionCardStyle.card_background(widget.is_dark),
-            style: TextStyle(
-              fontSize:
-                  widget.font_size ??
-                  (cjk
-                      ? ExpandableSynopsisStyle.font_size_cjk
-                      : ExpandableSynopsisStyle.font_size_alphabetic),
-              height: cjk
-                  ? ExpandableSynopsisStyle.line_height_cjk
-                  : ExpandableSynopsisStyle.line_height_alphabetic,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-              color: widget.is_dark
-                  ? ExpandableSynopsisStyle.text_color_dark
-                  : ExpandableSynopsisStyle.text_color_light,
-            ),
-          ),
-          const SizedBox(height: ExpandableSynopsisStyle.action_gap),
-          Center(
-            child: SynopsisToggleButton(
+            toggle_gap: ExpandableSynopsisStyle.action_gap,
+            body: ExpandableSynopsisTextViewport(
+              description: description,
               expanded: _expanded,
-              label: label,
+              on_collapse: _toggle,
               key_prefix: widget.key_prefix,
-              on_pressed: _toggle,
-              compact: widget.compact_toggle,
-              is_dark: widget.is_dark,
+              collapsed_lines: widget.collapsed_lines,
+              fade_line_ratio: widget.compact_toggle
+                  ? ExpandableSynopsisStyle.compact_fade_line_ratio
+                  : ExpandableSynopsisStyle.fade_line_ratio,
+              fade_surface_color:
+                  widget.surface_color ??
+                  WorkSectionCardStyle.card_background(widget.is_dark),
+              style: TextStyle(
+                fontSize:
+                    widget.font_size ??
+                    (cjk
+                        ? ExpandableSynopsisStyle.font_size_cjk
+                        : ExpandableSynopsisStyle.font_size_alphabetic),
+                height: cjk
+                    ? ExpandableSynopsisStyle.line_height_cjk
+                    : ExpandableSynopsisStyle.line_height_alphabetic,
+                fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                color: widget.is_dark
+                    ? ExpandableSynopsisStyle.text_color_dark
+                    : ExpandableSynopsisStyle.text_color_light,
+              ),
+            ),
+            toggle: Center(
+              child: SynopsisToggleButton(
+                expanded: _expanded,
+                label: label,
+                key_prefix: widget.key_prefix,
+                on_pressed: _toggle,
+                compact: widget.compact_toggle,
+                is_dark: widget.is_dark,
+              ),
             ),
           ),
         ],

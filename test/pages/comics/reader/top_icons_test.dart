@@ -2,7 +2,6 @@
 
 import 'package:app/components/reader_top_bar/action_button.dart';
 import 'package:app/components/svg_icon/index.dart';
-import 'package:app/config/color_config.dart';
 import 'package:app/models/project_config.dart';
 import 'package:app/pages/comics/reader/widgets/top_scrim.dart';
 import 'package:app/pages/short_story_read/widgets/full_appbar.dart';
@@ -99,7 +98,7 @@ void main() {
     }
   }
 
-  testWidgets('漫画收藏加载阻止重复点击，完成后切换图标，远端分享开关实时生效', (tester) async {
+  testWidgets('漫画收藏即时显示乐观星形、无波纹并阻止重复点击，远端分享开关实时生效', (tester) async {
     var collecting = false;
     var collected = false;
     var collections = 0;
@@ -130,14 +129,17 @@ void main() {
         .toList();
     await tester.tap(find.byWidget(actions()[1]));
     expect(collections, 1);
-    update(() => collecting = true);
+    update(() {
+      collecting = true;
+      collected = true;
+    });
     await tester.pump();
     final spinner = find.byType(CircularProgressIndicator);
-    expect(spinner, findsOneWidget);
-    expect(
-      tester.widget<CircularProgressIndicator>(spinner).color,
-      ColorConstants.themeColor,
-    );
+    expect(spinner, findsNothing);
+    expect((actions()[1].icon_widget! as SvgIcon).name, 'user_selected');
+    expect(actions()[1].ripple, isFalse);
+    expect(actions().first.ripple, isTrue);
+    expect(actions().last.ripple, isTrue);
     await tester.tap(find.byWidget(actions()[1]));
     expect(collections, 1);
     update(() {

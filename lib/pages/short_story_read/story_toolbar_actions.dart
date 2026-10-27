@@ -99,6 +99,7 @@ class StoryToolbarActions {
     final ShortStoryReadLogic logic = host.logic;
     showShareSheet(
       context: host.host_context,
+      work_kind: WorkShareKind.short_story,
       novel_id: logic.story_id,
       novel_title: logic.title,
       novel_cover_url: logic.story_data.value?.cover_url ?? '',
@@ -127,15 +128,9 @@ class StoryToolbarActions {
     final bool is_logged_in = await showLoginRequiredDialog(
       title: easy.tr('short_story_read.login_required'),
     );
-    if (!is_logged_in) return;
+    if (!is_logged_in || !host.host_mounted) return;
     final ShortStoryReadLogic action_logic = host.logic;
-    final bool? is_favorited = await action_logic.toggle_favorite();
-    if (!host.host_mounted || is_favorited == null) return;
-    showBottomTip(
-      easy.tr(
-        is_favorited ? 'favorite.add_success' : 'favorite.remove_success',
-      ),
-    );
+    await action_logic.toggle_favorite();
   }
 
   /// 底部栏点赞按钮（带登录检查）。

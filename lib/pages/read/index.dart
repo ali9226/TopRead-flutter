@@ -4,12 +4,10 @@ import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import 'package:app/api/bookshelf.dart';
 import 'package:app/config/color_config.dart';
-import 'package:app/models/paragraph_text_selection.dart';
+import 'package:app/models/share_excerpt.dart';
 import 'package:app/pages/read/utils/scroll_utils.dart';
 import 'package:app/pages/read/widgets/reading_settings_sheet/index.dart';
 import 'package:app/pages/read/widgets/auto_read_settings_sheet/index.dart';
@@ -27,6 +25,7 @@ import 'package:app/pages/read/reading_scroll_progress.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/stores/project_config_store.dart';
 import 'package:app/services/bookshelf_sync_service.dart';
+import 'package:app/services/reading_engagement/index.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/util/ad_display_policy.dart';
 import 'package:app/components/app_wrapper/utils/app_router.dart';
@@ -34,7 +33,6 @@ import 'package:app/components/login_required_dialog/index.dart';
 import 'package:app/components/comment_list/index.dart';
 import 'package:app/components/share_sheet/index.dart';
 import 'package:app/components/share_sheet/widgets/text_selection_preview_sheet.dart';
-import 'package:app/util/dialog/show_bottom_tip.dart';
 
 import 'package:app/components/paragraph_selection/actions.dart';
 
@@ -70,16 +68,18 @@ class ReadPage extends StatefulWidget {
 class _ReadPageState extends State<ReadPage>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin
     implements
-    ReadAdUnlockHost,
-    AutoReadHost,
-    ChapterAnchorHost,
-    ScrollProgressHost,
-    ReadingNativeAdHost,
-    ChapterJumpHost {
+        ReadAdUnlockHost,
+        AutoReadHost,
+        ChapterAnchorHost,
+        ScrollProgressHost,
+        ReadingNativeAdHost,
+        ChapterJumpHost {
   /// 页面逻辑层，用于承载页面数据组装与业务判断。
+  @override
   late final Logic logic;
 
   /// 页面滚动控制器，从当前路由独享的逻辑层获取。
+  @override
   ScrollController get scroll_controller => logic.scroll_controller;
 
   /// 设备信息仓库，用于读取当前主题模式等全局设备状态。
@@ -89,6 +89,7 @@ class _ReadPageState extends State<ReadPage>
   final UserInformation user_information = Get.find<UserInformation>();
 
   /// 正文区块定位锚点，用于点击底部胶囊后精确滚动到正文位置。
+  @override
   final GlobalKey reading_section_key = GlobalKey();
 
   /// 是否已经进入正文阅读状态，用于控制底部胶囊与进度条显隐。
@@ -138,9 +139,6 @@ class _ReadPageState extends State<ReadPage>
 
   // ==================== 广告相关状态 ====================
 
-
-
-
   /// 是否进入正文区域的展示通知器。
   final ValueNotifier<bool> _has_started_reading_notifier = ValueNotifier<bool>(
     false,
@@ -153,24 +151,22 @@ class _ReadPageState extends State<ReadPage>
   double last_viewport_dimension = 0;
 
   /// 布局变化前记录的章节索引。
+  @override
   int pending_restore_chapter_index = 0;
 
   /// 布局变化前记录的章节内进度。
+  @override
   double pending_restore_chapter_progress = 0;
 
   /// 是否需要在下一帧恢复滚动位置。
+  @override
   bool needs_restore_scroll_position = false;
 
   /// 正文区块是否已经贴近顶部，用于控制翻页点击区域是否生效。
   bool is_reading_section_at_top = false;
 
-
-
-
   /// 是否正在执行程序化滚动（点击翻页），此时不触发导航栏显隐。
   bool _is_programmatic_scroll = false;
-
-
 
   /// 是否正在执行章节窗口重建与精确定位。
   bool _is_chapter_transaction_active = false;
@@ -180,6 +176,8 @@ class _ReadPageState extends State<ReadPage>
 
   /// 阅读进度定时保存定时器。
   Timer? _progress_save_timer;
+  ReadingEngagementController? _reading_engagement;
+  ModalRoute<dynamic>? _reading_route;
 
   /// 阅读进度保存间隔（秒）。
   static const int _progress_save_interval_seconds = 10;
@@ -241,6 +239,25 @@ class _ReadPageState extends State<ReadPage>
     }
 
     // 注册滚动监听，驱动阅读进度、底部胶囊和翻页区域状态更新。
+    _reading_engagement = ReadingEngagementController(
+      identity: () {
+        final user = user_information.userInfo.value;
+        if (!user_information.isLoggedIn.value || user == null) return null;
+        return (user_id: user.id, novel_id: widget.story_id);
+      },
+      is_body_visible: () =>
+          mounted &&
+          _reading_route?.isCurrent == true &&
+          has_started_reading &&
+          _has_stable_progress &&
+          !_is_restoring_progress &&
+          !_is_chapter_transaction_active &&
+          !logic.is_loading.value &&
+          !logic.is_error.value &&
+          !logic.is_jumping_chapter.value &&
+          !_paragraph_actions.is_open &&
+          _selected_paragraphs.isEmpty,
+    );
     scroll_controller.addListener(_scroll_progress.handle_scroll);
 
     // 进入页面时请求接口，有阅读进度时静默加载目标章节。
@@ -299,6 +316,13 @@ class _ReadPageState extends State<ReadPage>
 
   // ==================== 广告管理 ====================
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reading_route = ModalRoute.of(context);
+    _reading_engagement?.sample();
+  }
+
   /// 等待阅读页初始化完成后打开路由指定的评论。
   Future<void> _open_initial_comment_after_ready() async {
     await _initialization_future;
@@ -312,6 +336,7 @@ class _ReadPageState extends State<ReadPage>
 
   @override
   void dispose() {
+    _reading_engagement?.dispose();
     _progress_save_timer?.cancel();
     _ad_unlock.dispose();
     _ad_free_state_worker?.dispose();
@@ -447,6 +472,7 @@ class _ReadPageState extends State<ReadPage>
   /// 更新是否进入正文，并仅通知底部阅读辅助层。
   void _set_has_started_reading(bool value) {
     has_started_reading = value;
+    _reading_engagement?.sample();
     if (value) {
       _has_reading_history_notifier.value = true;
       _resume_target = (
@@ -553,8 +579,12 @@ class _ReadPageState extends State<ReadPage>
   void _on_paragraph_share(ReadingContentItem item, TextSelection selection) {
     _auto_read.stop();
     logic.show_navigation.value = false;
-    final String selected_text = selected_paragraph_text(item.text, selection);
-    if (selected_text.trim().isEmpty) return;
+    final excerpt = ShareExcerpt.from_selection(
+      paragraph_text: item.text,
+      paragraph_start: item.start_offset,
+      selection: selection,
+    );
+    if (excerpt == null) return;
     final ReadDetail detail = logic.build_detail();
     showTextSelectionPreviewSheet(
       context: context,
@@ -562,7 +592,8 @@ class _ReadPageState extends State<ReadPage>
       novel_title: detail.title,
       novel_author: detail.author_name,
       novel_cover_url: detail.cover_url,
-      share_text: selected_text,
+      share_text: excerpt.selected_text,
+      excerpt: excerpt,
       is_dark: device_info.dark.value,
     );
   }
@@ -801,13 +832,7 @@ class _ReadPageState extends State<ReadPage>
       title: easy.tr('short_story_read.login_required'),
     );
     if (!is_logged_in || !mounted) return;
-    final is_favorited = await logic.toggle_favorite();
-    if (!mounted || is_favorited == null) return;
-    showBottomTip(
-      easy.tr(
-        is_favorited ? 'favorite.add_success' : 'favorite.remove_success',
-      ),
-    );
+    await logic.toggle_favorite();
   }
 
   // ==================== [ChapterJumpHost] ====================

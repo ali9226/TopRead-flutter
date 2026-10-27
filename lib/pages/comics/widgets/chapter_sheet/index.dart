@@ -127,51 +127,46 @@ class _ComicChapterSheetState extends State<ComicChapterSheet> {
           child: WindowContentLayout(
             expand_height: false,
             max_width: ComicChapterSheetStyle.max_width,
-            child: SafeArea(
-              top: false,
-              left: false,
-              right: false,
-              maintainBottomViewPadding: true,
-              child: AnimatedBuilder(
-                animation: _logic,
-                builder: (context, _) {
-                  final detail = _logic.detail;
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CatalogHeader(
-                        is_dark: ComicDetailStyle.is_dark(context),
-                        title: tr('comics.chapters'),
-                        on_close: () => Navigator.pop(context),
-                      ),
-                      Flexible(
-                        fit: FlexFit.loose,
-                        child: detail == null
-                            ? Padding(
-                                padding: const EdgeInsets.all(
-                                  LayoutConfig.space_24,
-                                ),
-                                child: ComicsEmptyState(
-                                  loading: _logic.loading,
-                                  error: _logic.error,
-                                  message: tr('comics.empty_chapters'),
-                                  on_retry: _logic.load,
-                                ),
-                              )
-                            : PrimaryScrollController(
-                                controller: _scroll,
-                                child: ComicChapterCatalog(
-                                  logic: _logic,
-                                  current_chapter_id: widget.current_chapter_id,
-                                  on_open: _open,
-                                  shrink_wrap: true,
-                                ),
+            // 列表视口延伸到窗口底部；列表尾部和定位按钮各自避让手势区。
+            child: AnimatedBuilder(
+              animation: _logic,
+              builder: (context, _) {
+                final detail = _logic.detail;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CatalogHeader(
+                      is_dark: ComicDetailStyle.is_dark(context),
+                      title: tr('comics.chapters'),
+                      on_close: () => Navigator.pop(context),
+                    ),
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: detail == null
+                          ? Padding(
+                              padding: const EdgeInsets.all(
+                                LayoutConfig.space_24,
                               ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+                              child: ComicsEmptyState(
+                                loading: _logic.loading,
+                                error: _logic.error,
+                                message: tr('comics.empty_chapters'),
+                                on_retry: _logic.load,
+                              ),
+                            )
+                          : PrimaryScrollController(
+                              controller: _scroll,
+                              child: ComicChapterCatalog(
+                                logic: _logic,
+                                current_chapter_id: widget.current_chapter_id,
+                                on_open: _open,
+                                shrink_wrap: true,
+                              ),
+                            ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),

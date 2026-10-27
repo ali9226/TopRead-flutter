@@ -587,16 +587,24 @@ Future<bool> save_read_progress({
   int? chapter_id,
   int chapter_offset = 0,
   double read_progress = 0,
+  String? reading_session_id,
+  int? reading_seconds,
+  bool reading_only = false,
+  String? authorization_token,
 }) async {
   final ResultsType<Map<String, dynamic>> results =
       await postRequest<Map<String, dynamic>>(
         path: 'novel_read_record/save_progress',
+        authorization_token: authorization_token,
         parameter: {
           'novel_id': novel_id,
           'novel_language_id': ?novel_language_id,
           'chapter_id': ?chapter_id,
           'chapter_offset': chapter_offset,
           'read_progress': read_progress,
+          'reading_session_id': ?reading_session_id,
+          'reading_seconds': ?reading_seconds,
+          if (reading_only) 'reading_only': true,
         },
         showTips: false,
         fromJson: (json) => json,

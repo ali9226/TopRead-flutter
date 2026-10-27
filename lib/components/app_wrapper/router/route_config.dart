@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/pages/novel_discovery/browse/index.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
@@ -34,6 +35,7 @@ import 'package:app/pages/published_long_novel_editor/index.dart';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/pages/work_editor/index.dart';
 import 'package:app/pages/comics/detail/index.dart';
+import 'package:app/pages/comics/browse/index.dart';
 import 'package:app/pages/comics/reader/index.dart';
 import 'package:app/pages/comics/comments/index.dart';
 import 'package:app/pages/comics/mine/index.dart';
@@ -130,7 +132,34 @@ class RouteConfig {
             pageBuilder: (context, state) =>
                 buildRoutePage(state: state, child: const TilePreviewPage()),
           ),
+        // 首页小说分类的独立分页路由，保留首页分组及滚动位置。
+        GoRoute(
+          path: '/novel/browse',
+          pageBuilder: (context, state) => buildRoutePage(
+            state: state,
+            child: NovelBrowsePage(
+              initial_category_id:
+                  int.tryParse(
+                    state.uri.queryParameters['category_id'] ?? '',
+                  ) ??
+                  0,
+            ),
+          ),
+        ),
         // 漫画具有独立作品、语种与图片阅读路由，支持分享深链接。
+        GoRoute(
+          path: '/comics/browse',
+          pageBuilder: (context, state) => buildRoutePage(
+            state: state,
+            child: ComicBrowsePage(
+              initial_category_id:
+                  int.tryParse(
+                    state.uri.queryParameters['category_id'] ?? '',
+                  ) ??
+                  0,
+            ),
+          ),
+        ),
         GoRoute(
           path: '/comics/detail',
           pageBuilder: (context, state) => buildRoutePage(

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:app/config/color_config.dart';
+import 'package:app/components/comment_list/widgets/comment_avatar.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/pages/read/utils/read_models.dart';
 import 'package:app/pages/read/widgets/introduction_section/index.dart';
@@ -320,6 +321,11 @@ void main() {
               of: find.text(comment.user_name),
               matching: find.byType(ReadCommentItem),
             );
+            final avatar = tester.widget<CommentAvatar>(
+              find.descendant(of: item, matching: find.byType(CommentAvatar)),
+            );
+            expect(avatar.user_id, comment.user_id);
+            expect(avatar.avatar_url, comment.avatar_url);
             final stars = find.descendant(
               of: item,
               matching: find.byIcon(Icons.star_rounded),
@@ -329,7 +335,7 @@ void main() {
               final star_widgets = tester.widgetList<Icon>(stars).toList();
               expect(
                 star_widgets
-                    .where((star) => star.color == star_widgets.first.color)
+                    .where((star) => star.color == ColorConstants.dangerColor)
                     .length,
                 comment.star_count,
               );

@@ -16,6 +16,9 @@ class ReaderOverlayLayer extends StatelessWidget {
   /// 是否为夜间模式。
   final bool is_dark;
 
+  /// 当前短篇作品标题。
+  final String title;
+
   /// 状态栏高度。
   final double status_bar_height;
 
@@ -98,6 +101,7 @@ class ReaderOverlayLayer extends StatelessWidget {
   const ReaderOverlayLayer({
     super.key,
     required this.is_dark,
+    this.title = '',
     required this.status_bar_height,
     required this.bottom_padding,
     required this.bg_color,
@@ -156,6 +160,7 @@ class ReaderOverlayLayer extends StatelessWidget {
             right: 0,
             child: FullAppbar(
               is_dark: is_dark,
+              title: title,
               on_back: on_back,
               on_favorite_tap: on_favorite_tap,
               on_share: on_share,

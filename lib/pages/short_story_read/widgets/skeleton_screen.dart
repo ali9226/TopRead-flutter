@@ -1,7 +1,7 @@
 import 'package:app/components/work_detail_skeleton/index.dart';
 import 'package:flutter/material.dart';
 
-/// 短篇首屏与加载后的封面简介一致，阅读正文及底栏不提前出现。
+/// 短篇首屏同时预示真实封面简介和正文，业务底栏仍由阅读页控制。
 class SkeletonScreen extends StatelessWidget {
   const SkeletonScreen({super.key, required this.is_dark, this.on_back});
 

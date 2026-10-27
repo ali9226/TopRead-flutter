@@ -38,6 +38,12 @@ class NetworkCoverImage extends StatelessWidget {
   /// 图片加载失败时展示的占位文案。
   final String? error_text;
 
+  /// 列表按实际封面像素解码，避免分页时保留整张原图。
+  final int? mem_cache_width;
+
+  /// 可覆盖默认骨架，以便与页面的数据加载占位共享视觉和动效规则。
+  final WidgetBuilder? loading_placeholder;
+
   const NetworkCoverImage({
     super.key,
     required this.image_url,
@@ -47,6 +53,8 @@ class NetworkCoverImage extends StatelessWidget {
     this.fit = BoxFit.cover,
     this.is_dark,
     this.error_text,
+    this.mem_cache_width,
+    this.loading_placeholder,
   });
 
   @override
@@ -62,19 +70,17 @@ class NetworkCoverImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
+        memCacheWidth: mem_cache_width,
         placeholder: (BuildContext context, String url) {
-          return NetworkCoverLoadingSkeleton(
-            width: width,
-            height: height,
-            border_radius: border_radius,
-            is_dark: current_is_dark,
-          );
+          return loading_placeholder?.call(context) ??
+              NetworkCoverLoadingSkeleton(
+                width: width,
+                height: height,
+                border_radius: border_radius,
+                is_dark: current_is_dark,
+              );
         },
-        errorWidget: (
-          BuildContext context,
-          String url,
-          Object error,
-        ) {
+        errorWidget: (BuildContext context, String url, Object error) {
           /// 错误态背景色。
           final Color background_color = current_is_dark
               ? NetworkCoverImageStyle.dark_error_background_color
@@ -112,8 +118,7 @@ class NetworkCoverImage extends StatelessWidget {
                       color: foreground_color.withValues(
                         alpha: NetworkCoverImageStyle.error_text_opacity,
                       ),
-                      fontSize:
-                          NetworkCoverImageStyle.error_text_font_size,
+                      fontSize: NetworkCoverImageStyle.error_text_font_size,
                       fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
                     ),
                   ),
