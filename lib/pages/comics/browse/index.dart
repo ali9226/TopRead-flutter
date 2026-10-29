@@ -80,7 +80,10 @@ class _ComicBrowsePageState extends State<ComicBrowsePage>
             state.error == null;
       },
       content_changes: _logic,
-      on_refresh: () => _logic.refresh(_logic.selected_category_id),
+      on_refresh: () => _logic.refresh(
+        _logic.selected_category_id,
+        keep_if_pending: true,
+      ),
     );
     _language_subscription = LanguageChangeHandler.register_refresh_task(
       phase: LanguageRefreshPhase.content,

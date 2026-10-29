@@ -164,6 +164,8 @@ class _ComicsTabContentState extends State<ComicsTabContent>
     final request = _logic.refresh(
       language: language ?? _language,
       clear: clear,
+      // 画像未就绪的补取不替换列表，避免连闪；就绪后才整体替换。
+      keep_if_pending: pending_retry,
     );
     final request_revision = _logic.request_revision;
     await request;

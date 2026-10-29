@@ -64,7 +64,14 @@ class ComicsTabLogic extends ChangeNotifier {
   }
 
   /// 下拉刷新保留原分组；只有语种与账号变化时主动清空旧内容。
-  Future<void> refresh({String? language, bool clear = false}) async {
+  ///
+  /// [keep_if_pending] 为画像未就绪的补取重试：响应仍是旧画像时保留当前列表，
+  /// 避免每次补取都整体重排；画像就绪后才一次性替换为个性化结果。
+  Future<void> refresh({
+    String? language,
+    bool clear = false,
+    bool keep_if_pending = false,
+  }) async {
     if (_disposed) return;
     final generation = ++_generation;
     _language = language ?? _language;
@@ -78,6 +85,11 @@ class ComicsTabLogic extends ChangeNotifier {
       // 不复用上一页seed，完整刷新由服务端重新生成推荐顺序。
       final feed = await _home_loader(language: _language);
       if (_disposed || generation != _generation) return;
+      // 画像仍未就绪的补取不替换展示内容，否则每次补取都换一遍顺序。
+      if (keep_if_pending && feed.profile_pending && sections.isNotEmpty) {
+        profile_pending = true;
+        return;
+      }
       final seen_categories = <int>{};
       final occupied = <int>{};
       final unique_sections = <ComicDiscoverySection>[];

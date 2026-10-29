@@ -158,6 +158,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  # TODO 真机/模拟器上的 Dart 界面测试（integration_test 驱动真实 App）
+  integration_test:
+    sdk: flutter
+
   flutter_lints: ^6.0.0
 
   # TODO 更改项目名称的插件

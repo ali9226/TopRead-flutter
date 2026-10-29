@@ -171,10 +171,13 @@ class ComicBrowseLogic extends ChangeNotifier {
   }
 
   /// 下拉刷新使用新种子；旧内容持续显示，只有成功后才原子替换。
-  Future<void> refresh(int category_id) async {
+  ///
+  /// [keep_if_pending] 为画像未就绪的补取重试：响应仍是旧画像时保留当前快照，
+  /// 避免每次补取都整体重排；画像就绪后才一次性替换。
+  Future<void> refresh(int category_id, {bool keep_if_pending = false}) async {
     if (_disposed) return;
     unawaited(load_categories());
-    await _load(category_id);
+    await _load(category_id, keep_if_pending: keep_if_pending);
   }
 
   Future<void> retry(int category_id) {
@@ -182,7 +185,11 @@ class ComicBrowseLogic extends ChangeNotifier {
     return state.failed_more ? load_more(category_id) : _load(category_id);
   }
 
-  Future<void> _load(int category_id, {bool more = false}) async {
+  Future<void> _load(
+    int category_id, {
+    bool more = false,
+    bool keep_if_pending = false,
+  }) async {
     if (_disposed) return;
     final state = state_for(category_id);
     final revision = ++state.revision;
@@ -202,6 +209,11 @@ class ComicBrowseLogic extends ChangeNotifier {
         language: language,
       );
       if (_disposed || revision != state.revision) return;
+      // 画像未就绪的补取不替换当前快照，避免每次补取都整体重排。
+      if (keep_if_pending && result.profile_pending && state.items.isNotEmpty) {
+        state.profile_pending = true;
+        return;
+      }
       // 服务端可能因种子过期或身份变化，把分页请求重置为新的第一页。
       // 新快照只能整体替换，不能把两轮随机排序拼接在一起。
       final reset_snapshot =
