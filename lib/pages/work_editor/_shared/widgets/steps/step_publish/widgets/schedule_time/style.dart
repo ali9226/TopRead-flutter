@@ -35,6 +35,10 @@ class ScheduleTimeStyle {
   static const double time_size_alphabetic = 28;
   static const double picker_max_text_scale = 1.2;
 
-  static final FontWeight title_weight = FontConfig.adjustedWeight(FontWeight.w500);
-  static final FontWeight body_weight = FontConfig.adjustedWeight(FontWeight.w400);
+  static final FontWeight title_weight = FontConfig.adjustedWeight(
+    FontWeight.w500,
+  );
+  static final FontWeight body_weight = FontConfig.adjustedWeight(
+    FontWeight.w400,
+  );
 }

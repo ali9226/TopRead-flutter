@@ -145,7 +145,7 @@ void main() {
   );
 
   test(
-    'brick-bond helpers keep half-row supports and full card scale in landscape',
+    'fan-bond helpers keep chain supports and full card scale in landscape',
     () {
       for (var difficulty = 1; difficulty <= 10; difficulty++) {
         for (final seed in [2, 3, 11, 104729]) {
@@ -170,7 +170,6 @@ void main() {
               final first_layer = helpers
                   .map((tile) => tile.layer)
                   .reduce(math.min);
-              var crossed_supports = 0;
               for (final upper in helpers) {
                 final upper_rect = layout.board_tile(upper);
                 _expect_inside(upper_rect, layout.board);
@@ -181,11 +180,11 @@ void main() {
                 final supports = helpers
                     .where(
                       (lower) =>
-                          lower.layer == upper.layer - 1 &&
+                          lower.layer < upper.layer &&
                           TileQuestGeometry.overlaps(lower, upper),
                     )
                     .toList();
-                expect(supports.length, inInclusiveRange(1, 2));
+                expect(supports, isNotEmpty, reason: '$difficulty / $seed');
                 for (final lower in supports) {
                   final lower_rect = layout.board_tile(lower);
                   expect(
@@ -195,32 +194,33 @@ void main() {
                       _epsilon,
                     ),
                   );
-                  // An upright helper island becomes a vertical brick bond.
-                  // Neighbouring layers must remain half a card apart, rather
-                  // than being collapsed back into the former same-place pile.
+                }
+              }
+              // 整岛 90° 转向后，相邻层间距由原几何 x 偏移决定：
+              // 卡扇细边列的相位差在屏幕上就是纵向步距。
+              final by_layer = <int, List<TileQuestTile>>{};
+              for (final tile in helpers) {
+                by_layer.putIfAbsent(tile.layer, () => []).add(tile);
+              }
+              final levels = by_layer.keys.toList()..sort();
+              for (var index = 1; index < levels.length; index++) {
+                final lower = by_layer[levels[index - 1]]!;
+                final upper = by_layer[levels[index]]!;
+                for (final tile in upper) {
+                  final support = lower
+                      .where((value) => TileQuestGeometry.overlaps(value, tile))
+                      .firstOrNull;
+                  if (support == null) continue;
+                  final dx = (tile.x - support.x).abs();
+                  final lower_rect = layout.board_tile(support);
+                  final upper_rect = layout.board_tile(tile);
                   expect(
                     (lower_rect.center.dy - upper_rect.center.dy).abs(),
-                    closeTo(layout.unit_y / 2, _epsilon),
-                  );
-                }
-                if (supports.length == 2) {
-                  crossed_supports++;
-                  expect(
-                    upper_rect.center.dy,
-                    closeTo(
-                      (layout.board_tile(supports[0]).center.dy +
-                              layout.board_tile(supports[1]).center.dy) /
-                          2,
-                      _epsilon,
-                    ),
+                    closeTo(dx * layout.unit_y, _epsilon),
+                    reason: '$difficulty / $seed / $region / ${tile.id}',
                   );
                 }
               }
-              expect(
-                crossed_supports,
-                greaterThan(0),
-                reason: '$difficulty / $seed / $region / $size',
-              );
             }
           }
         }

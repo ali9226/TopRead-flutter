@@ -168,7 +168,8 @@ class _OperationListState extends State<OperationList> {
           ),
         );
       }
-      if (isLoggedIn) {
+      // TODO 「我的漫画」入口暂时隐藏，开关见 Style.show_my_comics_entry。
+      if (isLoggedIn && Style.show_my_comics_entry) {
         group1Children.add(
           OperationLi(
             icon: "image",

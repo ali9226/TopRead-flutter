@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/config/layout_config.dart';
+import 'package:app/pages/work_editor/_shared/style.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'dart:convert';
 import 'package:app/config/font_config.dart';
@@ -153,9 +154,15 @@ class _SingleChapterPageState extends State<SingleChapterPage> {
           canPop: false,
           child: AlertDialog(
             title: Text(tr('creator_workspace.recovery_title')),
-            content: SizedBox(
-              width: 600,
-              height: 320,
+            content: ConstrainedBox(
+              // TODO 横屏可视高度骤减，改用窗口高度比例封顶，避免按钮被挤出视口；
+              //      内容超限后由内层 SingleChildScrollView 滚动。
+              constraints: BoxConstraints(
+                maxWidth: WorkEditorStyle.dialog_content_max_width,
+                maxHeight:
+                    MediaQuery.sizeOf(context).height *
+                    WorkEditorStyle.dialog_content_max_height_ratio,
+              ),
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

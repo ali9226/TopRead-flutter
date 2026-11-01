@@ -24,6 +24,7 @@ void expect_compact_layers(TileQuestState state) {
   }
   expect(regions.expand((tiles) => tiles).length, state.tiles.length);
   for (final region in regions) {
+    final entry = (key: region.first.region_id, value: region);
     final layer_ids = state.tiles.map((tile) => tile.layer).toSet();
     for (final layer in layer_ids) {
       final layer_tiles = region.where((tile) => tile.layer == layer).toList();
@@ -54,8 +55,13 @@ void expect_compact_layers(TileQuestState state) {
                 ? after.x - before.x
                 : after.y - before.y;
             final steps = distance / pitch;
+            // 主阵/门区保持整格槽位；辅助卡扇列按设计落在细分相位上，
+            // 同层只要求不重叠，细边列的间距不参与整格校验。
+            final fan_island =
+                entry.key == 'side_top' || entry.key == 'side_bottom';
             expect(
-              gap >= -tolerance && (steps - steps.round()).abs() < tolerance,
+              gap >= -tolerance &&
+                  (fan_island || (steps - steps.round()).abs() < tolerance),
               isTrue,
               reason:
                   'level=${state.level} difficulty=${state.difficulty} '

@@ -244,10 +244,7 @@ class _EditorKeyboardLayoutState extends State<EditorKeyboardLayout>
               ),
             )
           : Column(
-              children: [
-                content_widget,
-                _chrome(widget.footer, alignment: 1),
-              ],
+              children: [content_widget, _chrome(widget.footer, alignment: 1)],
             ),
     );
   }

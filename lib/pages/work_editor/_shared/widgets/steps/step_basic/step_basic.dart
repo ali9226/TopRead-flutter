@@ -202,7 +202,8 @@ class StepBasic extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(LayoutConfig.radius_16),
-                  color: ColorConstants.pages_short_story_read_widgets_auto_read_settings_sheet_tone,
+                  color: ColorConstants
+                      .pages_short_story_read_widgets_auto_read_settings_sheet_tone,
                 ),
                 child: const Center(
                   child: SizedBox(
@@ -585,7 +586,9 @@ class StepBasic extends StatelessWidget {
                                     color: AuthorStyle.primary_text(is_dark),
                                     fontSize: 15,
                                     fontWeight: is_selected
-                                        ? FontConfig.adjustedWeight(FontWeight.w500)
+                                        ? FontConfig.adjustedWeight(
+                                            FontWeight.w500,
+                                          )
                                         : AuthorStyle.body_weight,
                                   ),
                                 ),

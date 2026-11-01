@@ -47,45 +47,68 @@ class ScheduleTimeField extends StatelessWidget {
                 height: ScheduleTimeStyle.badge_size,
                 decoration: BoxDecoration(
                   color: AuthorStyle.selected_tab_surface(is_dark),
-                  borderRadius: BorderRadius.circular(ScheduleTimeStyle.card_radius),
+                  borderRadius: BorderRadius.circular(
+                    ScheduleTimeStyle.card_radius,
+                  ),
                 ),
-                child: Icon(Icons.calendar_today_rounded,
+                child: Icon(
+                  Icons.calendar_today_rounded,
                   size: ScheduleTimeStyle.icon_size,
-                  color: AuthorStyle.selected_tab_text(is_dark)),
+                  color: AuthorStyle.selected_tab_text(is_dark),
+                ),
               ),
               const SizedBox(width: ScheduleTimeStyle.card_padding),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(tr('creator_center.select_schedule_time'),
+                    Text(
+                      tr('creator_center.select_schedule_time'),
                       style: TextStyle(
                         color: time == null ? primary : secondary,
-                        fontSize: is_cjk ? ScheduleTimeStyle.label_size_cjk : ScheduleTimeStyle.label_size_alphabetic,
+                        fontSize: is_cjk
+                            ? ScheduleTimeStyle.label_size_cjk
+                            : ScheduleTimeStyle.label_size_alphabetic,
                         fontWeight: ScheduleTimeStyle.title_weight,
-                      )),
+                      ),
+                    ),
                     const SizedBox(height: ScheduleTimeStyle.small_gap),
                     if (time != null) ...[
-                      Text(DateFormat.Hm(locale).format(time),
-                        style: TextStyle(color: primary,
-                          fontSize: is_cjk ? ScheduleTimeStyle.time_size_cjk : ScheduleTimeStyle.time_size_alphabetic,
+                      Text(
+                        DateFormat.Hm(locale).format(time),
+                        style: TextStyle(
+                          color: primary,
+                          fontSize: is_cjk
+                              ? ScheduleTimeStyle.time_size_cjk
+                              : ScheduleTimeStyle.time_size_alphabetic,
                           fontWeight: ScheduleTimeStyle.title_weight,
-                          height: 1.1)),
+                          height: 1.1,
+                        ),
+                      ),
                       const SizedBox(height: ScheduleTimeStyle.small_gap),
                     ],
-                    Text(time == null
-                        ? tr('creator_center.schedule_picker_hint')
-                        : DateFormat.yMMMEd(locale).format(time),
-                      style: TextStyle(color: secondary,
-                        fontSize: is_cjk ? ScheduleTimeStyle.hint_size_cjk : ScheduleTimeStyle.hint_size_alphabetic,
+                    Text(
+                      time == null
+                          ? tr('creator_center.schedule_picker_hint')
+                          : DateFormat.yMMMEd(locale).format(time),
+                      style: TextStyle(
+                        color: secondary,
+                        fontSize: is_cjk
+                            ? ScheduleTimeStyle.hint_size_cjk
+                            : ScheduleTimeStyle.hint_size_alphabetic,
                         height: 1.4,
-                        fontWeight: ScheduleTimeStyle.body_weight)),
+                        fontWeight: ScheduleTimeStyle.body_weight,
+                      ),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(width: ScheduleTimeStyle.small_gap),
-              Icon(Icons.chevron_right_rounded, color: secondary,
-                size: ScheduleTimeStyle.icon_size),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: secondary,
+                size: ScheduleTimeStyle.icon_size,
+              ),
             ],
           ),
         ),

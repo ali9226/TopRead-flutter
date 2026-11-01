@@ -579,50 +579,73 @@ class _CreatorFlexibleHeader extends StatelessWidget {
           const SizedBox(height: LayoutConfig.space_18),
 
           /// 操作按钮：创建作品、继续写作（有草稿时显示）。
+          ///
+          /// TODO 宽度由 TweenAnimationBuilder 统一驱动，动画值先夹到“放得下”的范围。
+          ///      - 动画目标跟当前可用宽度走，横竖屏切换时目标值变化就会重新收敛，
+          ///        因此旋转时依然能看到按钮宽度拉伸变换的动画；
+          ///      - 动画值被夹住后，首块 + 间距 + 尾块恒等于可用宽度，
+          ///        任意一帧都排不满不超，不会再出现“继续写作”右侧的溢出条纹；
+          ///      - 尾块再保底一个按钮最小宽度（不足时从首块借用），
+          ///        避免分栏起始阶段尾块趋近 0 把按钮内部图标挤出。
           LayoutBuilder(
             builder: (context, constraints) {
               final double total = constraints.maxWidth;
               final double gap = LayoutConfig.space_10;
-              final double half = (total - gap) / 2;
-              return Row(
-                children: <Widget>[
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOutCubic,
-                    width: has_draft ? half : total,
-                    child: _HeaderActionButton(
-                      icon: Icons.add_rounded,
-                      label: easy.tr('creator_center.create_work'),
-                      is_primary: true,
-                      is_dark: is_dark,
-                      is_cjk: is_cjk,
-                      on_tap: on_create_work,
-                    ),
-                  ),
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOutCubic,
-                    alignment: Alignment.centerLeft,
-                    child: has_draft
-                        ? SizedBox(
-                            width: half,
-                            child: Padding(
-                              padding: EdgeInsets.only(left: gap),
-                              child: _HeaderActionButton(
-                                icon: Icons.edit_note_rounded,
-                                label: easy.tr(
-                                  'creator_center.continue_writing',
-                                ),
-                                is_primary: false,
-                                is_dark: is_dark,
-                                is_cjk: is_cjk,
-                                on_tap: on_continue_writing,
-                              ),
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                ],
+              return TweenAnimationBuilder<double>(
+                tween: Tween<double>(
+                  end: has_draft ? (total - gap) / 2 : total,
+                ),
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOutCubic,
+                builder: (context, animated_first, _) {
+                  final double max_first = has_draft ? total - gap : total;
+                  double first = animated_first.clamp(0.0, max_first);
+                  double second = max_first - first;
+                  if (has_draft) {
+                    // TODO 尾块保底：不足时从首块借，两块之和不变，仍精确填满。
+                    final double floor = math.min(
+                      max_first / 2,
+                      AuthorStyle.header_action_min_width,
+                    );
+                    if (second < floor) {
+                      final double take = math.min(
+                        floor - second,
+                        math.max(0.0, first - floor),
+                      );
+                      first -= take;
+                      second += take;
+                    }
+                  }
+                  return Row(
+                    children: <Widget>[
+                      SizedBox(
+                        width: first,
+                        child: _HeaderActionButton(
+                          icon: Icons.add_rounded,
+                          label: easy.tr('creator_center.create_work'),
+                          is_primary: true,
+                          is_dark: is_dark,
+                          is_cjk: is_cjk,
+                          on_tap: on_create_work,
+                        ),
+                      ),
+                      if (has_draft) ...[
+                        SizedBox(width: gap),
+                        SizedBox(
+                          width: second,
+                          child: _HeaderActionButton(
+                            icon: Icons.edit_note_rounded,
+                            label: easy.tr('creator_center.continue_writing'),
+                            is_primary: false,
+                            is_dark: is_dark,
+                            is_cjk: is_cjk,
+                            on_tap: on_continue_writing,
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
               );
             },
           ),

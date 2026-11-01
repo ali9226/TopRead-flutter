@@ -21,7 +21,9 @@ class TileQuestTrapFork {
 /// A single switch controls every challenge after the introductory level.
 class TileQuestConfig {
   static const int level1Difficulty = 1;
-  static const int gameDifficulty = 6;
+
+  /// TODO 可填小数（如 9.5）：档位表按 floor 取档，难度本身保留两位小数。
+  static const num gameDifficulty = 6;
   static const int tray_capacity = 7;
 
   /// 从第五档难度起，静态容量门槛确保必须实际使用道具。
@@ -92,6 +94,7 @@ class TileQuestConfig {
     }
     return value;
   }
+
   static const int remove_batch_size = 3;
   static const int reserve_columns = 3;
   static const int reserve_capacity =
@@ -102,7 +105,7 @@ class TileQuestConfig {
   static int initial_tool_uses(Enum tool) =>
       tool.name == 'remove' ? remove_uses_per_challenge : 1;
   static const int max_generation_attempts = 8;
-  static const int generation_budget_ms = 800;
+  static const int generation_budget_ms = 1500;
   static const int shuffle_budget_ms = 250;
   static const int max_tiles = 600;
 
@@ -164,12 +167,24 @@ class DifficultyProfile {
     required this.target_failure_rate,
   });
 
+  /// [difficulty] 决定查表档位（tile_count/layers 等按整数档）；
+  /// [precise_difficulty] 可带两位小数，只参与分叉配方的通关率，
+  /// 让 9.5 真正比 9.0 多埋延迟三连。缺省时按 [difficulty] 计算。
   static DifficultyProfile for_difficulty(
     int difficulty, {
     bool tutorial = false,
+    num? precise_difficulty,
   }) {
     if (difficulty < 1 || difficulty > 10) {
       throw ArgumentError.value(difficulty, 'difficulty', 'Must be 1–10');
+    }
+    final double precise = (precise_difficulty ?? difficulty).toDouble();
+    if (precise < 1 || precise > 10) {
+      throw ArgumentError.value(
+        precise_difficulty,
+        'precise_difficulty',
+        'Must be 1–10',
+      );
     }
     const counts = [90, 126, 162, 198, 246, 294, 348, 402, 456, 528];
     const types = [5, 6, 8, 10, 11, 12, 13, 14, 15, 15];
@@ -195,7 +210,7 @@ class DifficultyProfile {
       // q 是技能锚点，真实玩家曲线由对局遥测回收后校正。
       trap_forks: tutorial
           ? const []
-          : TileQuestConfig.trap_recipe((10 - difficulty) / 10),
+          : TileQuestConfig.trap_recipe((10 - precise) / 10),
       target_failure_rate: rates[index],
     );
   }

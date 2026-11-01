@@ -137,28 +137,32 @@ void main() {
             }
             final levels = layers.keys.toList()..sort();
             expect(levels.length, greaterThanOrEqualTo(3));
+            // 镜像卡扇：牌端逐列揭开，每张非牌端都被更高层真实覆盖，
+            // 同层细边列不重叠；顶部闲牌柱在同列内自然叠放。
+            final all = layers.values.expand((row) => row).toList();
+            for (final tile in all) {
+              if (tile.layer == levels.last) continue;
+              expect(
+                all.any(
+                  (upper) =>
+                      upper.layer > tile.layer &&
+                      TileQuestGeometry.overlaps(tile, upper),
+                ),
+                isTrue,
+                reason: '$difficulty / $seed / $region / ${tile.id}',
+              );
+            }
             for (var index = 1; index < levels.length; index++) {
               final lower = layers[levels[index - 1]]!;
               final upper = layers[levels[index]]!;
               expect(
                 upper.any(
-                  (tile) =>
-                      lower
-                          .where(
-                            (support) =>
-                                TileQuestGeometry.overlaps(support, tile),
-                          )
-                          .length ==
-                      2,
+                  (tile) => lower.any(
+                    (support) => TileQuestGeometry.overlaps(support, tile),
+                  ),
                 ),
                 isTrue,
                 reason: '$difficulty / $seed / $region / ${levels[index]}',
-              );
-              expect(
-                upper.any(
-                  (tile) => lower.any((support) => support.x == tile.x),
-                ),
-                isFalse,
               );
             }
             expect(

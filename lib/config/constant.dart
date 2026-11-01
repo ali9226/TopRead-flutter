@@ -48,7 +48,7 @@ class Constant {
     // 本地调试地址
     // return "http://192.168.31.66:5006";
     // return "http://192.168.31.120:5006";
-    // return "http://0.0.0.0:5006";
+    return "http://0.0.0.0:5006";
     // 正式域名（发布前切换为该地址）
     return "https://app.read.top";
   }

@@ -238,7 +238,9 @@ class _LongContentEditorState extends State<LongContentEditor> {
                             style: TextStyle(
                               color: accent,
                               fontSize: 14,
-                              fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
+                              ),
                             ),
                           ),
                         ),
@@ -304,7 +306,9 @@ class _LongContentEditorState extends State<LongContentEditor> {
                               style: TextStyle(
                                 color: accent,
                                 fontSize: 15,
-                                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                                fontWeight: FontConfig.adjustedWeight(
+                                  FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
@@ -512,7 +516,9 @@ class _ChapterDirectoryState extends State<_ChapterDirectory> {
                                     ? WorkEditorStyle.directory_title_size_cjk
                                     : WorkEditorStyle
                                           .directory_title_size_alphabetic,
-                                fontWeight: FontConfig.adjustedWeight(FontWeight.w600),
+                                fontWeight: FontConfig.adjustedWeight(
+                                  FontWeight.w600,
+                                ),
                                 color: text,
                               ),
                             ),
@@ -770,7 +776,10 @@ class _DirectoryFooter extends StatelessWidget {
                     name: 'add',
                     width: 19,
                     height: 19,
-                    color: is_dark ? ColorConstants.pages_author_center_widgets_creator_empty_state_tone : ColorConstants.whiteColor,
+                    color: is_dark
+                        ? ColorConstants
+                              .pages_author_center_widgets_creator_empty_state_tone
+                        : ColorConstants.whiteColor,
                   ),
                   label: Text(
                     easy.tr('creator_center.new_chapter'),
@@ -780,7 +789,8 @@ class _DirectoryFooter extends StatelessWidget {
                   style: FilledButton.styleFrom(
                     backgroundColor: accent,
                     foregroundColor: is_dark
-                        ? ColorConstants.pages_author_center_widgets_creator_empty_state_tone
+                        ? ColorConstants
+                              .pages_author_center_widgets_creator_empty_state_tone
                         : ColorConstants.whiteColor,
                     padding: const EdgeInsets.symmetric(
                       vertical: LayoutConfig.space_14,

@@ -62,7 +62,9 @@ class LongChapterTile extends StatelessWidget {
                             color: active
                                 ? accent
                                 : AuthorStyle.secondary_text(dark),
-                            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                            fontWeight: FontConfig.adjustedWeight(
+                              FontWeight.w500,
+                            ),
                           ),
                         ),
                 ),
@@ -80,7 +82,9 @@ class LongChapterTile extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14,
                           color: AuthorStyle.primary_text(dark),
-                          fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+                          fontWeight: FontConfig.adjustedWeight(
+                            FontWeight.w500,
+                          ),
                         ),
                       ),
                       const SizedBox(height: LayoutConfig.space_5),

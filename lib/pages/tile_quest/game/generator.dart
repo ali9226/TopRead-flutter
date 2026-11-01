@@ -42,20 +42,27 @@ class TileQuestGenerator {
       throw ArgumentError.value(difficulty, 'difficulty', 'Must be 1–10');
     }
     // 旧 profile 表按整数档查表；floor 保证 9.99 不会误入 10 的必败档。
+    // 分叉配方仍吃两位小数，9.5 比 9.0 多埋延迟三连。
     final int tier = raw_difficulty.floor().clamp(1, 10);
-    final profile = DifficultyProfile.for_difficulty(tier);
+    final profile = DifficultyProfile.for_difficulty(
+      tier,
+      precise_difficulty: raw_difficulty,
+    );
     // 日常难度（1-9）全面去门：难度只来自盘面本身。难度10 是「暗坑必败」
     // 运维开关，容量核保证道具 1/1/2 全用完仍无法通关。
-    final needs_barrier =
-        raw_difficulty >= TileQuestConfig.trap_difficulty;
+    final needs_barrier = raw_difficulty >= TileQuestConfig.trap_difficulty;
     final lead_profile = needs_barrier
         ? profile.with_inventory(
             tile_count:
                 profile.tile_count -
-                TileQuestExpertBarrier.tile_count_for_difficulty(raw_difficulty),
+                TileQuestExpertBarrier.tile_count_for_difficulty(
+                  raw_difficulty,
+                ),
             type_count:
                 profile.type_count -
-                TileQuestExpertBarrier.type_count_for_difficulty(raw_difficulty),
+                TileQuestExpertBarrier.type_count_for_difficulty(
+                  raw_difficulty,
+                ),
           )
         : profile;
     // 共享几何只依赖 layout_seed 与难度；同日全服骨架一致。
@@ -142,6 +149,7 @@ class TileQuestGenerator {
             for (final id in opening)
               if (!trap_positions.contains(id)) id,
           ].length;
+          final trap_marks = <int>{};
           final free_sequence = TileQuestTypeAllocator.initial(
             lead_profile.with_inventory(
               tile_count: free_order.length,
@@ -153,7 +161,9 @@ class TileQuestGenerator {
             // 暗坑盘的免费区按 留出这些槽位 规划，合并占用恒 < 槽位上限。
             capacity: trap_positions.isEmpty
                 ? TileQuestConfig.tray_capacity
-                : TileQuestConfig.tray_capacity - TileQuestConfig.trap_pair_hold,
+                : TileQuestConfig.tray_capacity -
+                      TileQuestConfig.trap_pair_hold,
+            trap_marks: trap_marks,
           );
           final assigned = <int, int>{};
           for (var index = 0; index < free_order.length; index++) {
@@ -179,10 +189,22 @@ class TileQuestGenerator {
           final types_by_id = {
             for (final tile in lead_tiles) tile.id: assigned[tile.id]!,
           };
-          _disperse_stack_repeats(
+          _disperse_type_clusters(
             lead_tiles,
             types_by_id,
+            lead_order,
             random,
+            capacity: TileQuestConfig.tray_capacity,
+            frozen: {
+              for (
+                var index = 0;
+                index < free_opening && index < free_order.length;
+                index++
+              )
+                free_order[index],
+              for (final mark in trap_marks)
+                if (mark < free_order.length) free_order[mark],
+            },
             forced_ids: forced_ids,
             trap_type_start: trap_type_start,
           );
@@ -219,32 +241,22 @@ class TileQuestGenerator {
             TileQuestConfig.max_tile_types,
             (index) => index,
           )..shuffle(random);
+          // TODO 参考布局的卡扇固定在下方、闲牌在上方；种子多样性交给横向镜像。
           final mirror_x = random.nextBool();
-          final mirror_y = random.nextBool();
           final remapped =
               tiles
                   .map(
                     (tile) => TileQuestTile(
                       id: new_id[tile.id]!,
                       type: palette[tile.type],
-                      region_id: mirror_y
-                          ? switch (tile.region_id) {
-                              'side_top' => 'side_bottom',
-                              'side_bottom' => 'side_top',
-                              _ => tile.region_id,
-                            }
-                          : tile.region_id,
+                      region_id: tile.region_id,
                       layer: tile.layer,
                       x: mirror_x
                           ? TileQuestConfig.board_logical_width -
                                 tile.x -
                                 tile.width
                           : tile.x,
-                      y: mirror_y
-                          ? TileQuestConfig.board_logical_height -
-                                tile.y -
-                                tile.height
-                          : tile.y,
+                      y: tile.y,
                       width: tile.width,
                       height: tile.height,
                     ),
@@ -286,11 +298,17 @@ class TileQuestGenerator {
             barrier?.validate(state);
             return state;
           }
+          // TODO 校验失败原因保留给外层重试与生成错误信息。
+          last_failure = StateError(
+            'certificate rejected: ${check.reason ?? 'late variety'}',
+          );
         } on StateError catch (error) {
           last_failure = error;
           // Retry a complete seeded construction, never force a player's result.
         } on FormatException catch (error) {
           last_failure = StateError(error.message);
+        } catch (error) {
+          last_failure = StateError('$error');
         }
         if (stopwatch.elapsedMilliseconds >=
             TileQuestConfig.generation_budget_ms) {
@@ -313,7 +331,11 @@ class TileQuestGenerator {
     if (tier < 8) return true;
     final int floor = tier == 10 ? 5 : 8;
     final late_types = <int>{};
-    for (var index = lead_order.length * 2 ~/ 3; index < lead_order.length; index++) {
+    for (
+      var index = lead_order.length * 2 ~/ 3;
+      index < lead_order.length;
+      index++
+    ) {
       late_types.add(assigned[lead_order[index]]!);
     }
     return late_types.length >= floor;
@@ -382,26 +404,40 @@ class TileQuestGenerator {
     return forced;
   }
 
-  /// 同一叠柱内相邻层禁止同图：消除「点开一张，正下方又是同一张」的机械感。
-  /// 跨柱交换类型修正，每图总数（3 的倍数）不变；解的可行性由校验兜底。
-  static void _disperse_stack_repeats(
+  /// TODO 图案打散：同一叠柱相邻层、同一横排邻牌（含卡扇细边列）都禁止同图，
+  /// TODO 避免「底部一排一样的方块」。跨柱交换类型修正，每图总数（3 的倍数）
+  /// TODO 不变；每次换位后解序必须保持槽位安全，否则回退。暖场前缀与延迟三连
+  /// TODO 的落位保持原样，保证开局完整三同与分叉结构不被拆掉。
+  static void _disperse_type_clusters(
     List<TileQuestTile> lead_tiles,
     Map<int, int> types,
+    List<int> lead_order,
     Random random, {
+    required int capacity,
+    Set<int> frozen = const {},
     Set<int> forced_ids = const {},
     int trap_type_start = 1 << 30,
   }) {
     final stacks = <String, List<TileQuestTile>>{};
+    final rows = <int, List<TileQuestTile>>{};
     for (final tile in lead_tiles) {
       stacks.putIfAbsent('${tile.x}:${tile.y}', () => []).add(tile);
+      rows.putIfAbsent(tile.grid_row, () => []).add(tile);
     }
     for (final stack in stacks.values) {
       stack.sort((a, b) => a.layer.compareTo(b.layer));
+    }
+    for (final row in rows.values) {
+      row.sort((a, b) => a.x.compareTo(b.x));
     }
     final stack_of = <int, String>{
       for (final entry in stacks.entries)
         for (final tile in entry.value) tile.id: entry.key,
     };
+    // TODO 同行 2.2 格内（含相邻牌与顶部牌柱）都视为邻牌。
+    bool adjacent(TileQuestTile left, TileQuestTile right) =>
+        (left.x - right.x).abs() < 2.2 && (left.y - right.y).abs() < 1.6;
+
     bool violates(TileQuestTile tile, int new_type) {
       final stack = stacks[stack_of[tile.id]!]!;
       final index = stack.indexWhere((candidate) => candidate.id == tile.id);
@@ -410,40 +446,85 @@ class TileQuestGenerator {
         if ((stack[neighbor].layer - tile.layer).abs() != 1) continue;
         if (types[stack[neighbor].id] == new_type) return true;
       }
+      for (final other in rows[tile.grid_row]!) {
+        if (other.id == tile.id) continue;
+        if (!adjacent(tile, other) && !adjacent(other, tile)) continue;
+        if (types[other.id] == new_type) return true;
+      }
       return false;
     }
 
-    for (var pass = 0; pass < 4; pass++) {
+    final sequence = [for (final id in lead_order) types[id]!];
+    final late_floor = sequence.length * 2 ~/ 3;
+    // TODO 换位后的解序既要槽位安全，也不许稀释后段压力（后段压槽是难度来源）。
+    ({bool ok, int late}) replay() {
+      final counts = List<int>.filled(TileQuestConfig.max_tile_types, 0);
+      var occupancy = 0;
+      var late = 0;
+      for (var index = 0; index < sequence.length; index++) {
+        final type = sequence[index];
+        if (occupancy >= capacity) return (ok: false, late: 0);
+        counts[type]++;
+        occupancy++;
+        if (counts[type] == 3) {
+          counts[type] = 0;
+          occupancy -= 3;
+        }
+        if (occupancy >= capacity) return (ok: false, late: 0);
+        if (index >= late_floor) late += occupancy;
+      }
+      return (ok: occupancy == 0, late: late);
+    }
+
+    final position_of = <int, int>{
+      for (var index = 0; index < lead_order.length; index++)
+        lead_order[index]: index,
+    };
+    for (var pass = 0; pass < 6; pass++) {
       var repaired = 0;
-      for (final entry in stacks.entries) {
-        final stack = entry.value;
-        for (var index = 1; index < stack.length; index++) {
-          final lower = stack[index - 1];
-          final upper = stack[index];
-          if (upper.layer - lower.layer != 1) continue;
-          if (types[lower.id] != types[upper.id]) continue;
-          final partners = lead_tiles
-              .where(
-                (tile) =>
-                    stack_of[tile.id] != entry.key &&
-                    types[tile.id] != types[upper.id] &&
-                    // 暗坑图案的库存必须留在强制祖先集内，交换不得外溢。
-                    (types[upper.id]! < trap_type_start ||
-                        forced_ids.contains(tile.id)) &&
-                    (types[tile.id]! < trap_type_start ||
-                        forced_ids.contains(upper.id)),
-              )
-              .toList();
-          partners.shuffle(random);
-          for (final partner in partners) {
-            final held = types[upper.id]!;
-            if (violates(partner, held)) continue;
-            final recycled = types[partner.id]!;
-            types[partner.id] = held;
-            types[upper.id] = recycled;
-            repaired++;
-            break;
+      for (final tile in List<TileQuestTile>.of(lead_tiles)) {
+        if (frozen.contains(tile.id)) continue;
+        if (!violates(tile, types[tile.id]!)) continue;
+        final partners = lead_tiles
+            .where(
+              (other) =>
+                  other.id != tile.id &&
+                  !frozen.contains(other.id) &&
+                  types[other.id] != types[tile.id] &&
+                  (types[tile.id]! < trap_type_start ||
+                      forced_ids.contains(other.id)) &&
+                  (types[other.id]! < trap_type_start ||
+                      forced_ids.contains(tile.id)),
+            )
+            .toList();
+        partners.shuffle(random);
+        for (final partner in partners) {
+          final held = types[tile.id]!;
+          final recycled = types[partner.id]!;
+          if (violates(partner, held) || violates(tile, recycled)) continue;
+          types[tile.id] = recycled;
+          types[partner.id] = held;
+          final left = position_of[tile.id];
+          final right = position_of[partner.id];
+          var swapped = true;
+          if (left != null && right != null) {
+            final before = replay();
+            sequence[left] = recycled;
+            sequence[right] = held;
+            final after = replay();
+            swapped = after.ok && after.late >= before.late;
+            if (!swapped) {
+              sequence[left] = held;
+              sequence[right] = recycled;
+            }
           }
+          if (!swapped) {
+            types[tile.id] = held;
+            types[partner.id] = recycled;
+            continue;
+          }
+          repaired++;
+          break;
         }
       }
       if (repaired == 0) break;

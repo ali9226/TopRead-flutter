@@ -6,7 +6,7 @@ import 'package:app/pages/tile_quest/game/layout_patterns.dart';
 import 'package:app/pages/tile_quest/game/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Read the real generated geometry after identity shuffling and mirroring.
+/// 真实生成几何（已过 id 重标与镜像）的辅助牌岛按层分组。
 Map<int, List<TileQuestTile>> _layers(TileQuestState state, String region) {
   final result = <int, List<TileQuestTile>>{};
   for (final tile in state.tiles.where((tile) => tile.region_id == region)) {
@@ -20,11 +20,11 @@ Map<int, List<TileQuestTile>> _layers(TileQuestState state, String region) {
 
 void main() {
   test(
-    'all difficulty helper islands are continuous real half-grid brick bonds',
+    'helper islands are mirrored fan chains: thin strips, one face per chain',
     () {
       expect(TileQuestLayoutPatterns.grid_gap, 0);
       for (var difficulty = 1; difficulty <= 10; difficulty++) {
-        for (var sample = 0; sample < 12; sample++) {
+        for (var sample = 0; sample < 8; sample++) {
           final seed = 104729 * sample;
           final state = TileQuestGenerator.generate(
             level: 2,
@@ -36,47 +36,49 @@ void main() {
             final levels = layers.keys.toList()..sort();
             final reason = '$difficulty / $seed / $region';
             expect(levels.length, greaterThanOrEqualTo(3), reason: reason);
+            // 同层永不重叠；列间距由卡扇细分相位决定，不要求整格。
             for (final row in layers.values) {
-              expect(row.length, greaterThanOrEqualTo(2), reason: reason);
-              for (var index = 0; index < row.length; index++) {
-                final tile = row[index];
-                expect(tile.width, 1);
-                expect(tile.height, 1);
-                expect(tile.y, region == 'side_top' ? 0 : 8);
-                if (index == 0) continue;
+              for (var index = 1; index < row.length; index++) {
                 final previous = row[index - 1];
-                expect(previous.x + previous.width, tile.x, reason: reason);
-                expect(TileQuestGeometry.overlap_area(previous, tile), 0);
-              }
-            }
-            for (var layer = 1; layer < levels.length; layer++) {
-              final lower = layers[levels[layer - 1]]!;
-              final upper = layers[levels[layer]]!;
-              expect((upper.length - lower.length).abs(), 1, reason: reason);
-              for (var index = 0; index < upper.length; index++) {
-                final tile = upper[index];
-                final supports = lower
-                    .where((value) => TileQuestGeometry.overlaps(value, tile))
-                    .toList();
-                final is_wide_shoulder =
-                    upper.length > lower.length &&
-                    (index == 0 || index == upper.length - 1);
+                final tile = row[index];
                 expect(
-                  supports.length,
-                  is_wide_shoulder ? 1 : 2,
+                  TileQuestGeometry.overlap_area(previous, tile),
+                  0,
                   reason: reason,
                 );
-                for (final support in supports) {
-                  expect((support.x - tile.x).abs(), .5, reason: reason);
-                  expect(
-                    TileQuestGeometry.occlusion_area_ratio(support, tile),
-                    .5,
-                  );
-                }
+                expect(
+                  previous.x + previous.width,
+                  lessThanOrEqualTo(tile.x + .000001),
+                  reason: reason,
+                );
               }
             }
-            // Each complete island still fits its original 6×1 reference bounds.
-            final tiles = layers.values.expand((row) => row);
+            // 卡扇依赖：每张非牌端都被更高层真实覆盖；牌端开局可点。
+            final all = layers.values.expand((row) => row).toList();
+            final top_layer = levels.last;
+            for (final tile in all) {
+              expect(tile.width, 1, reason: reason);
+              expect(tile.height, 1, reason: reason);
+              if (tile.layer == top_layer) continue;
+              expect(
+                all.any(
+                  (upper) =>
+                      upper.layer > tile.layer &&
+                      TileQuestGeometry.overlaps(tile, upper),
+                ),
+                isTrue,
+                reason: '$reason / ${tile.id} must stay covered',
+              );
+            }
+            for (final face in layers[top_layer]!) {
+              expect(face.is_blocked, isFalse, reason: reason);
+            }
+            // 每层至多一条卡扇一张牌：细边列沿层序单线推进。
+            for (final row in layers.values) {
+              expect(row.length, lessThanOrEqualTo(4), reason: reason);
+            }
+            // 整座牌岛仍在六列足迹内。
+            final tiles = all;
             final width =
                 tiles.map((tile) => tile.x + tile.width).reduce(max) -
                 tiles.map((tile) => tile.x).reduce(min);
@@ -87,44 +89,38 @@ void main() {
     },
   );
 
-  test(
-    'a helper lower tile waits for every overlapping upper brick to leave',
-    () {
-      final state = TileQuestGenerator.generate(
-        level: 2,
-        difficulty: 8,
-        seed: 17,
-      );
-      final graph = TileQuestGeometry(state.tiles);
-      final layers = _layers(state, 'side_top');
-      final levels = layers.keys.toList()..sort();
-      final top_layer = levels.last;
-      final top = layers[top_layer]!;
-      final lower = layers[levels[levels.length - 2]]!.firstWhere(
-        (tile) =>
-            top
-                .where((upper) => TileQuestGeometry.overlaps(tile, upper))
-                .length ==
-            2,
-      );
-      final covering = top
-          .where((upper) => TileQuestGeometry.overlaps(lower, upper))
-          .toList();
-      final once = graph.refresh([
-        for (final tile in state.tiles)
-          tile.copy_with(is_removed: tile.id == covering.first.id),
-      ]);
-      expect(once.firstWhere((tile) => tile.id == lower.id).is_blocked, isTrue);
-      final twice = graph.refresh([
-        for (final tile in once)
-          tile.copy_with(
-            is_removed: tile.is_removed || tile.id == covering.last.id,
-          ),
-      ]);
-      expect(
-        twice.firstWhere((tile) => tile.id == lower.id).is_blocked,
-        isFalse,
-      );
-    },
-  );
+  test('a fan face unlocks exactly the next column when tapped', () {
+    final state = TileQuestGenerator.generate(
+      level: 2,
+      difficulty: 8,
+      seed: 17,
+    );
+    final graph = TileQuestGeometry(state.tiles);
+    final layers = _layers(state, 'side_bottom');
+    final levels = layers.keys.toList()..sort();
+    final top = layers[levels.last]!;
+    expect(top.length, greaterThanOrEqualTo(1));
+    final face = top.first;
+    final blockers = graph.blockers[face.id]!;
+    expect(blockers, isEmpty);
+    final once = graph.refresh([
+      for (final tile in state.tiles)
+        tile.copy_with(is_removed: tile.id == face.id),
+    ]);
+    // 牌端离开后，下一张细边牌必须立即可点（同链下一张）。
+    final opened = once
+        .where(
+          (tile) =>
+              tile.region_id == 'side_bottom' &&
+              !tile.is_removed &&
+              !tile.is_blocked,
+        )
+        .map((tile) => tile.id)
+        .toSet();
+    expect(
+      opened.any((id) => id != face.id),
+      isTrue,
+      reason: 'the next fan column must become available',
+    );
+  });
 }

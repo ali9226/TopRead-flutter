@@ -220,12 +220,14 @@ mixin WorkEditorFormMixin {
     final String content = chapter_content_controller.text;
     if (title.isEmpty || content.trim().isEmpty) return false;
     final now = DateTime.now();
-    chapters.add(CreatorChapterDraft(
-      local_id: 'chapter_${now.microsecondsSinceEpoch}',
-      title: title,
-      content: content,
-      update_time: now,
-    ));
+    chapters.add(
+      CreatorChapterDraft(
+        local_id: 'chapter_${now.microsecondsSinceEpoch}',
+        title: title,
+        content: content,
+        update_time: now,
+      ),
+    );
     chapter_title_controller.clear();
     chapter_content_controller.clear();
     return true;

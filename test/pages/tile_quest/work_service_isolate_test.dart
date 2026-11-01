@@ -23,7 +23,7 @@ void main() {
       expect(
         generated.tiles.length,
         DifficultyProfile.for_difficulty(
-          TileQuestConfig.gameDifficulty,
+          TileQuestConfig.gameDifficulty.floor(),
         ).tile_count,
       );
       final engine = TileQuestEngine(generated);

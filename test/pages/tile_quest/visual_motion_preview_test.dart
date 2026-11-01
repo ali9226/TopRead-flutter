@@ -231,7 +231,14 @@ void main() {
       }
       expect(engine.remove().accepted, isTrue);
       final tray_type = engine.state.clickable_tiles
-          .firstWhere((tile) => tile.type != reserved_type)
+          .firstWhere(
+            (tile) =>
+                tile.type != reserved_type &&
+                engine.state.clickable_tiles
+                        .where((other) => other.type == tile.type)
+                        .length >=
+                    2,
+          )
           .type;
       for (var index = 0; index < 2; index++) {
         final id = engine.state.clickable_tiles

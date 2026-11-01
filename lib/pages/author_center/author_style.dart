@@ -110,6 +110,16 @@ class AuthorStyle {
   /// 头部操作按钮圆角。
   static const double header_action_radius = LayoutConfig.radius_14;
 
+  /*
+   TODO 头部操作按钮的最小可用宽度。
+
+   FilledButton.icon 的内容 = 左右内边距(14×2) + 图标(18) + 图文间距(8) = 54，
+   再留少量余量取 60：低于这个宽度内部图标会被挤出并抛布局溢出。
+   「创建作品 / 继续写作」分栏动画的起始阶段尾块宽度趋近 0，
+   用它给尾块保底（不足时从首块借用），保证动画全程不触发按钮内部溢出。
+   */
+  static const double header_action_min_width = 60;
+
   /// Tab 标签的垂直内边距。
   static const double tab_vertical_padding = LayoutConfig.space_6;
 

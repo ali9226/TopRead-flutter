@@ -1,4 +1,5 @@
 import 'package:app/config/layout_config.dart';
+import 'style.dart';
 import 'dart:convert';
 import 'package:app/pages/author_center/models/creator_work.dart';
 import 'package:app/util/storage_util/index.dart';
@@ -73,9 +74,15 @@ Future<({CreatorWorkDraft draft, bool restored})> restoreCreatorWork(
       canPop: false,
       child: AlertDialog(
         title: Text(tr('creator_workspace.recovery_title')),
-        content: SizedBox(
-          width: 600,
-          height: 360,
+        content: ConstrainedBox(
+          // TODO 横屏可视高度骤减，改用窗口高度比例封顶，避免按钮被挤出视口；
+          //      内容超限后由内层 SingleChildScrollView 滚动。
+          constraints: BoxConstraints(
+            maxWidth: WorkEditorStyle.dialog_content_max_width,
+            maxHeight:
+                MediaQuery.sizeOf(context).height *
+                WorkEditorStyle.dialog_content_max_height_ratio,
+          ),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

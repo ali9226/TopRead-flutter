@@ -18,6 +18,7 @@ import 'package:app/stores/language_store.dart';
 import 'package:app/stores/preference_store.dart';
 import 'package:app/stores/project_config_store.dart';
 import 'package:app/stores/share_store.dart';
+import 'package:app/stores/tile_quest_config_store.dart';
 import 'package:app/util/device/app_environment.dart';
 import 'package:app/util/encryption/get_encryption.dart';
 import 'package:app/util/encryption/set_encryption.dart';
@@ -421,6 +422,10 @@ class RedisRequestStore extends GetxController {
       Get.find<ProjectConfigStore>()
         ..save_config(data.project_config)
         ..save_complaint_list(data.complaint_list);
+    }
+
+    if (Get.isRegistered<TileQuestConfigStore>()) {
+      Get.find<TileQuestConfigStore>().save_config(data.tile_quest_config);
     }
 
     if (Get.isRegistered<AdConfigStore>()) {

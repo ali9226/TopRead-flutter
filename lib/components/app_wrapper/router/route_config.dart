@@ -11,6 +11,7 @@ import 'package:app/components/app_wrapper/utils/back_aware_page.dart';
 import 'package:app/components/window_content_layout/index.dart';
 import 'package:app/components/shell_tab_host/index.dart';
 import 'package:app/config/layout_config.dart';
+import 'package:app/stores/tile_quest_config_store.dart';
 import 'package:app/pages/change_nickname/index.dart';
 import 'package:app/pages/change_password/index.dart';
 import 'package:app/pages/image_text/index.dart';
@@ -61,7 +62,12 @@ class RouteConfig {
     final bool immersive = path.startsWith('/tile_quest');
     final double max_width = switch (path) {
       '/read' || '/short_story_read' => LayoutConfig.reader_max_width,
-      '/login' || '/register' => LayoutConfig.form_max_width,
+      // TODO 登录/注册/改昵称/改密码都是单列窄表单，大屏下统一按表单限宽，
+      //      否则 iPad 上输入框会被拉到全宽，与登录页的视觉密度不一致。
+      '/login' ||
+      '/register' ||
+      '/change_nickname' ||
+      '/change_password' => LayoutConfig.form_max_width,
       _ => LayoutConfig.page_max_width,
     };
     final Widget wrappedChild = BackAwarePage(
@@ -121,6 +127,13 @@ class RouteConfig {
         GoRoute(
           path: '/tile_quest',
           name: 'tile_quest',
+          // TODO 后台「游戏配置」关闭游戏入口后，深链/历史栈也不允许进入游戏，
+          //      否则开关只挡住个人中心入口，绕过入口仍能玩，等于没关。
+          //      配置未加载时 TileQuestConfigStore 默认「全部开启」，不会误伤正常进游戏。
+          redirect: (context, state) {
+            final store = Get.find<TileQuestConfigStore>();
+            return store.is_game_enabled ? null : '/user_info';
+          },
           pageBuilder: (context, state) =>
               buildRoutePage(state: state, child: const TileQuestPage()),
         ),
@@ -129,6 +142,11 @@ class RouteConfig {
           GoRoute(
             path: '/tile_quest/tile_preview',
             name: 'tile_quest_tile_preview',
+            // TODO 预览页同样受游戏入口开关约束，关闭时统一挡在游戏外。
+            redirect: (context, state) {
+              final store = Get.find<TileQuestConfigStore>();
+              return store.is_game_enabled ? null : '/user_info';
+            },
             pageBuilder: (context, state) =>
                 buildRoutePage(state: state, child: const TilePreviewPage()),
           ),

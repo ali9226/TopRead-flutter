@@ -105,13 +105,15 @@ class EditorStepIndicator extends StatelessWidget {
                                     ? const Icon(
                                         Icons.check_rounded,
                                         size: 15,
-                                        color: ColorConstants.pages_author_center_widgets_creator_empty_state_tone,
+                                        color: ColorConstants
+                                            .pages_author_center_widgets_creator_empty_state_tone,
                                       )
                                     : Text(
                                         '${index + 1}',
                                         style: TextStyle(
                                           color: is_active
-                                              ? ColorConstants.pages_author_center_widgets_creator_empty_state_tone
+                                              ? ColorConstants
+                                                    .pages_author_center_widgets_creator_empty_state_tone
                                               : AuthorStyle.secondary_text(
                                                   is_dark,
                                                 ),

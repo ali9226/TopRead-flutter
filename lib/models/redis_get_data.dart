@@ -7,6 +7,7 @@ import 'package:app/models/preference.dart';
 import 'package:app/models/home_classification.dart';
 import 'package:app/models/popular_search_item.dart';
 import 'package:app/models/project_config.dart';
+import 'package:app/models/tile_quest_config.dart';
 
 /* TODO
  * redis/get 接口返回的 content 数据模型。
@@ -42,6 +43,9 @@ class RedisGetData {
   /// 项目配置。
   final ProjectConfig project_config;
 
+  /// 拼图闯关游戏配置（难度 + 游戏入口开关）。
+  final TileQuestConfig tile_quest_config;
+
   /// 广告配置列表。
   final List<AdConfig> ads_ids;
 
@@ -58,6 +62,7 @@ class RedisGetData {
     required this.dislike_list,
     required this.popular_searches,
     required this.project_config,
+    required this.tile_quest_config,
     required this.ads_ids,
     this.complaint_list = const [],
   });
@@ -73,6 +78,7 @@ class RedisGetData {
       dislike_list = const [],
       popular_searches = const [],
       project_config = const ProjectConfig.empty(),
+      tile_quest_config = const TileQuestConfig.empty(),
       ads_ids = const [],
       complaint_list = const [];
 
@@ -93,6 +99,7 @@ class RedisGetData {
       dislike_list: _parse_dislike_list(json['dislike_list']),
       popular_searches: _parse_popular_searches(json['popular_searches']),
       project_config: _parse_project_config(json['project_config']),
+      tile_quest_config: _parse_tile_quest_config(json['tile_quest_config']),
       ads_ids: _parse_ads_ids(json['ads_ids']),
       complaint_list: _parse_complaint_list(json['complaint_list']),
     );
@@ -158,6 +165,15 @@ class RedisGetData {
   static ProjectConfig _parse_project_config(dynamic raw) {
     if (raw is! Map) return const ProjectConfig.empty();
     return ProjectConfig.from_json(Map<String, dynamic>.from(raw));
+  }
+
+  /// TODO 解析拼图闯关游戏配置。
+  ///
+  /// 字段缺失（旧版本后端 / 缓存丢失）时返回 [TileQuestConfig.empty]，
+  /// 其 game_switch 默认「全部平台开启」，避免游戏入口被误隐藏。
+  static TileQuestConfig _parse_tile_quest_config(dynamic raw) {
+    if (raw is! Map) return const TileQuestConfig.empty();
+    return TileQuestConfig.from_json(Map<String, dynamic>.from(raw));
   }
 
   /// TODO 解析广告配置列表。

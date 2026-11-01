@@ -17,12 +17,33 @@ class TileQuestLayoutPatterns {
   static const double grid_gap = 0;
   static const double tile_extent = 1 - grid_gap;
   static const int base_capacity = 26;
-  static const int cap_capacity = 4;
+  static const int cap_capacity = 6;
   static const int deep_core_min_layers = 40;
-  static const int deep_core_cap_capacity = 6;
-  static const int maximum_auxiliary_stacks = 9;
-  static const int minimum_auxiliary_stacks = 6;
-  static const int maximum_auxiliary_depth = 24;
+  static const int deep_core_cap_capacity = 8;
+
+  /// TODO 同位叠柱上限：同一 (x,y) 最多 4 张。叠太深会让玩家在同一处反复点
+  /// TODO 同一张牌，像被耍。4 是足迹 6×5、孔洞贯穿、主阵与牌堆间距≥1 这些
+  /// TODO 约束下的几何下限（相位格被孔洞挖到 16 格时，16×4 才装得下该相位）。
+  static const int max_exact_stack = 4;
+
+  /// TODO 主阵细分相位：x 保持 0.5 半格（一张牌正好遮住并排两张各一半），
+  /// TODO y 用 0.25 细分把同位叠柱摊薄。相位 8 个，40 层每个相位只摊 5 层。
+  static const int phase_count = 8;
+
+  /// TODO 羊了个羊式镜像卡扇：列间水平重叠只露细边，牌端逐列揭开。
+  /// TODO 底部一排卡扇朝中央出牌。
+  static const double fan_stride = .16;
+  static const int fan_max_columns = 12;
+  static const int fan_min_columns = 3;
+  static const int fan_max_passes = 3;
+  static const double fan_min_gap = .12;
+
+  /// TODO 顶部牌岛：半格错位的砖砌牌列，不是孤立牌柱。相邻列错开半格，
+  /// TODO 每张牌正好压住并排两张各一半；揭开后下一张被「一对」牌挡着，
+  /// TODO 深度看不穿。孤立的单格叠柱会让人一直点同一处、像被耍。
+  static const double top_row_stride = .5;
+  static const int top_row_columns = 7;
+  static const int top_row_layers = 4;
   static const int contour_search_steps = 40;
   static const double contour_min_power = .01;
   static const double contour_max_power = 10;
@@ -63,29 +84,45 @@ class TileQuestLayoutPatterns {
       for (var layer = 0; layer < profile.layers; layer++)
         _ordered_cells(layer, template, peaks, channels),
     ];
-    final auxiliary_layout = _auxiliary_layout(random);
-    final preferred_depth = min(
-      min(maximum_auxiliary_depth, profile.layers),
-      max(3, (profile.layers * .45).round()),
-    );
+    final fan_layout = _fan_layout(random);
     // Search template stock, not random points. Every returned candidate has an
     // independently measured opening, exact inventory and long main corridors.
-    final depths = [
-      preferred_depth,
+    final fan_options = <({int columns, int passes, int chains})>[];
+    // TODO 先长卡扇（细边列多、最接近参考布局的镜像扇堆），再补叠深与条数。
+    // TODO 宽度可行性必须用实际 stride 计算，保证扇体互不相交且不出足迹。
+    final max_columns = min(fan_max_columns, profile.layers);
+    // 参考布局是一对镜像扇堆：双扇方案全部先于三扇，三扇只作库存兜底。
+    for (final chains in [2, 3]) {
       for (
-        var depth = preferred_depth + 1;
-        depth <= min(maximum_auxiliary_depth, profile.layers);
-        depth++
-      )
-        depth,
-      for (var depth = preferred_depth - 1; depth >= 1; depth--) depth,
-    ];
+        var candidate = max_columns;
+        candidate >= fan_min_columns;
+        candidate--
+      ) {
+        final width = (candidate - 1) * fan_layout.stride + tile_extent;
+        final spread = _fan_spread(width, chains);
+        if (spread == null) continue;
+        for (final passes in [1, 2, fan_max_passes]) {
+          if (candidate * passes > profile.layers) continue;
+          fan_options.add((columns: candidate, passes: passes, chains: chains));
+        }
+      }
+    }
+    if (fan_options.isEmpty) {
+      fan_options.add((columns: fan_min_columns, passes: 1, chains: 2));
+    }
 
-    List<TileQuestTile>? build(int main_count, int auxiliary_count, int depth) {
-      final auxiliary_layers = _auxiliary_layers(
-        auxiliary_layout,
-        auxiliary_count,
-        depth,
+    List<TileQuestTile>? build(
+      int main_count,
+      int columns,
+      int passes,
+      int chains,
+    ) {
+      final auxiliary_layers = _fan_layers(
+        fan_layout,
+        columns,
+        passes,
+        chains,
+        layer_count: profile.layers,
       );
       final counts = _layer_counts(
         main_count,
@@ -94,8 +131,25 @@ class TileQuestLayoutPatterns {
       );
       if (counts == null) return null;
       final tiles = <TileQuestTile>[];
+      // TODO 同位叠柱上限：候选格按（已叠层数, 分数）摊派，叠满 max_exact_stack
+      // TODO 的格位让给还没叠起来的格位。既保证同位不再无限叠，又让并排牌
+      // TODO 一起遮住下方，深度看不穿。按层数优先摊派数学上保证放得下。
+      final depth = <String, int>{};
       for (var layer = 0; layer < footprints.length; layer++) {
-        for (final point in footprints[layer].take(counts[layer])) {
+        final cells = footprints[layer];
+        final order = [for (var index = 0; index < cells.length; index++) index]
+          ..sort((left, right) {
+            final compared = (depth['${cells[left].x}:${cells[left].y}'] ?? 0)
+                .compareTo(depth['${cells[right].x}:${cells[right].y}'] ?? 0);
+            return compared != 0 ? compared : left.compareTo(right);
+          });
+        var placed = 0;
+        for (final index in order) {
+          if (placed >= counts[layer]) break;
+          final point = cells[index];
+          final key = '${point.x}:${point.y}';
+          if ((depth[key] ?? 0) >= max_exact_stack) continue;
+          depth[key] = (depth[key] ?? 0) + 1;
           // Core is a logical depth basin, not necessarily the screen center.
           final core = peaks.any(
             (peak) =>
@@ -103,7 +157,9 @@ class TileQuestLayoutPatterns {
                 (point.y + .5 - peak.y).abs() <= 1,
           );
           _add(tiles, point, layer, core ? 'core' : 'main');
+          placed++;
         }
+        if (placed < counts[layer]) return null;
       }
       for (var layer = 0; layer < auxiliary_layers.length; layer++) {
         for (final slot in auxiliary_layers[layer]) {
@@ -122,23 +178,25 @@ class TileQuestLayoutPatterns {
           opening % 3 == 0;
     }
 
-    int stock_of(int auxiliary_count, int depth) => _auxiliary_layers(
-      auxiliary_layout,
-      auxiliary_count,
-      depth,
+    int stock_of(int columns, int passes, int chains) => _fan_layers(
+      fan_layout,
+      columns,
+      passes,
+      chains,
+      layer_count: profile.layers,
     ).fold<int>(0, (sum, layer) => sum + layer.length);
 
-    for (final depth in depths) {
-      for (
-        var auxiliary_count = maximum_auxiliary_stacks;
-        auxiliary_count >= minimum_auxiliary_stacks;
-        auxiliary_count--
-      ) {
-        final main_count =
-            profile.tile_count - stock_of(auxiliary_count, depth);
-        final tiles = build(main_count, auxiliary_count, depth);
-        if (tiles != null && acceptable(tiles)) return tiles;
-      }
+    for (final option in fan_options) {
+      final main_count =
+          profile.tile_count -
+          stock_of(option.columns, option.passes, option.chains);
+      final tiles = build(
+        main_count,
+        option.columns,
+        option.passes,
+        option.chains,
+      );
+      if (tiles != null && acceptable(tiles)) return tiles;
     }
     return null;
   }
@@ -176,11 +234,14 @@ class TileQuestLayoutPatterns {
       2 => Rectangle<double>(0, cross, 2, 1),
       _ => Rectangle<double>(main_columns - 2, cross, 2, 1),
     };
-    return [
-      notch,
-      if (random.nextBool())
-        Rectangle<double>(2 + random.nextInt(2).toDouble(), main_top + 2, 1, 1),
-    ];
+    // TODO 中央孔洞（回字心）贯穿全部普通层，与参考布局的镂空中区一致。
+    final heart = Rectangle<double>(
+      2 + random.nextInt(2).toDouble(),
+      main_top + 1 + random.nextInt(2).toDouble(),
+      1,
+      1,
+    );
+    return [notch, heart];
   }
 
   static bool _outside_channels(
@@ -236,9 +297,11 @@ class TileQuestLayoutPatterns {
     List<Point<double>> peaks,
     List<Rectangle<double>> channels,
   ) {
-    final phase = (layer + template) % 4;
-    final half_x = phase == 1 || phase == 2 ? .5 : 0.0;
-    final half_y = phase == 2 || phase == 3 ? .5 : 0.0;
+    // TODO x 半格（0/.5）保证并排两牌各挡一半；y 四分格（0/.25/.5/.75）
+    // TODO 把同位叠柱摊薄到上限内。同层仍取整格间距，不会互相重叠。
+    final phase = (layer + template) % phase_count;
+    final half_x = phase.isOdd ? .5 : 0.0;
+    final half_y = (phase ~/ 2) * .25;
     final cells = <Point<double>>[
       for (var row = 0; row < main_rows - (half_y > 0 ? 1 : 0); row++)
         for (
@@ -276,46 +339,76 @@ class TileQuestLayoutPatterns {
     return cells.take(base_capacity).toList();
   }
 
-  /// Seed each independent helper island once. Anchors live on a half-grid;
-  /// no individual tile receives a random position or independent z value.
-  static ({bool top_longer, int top_anchor, int bottom_anchor})
-  _auxiliary_layout(Random random) => (
-    top_longer: random.nextBool(),
-    top_anchor: random.nextInt(main_columns * 2),
-    bottom_anchor: random.nextInt(main_columns * 2),
+  /// TODO 卡扇列间距：整格（同层牌距合法）、不小于扇宽（扇体不相交），
+  /// TODO 并尽量铺满足迹，使牌堆贴住底部两角（参考布局的镜像扇堆）。
+  static double? _fan_spread(double width, int chains) {
+    if (chains <= 1) return 0.0;
+    final ideal = ((footprint_width - width) / (chains - 1)).floorToDouble();
+    final spread = max(width.ceilToDouble(), ideal);
+    return (chains - 1) * spread + width <= footprint_width + .000001
+        ? spread
+        : null;
+  }
+
+  /// TODO 羊了个羊式辅助牌岛锚点：底部一排镜像卡扇 + 顶部半格砖砌牌列。
+  /// TODO 锚点取 0.5 整数倍，保证同层相邻牌正好差一格、浮点零重叠。
+  static ({double top_anchor, double stride}) _fan_layout(Random random) => (
+    top_anchor: .5 * (1 + random.nextInt(3)),
+    stride: fan_stride + (random.nextInt(3) - 1) * .015,
   );
 
-  /// Lay actual brick bonds: an n-tile whole row alternates with an n−1-tile
-  /// half-shifted row. Each narrow-row tile therefore covers two real lower
-  /// tiles, and each internal wide-row tile covers two narrow-row tiles. The
-  /// unavoidable outer shoulders have one support only on every other layer;
-  /// they never form the old isolated vertical columns. All stock is measured
-  /// from these rows before the main contour receives the remaining tiles.
-  static List<List<Point<double>>> _auxiliary_layers(
-    ({bool top_longer, int top_anchor, int bottom_anchor}) layout,
-    int count,
-    int depth,
-  ) {
-    final longer = (count + 1) ~/ 2;
-    final shorter = count ~/ 2;
-    final top_width = layout.top_longer ? longer : shorter;
-    final bottom_width = layout.top_longer ? shorter : longer;
-    List<Point<double>> row(int width, int anchor, double y, int layer) {
-      final half_phase = layer.isOdd;
-      final start = (anchor % ((main_columns - width) * 2 + 1)) / 2;
-      return [
-        for (var column = 0; column < width - (half_phase ? 1 : 0); column++)
-          Point(start + column + (half_phase ? .5 : 0), y),
-      ];
-    }
-
+  /// TODO 每层返回该层牌位。卡扇列 c（0=细边端）占 layer = c*passes + p，
+  /// TODO 同列 [passes] 副完全叠放；牌端朝棋盘中央，同层永不重叠。
+  /// TODO 顶部是半格错位的砖砌牌列：列 i 落在 layer = i%2 + 2k，
+  /// TODO 同层列距整格不重叠，跨层相邻列各挡一半——每张牌都被并排两张
+  /// TODO 压住，下方深度看不穿。两端列只放一张（棋盘外没有牌可并排遮挡，
+  /// TODO 端点不叠柱，避免「孤零零一直点」）。
+  static List<List<Point<double>>> _fan_layers(
+    ({double top_anchor, double stride}) layout,
+    int columns,
+    int passes,
+    int chains, {
+    required int layer_count,
+  }) {
+    final fan_span = columns * passes;
+    final top_span = min(top_row_layers, layer_count);
+    final span = max(fan_span, top_span);
+    final width = (columns - 1) * layout.stride + tile_extent;
+    final spread = chains <= 1 ? 0.0 : _fan_spread(width, chains)!;
     return [
-      for (var layer = 0; layer < depth; layer++)
+      for (var layer = 0; layer < span; layer++)
         [
-          ...row(top_width, layout.top_anchor, 0, layer),
-          ...row(bottom_width, layout.bottom_anchor, 8, layer),
+          if (layer < top_span)
+            for (var column = 0; column < top_row_columns; column++)
+              if (column.isOdd == layer.isOdd &&
+                  (layer < 2 || (column > 0 && column < top_row_columns - 1)))
+                Point(layout.top_anchor + column * top_row_stride, 0),
+          for (var chain = 0; chain < chains; chain++)
+            if (layer < fan_span)
+              _fan_slot(layout, columns, passes, chain, spread, layer),
         ],
     ];
+  }
+
+  /// TODO 单条卡扇在 [layer] 的牌位。牌端朝中央：左半区列号向右递增出牌，
+  /// TODO 右半区镜像，使左右两堆的牌端相对、细边朝外。
+  static Point<double> _fan_slot(
+    ({double top_anchor, double stride}) layout,
+    int columns,
+    int passes,
+    int chain,
+    double spread,
+    int layer,
+  ) {
+    final column = layer ~/ passes;
+    final start = chain * spread;
+    final faces_right =
+        start + ((columns - 1) * layout.stride + tile_extent) / 2 <
+        footprint_width / 2;
+    final x = faces_right
+        ? start + column * layout.stride
+        : start + (columns - 1 - column) * layout.stride;
+    return Point(x, 8);
   }
 
   /// Fit exact inventory to the basin footprints. A shared contour curve keeps

@@ -26,6 +26,7 @@ import 'package:app/stores/short_story_catalog_store.dart';
 import 'package:app/stores/preference_store.dart';
 import 'package:app/stores/share_store.dart';
 import 'package:app/stores/project_config_store.dart';
+import 'package:app/stores/tile_quest_config_store.dart';
 import 'package:app/stores/ad_config_store.dart';
 import 'package:app/stores/message_store.dart';
 import 'package:app/stores/bookshelf_store.dart';
@@ -85,6 +86,7 @@ void main() async {
   Get.put(PreferenceStore());
   Get.put(ShareStore());
   Get.put(ProjectConfigStore());
+  Get.put(TileQuestConfigStore());
   Get.put(AdConfigStore());
   Get.put(MessageStore());
   Get.put(BookshelfStore());

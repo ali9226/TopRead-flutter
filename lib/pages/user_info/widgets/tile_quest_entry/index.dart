@@ -25,88 +25,103 @@ class TileQuestEntry extends StatelessWidget {
         : TileQuestEntryStyle.light_ink;
     return Padding(
       padding: TileQuestEntryStyle.margin,
-      child: Material(
-        color: ColorConstants.transparent,
-        borderRadius: BorderRadius.circular(TileQuestEntryStyle.radius),
-        clipBehavior: Clip.antiAlias,
-        child: Ink(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: is_dark
-                  ? TileQuestEntryStyle.dark_colors
-                  : TileQuestEntryStyle.light_colors,
-            ),
-            borderRadius: BorderRadius.circular(TileQuestEntryStyle.radius),
-            border: Border.all(
-              color: TileQuestEntryStyle.accent.withValues(alpha: 0.18),
-            ),
+      // TODO 宽屏（iPad / 横屏 / 折叠展开态）下把卡片收窄并居中，
+      //      避免图标与播放按钮被 900pt 内容列拉散、中段出现大片空白；
+      //      手机宽度小于 max_width，约束不生效，观感与原先一致。
+      child: Align(
+        alignment: Alignment.center,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: TileQuestEntryStyle.max_width,
           ),
-          child: InkWell(
-            key: const ValueKey('tile_quest_entry'),
-            onTap: on_open ?? () => routerUtil(path: '/tile_quest'),
-            child: Padding(
-              padding: TileQuestEntryStyle.padding,
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(
-                      TileQuestEntryStyle.icon_radius,
-                    ),
-                    child: Image.asset(
-                      'assets/img/tile_quest/app_icon.png',
-                      width: TileQuestEntryStyle.icon_size,
-                      height: TileQuestEntryStyle.icon_size,
-                      fit: BoxFit.contain,
-                      cacheWidth: 192,
-                      excludeFromSemantics: true,
-                    ),
-                  ),
-                  const SizedBox(width: TileQuestEntryStyle.content_gap),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Tile Quest',
-                          style: TextStyle(
-                            color: ink,
-                            fontSize: is_cjk
-                                ? TileQuestEntryStyle.title_size_cjk
-                                : TileQuestEntryStyle.title_size_alphabetic,
-                            fontWeight: TileQuestEntryStyle.title_weight,
-                          ),
+          child: Material(
+            color: ColorConstants.transparent,
+            borderRadius: BorderRadius.circular(TileQuestEntryStyle.radius),
+            clipBehavior: Clip.antiAlias,
+            child: Ink(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: is_dark
+                      ? TileQuestEntryStyle.dark_colors
+                      : TileQuestEntryStyle.light_colors,
+                ),
+                borderRadius: BorderRadius.circular(TileQuestEntryStyle.radius),
+                border: Border.all(
+                  color: TileQuestEntryStyle.accent.withValues(alpha: 0.18),
+                ),
+              ),
+              child: InkWell(
+                key: const ValueKey('tile_quest_entry'),
+                onTap: on_open ?? () => routerUtil(path: '/tile_quest'),
+                child: Padding(
+                  padding: TileQuestEntryStyle.padding,
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(
+                          TileQuestEntryStyle.icon_radius,
                         ),
-                        const SizedBox(height: LayoutConfig.space_4),
-                        Text(
-                          'tile_quest.entry_subtitle'.tr(),
-                          style: TextStyle(
-                            color: ink.withValues(alpha: 0.72),
-                            fontWeight: TileQuestEntryStyle.subtitle_weight,
-                            fontSize: is_cjk
-                                ? TileQuestEntryStyle.subtitle_size_cjk
-                                : TileQuestEntryStyle.subtitle_size_alphabetic,
-                            height: is_cjk
-                                ? TileQuestEntryStyle.line_height_cjk
-                                : TileQuestEntryStyle.line_height_alphabetic,
-                          ),
+                        child: Image.asset(
+                          'assets/img/tile_quest/app_icon.png',
+                          width: TileQuestEntryStyle.icon_size,
+                          height: TileQuestEntryStyle.icon_size,
+                          fit: BoxFit.contain,
+                          cacheWidth: 192,
+                          excludeFromSemantics: true,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: TileQuestEntryStyle.content_gap),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Tile Quest',
+                              style: TextStyle(
+                                color: ink,
+                                fontSize: is_cjk
+                                    ? TileQuestEntryStyle.title_size_cjk
+                                    : TileQuestEntryStyle.title_size_alphabetic,
+                                fontWeight: TileQuestEntryStyle.title_weight,
+                              ),
+                            ),
+                            const SizedBox(height: LayoutConfig.space_4),
+                            Text(
+                              'tile_quest.entry_subtitle'.tr(),
+                              style: TextStyle(
+                                color: ink.withValues(alpha: 0.72),
+                                fontWeight: TileQuestEntryStyle.subtitle_weight,
+                                fontSize: is_cjk
+                                    ? TileQuestEntryStyle.subtitle_size_cjk
+                                    : TileQuestEntryStyle
+                                          .subtitle_size_alphabetic,
+                                height: is_cjk
+                                    ? TileQuestEntryStyle.line_height_cjk
+                                    : TileQuestEntryStyle
+                                          .line_height_alphabetic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: LayoutConfig.space_8),
+                      Container(
+                        width: TileQuestEntryStyle.action_size,
+                        height: TileQuestEntryStyle.action_size,
+                        decoration: BoxDecoration(
+                          color: TileQuestEntryStyle.accent.withValues(
+                            alpha: 0.14,
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.play_arrow_rounded, color: ink),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: LayoutConfig.space_8),
-                  Container(
-                    width: TileQuestEntryStyle.action_size,
-                    height: TileQuestEntryStyle.action_size,
-                    decoration: BoxDecoration(
-                      color: TileQuestEntryStyle.accent.withValues(alpha: 0.14),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.play_arrow_rounded, color: ink),
-                  ),
-                ],
+                ),
               ),
             ),
           ),

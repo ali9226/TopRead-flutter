@@ -13,6 +13,12 @@ class TileQuestTypeAllocator {
   /// 每条分叉的落位尝试预算：换取互不重叠目标位的命中率。
   static const int trap_install_attempts = 12;
 
+  /// TODO 供体三连在解序上的最大窗口（步）：窗口内的同图三张才可拆成延迟三连。
+  static const int trap_donor_span = 12;
+
+  /// TODO 暖场前缀地板：前缀三连不可拆，供体与目标位都必须在其后。
+  static const int trap_prefix_floor = 24;
+
   /// 开局新盘的图案序列：暖场三连在前，其余按公平库存铺满，
   /// 最后按配方埋入强弱档延迟三连。[profile] 难度档（含陷阱配方）；
   /// [opening_count] 开局可见牌数（占暖场前缀）；[random] 种子随机源；
@@ -22,6 +28,7 @@ class TileQuestTypeAllocator {
     required int opening_count,
     required Random random,
     int capacity = TileQuestConfig.tray_capacity,
+    Set<int>? trap_marks,
   }) {
     final supply = List<int>.filled(profile.type_count, 0);
     // Isolated hard openings need at least two full triples per warmup sprite;
@@ -50,7 +57,13 @@ class TileQuestTypeAllocator {
       hard: false,
       capacity: capacity,
     );
-    _install_delayed_triples(sequence, profile.trap_forks, random);
+    _install_delayed_triples(
+      sequence,
+      profile.trap_forks,
+      random,
+      capacity: capacity,
+      marks: trap_marks,
+    );
     return sequence;
   }
 
@@ -98,17 +111,16 @@ class TileQuestTypeAllocator {
         if (next >= capacity) continue;
         // 填到容量-1 时必须确认还存在可关对，避免六张单牌锁死槽位。
         if (next == capacity - 1) {
-          final can_close = List<int>.generate(
-            supply.length,
-            (index) => index,
-          ).any(
-            (candidate) =>
-                (candidate == type && counts[type] == 2
-                        ? 0
-                        : counts[candidate] + (candidate == type ? 1 : 0)) ==
-                    2 &&
-                supply[candidate] - (candidate == type ? 1 : 0) > 0,
-          );
+          final can_close = List<int>.generate(supply.length, (index) => index)
+              .any(
+                (candidate) =>
+                    (candidate == type && counts[type] == 2
+                            ? 0
+                            : counts[candidate] +
+                                  (candidate == type ? 1 : 0)) ==
+                        2 &&
+                    supply[candidate] - (candidate == type ? 1 : 0) > 0,
+              );
           if (!can_close) continue;
         }
         safe.add(type);
@@ -124,9 +136,7 @@ class TileQuestTypeAllocator {
       // exhaustion and finish with a simpler, tiny leftover palette.
       // 低难度不为深区预留末组三连（减少「第三张很晚才出现」的压槽感）。
       final unreserved = !hard && profile.difficulty >= 5 && progress < 2 / 3
-          ? safe
-                .where((type) => counts[type] > 0 || supply[type] > 3)
-                .toList()
+          ? safe.where((type) => counts[type] > 0 || supply[type] > 3).toList()
           : safe;
       final phase_safe = unreserved.isEmpty ? safe : unreserved;
       final demanding = profile.difficulty >= 6;
@@ -197,19 +207,22 @@ class TileQuestTypeAllocator {
     return sequence;
   }
 
-  /// 陷阱配方：把若干组三连改造成强弱档「延迟三连」——前两张在解序上
-  /// 隔 spread 步、第三张再滞后 gap 步。选错提前开对就把单牌压进槽里；
-  /// 叠对后槽位在 3-6 步内见底，而撤回只有 1 步，死期落在分叉点之后。
-  /// 类型取自普通库存，不制造稀有图；位置多重集不变，解的可行性由校验兜底。
+  /// TODO 陷阱配方：把若干组「紧凑三连」改造成强弱档「延迟三连」——前两张
+  /// TODO 在解序上隔 spread 步、第三张再滞后 gap 步。选错提前开对就把单牌压
+  /// TODO 进槽里；叠对后槽位在 3-6 步内见底，而撤回只有 1 步，死期落在分叉点
+  /// TODO 之后。供体是解序上窗口不超过 [trap_donor_span] 步的同图三张（暖场
+  /// TODO 前缀不参与）；位置多重集不变，解的可行性由校验兜底。
   static void _install_delayed_triples(
     List<int> sequence,
     List<TileQuestTrapFork> forks,
-    Random random,
-  ) {
+    Random random, {
+    int capacity = TileQuestConfig.tray_capacity,
+    Set<int>? marks,
+  }) {
     if (forks.isEmpty || sequence.length < trap_min_sequence) return;
-    // 陷阱只落在解序的最后 1/4 深区：前 3/4 留给暖场与中盘，分叉的
-    // 难度完全压在后半程，开局不出现任何人为张力。
-    final origin = sequence.length * 3 ~/ 4;
+    // TODO 分叉自解序 45% 处铺到末尾：中盘起就引入「第三张很晚才出现」的
+    // TODO 猜疑张力，开局前段仍留给暖场，不人为制造早期压力。
+    final origin = sequence.length * 45 ~/ 100;
     final used = <int>{};
     var installed = 0;
     for (
@@ -230,23 +243,75 @@ class TileQuestTypeAllocator {
       for (var position = 0; position < sequence.length; position++) {
         (occurrences[sequence[position]] ??= []).add(position);
       }
-      final donor = occurrences.entries.where((entry) {
-        return entry.value.length == 3 &&
-            entry.value.every((position) => !used.contains(position));
-      }).toList();
+      // TODO 紧凑三连供体：同图三张在解序上彼此靠近，拆开即失去「随手关对」，
+      // TODO 换成目标位上的延迟三连。暖场前缀的三连保持原样。
+      final donor = <({int type, List<int> positions})>[];
+      for (final entry in occurrences.entries) {
+        final free = <int>[
+          for (final position in entry.value)
+            if (position >= trap_prefix_floor && !used.contains(position))
+              position,
+        ];
+        for (var index = 0; index + 2 < free.length; index++) {
+          if (free[index + 2] - free[index] <= trap_donor_span) {
+            donor.add((
+              type: entry.key,
+              positions: [free[index], free[index + 1], free[index + 2]],
+            ));
+            break;
+          }
+        }
+      }
       if (donor.isEmpty) continue;
       final picked = donor[random.nextInt(donor.length)];
+      final before = _sequence_replay(sequence, capacity).late;
       final displaced = [for (final position in targets) sequence[position]];
       for (var index = 0; index < 3; index++) {
-        sequence[targets[index]] = picked.key;
+        sequence[targets[index]] = picked.type;
       }
       for (var index = 0; index < 3; index++) {
-        sequence[picked.value[index]] = displaced[index];
+        sequence[picked.positions[index]] = displaced[index];
+      }
+      final after = _sequence_replay(sequence, capacity);
+      if (!after.ok || after.late < before) {
+        for (var index = 0; index < 3; index++) {
+          sequence[targets[index]] = displaced[index];
+          sequence[picked.positions[index]] = picked.type;
+        }
+        continue;
       }
       used.addAll(targets);
-      used.addAll(picked.value);
+      used.addAll(picked.positions);
+      marks?.addAll(targets);
+      marks?.addAll(picked.positions);
       installed++;
     }
+  }
+
+  /// TODO 解序槽位安全：按三消结算回放，任一步占位达到 [capacity] 即失败。
+  /// TODO 与校验器同一口径，供延迟三连与图案打散做原子换位。返回后段压槽
+  /// TODO 负载：换位不得稀释后段压力（后段压槽是难度的主要来源）。
+  static ({bool ok, int late}) _sequence_replay(
+    List<int> sequence,
+    int capacity,
+  ) {
+    final counts = List<int>.filled(TileQuestConfig.max_tile_types, 0);
+    final late_floor = sequence.length * 2 ~/ 3;
+    var occupancy = 0;
+    var late = 0;
+    for (var index = 0; index < sequence.length; index++) {
+      final type = sequence[index];
+      if (occupancy >= capacity) return (ok: false, late: 0);
+      counts[type]++;
+      occupancy++;
+      if (counts[type] == 3) {
+        counts[type] = 0;
+        occupancy -= 3;
+      }
+      if (occupancy >= capacity) return (ok: false, late: 0);
+      if (index >= late_floor) late += occupancy;
+    }
+    return (ok: occupancy == 0, late: late);
   }
 
   /// Preserve the existing safe/pressure decision, then balance only its legal

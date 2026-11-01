@@ -252,7 +252,9 @@ class StepPublish extends StatelessWidget {
                 if (v != null) on_rights_confirmed_changed(v);
               },
               activeColor: accent,
-              checkColor: is_dark ? AuthorStyle.dark_surface : ColorConstants.whiteColor,
+              checkColor: is_dark
+                  ? AuthorStyle.dark_surface
+                  : ColorConstants.whiteColor,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               visualDensity: VisualDensity.compact,
               side: BorderSide(color: accent),

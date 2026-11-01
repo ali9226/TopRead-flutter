@@ -4,6 +4,14 @@ import 'package:app/config/layout_config.dart';
 
 /// 样式配置（类似 CSS）
 class Style {
+  /*
+   TODO 「我的漫画」入口是否在个人中心展示。
+
+   目前产品侧暂时隐藏该入口，恢复时把这里改回 true 即可，
+   不需要动 index.dart 的列表结构。
+   */
+  static const bool show_my_comics_entry = false;
+
   /// 单个列表项高度
   static const double liHeight = 62;
 

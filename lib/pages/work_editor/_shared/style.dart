@@ -31,6 +31,18 @@ class WorkEditorStyle {
   /// 独立章节正文的普通大屏可读宽度；局部边缘状态区窗口按可用宽度铺开。
   static const double chapter_max_width = 800;
 
+  /// TODO 云端/本地草稿对比弹窗内容区的最大宽度。
+  static const double dialog_content_max_width = 600;
+
+  /*
+   TODO 草稿对比弹窗内容区的最大高度占窗口高度的比例。
+
+   为什么用比例而不是固定像素：横屏手机可视高度只有 375~440pt，
+   写死 320/360 会把标题和底部按钮一起挤出视口。
+   内部已是 SingleChildScrollView，超过上限即可滚动。
+   */
+  static const double dialog_content_max_height_ratio = 0.7;
+
   /// TODO 页面水平留白。
   static const double page_padding = LayoutConfig.space_12;
 
@@ -63,7 +75,8 @@ class WorkEditorStyle {
   static const double action_spacing = LayoutConfig.space_12;
   static const double action_font_size_cjk = 14;
   static const double action_font_size_alphabetic = 12.5;
-  static const Color action_foreground = ColorConstants.pages_author_center_widgets_creator_empty_state_tone;
+  static const Color action_foreground =
+      ColorConstants.pages_author_center_widgets_creator_empty_state_tone;
   static const double save_button_radius = LayoutConfig.radius_6;
   static const double save_button_font_size = 12;
   static const EdgeInsets save_button_padding = EdgeInsets.symmetric(
@@ -108,8 +121,12 @@ class WorkEditorStyle {
   // ==================== 字重常量 ========================
 
   /// TODO 表单标题字重。
-  static final FontWeight section_title_weight = FontConfig.adjustedWeight(FontWeight.w600);
+  static final FontWeight section_title_weight = FontConfig.adjustedWeight(
+    FontWeight.w600,
+  );
 
   /// TODO 字段标题字重。
-  static final FontWeight field_label_weight = FontConfig.adjustedWeight(FontWeight.w500);
+  static final FontWeight field_label_weight = FontConfig.adjustedWeight(
+    FontWeight.w500,
+  );
 }

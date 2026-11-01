@@ -5,7 +5,6 @@ import 'package:app/config/color_config.dart';
 /// 三类作品详情的自然流式封面、信息及安全区尺寸。
 class WorkIntroductionHeroStyle {
   const WorkIntroductionHeroStyle._();
-  static const double max_content_width = 720;
   static const double horizontal_padding = LayoutConfig.page_horizontal_padding;
   static const double cover_width_ratio = 0.32;
   static const double cover_max_width = 132;

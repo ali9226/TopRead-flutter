@@ -68,13 +68,20 @@ show_chapter_publish_sheet({
                         ? () => Navigator.pop(context, (mode: mode, time: time))
                         : null,
                     style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(WorkEditorStyle.action_height),
+                      minimumSize: const Size.fromHeight(
+                        WorkEditorStyle.action_height,
+                      ),
                       backgroundColor: AuthorStyle.gold,
                       foregroundColor: ColorConstants.lightTextColor,
-                      disabledBackgroundColor: AuthorStyle.gold.withValues(alpha: 0.5),
-                      disabledForegroundColor: ColorConstants.pages_work_editor_shared_widgets_chapter_publish_sheet_tone,
+                      disabledBackgroundColor: AuthorStyle.gold.withValues(
+                        alpha: 0.5,
+                      ),
+                      disabledForegroundColor: ColorConstants
+                          .pages_work_editor_shared_widgets_chapter_publish_sheet_tone,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(WorkEditorStyle.action_radius),
+                        borderRadius: BorderRadius.circular(
+                          WorkEditorStyle.action_radius,
+                        ),
                       ),
                     ),
                     child: Text(tr('creator_center.publish')),

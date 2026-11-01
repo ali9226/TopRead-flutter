@@ -117,10 +117,16 @@ class _WorkIntroductionHeroState extends State<WorkIntroductionHero> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final content_width = math.min(
-        constraints.maxWidth,
-        WorkIntroductionHeroStyle.max_content_width,
-      );
+      /*
+       TODO 直接跟随页面给的可用宽度，不再单独卡一个更窄的上限。
+
+       详情页的可读宽度已经由页面的 WindowContentLayout 统一控制
+       （漫画简介 900 / 阅读与短篇 760）。Hero 此前再取 min(可用宽, 720)
+       并居中，导致封面+标题+统计+分类那一行比下方内容卡窄一截，
+       宽屏与折叠屏横屏下看起来像被套进了一层安全区。
+       首屏骨架本来就是铺满的，去掉这层上限后骨架与正式内容也才对得上。
+       */
+      final content_width = constraints.maxWidth;
       final inner_width = math.max(
         0.0,
         content_width - WorkIntroductionHeroStyle.horizontal_padding * 2,

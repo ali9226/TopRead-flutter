@@ -9,6 +9,7 @@ import 'package:app/pages/user_info/widgets/operation_list/index.dart';
 import 'package:app/pages/user_info/widgets/user_info_top.dart';
 import 'package:app/pages/user_info/widgets/tile_quest_entry/index.dart';
 import 'package:app/stores/shell_tab_info.dart';
+import 'package:app/stores/tile_quest_config_store.dart';
 import 'package:app/stores/user_information.dart';
 import 'package:app/stores/device_info.dart';
 import 'logic.dart';
@@ -38,6 +39,9 @@ class _UserInfoState extends State<UserInfo> {
 
   /// 用户信息仓库。
   final userInformation = Get.find<UserInformation>();
+
+  /// 拼图闯关游戏配置仓库（控制游戏入口是否显示）。
+  final tileQuestConfig = Get.find<TileQuestConfigStore>();
 
   /// 底部壳层 tab 状态仓库。
   final shellTabInfo = Get.find<ShellTabInfo>();
@@ -182,7 +186,10 @@ class _UserInfoState extends State<UserInfo> {
                                     Statistics(key: _statisticsKey),
 
                                   /// 独立离线游戏，访客与已登录用户均可进入。
-                                  TileQuestEntry(is_dark: isDark),
+                                  /// 后台「游戏配置」里关掉游戏入口后，这里整体隐藏；
+                                  /// 读响应式开关值，配置下发后会自动显隐刷新。
+                                  if (tileQuestConfig.is_game_enabled)
+                                    TileQuestEntry(is_dark: isDark),
 
                                   /// 常用操作入口列表。
                                   OperationList(),

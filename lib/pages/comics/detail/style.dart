@@ -10,8 +10,18 @@ import 'package:app/config/layout_config.dart';
 /// 视觉结构：全幅封面海报 Hero（封面卡 + 标题 + 标签 + 统计 + CTA）
 /// → 白色圆角内容卡（Tab 切换 Overview / Chapters / Comments）。
 class ComicDetailStyle {
-  /// 已加载内容与首屏骨架使用同一最大宽度，窗口伸展时保持几何一致。
-  static const double page_max_width = 600;
+  /*
+   TODO 已加载内容与首屏骨架使用同一最大宽度，窗口伸展时保持几何一致。
+
+   为什么对齐全站内容宽度而不是保留更窄的 600：
+   详情页是全站唯一把整页（含全幅海报 Hero）压到 600 的页面，
+   折叠屏展开态等宽度在 600~900 之间的窗口会在两侧露出空白边，
+   而首页/书架等使用全站宽度的页面是铺满的，视觉上就只在这里出现断层。
+
+   Hero 内部不再单独卡更窄的上限，直接铺满这里的页面宽度，
+   保证封面/标题/统计/分类那一行与下方内容卡左右对齐。
+   */
+  static const double page_max_width = LayoutConfig.page_max_width;
   static const String public_url = String.fromEnvironment(
     'APP_PUBLIC_URL',
     defaultValue: 'https://app.read.top',

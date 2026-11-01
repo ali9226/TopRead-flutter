@@ -15,7 +15,8 @@ void main() {
       expect(
         (achieved - win).abs(),
         lessThanOrEqualTo(0.02),
-        reason: 'difficulty $difficulty forks=${forks.length} '
+        reason:
+            'difficulty $difficulty forks=${forks.length} '
             'achieved=$achieved target=$win',
       );
     }
@@ -52,6 +53,41 @@ void main() {
     }
   });
 
+  test('分数难度参与分叉配方：9.5 比 9.0 多埋延迟三连', () {
+    final plain = DifficultyProfile.for_difficulty(9);
+    final sharp = DifficultyProfile.for_difficulty(9, precise_difficulty: 9.5);
+    expect(
+      sharp.trap_forks.length,
+      greaterThan(plain.trap_forks.length),
+      reason:
+          '9.0 forks=${plain.trap_forks.length} '
+          '9.5 forks=${sharp.trap_forks.length}',
+    );
+    // 同档查表不变，只有分叉配方被小数推动。
+    expect(sharp.tile_count, plain.tile_count);
+    expect(sharp.layers, plain.layers);
+    expect(sharp.type_count, plain.type_count);
+    // 精确难度也要校验范围。
+    expect(
+      () => DifficultyProfile.for_difficulty(9, precise_difficulty: 10.5),
+      throwsArgumentError,
+    );
+  });
+
+  test('分数难度的盘面仍可生成且解序合法', () {
+    for (final difficulty in [8.25, 9.5, 9.99]) {
+      for (final seed in [0, 17, 730]) {
+        final state = TileQuestGenerator.generate(
+          level: 2,
+          seed: seed,
+          difficulty: difficulty,
+        );
+        expect(state.tiles, isNotEmpty);
+        expect(state.certified_solution, isNotEmpty);
+      }
+    }
+  });
+
   test('生成盘面按配方埋入强弱档延迟三连', () {
     for (final difficulty in [2, 5, 8]) {
       final profile = DifficultyProfile.for_difficulty(difficulty);
@@ -68,9 +104,9 @@ void main() {
         };
         final by_type = <int, List<int>>{};
         for (final id in path) {
-          by_type.putIfAbsent(state.tile_by_id(id).type, () => []).add(
-            position_of[id]!,
-          );
+          by_type
+              .putIfAbsent(state.tile_by_id(id).type, () => [])
+              .add(position_of[id]!);
         }
         for (final fork in profile.trap_forks) {
           final tail = fork.spread + fork.gap;
@@ -89,7 +125,8 @@ void main() {
           expect(
             found,
             isTrue,
-            reason: 'difficulty $difficulty seed $seed '
+            reason:
+                'difficulty $difficulty seed $seed '
                 'gap=${fork.gap} spread=${fork.spread}',
           );
         }
