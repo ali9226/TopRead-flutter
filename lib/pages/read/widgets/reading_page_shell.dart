@@ -438,8 +438,13 @@ class ReadingPageShell extends StatelessWidget {
                             logic: logic,
                             is_dark: is_dark,
                             current_chapter_progress_percent:
-                                state.cached_chapter_progress,
+                                logic.current_chapter_progress_percent,
                             on_chapter_tap: actions.on_catalog_chapter_tap,
+                            on_continue: () {
+                              if (!state.has_started_reading.value) {
+                                actions.on_read();
+                              }
+                            },
                           );
                         },
                         on_setting_tap: actions.on_setting_tap,

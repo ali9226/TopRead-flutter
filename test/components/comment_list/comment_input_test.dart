@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -229,6 +231,87 @@ void main() {
     final TextField editor = tester.widget<TextField>(find.byType(TextField));
     expect(editor.focusNode?.hasFocus, isTrue);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('旧发送成功不能清空切换Tab后编辑的新草稿或关闭编辑器', (WidgetTester tester) async {
+    final pending_send = Completer<bool>();
+    final sent_contents = <String>[];
+    var active = true;
+    late StateSetter rebuild_parent;
+    await tester.pumpWidget(
+      EasyLocalization(
+        supportedLocales: const <Locale>[Locale('zh')],
+        path: 'assets/i18n',
+        assetLoader: const _CommentTestAssetLoader(),
+        startLocale: const Locale('zh'),
+        fallbackLocale: const Locale('zh'),
+        child: MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, set_state) {
+              rebuild_parent = set_state;
+              return Material(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: CommentInput(
+                    is_dark: false,
+                    active: active,
+                    on_send: (content) {
+                      sent_contents.add(content);
+                      return pending_send.future;
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final preview = find.byKey(const ValueKey('comment_input_preview'));
+    final send_button = find.byKey(
+      const ValueKey('comment_send_button_editor'),
+    );
+    await tester.tap(preview);
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), '  评论A  ');
+    await tester.pump();
+    await tester.tap(send_button);
+    await tester.pump();
+    expect(sent_contents, <String>['评论A']);
+    expect(pending_send.isCompleted, isFalse);
+
+    rebuild_parent(() => active = false);
+    await tester.pumpAndSettle();
+    expect(send_button.hitTestable(), findsNothing);
+    rebuild_parent(() => active = true);
+    await tester.pumpAndSettle();
+    await tester.tap(preview);
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), '新草稿B');
+    await tester.pump();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).focusNode?.hasFocus,
+      isTrue,
+    );
+
+    pending_send.complete(true);
+    await tester.pumpAndSettle();
+    final editor = tester.widget<TextField>(find.byType(TextField));
+    expect(editor.controller?.text, '新草稿B');
+    expect(editor.focusNode?.hasFocus, isTrue);
+    expect(send_button.hitTestable(), findsOneWidget);
+    expect(
+      tester
+          .widget<IgnorePointer>(
+            find.byKey(const ValueKey('comment_fixed_composer_gate')),
+          )
+          .ignoring,
+      isTrue,
+    );
+    expect(sent_contents, hasLength(1));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 }
 

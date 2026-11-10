@@ -16,6 +16,18 @@ import 'package:app/config/color_config.dart';
 class ShortStoryReadStyle {
   static const Duration read_entry_duration = Duration(milliseconds: 280);
 
+  /// TODO 隐藏导航栏时，上三分区单击回看上一屏。
+  static const double page_up_tap_fraction = 1 / 3;
+
+  /// TODO 单次翻屏保留的正文衔接高度。
+  static const double page_scroll_overlap = 100;
+
+  /// TODO 单击翻屏的平滑过渡时长。
+  static const Duration page_scroll_duration = Duration(milliseconds: 320);
+
+  /// TODO 正文起点靠近视口上缘时的布局容差。
+  static const double reading_section_at_top_threshold = 20;
+
   /// 目录关闭按钮保留完整触控区域，图标沿用原有视觉尺寸。
   static const double catalog_close_target = 44;
   static const double catalog_close_icon_size = LayoutConfig.icon_small;

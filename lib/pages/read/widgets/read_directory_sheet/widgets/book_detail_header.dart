@@ -1,334 +1,525 @@
-import 'package:app/config/layout_config.dart';
-import 'dart:math';
-import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/api/bookshelf.dart';
 import 'package:app/components/login_required_dialog/index.dart';
-import 'package:app/config/color_config.dart';
+import 'package:app/components/network_cover_image/index.dart';
+import 'package:app/components/work_hero_stats/index.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/pages/read/logic.dart';
-import 'package:app/pages/read/widgets/read_directory_sheet/style.dart';
 import 'package:app/services/bookshelf_sync_service.dart';
+import 'package:app/stores/project_config_store.dart';
 import 'package:app/util/language_util/index.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-/// 目录弹窗顶部书籍信息头组件。
+import 'book_detail_header_style.dart';
+import 'book_header_backdrop.dart';
+import 'book_header_statistics.dart';
+
+/// TODO 章节弹窗封面 Hero；统计来自真实详情，未提供的计数显示破折号。
 class BookDetailHeader extends StatefulWidget {
-  /// 书籍详情数据。
-  final ReadDetail detail;
-
-  /// 是否为夜间模式。
-  final bool is_dark;
-
-  /// 关注状态变更回调。
-  final ValueChanged<bool>? on_focus_changed;
-
+  /// TODO [chapter_count] 为当前作品目录总数，[favorite_count] 为服务端收藏计数。
+  /// TODO [subtitle] 使用作品原始副标题，缺失时不从书名猜测或补造。
   const BookDetailHeader({
     super.key,
     required this.detail,
     required this.is_dark,
     this.on_focus_changed,
+    this.chapter_count,
+    this.favorite_count,
+    this.subtitle = '',
+    this.show_backdrop = true,
   });
+
+  final ReadDetail detail;
+  final bool is_dark;
+  final ValueChanged<bool>? on_focus_changed;
+  final int? chapter_count;
+  final String? favorite_count;
+  final String subtitle;
+  final bool show_backdrop;
 
   @override
   State<BookDetailHeader> createState() => _BookDetailHeaderState();
 }
 
 class _BookDetailHeaderState extends State<BookDetailHeader> {
-  /// 当前关注状态。
   late bool _is_focused;
-
-  /// 是否正在请求中。
   bool _is_loading = false;
-
-  /// 随机选择的默认头像索引（0-9）。
-  late final int _random_avatar_index;
+  int _follow_generation = 0;
 
   @override
   void initState() {
     super.initState();
     _is_focused = widget.detail.focus_on;
-    _random_avatar_index = Random().nextInt(10);
   }
 
   @override
-  void didUpdateWidget(BookDetailHeader oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.detail.focus_on != widget.detail.focus_on) {
+  void didUpdateWidget(covariant BookDetailHeader old_widget) {
+    super.didUpdateWidget(old_widget);
+    if (old_widget.detail.story_id != widget.detail.story_id ||
+        old_widget.detail.author_id != widget.detail.author_id) {
+      _follow_generation++;
+      _is_loading = false;
+      _is_focused = widget.detail.focus_on;
+    } else if (old_widget.detail.focus_on != widget.detail.focus_on) {
       _is_focused = widget.detail.focus_on;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool is_cjk = LanguageUtil.is_cjk_language(
-      context.locale.languageCode,
+    final bool cjk = LanguageUtil.is_cjk_language(context.locale.languageCode);
+    final bool compact =
+        MediaQuery.sizeOf(context).height <
+        BookDetailHeaderStyle.compact_viewport_height;
+    final statistics = BookHeaderStatistics(
+      items: _statistics(context),
+      is_dark: widget.is_dark,
+      compact: compact,
     );
-    final Color title_color = ReadDirectorySheetStyle.getPrimaryTextColor(
-      widget.is_dark,
-    );
-    final Color sub_text_color = ReadDirectorySheetStyle.getSubTextColor(
-      widget.is_dark,
-    );
-    final double title_font_size = is_cjk
-        ? ReadDirectorySheetStyle.book_title_font_size_cjk
-        : ReadDirectorySheetStyle.book_title_font_size_alphabetic;
-    final double author_font_size = is_cjk
-        ? ReadDirectorySheetStyle.author_name_font_size_cjk
-        : ReadDirectorySheetStyle.author_name_font_size_alphabetic;
-    final double shadow_alpha = widget.is_dark ? 0.34 : 0.11;
 
-    return Padding(
-      padding: ReadDirectorySheetStyle.header_padding,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // 书籍封面使用固定比例，避免不同封面尺寸撑动目录头部。
-          Container(
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: ColorConstants.shadowColor.withValues(alpha: shadow_alpha),
-                  blurRadius: ReadDirectorySheetStyle.cover_shadow_blur_radius,
-                  offset: const Offset(
-                    0,
-                    ReadDirectorySheetStyle.cover_shadow_offset_y,
-                  ),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(
-                ReadDirectorySheetStyle.cover_border_radius,
-              ),
-              child: widget.detail.cover_url.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: widget.detail.cover_url,
-                      width: ReadDirectorySheetStyle.cover_width,
-                      height: ReadDirectorySheetStyle.cover_height,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      width: ReadDirectorySheetStyle.cover_width,
-                      height: ReadDirectorySheetStyle.cover_height,
-                      color: sub_text_color.withValues(alpha: 0.12),
-                      child: Icon(
-                        Icons.book_rounded,
-                        size: 26,
-                        color: sub_text_color,
-                      ),
-                    ),
+    return Stack(
+      key: const ValueKey('directory_book_hero'),
+      children: [
+        if (widget.show_backdrop)
+          Positioned.fill(
+            child: BookHeaderBackdrop(
+              cover_url: widget.detail.cover_url,
+              is_dark: widget.is_dark,
             ),
           ),
-          const SizedBox(width: ReadDirectorySheetStyle.header_content_spacing),
-          // 书籍信息保持单行省略，避免长标题影响 Tab 区域。
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                InkWell(
-                  onTap: () {},
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.detail.title,
-                          style: TextStyle(
-                            color: title_color,
-                            fontSize: title_font_size,
-                            height: 1.15,
-                            fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            compact
+                ? BookDetailHeaderStyle.compact_horizontal_padding
+                : BookDetailHeaderStyle.horizontal_padding,
+            BookDetailHeaderStyle.top_padding,
+            compact
+                ? BookDetailHeaderStyle.compact_horizontal_padding
+                : BookDetailHeaderStyle.horizontal_padding,
+            compact
+                ? BookDetailHeaderStyle.compact_bottom_padding
+                : BookDetailHeaderStyle.bottom_padding,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _cover(compact),
+                  SizedBox(
+                    width: compact
+                        ? BookDetailHeaderStyle.compact_cover_gap
+                        : BookDetailHeaderStyle.cover_gap,
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Tooltip(
+                          message: widget.detail.title,
+                          child: Text(
+                            widget.detail.title,
+                            key: const ValueKey('directory_book_title'),
+                            maxLines: compact
+                                ? BookDetailHeaderStyle.compact_title_lines
+                                : BookDetailHeaderStyle.title_lines,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: BookDetailHeaderStyle.ink,
+                              fontSize: compact
+                                  ? (cjk
+                                        ? BookDetailHeaderStyle
+                                              .compact_title_size_cjk
+                                        : BookDetailHeaderStyle
+                                              .compact_title_size_alphabetic)
+                                  : (cjk
+                                        ? BookDetailHeaderStyle.title_size_cjk
+                                        : BookDetailHeaderStyle
+                                              .title_size_alphabetic),
+                              height: cjk
+                                  ? BookDetailHeaderStyle.title_height_cjk
+                                  : BookDetailHeaderStyle
+                                        .title_height_alphabetic,
+                              fontWeight: FontConfig.adjustedWeight(
+                                FontWeight.w500,
+                              ),
+                              shadows: BookDetailHeaderStyle.title_shadows,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: LayoutConfig.space_8),
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          top: LayoutConfig.space_3,
+                        if (!compact && widget.subtitle.trim().isNotEmpty) ...[
+                          const SizedBox(
+                            height: BookDetailHeaderStyle.subtitle_gap,
+                          ),
+                          Text(
+                            widget.subtitle.trim(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: _secondary_style(cjk),
+                          ),
+                        ],
+                        if (!compact &&
+                            widget.detail.author_name.trim().isNotEmpty) ...[
+                          const SizedBox(
+                            height: BookDetailHeaderStyle.author_gap,
+                          ),
+                          _author(cjk),
+                        ],
+                        SizedBox(
+                          height: compact
+                              ? BookDetailHeaderStyle.compact_metadata_gap
+                              : BookDetailHeaderStyle.metadata_gap,
                         ),
-                        child: Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          color: title_color.withValues(alpha: 0.3),
-                          size: 14,
-                        ),
-                      ),
-                    ],
+                        _metadata(cjk),
+                        if (compact) ...[
+                          const SizedBox(
+                            height:
+                                BookDetailHeaderStyle.compact_statistics_gap,
+                          ),
+                          statistics,
+                        ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(
-                  height: ReadDirectorySheetStyle.title_author_spacing,
-                ),
-                if (widget.detail.author_avatar_url.isNotEmpty ||
-                    widget.detail.author_name.trim().isNotEmpty)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          right: LayoutConfig.space_6,
-                        ),
-                        child: widget.detail.author_avatar_url.isNotEmpty
-                            ? ClipOval(
-                                child: CachedNetworkImage(
-                                  imageUrl: widget.detail.author_avatar_url,
-                                  width:
-                                      ReadDirectorySheetStyle
-                                          .author_avatar_radius *
-                                      2,
-                                  height:
-                                      ReadDirectorySheetStyle
-                                          .author_avatar_radius *
-                                      2,
-                                  fit: BoxFit.cover,
-                                  errorWidget: (context, url, error) =>
-                                      _buildFallbackAvatar(),
-                                ),
-                              )
-                            : _buildFallbackAvatar(),
-                      ),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            if (widget.detail.author_name.trim().isNotEmpty)
-                              Flexible(
-                                child: Text(
-                                  widget.detail.author_name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: sub_text_color,
-                                    fontSize: author_font_size,
-                                    fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
-                                  ),
-                                ),
-                              ),
-                            const SizedBox(width: LayoutConfig.space_8),
-                            _buildFollowButton(is_cjk: is_cjk),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                ],
+              ),
+              if (!compact) ...[
+                const SizedBox(height: BookDetailHeaderStyle.statistics_gap),
+                statistics,
               ],
-            ),
+            ],
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  /// TODO 封面固定比例并保留亮边，加载及缺图状态不改变头部几何。
+  Widget _cover(bool compact) {
+    final double width = compact
+        ? BookDetailHeaderStyle.compact_cover_width
+        : BookDetailHeaderStyle.cover_width;
+    final double height = compact
+        ? BookDetailHeaderStyle.compact_cover_height
+        : BookDetailHeaderStyle.cover_height;
+    return DecoratedBox(
+      key: const ValueKey('directory_book_cover'),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(BookDetailHeaderStyle.cover_radius),
+        boxShadow: BookDetailHeaderStyle.cover_shadows,
       ),
-    );
-  }
-
-  /// 构建随机 SVG 兜底头像。
-  Widget _buildFallbackAvatar() {
-    return SvgPicture.asset(
-      'assets/svg/avatar_${_random_avatar_index.toString().padLeft(2, '0')}.svg',
-      width: ReadDirectorySheetStyle.author_avatar_radius * 2,
-      height: ReadDirectorySheetStyle.author_avatar_radius * 2,
-    );
-  }
-
-  /// 构建作者关注按钮，文案遵循当前语种。
-  Widget _buildFollowButton({required bool is_cjk}) {
-    // 夜间模式使用主题色，日间模式使用品牌蓝色。
-    final Color accent_color = widget.is_dark
-        ? ColorConstants.themeColor
-        : ColorConstants.pages_read_widgets_read_directory_sheet_widgets_book_detail_header_tone;
-    final String follow_text = _is_focused
-        ? tr('read.followed')
-        : tr('read.follow');
-    final double follow_font_size = is_cjk
-        ? ReadDirectorySheetStyle.follow_button_font_size_cjk
-        : ReadDirectorySheetStyle.follow_button_font_size_alphabetic;
-
-    return GestureDetector(
-      onTap: _is_loading ? null : _handle_follow_toggle,
-      child: TweenAnimationBuilder<double>(
-        duration: const Duration(milliseconds: 560),
-        curve: Curves.elasticOut,
-        tween: Tween<double>(begin: 0.6, end: _is_focused ? 1.0 : 1.0),
-        builder: (context, scale, child) {
-          return Transform.scale(scale: scale, child: child);
-        },
-        key: ValueKey(_is_focused),
-        child: Container(
-          padding: ReadDirectorySheetStyle.follow_button_padding,
-          decoration: BoxDecoration(
-            color: _is_focused
-                ? ColorConstants.transparent
-                : accent_color.withValues(alpha: 0.16),
-            border: _is_focused
-                ? Border.all(
-                    color: accent_color.withValues(alpha: 0.4),
-                    width: 1,
-                  )
-                : null,
-            borderRadius: BorderRadius.circular(
-              ReadDirectorySheetStyle.follow_button_radius,
-            ),
+      child: Container(
+        width: width,
+        height: height,
+        padding: const EdgeInsets.all(BookDetailHeaderStyle.cover_border_width),
+        decoration: BoxDecoration(
+          color: BookDetailHeaderStyle.ink.withValues(
+            alpha: BookDetailHeaderStyle.cover_border_opacity,
           ),
-          child: Text(
-            follow_text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: _is_focused
-                  ? accent_color.withValues(alpha: 0.7)
-                  : accent_color,
-              fontSize: follow_font_size,
-              height: 1,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
-            ),
+          borderRadius: BorderRadius.circular(
+            BookDetailHeaderStyle.cover_radius,
           ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(
+            BookDetailHeaderStyle.cover_radius -
+                BookDetailHeaderStyle.cover_border_width,
+          ),
+          child: widget.detail.cover_url.trim().isEmpty
+              ? _cover_placeholder()
+              : NetworkCoverImage(
+                  image_url: widget.detail.cover_url,
+                  width: width,
+                  height: height,
+                  border_radius: BookDetailHeaderStyle.cover_radius,
+                  is_dark: widget.is_dark,
+                  loading_placeholder: (_) => _cover_placeholder(),
+                ),
         ),
       ),
     );
   }
 
-  /// 处理关注/取消关注操作（乐观更新）。
-  ///
-  /// 立即切换状态，请求失败时回退，请求期间防止重复点击。
-  Future<void> _handle_follow_toggle() async {
-    if (_is_loading) return;
+  Widget _cover_placeholder() => ColoredBox(
+    color: BookDetailHeaderStyle.background,
+    child: Center(
+      child: Icon(
+        Icons.auto_stories_rounded,
+        size: BookDetailHeaderStyle.statistic_icon_size,
+        color: BookDetailHeaderStyle.muted_ink,
+      ),
+    ),
+  );
 
-    // 检查登录状态。
-    final bool is_logged_in = await showLoginRequiredDialog(
+  TextStyle _secondary_style(bool cjk) => TextStyle(
+    color: BookDetailHeaderStyle.muted_ink,
+    fontSize: cjk
+        ? BookDetailHeaderStyle.subtitle_size_cjk
+        : BookDetailHeaderStyle.subtitle_size_alphabetic,
+    height: cjk
+        ? BookDetailHeaderStyle.subtitle_height_cjk
+        : BookDetailHeaderStyle.subtitle_height_alphabetic,
+    fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+    shadows: BookDetailHeaderStyle.title_shadows,
+  );
+
+  /// TODO 作者名允许省略，关注按钮按实际文字宽度决定是否换到下一行。
+  Widget _author(bool cjk) => LayoutBuilder(
+    builder: (context, constraints) {
+      final name = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.person_outline_rounded,
+            size: BookDetailHeaderStyle.author_icon_size,
+            color: BookDetailHeaderStyle.muted_ink,
+          ),
+          const SizedBox(width: BookDetailHeaderStyle.token_icon_gap),
+          Flexible(
+            child: Text(
+              widget.detail.author_name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: _secondary_style(cjk),
+            ),
+          ),
+        ],
+      );
+      if (widget.detail.author_id <= 0) return name;
+      final painter = TextPainter(
+        text: TextSpan(
+          text: tr(_is_focused ? 'read.followed' : 'read.follow'),
+          style: DefaultTextStyle.of(context).style.merge(_follow_style(cjk)),
+        ),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+      )..layout();
+      final required_width =
+          painter.width +
+          BookDetailHeaderStyle.follow_padding_h * 2 +
+          BookDetailHeaderStyle.author_gap +
+          BookDetailHeaderStyle.author_min_width;
+      painter.dispose();
+      if (required_width > constraints.maxWidth) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [name, _follow_button(cjk)],
+        );
+      }
+      return Row(
+        children: [
+          Expanded(child: name),
+          const SizedBox(width: BookDetailHeaderStyle.author_gap),
+          _follow_button(cjk),
+        ],
+      );
+    },
+  );
+
+  TextStyle _follow_style(bool cjk) => TextStyle(
+    color: _is_focused
+        ? BookDetailHeaderStyle.muted_ink
+        : BookDetailHeaderStyle.accent,
+    fontSize: cjk
+        ? BookDetailHeaderStyle.follow_font_size_cjk
+        : BookDetailHeaderStyle.follow_font_size_alphabetic,
+    height: BookDetailHeaderStyle.metadata_line_height,
+    fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+    shadows: BookDetailHeaderStyle.title_shadows,
+  );
+
+  Widget _follow_button(bool cjk) => Semantics(
+    button: true,
+    enabled: !_is_loading,
+    child: InkWell(
+      key: const ValueKey('directory_author_follow'),
+      onTap: _is_loading ? null : _handle_follow_toggle,
+      borderRadius: BorderRadius.circular(BookDetailHeaderStyle.status_radius),
+      child: Container(
+        constraints: const BoxConstraints(
+          minHeight: BookDetailHeaderStyle.follow_target_height,
+        ),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(
+          horizontal: BookDetailHeaderStyle.follow_padding_h,
+          vertical: BookDetailHeaderStyle.follow_padding_v,
+        ),
+        decoration: BoxDecoration(
+          color: BookDetailHeaderStyle.ink.withValues(
+            alpha: BookDetailHeaderStyle.follow_surface_opacity,
+          ),
+          borderRadius: BorderRadius.circular(
+            BookDetailHeaderStyle.status_radius,
+          ),
+          border: Border.all(
+            color: BookDetailHeaderStyle.ink.withValues(
+              alpha: BookDetailHeaderStyle.follow_border_opacity,
+            ),
+            width: BookDetailHeaderStyle.follow_border_width,
+          ),
+        ),
+        child: Text(
+          tr(_is_focused ? 'read.followed' : 'read.follow'),
+          style: _follow_style(cjk),
+        ),
+      ),
+    ),
+  );
+
+  /// TODO 状态、章节总数与真实字数自然换行，不锁定系统大字的行高。
+  Widget _metadata(bool cjk) {
+    final style = TextStyle(
+      color: BookDetailHeaderStyle.muted_ink,
+      fontSize: cjk
+          ? BookDetailHeaderStyle.metadata_size_cjk
+          : BookDetailHeaderStyle.metadata_size_alphabetic,
+      height: BookDetailHeaderStyle.metadata_line_height,
+      fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+      shadows: BookDetailHeaderStyle.title_shadows,
+    );
+    final words =
+        widget.detail.word_count_value_text ??
+        '${widget.detail.word_count_major_text}${widget.detail.word_count_minor_text}';
+    final word_label =
+        widget.detail.word_count_label_text ??
+        tr('read.chapter_word_count_suffix');
+    return Wrap(
+      key: const ValueKey('directory_book_metadata'),
+      spacing: BookDetailHeaderStyle.token_spacing,
+      runSpacing: BookDetailHeaderStyle.token_run_spacing,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (widget.detail.status_text.trim().isNotEmpty)
+          Container(
+            key: const ValueKey('directory_book_status'),
+            padding: const EdgeInsets.symmetric(
+              horizontal: BookDetailHeaderStyle.status_padding_h,
+              vertical: BookDetailHeaderStyle.status_padding_v,
+            ),
+            decoration: BoxDecoration(
+              color: BookDetailHeaderStyle.accent,
+              borderRadius: BorderRadius.circular(
+                BookDetailHeaderStyle.status_radius,
+              ),
+            ),
+            child: Text(
+              widget.detail.status_text,
+              style: style.copyWith(
+                color: BookDetailHeaderStyle.status_ink,
+                shadows: const [],
+                fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
+              ),
+            ),
+          ),
+        _metadata_token(
+          icon: Icons.menu_book_outlined,
+          label: tr(
+            'comics.chapter_count_label',
+            namedArgs: {'count': widget.chapter_count?.toString() ?? '—'},
+          ),
+          style: style,
+        ),
+        _metadata_token(
+          icon: Icons.notes_rounded,
+          label: cjk ? '$words$word_label' : '$words $word_label',
+          style: style,
+        ),
+      ],
+    );
+  }
+
+  Widget _metadata_token({
+    required IconData icon,
+    required String label,
+    required TextStyle style,
+  }) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(
+        icon,
+        size: BookDetailHeaderStyle.token_icon_size,
+        color: BookDetailHeaderStyle.muted_ink,
+      ),
+      const SizedBox(width: BookDetailHeaderStyle.token_icon_gap),
+      Flexible(child: Text(label, style: style)),
+    ],
+  );
+
+  /// TODO 评分遵循服务端开关；未知计数显示破折号，不从带单位的字符串猜测。
+  List<WorkHeroStat> _statistics(BuildContext context) {
+    final config = Get.isRegistered<ProjectConfigStore>()
+        ? Get.find<ProjectConfigStore>().current
+        : null;
+    final score = double.tryParse(widget.detail.score_major_text.trim());
+    final bool show_score =
+        config == null ||
+        (config.is_rating_enabled && !config.is_apple_review_mode);
+    return [
+      if (show_score)
+        WorkHeroStat(
+          icon: Icons.star_rounded,
+          value: score != null && score.isFinite && score > 0
+              ? widget.detail.score_major_text
+              : '—',
+          label: widget.detail.review_count_text.isNotEmpty
+              ? widget.detail.review_count_text
+              : tr('comics.ratings'),
+        ),
+      WorkHeroStat(
+        icon: Icons.local_fire_department_rounded,
+        value:
+            widget.detail.reading_value_text ??
+            '${widget.detail.reading_major_text}${widget.detail.reading_minor_text}',
+        label:
+            widget.detail.reading_label_text ??
+            widget.detail.reading_subtitle_text,
+      ),
+      WorkHeroStat(
+        icon: Icons.bookmark_border_rounded,
+        value: _format_count(widget.favorite_count, context.locale.toString()),
+        label: tr('comics.favorites'),
+      ),
+    ];
+  }
+
+  String _format_count(String? raw_count, String locale) {
+    final value = num.tryParse(raw_count?.trim() ?? '');
+    if (value == null || !value.isFinite || value < 0) return '—';
+    final number_locale = Intl.verifiedLocale(
+      locale,
+      NumberFormat.localeExists,
+      onFailure: (_) => 'en',
+    );
+    return NumberFormat.compact(locale: number_locale).format(value);
+  }
+
+  /// TODO 保留作者关注的登录校验、乐观反馈、失败回滚及跨作品请求隔离。
+  Future<void> _handle_follow_toggle() async {
+    if (_is_loading || widget.detail.author_id <= 0) return;
+    final generation = ++_follow_generation;
+    final author_id = widget.detail.author_id;
+    setState(() => _is_loading = true);
+    final allowed = await showLoginRequiredDialog(
       title: tr('short_story_read.login_required'),
     );
-    if (!is_logged_in) return;
-
-    _is_loading = true;
-
-    // 乐观更新：立即切换状态。
-    final bool previous_status = _is_focused;
+    if (!mounted || generation != _follow_generation) return;
+    if (!allowed) {
+      setState(() => _is_loading = false);
+      return;
+    }
+    final previous_status = _is_focused;
+    setState(() => _is_focused = !previous_status);
+    widget.on_focus_changed?.call(_is_focused);
+    final result = await toggle_focus_author(author_id: author_id);
+    if (result != null) await BookshelfSyncService.focus_changed();
+    if (!mounted || generation != _follow_generation) return;
     setState(() {
-      _is_focused = !previous_status;
+      _is_loading = false;
+      _is_focused = result?.focus ?? previous_status;
     });
     widget.on_focus_changed?.call(_is_focused);
-
-    final result = await toggle_focus_author(
-      author_id: widget.detail.author_id,
-    );
-
-    if (result != null) {
-      await BookshelfSyncService.focus_changed();
-    }
-
-    if (!mounted) return;
-
-    _is_loading = false;
-
-    setState(() {
-      if (result == null) {
-        // 请求失败，回退状态。
-        _is_focused = previous_status;
-        widget.on_focus_changed?.call(_is_focused);
-      } else if (result.focus != _is_focused) {
-        // 服务端状态与乐观更新不一致，以服务端为准。
-        _is_focused = result.focus;
-        widget.on_focus_changed?.call(_is_focused);
-      }
-    });
   }
 }

@@ -171,11 +171,11 @@ class StoryContentActions {
     required this.reader_text,
   });
 
-  /// 正文单击：切换导航栏显隐。
+  /// TODO 正文单击：隐藏栏位时上三分区翻上一屏，其他位置沿用显隐切换。
   final VoidCallback on_content_tap;
 
-  /// 指针按下：记录是否从选区开始。
-  final VoidCallback on_pointer_down;
+  /// TODO 指针按下：记录全局触点以及是否从选区开始。
+  final ValueChanged<Offset> on_pointer_down;
 
   /// 指针移动：上下拉切篇手势。
   final void Function(double dy) on_pointer_move;
@@ -401,7 +401,8 @@ class StoryContentStack extends StatelessWidget {
                 },
                 child: Listener(
                   behavior: HitTestBehavior.translucent,
-                  onPointerDown: (_) => actions.on_pointer_down(),
+                  onPointerDown: (event) =>
+                      actions.on_pointer_down(event.position),
                   onPointerMove: (PointerMoveEvent event) =>
                       actions.on_pointer_move(event.delta.dy),
                   onPointerUp: (_) => actions.on_pointer_end(),

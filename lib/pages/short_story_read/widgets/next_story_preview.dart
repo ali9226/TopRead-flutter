@@ -187,7 +187,8 @@ class NextStoryPreview extends StatelessWidget {
             overflow: TextOverflow.fade,
             style: TextStyle(
               fontSize: body_font_size,
-              fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+              // TODO 预览正文与正文同字号，字重固定 w400 不随 Android 降档，避免与上方正文粗细断层。
+              fontWeight: FontWeight.w400,
               color: body_color,
               height: preview_line_height,
             ),
@@ -207,7 +208,8 @@ class NextStoryPreview extends StatelessWidget {
         : ColorConstants.pages_short_story_read_index_tone;
     final Color pill_bg = is_dark
         ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
-        : ColorConstants.pages_short_story_read_widgets_next_story_preview_tone_9222222;
+        : ColorConstants
+              .pages_short_story_read_widgets_next_story_preview_tone_9222222;
 
     Widget line() {
       return Expanded(

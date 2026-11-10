@@ -49,4 +49,10 @@ class RecommendTabStyle {
 
   /// 返回顶部按钮显示的滚动阈值。
   static const double back_to_top_visible_offset = 320;
+
+  /// TODO 榜单回顶与瀑布流停靠共用的磁吸过渡时长。
+  static const Duration snap_duration = Duration(milliseconds: 320);
+
+  /// TODO 吸附由快到慢自然停靠，避免终点弹跳。
+  static const Curve snap_curve = Curves.easeOutCubic;
 }

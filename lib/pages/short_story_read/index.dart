@@ -25,6 +25,7 @@ import 'package:app/pages/short_story_read/story_native_ad_gate.dart';
 import 'package:app/pages/short_story_read/story_progress_keeper.dart';
 import 'package:app/pages/short_story_read/story_auto_read.dart';
 import 'package:app/pages/short_story_read/story_toolbar_actions.dart';
+import 'package:app/pages/short_story_read/story_tap_paging.dart';
 import 'package:app/pages/short_story_read/style.dart';
 import 'package:app/pages/short_story_read/widgets/full_appbar.dart';
 import 'package:app/pages/short_story_read/widgets/bottom_comment_bar.dart';
@@ -52,7 +53,7 @@ import 'package:app/services/reading_engagement/index.dart';
 /// 交互规则：
 /// - 向下滚动正文时，自动隐藏顶部导航栏和底部评论栏，提供沉浸式阅读体验。
 /// - 向上滚动时，自动显示顶部导航栏和底部评论栏。
-/// - 点击正文区域时，切换顶部导航栏和底部评论栏的显示/隐藏。
+/// TODO - 栏位隐藏且正文已到顶时，上三分区单击翻上一屏；其他位置沿用显隐切换。
 ///
 /// 页面结构（从底到顶）：
 /// 1. 背景装饰（[PageBackgroundDecor]）
@@ -98,6 +99,12 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
   /// 正文滚动控制器。
   late ScrollController _scroll_controller;
+
+  /// TODO 单击上一屏的程序滚动状态与真实拖动分开处理。
+  late final StoryTapPagingController _tap_paging;
+
+  /// TODO 在已有按下监听中保留触点，正文选区确认单击后再判断翻屏区域。
+  Offset? _content_tap_position;
 
   /// 底部评论栏动画控制器（控制滑入/滑出）。
   late AnimationController _bottom_bar_animation_controller;
@@ -227,6 +234,9 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
 
     // 初始化滚动控制器并监听滚动事件。
     _scroll_controller = ScrollController();
+    _tap_paging = StoryTapPagingController(
+      scroll_controller: _scroll_controller,
+    );
     _scroll_controller.addListener(_on_scroll);
 
     // 初始化底部评论栏动画（滑入/滑出效果）。
@@ -365,6 +375,7 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     _comment_navigation_worker?.dispose();
     _bottom_bar_visibility_worker?.dispose();
     _ad_policy_worker?.dispose();
+    _tap_paging.cancel();
     _scroll_controller.removeListener(_on_scroll);
     _scroll_controller.dispose();
     _has_reading_history.dispose();
@@ -692,8 +703,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
       _auto_read.stop();
     }
 
-    if (is_ad_compensation) {
-      // 下次手动滚动以补偿后的正文位置为基准，不把广告高度差当作方向位移。
+    if (is_ad_compensation || _tap_paging.is_scrolling) {
+      // TODO 补偿与单击翻屏只同步实际位置，后续手动滑动从新位置累计方向。
       _logic.sync_scroll_offset(_scroll_controller.offset);
     } else if (!_is_progress_scrolling && !_is_restoring_position) {
       _logic.on_scroll(_scroll_controller.offset);
@@ -757,13 +768,36 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     }
   }
 
-  /// 处理正文区域点击事件。
-  ///
-  /// 切换导航栏和评论栏的显示/隐藏，同时停止自动阅读。
+  /// TODO 确认普通单击后停止自动阅读，隐藏栏位时上三分区翻上一屏。
+  /// TODO 其他区域沿用双栏切换，已有选区只清除选区而不翻屏。
   void _on_content_tap() {
+    final Offset? position = _content_tap_position;
+    _content_tap_position = null;
     _auto_read.stop();
     if (_tap_started_with_selection || _is_paragraph_selection_active) {
       FocusManager.instance.primaryFocus?.unfocus();
+      return;
+    }
+    if (!_logic.is_appbar_visible.value &&
+        !_logic.is_bottom_bar_visible.value &&
+        position != null &&
+        _tap_paging.should_page_up(
+          position: position,
+          body_start_key: _body_start_key,
+        )) {
+      // TODO 单击翻屏也是主动阅读，恢复位置后无需先拖动才记录进度。
+      _has_user_engaged = true;
+      final ShortStoryReadLogic logic = _logic;
+      unawaited(
+        _tap_paging.scroll_page_up(
+          disable_animations: MediaQuery.disableAnimationsOf(context),
+          sync_scroll_offset: (offset) {
+            if (mounted && identical(logic, _logic)) {
+              logic.sync_scroll_offset(offset);
+            }
+          },
+        ),
+      );
       return;
     }
     _logic.toggle_bars_visibility();
@@ -1002,6 +1036,8 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
   Future<void> _switch_to_story(int story_id, {bool slide_up = true}) async {
     if (_is_transitioning || story_id == _logic.story_id) return;
 
+    _tap_paging.cancel();
+    _content_tap_position = null;
     _is_transitioning = true;
     _reading_engagement?.sample(force_pause: true);
     FocusManager.instance.primaryFocus?.unfocus();
@@ -1518,78 +1554,86 @@ class _ShortStoryReadPageState extends State<ShortStoryReadPage>
     /// 尺寸回调必须属于创建该阅读树时的小说，避免切篇后回写旧范围。
     final int generation = _logic_generation;
 
-    return StoryContentStack(
-      status_bar_height: status_bar_height,
-      bottom_padding: bottom_padding,
-      theme: StoryContentTheme(
-        is_dark: is_dark,
-        is_cjk: is_cjk,
-        bg_color: bg_color,
-        title_color: is_dark
-            ? ShortStoryReadStyle.title_dark_color
-            : ShortStoryReadStyle.title_light_color,
-        title_font_size: is_cjk ? 22.0 : 20.0,
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) => _tap_paging.on_scroll_notification(
+        notification,
+        on_pull_at_start: _logic.on_scroll,
       ),
-      state: StoryContentState(
-        logic: _logic,
-        generation: _logic_generation,
-        scroll_controller: _scroll_controller,
-        reader_scroll_physics: _reader_scroll_physics,
-        page_transition_controller: _page_transition_controller,
-        bottom_bar_slide_animation: _bottom_bar_slide_animation,
-        floating_button_fade_animation: _floating_button_fade_animation,
-        is_slide_up: _is_slide_up,
-        previous_pull_offset: _pull.previous_pull_offset,
-        next_pull_offset: _pull.next_pull_offset,
-        next_story_overlay_opacity: _next_story_overlay_opacity,
-        body_start_key: _body_start_key,
-        story_end_key: _current_story_end_key,
-        next_story_title_key: _next_story_title_key,
-        has_reading_history: _has_reading_history,
-        is_paragraph_selection_active: _is_paragraph_selection_active,
-        is_video_ad_gate_required: _ad_gate.is_video_ad_gate_required,
-        is_rewarded_ad_loading: _ad_gate.is_rewarded_ad_loading,
-        native_ad_slot: _build_native_ad_slot(),
-        native_ad_insert_index: _ad_gate.native_ad_insert_index,
-        show_floating_button: _has_floating_button,
-      ),
-      actions: StoryContentActions(
-        on_content_tap: _on_content_tap,
-        on_pointer_down: () {
-          _tap_started_with_selection = _is_paragraph_selection_active;
-        },
-        on_pointer_move: _pull.on_reader_pointer_move,
-        on_pointer_end: _pull.on_reader_pointer_end,
-        on_viewport_resize_start: _on_viewport_resize_start,
-        on_viewport_resize_end: _on_viewport_resize_end,
-        on_layout_pending: () {
-          if (generation == _logic_generation) {
-            _reading_progress_max_extent = null;
-          }
-        },
-        on_extent_changed: _on_current_story_extent_changed,
-        on_read_story: _on_read_story,
-        on_cover_replaced: _on_cover_replaced,
-        on_back: _actions.on_back,
-        on_favorite: _actions.on_favorite_tap,
-        on_share: _actions.on_share,
-        on_comment: _actions.on_comment_tap,
-        on_paragraph_comment: _on_paragraph_comment,
-        on_paragraph_share: _on_paragraph_share,
-        on_paragraph_selection_changed: _on_paragraph_selection_changed,
-        on_comment_count_tap: _on_comment_count_tap,
-        on_unlock: _actions.on_unlock_story_tap,
-        on_previous_tap: _on_previous_tap,
-        on_next_tap: _on_next_tap,
-        on_progress_changed: _on_progress_changed,
-        on_progress_change_end: _on_progress_change_end,
-        on_scroll_to_bottom: _showNextStory,
-        on_auto_read_settings_tap: _auto_read.on_settings_tap,
-        on_catalog_tap: _actions.on_catalog_tap,
-        on_like_tap: _actions.on_like_tap,
-        on_setting_tap: _actions.on_setting_tap,
-        schedule_next_story_overlay_update: _schedule_next_story_overlay_update,
-        reader_text: _readerText,
+      child: StoryContentStack(
+        status_bar_height: status_bar_height,
+        bottom_padding: bottom_padding,
+        theme: StoryContentTheme(
+          is_dark: is_dark,
+          is_cjk: is_cjk,
+          bg_color: bg_color,
+          title_color: is_dark
+              ? ShortStoryReadStyle.title_dark_color
+              : ShortStoryReadStyle.title_light_color,
+          title_font_size: is_cjk ? 22.0 : 20.0,
+        ),
+        state: StoryContentState(
+          logic: _logic,
+          generation: _logic_generation,
+          scroll_controller: _scroll_controller,
+          reader_scroll_physics: _reader_scroll_physics,
+          page_transition_controller: _page_transition_controller,
+          bottom_bar_slide_animation: _bottom_bar_slide_animation,
+          floating_button_fade_animation: _floating_button_fade_animation,
+          is_slide_up: _is_slide_up,
+          previous_pull_offset: _pull.previous_pull_offset,
+          next_pull_offset: _pull.next_pull_offset,
+          next_story_overlay_opacity: _next_story_overlay_opacity,
+          body_start_key: _body_start_key,
+          story_end_key: _current_story_end_key,
+          next_story_title_key: _next_story_title_key,
+          has_reading_history: _has_reading_history,
+          is_paragraph_selection_active: _is_paragraph_selection_active,
+          is_video_ad_gate_required: _ad_gate.is_video_ad_gate_required,
+          is_rewarded_ad_loading: _ad_gate.is_rewarded_ad_loading,
+          native_ad_slot: _build_native_ad_slot(),
+          native_ad_insert_index: _ad_gate.native_ad_insert_index,
+          show_floating_button: _has_floating_button,
+        ),
+        actions: StoryContentActions(
+          on_content_tap: _on_content_tap,
+          on_pointer_down: (position) {
+            _content_tap_position = position;
+            _tap_started_with_selection = _is_paragraph_selection_active;
+          },
+          on_pointer_move: _pull.on_reader_pointer_move,
+          on_pointer_end: _pull.on_reader_pointer_end,
+          on_viewport_resize_start: _on_viewport_resize_start,
+          on_viewport_resize_end: _on_viewport_resize_end,
+          on_layout_pending: () {
+            if (generation == _logic_generation) {
+              _reading_progress_max_extent = null;
+            }
+          },
+          on_extent_changed: _on_current_story_extent_changed,
+          on_read_story: _on_read_story,
+          on_cover_replaced: _on_cover_replaced,
+          on_back: _actions.on_back,
+          on_favorite: _actions.on_favorite_tap,
+          on_share: _actions.on_share,
+          on_comment: _actions.on_comment_tap,
+          on_paragraph_comment: _on_paragraph_comment,
+          on_paragraph_share: _on_paragraph_share,
+          on_paragraph_selection_changed: _on_paragraph_selection_changed,
+          on_comment_count_tap: _on_comment_count_tap,
+          on_unlock: _actions.on_unlock_story_tap,
+          on_previous_tap: _on_previous_tap,
+          on_next_tap: _on_next_tap,
+          on_progress_changed: _on_progress_changed,
+          on_progress_change_end: _on_progress_change_end,
+          on_scroll_to_bottom: _showNextStory,
+          on_auto_read_settings_tap: _auto_read.on_settings_tap,
+          on_catalog_tap: _actions.on_catalog_tap,
+          on_like_tap: _actions.on_like_tap,
+          on_setting_tap: _actions.on_setting_tap,
+          schedule_next_story_overlay_update:
+              _schedule_next_story_overlay_update,
+          reader_text: _readerText,
+        ),
       ),
     );
   }

@@ -1,7 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/components/paragraph_selection/index.dart';
-import 'package:app/config/font_config.dart';
 import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/util/language_util/index.dart';
 import 'package:flutter/material.dart';
@@ -46,9 +45,8 @@ class ReaderParagraphItem extends StatelessWidget {
       height: is_cjk
           ? ContentStyle.reading_paragraph_height_cjk
           : ContentStyle.reading_paragraph_height_alphabetic,
-      fontWeight: FontConfig.adjustedWeight(
-        item.is_title ? FontConfig.adjustedWeight(FontWeight.w500) : FontConfig.adjustedWeight(FontWeight.w400),
-      ),
+      // TODO 正文/章节标题字重不做 Android 降档（adjustedWeight 嵌套后正文仅 w200 无法阅读），固定 w400/w500 与 iOS 一致。
+      fontWeight: item.is_title ? FontWeight.w500 : FontWeight.w400,
     );
     if (item.is_title || on_comment == null) {
       return SelectionContainer.disabled(child: Text(item.text, style: style));

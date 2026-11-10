@@ -928,6 +928,12 @@
     "status_unknown": "Statut"
   },
   "read": {
+    "directory_reviews": "Avis",
+    "directory_all_chapters": "{count} chapitres",
+    "directory_search": "Rechercher un chapitre",
+    "directory_search_hint": "Titre ou numéro du chapitre",
+    "directory_no_results": "Aucun chapitre correspondant",
+    "directory_continue": "Continuer la lecture",
     "follow": "+ Suivre",
     "followed": "Suivi",
     "restoring_progress": "Chargement de la progression",

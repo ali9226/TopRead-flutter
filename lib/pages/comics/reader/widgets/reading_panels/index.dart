@@ -40,11 +40,14 @@ TextStyle _text(
         : (cjk
               ? ComicReadingPanelStyle.text_cjk
               : ComicReadingPanelStyle.text_alphabetic),
+    // TODO 平台字重只映射一次，避免 Android 正文连续降档到极细字重。
     fontWeight: FontConfig.adjustedWeight(
-      title ? FontConfig.adjustedWeight(FontWeight.w500) : FontConfig.adjustedWeight(FontWeight.w400),
+      title ? FontWeight.w500 : FontWeight.w400,
     ),
     color: _dark(context)
-        ? (muted ? ColorConstants.components_reader_top_bar_style_tone_b3ffffff : ColorConstants.whiteColor)
+        ? (muted
+              ? ColorConstants.components_reader_top_bar_style_tone_b3ffffff
+              : ColorConstants.whiteColor)
         : (muted
               ? ComicReadingPanelStyle.light_muted
               : ComicReadingPanelStyle.light_ink),

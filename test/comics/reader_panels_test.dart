@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:app/models/comics.dart';
+import 'package:app/config/font_config.dart';
 import 'package:app/pages/comics/reader/logic.dart';
 import 'package:app/pages/comics/reader/widgets/reading_panels/index.dart';
 import 'package:app/stores/device_info.dart';
@@ -119,86 +120,125 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('进度面板覆盖底部安全区，自动阅读居中且定位平滑', (tester) async {
-    final logic = _Reader();
-    addTearDown(logic.dispose);
-    await mount(
-      tester,
-      (context) => Stack(
-        children: [
-          SingleChildScrollView(
-            controller: logic.scroll,
-            child: const SizedBox(width: 320, height: 3000),
-          ),
-          TextButton(
-            onPressed: () => show_comic_progress_sheet(
-              context,
-              logic: logic,
-              on_start_auto_read: () {},
+  testWidgets(
+    '进度面板覆盖底部安全区，自动阅读居中且定位平滑',
+    (tester) async {
+      final logic = _Reader();
+      addTearDown(logic.dispose);
+      await mount(
+        tester,
+        (context) => Stack(
+          children: [
+            SingleChildScrollView(
+              controller: logic.scroll,
+              child: const SizedBox(width: 320, height: 3000),
             ),
-            child: const Text('open'),
-          ),
-        ],
-      ),
-    );
-    await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
-    final surface = tester.getRect(
-      find.byKey(const ValueKey('comic_reading_panel_surface')),
-    );
-    expect(surface.bottom, closeTo(700, 0.1));
-    final auto = tester.getRect(find.widgetWithText(TextButton, 'Auto-Read'));
-    expect(auto.center.dx, closeTo(160, 0.1));
-    final slider = tester.widget<Slider>(
-      find.byKey(const ValueKey('comic_chapter_progress_slider')),
-    );
-    slider.onChanged!(0.75);
-    slider.onChangeEnd!(0.75);
-    await tester.pump();
-    expect(logic.scroll.offset, 0);
-    await tester.pump(const Duration(milliseconds: 160));
-    final halfway = logic.scroll.offset;
-    expect(halfway, greaterThan(0));
-    expect(halfway, lessThan(logic.chapter_scroll_extent * 0.75));
-    await tester.pumpAndSettle();
-    expect(logic.chapter_progress, closeTo(0.75, 0.01));
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump(const Duration(seconds: 1));
-  });
+            TextButton(
+              onPressed: () => show_comic_progress_sheet(
+                context,
+                logic: logic,
+                on_start_auto_read: () {},
+              ),
+              child: const Text('open'),
+            ),
+          ],
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      // TODO Android 面板正文只降一档，防止重复映射变成极细的 w200。
+      for (final label in [
+        'First chapter',
+        'Read 0%',
+        'Page 1 of 1',
+        'Auto-Read',
+      ]) {
+        expect(
+          tester.widget<Text>(find.text(label)).style!.fontWeight,
+          FontConfig.adjustedWeight(FontWeight.w400),
+          reason: label,
+        );
+      }
+      expect(
+        tester.widget<Text>(find.text('Reading progress')).style!.fontWeight,
+        FontConfig.adjustedWeight(FontWeight.w500),
+      );
+      final surface = tester.getRect(
+        find.byKey(const ValueKey('comic_reading_panel_surface')),
+      );
+      expect(surface.bottom, closeTo(700, 0.1));
+      final auto = tester.getRect(find.widgetWithText(TextButton, 'Auto-Read'));
+      expect(auto.center.dx, closeTo(160, 0.1));
+      final slider = tester.widget<Slider>(
+        find.byKey(const ValueKey('comic_chapter_progress_slider')),
+      );
+      slider.onChanged!(0.75);
+      slider.onChangeEnd!(0.75);
+      await tester.pump();
+      expect(logic.scroll.offset, 0);
+      await tester.pump(const Duration(milliseconds: 160));
+      final halfway = logic.scroll.offset;
+      expect(halfway, greaterThan(0));
+      expect(halfway, lessThan(logic.chapter_scroll_extent * 0.75));
+      await tester.pumpAndSettle();
+      expect(logic.chapter_progress, closeTo(0.75, 0.01));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 1));
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.iOS,
+    }),
+  );
 
-  testWidgets('主题与亮度面板覆盖安全区，主题在共用动画中点切换', (tester) async {
-    messenger.setMockMethodCallHandler(
-      ComicReaderBrightnessSession.channel,
-      (call) async => call.method == 'getBrightness'
-          ? {'brightness': 0.5, 'override': 0.5}
-          : null,
-    );
-    final brightness = ComicReaderBrightnessSession();
-    addTearDown(brightness.dispose);
-    await mount(
-      tester,
-      (context) => TextButton(
-        onPressed: () =>
-            show_comic_appearance_sheet(context, brightness: brightness),
-        child: const Text('open'),
-      ),
-    );
-    await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
-    final surface = tester.getRect(
-      find.byKey(const ValueKey('comic_reading_panel_surface')),
-    );
-    expect(surface.bottom, closeTo(700, 0.1));
-    await tester.tap(find.text('Night'));
-    await tester.pump();
-    expect(Get.find<DeviceInfo>().theme.value, ThemeMode.light);
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(Get.find<DeviceInfo>().theme.value, ThemeMode.light);
-    await tester.pump(const Duration(milliseconds: 250));
-    expect(Get.find<DeviceInfo>().theme.value, ThemeMode.dark);
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
+  testWidgets(
+    '主题与亮度面板覆盖安全区，主题在共用动画中点切换',
+    (tester) async {
+      messenger.setMockMethodCallHandler(
+        ComicReaderBrightnessSession.channel,
+        (call) async => call.method == 'getBrightness'
+            ? {'brightness': 0.5, 'override': 0.5}
+            : null,
+      );
+      final brightness = ComicReaderBrightnessSession();
+      addTearDown(brightness.dispose);
+      await mount(
+        tester,
+        (context) => TextButton(
+          onPressed: () =>
+              show_comic_appearance_sheet(context, brightness: brightness),
+          child: const Text('open'),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Text>(find.text('Brightness')).style!.fontWeight,
+        FontConfig.adjustedWeight(FontWeight.w400),
+      );
+      final surface = tester.getRect(
+        find.byKey(const ValueKey('comic_reading_panel_surface')),
+      );
+      expect(surface.bottom, closeTo(700, 0.1));
+      await tester.tap(find.text('Night'));
+      await tester.pump();
+      expect(Get.find<DeviceInfo>().theme.value, ThemeMode.light);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(Get.find<DeviceInfo>().theme.value, ThemeMode.light);
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(Get.find<DeviceInfo>().theme.value, ThemeMode.dark);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Text>(find.text('Brightness')).style!.fontWeight,
+        FontConfig.adjustedWeight(FontWeight.w400),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.iOS,
+    }),
+  );
 }

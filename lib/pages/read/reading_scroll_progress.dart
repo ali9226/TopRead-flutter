@@ -138,10 +138,11 @@ class ReadingScrollProgress {
 
     final double next_scroll_offset = controller.offset;
 
-    // 广告高度补偿只更新方向基准，下一次手动滚动不能累计补偿位移。
-    if (is_native_ad_scroll_compensating(controller.position)) {
+    // TODO 广告补偿和点击翻屏只同步基准，避免结束通知把程序位移算作手动下拉。
+    if (is_native_ad_scroll_compensating(controller.position) ||
+        host.is_programmatic_scroll) {
       logic.sync_scroll_offset(next_scroll_offset);
-    } else if (!host.is_programmatic_scroll && !logic.is_auto_reading.value) {
+    } else if (!logic.is_auto_reading.value) {
       // 滚动方向检测：自动显示/隐藏导航栏（程序化滚动时不触发）。
       logic.on_scroll(next_scroll_offset);
     }
@@ -151,8 +152,8 @@ class ReadingScrollProgress {
 
     // 计算 reading_section_offset，即正文区块距离顶部的绝对偏移量。
     double reading_section_offset = 0;
-    final BuildContext? reading_context = host.reading_section_key
-        .currentContext;
+    final BuildContext? reading_context =
+        host.reading_section_key.currentContext;
     if (reading_context != null) {
       final RenderObject? render_object = reading_context.findRenderObject();
       if (render_object is RenderBox && render_object.hasSize) {

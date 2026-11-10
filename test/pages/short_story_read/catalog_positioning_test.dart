@@ -12,6 +12,7 @@ import 'package:app/pages/read/widgets/read_directory_sheet/index.dart';
 import 'package:app/pages/short_story_read/widgets/catalog/catalog_item.dart';
 import 'package:app/pages/short_story_read/widgets/catalog/catalog_sheet.dart';
 import 'package:app/stores/device_info.dart';
+import 'package:app/stores/novel_reading_store.dart';
 import 'package:app/stores/short_story_catalog_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -40,6 +41,9 @@ class _DeviceInfo extends DeviceInfo {
 
 /// 目录仅消费本地章节和书籍摘要，不初始化阅读服务或请求网络。
 class _DirectoryLogic extends Fake implements Logic {
+  @override
+  final store = NovelReadingStore();
+
   @override
   final current_chapter_index = 0.obs;
 
@@ -155,8 +159,18 @@ Finder _current() => find.byWidgetPredicate(
   (widget) => widget is CatalogItem && widget.is_current,
 );
 
-ScrollController _controller(WidgetTester tester) =>
-    tester.widget<ListView>(find.byType(ListView)).controller!;
+ScrollController _controller(WidgetTester tester) {
+  final long_catalog = find.byKey(
+    const ValueKey('read_directory_catalog_list'),
+  );
+  return tester
+      .widget<ListView>(
+        long_catalog.evaluate().isNotEmpty
+            ? long_catalog
+            : find.byType(ListView),
+      )
+      .controller!;
+}
 
 void _expect_hidden(WidgetTester tester) {
   final button = tester.widget<PositioningButton>(_location);
@@ -284,7 +298,7 @@ void main() {
       ),
     );
     final controller = _controller(tester);
-    final current = find.text('Chapter 1');
+    final current = find.byKey(const ValueKey('read_directory_chapter_0'));
     expect(current, findsOneWidget);
     _expect_hidden(tester);
     controller.jumpTo(20);

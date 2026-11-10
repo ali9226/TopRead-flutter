@@ -643,6 +643,10 @@ class _ReadPageState extends State<ReadPage>
         context: context,
       );
     } finally {
+      // TODO 清除翻屏标记前同步实际终点，包含被手动拖动打断的动画。
+      if (scroll_controller.hasClients) {
+        logic.sync_scroll_offset(scroll_controller.offset);
+      }
       _is_programmatic_scroll = false;
     }
   }
@@ -663,6 +667,10 @@ class _ReadPageState extends State<ReadPage>
         context: context,
       );
     } finally {
+      // TODO 下一次手动滚动从翻屏后的实际位置重新累计方向位移。
+      if (scroll_controller.hasClients) {
+        logic.sync_scroll_offset(scroll_controller.offset);
+      }
       _is_programmatic_scroll = false;
     }
   }

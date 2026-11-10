@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import 'package:app/components/recommend_book_card/book_list_item.dart';
+import 'package:app/services/masonry_native_ad_pool.dart';
 
 /// 单个推荐瀑布流在当前 App 进程内的独立会话。
 ///
@@ -79,6 +80,29 @@ class RecommendWaterfallStore extends GetxController {
       waterfall_id,
       () => RecommendWaterfallSession(waterfall_id: waterfall_id),
     );
+  }
+
+  /// TODO 废弃指定瀑布流的数据，未挂载的列表下次出现时重新请求首屏。
+  /// TODO 递增请求代次，防止刷新前的首屏、分页或删除动画回写旧数据。
+  void invalidate(String waterfall_id) {
+    final RecommendWaterfallSession session = obtain(waterfall_id);
+    MasonryNativeAdPool.remove_all(
+      session.items
+          .where((BookListItem item) => item.is_ad)
+          .map((BookListItem item) => item.id),
+    );
+    session.request_generation++;
+    session.items.clear();
+    session.removing_ids.clear();
+    session.item_heights.clear();
+    session.skipped_ad_slot_ids.clear();
+    session.active_overlay_id = null;
+    session.is_initial_loading = true;
+    session.is_loading_more = false;
+    session.has_more = true;
+    session.has_initialized = false;
+    session.is_initial_request_active = false;
+    session.mark_changed();
   }
 
   /// 当前进程中保留的独立会话数，仅供测试验证。

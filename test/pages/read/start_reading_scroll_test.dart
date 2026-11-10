@@ -16,6 +16,8 @@ import 'package:app/pages/read/widgets/content/paragraph.dart';
 import 'package:app/pages/read/widgets/main_list/index.dart';
 import 'package:app/pages/read/widgets/navigation_bars/bottom/index.dart';
 import 'package:app/pages/read/widgets/navigation_bars/top/index.dart';
+import 'package:app/pages/read/widgets/read_directory_sheet/index.dart';
+import 'package:app/pages/read/widgets/reading_page_shell.dart';
 import 'package:app/pages/read/widgets/skeleton/content_skeleton.dart';
 import 'package:app/pages/read/widgets/skeleton/index.dart';
 import 'package:app/stores/device_info.dart';
@@ -292,6 +294,148 @@ void main() {
     reader.logic.current_chapter_index.value = -1;
     await tester.pump();
     expect(title(), isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('正文滚动后目录读取最新章内进度，继续阅读保留原位置', (tester) async {
+    final reader = await _mount_reader(tester);
+    final initial_shell = tester.widget<ReadingPageShell>(
+      find.byType(ReadingPageShell),
+    );
+    await _read_chapter_paragraph(tester, reader, 0);
+    final shell = tester.widget<ReadingPageShell>(
+      find.byType(ReadingPageShell),
+    );
+    final double chapter_progress = reader.state.cached_chapter_progress;
+    final double reading_progress = reader.state.reading_progress_percent;
+    final offset = reader.logic.scroll_controller.offset;
+    final chapter_index = reader.logic.current_chapter_index.value;
+
+    // TODO 只滚动正文不强制父页重建，明确复现旧目录回调持有过时快照的条件。
+    expect(shell, same(initial_shell));
+    expect(chapter_progress, greaterThan(0));
+    expect(shell.state.cached_chapter_progress, lessThan(chapter_progress));
+    tester.widget<ReadBottomBar>(find.byType(ReadBottomBar)).on_catalog_tap();
+    await tester.pump();
+    for (var frame = 0; frame < 24; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    final directory = tester.widget<ReadDirectorySheet>(
+      find.byType(ReadDirectorySheet),
+    );
+    expect(
+      directory.current_chapter_progress_percent,
+      closeTo(chapter_progress, .01),
+    );
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(
+            find.byKey(const ValueKey('read_directory_current_progress')),
+          )
+          .value,
+      closeTo(chapter_progress / 100, .0001),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('read_directory_continue')));
+    await tester.pump();
+    for (var frame = 0; frame < 24; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(find.byType(ReadDirectorySheet), findsNothing);
+    expect(reader.logic.scroll_controller.offset, closeTo(offset, .1));
+    expect(reader.logic.current_chapter_index.value, chapter_index);
+    expect(
+      reader.state.cached_chapter_progress,
+      closeTo(chapter_progress, .01),
+    );
+    expect(
+      reader.state.reading_progress_percent,
+      closeTo(reading_progress, .01),
+    );
+    reader.expect_content_kept();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('点击上方翻上一屏始终保持双栏隐藏，随后手动下拉才显示', (tester) async {
+    final reader = await _mount_reader(tester);
+    await _read_chapter_paragraph(tester, reader, 0);
+    final logic = reader.logic;
+    final scroll = logic.scroll_controller;
+    logic.show_navigation.value = false;
+    logic.sync_scroll_offset(scroll.offset);
+    await tester.pump();
+    final list = find.byType(ReadMainList);
+    final list_rect = tester.getRect(list);
+
+    // TODO 连续两次真实顶部单击，逐帧验证动画及结束通知均不唤出导航栏。
+    for (var tap = 0; tap < 2; tap++) {
+      final before = scroll.offset;
+      await tester.tapAt(Offset(list_rect.center.dx, list_rect.top + 100));
+      await tester.pump();
+      for (var frame = 0; frame < 24; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(logic.show_navigation.value, isFalse);
+        expect(
+          tester.widget<ReadTopBar>(find.byType(ReadTopBar)).show,
+          isFalse,
+        );
+        expect(
+          tester.widget<ReadBottomBar>(find.byType(ReadBottomBar)).show,
+          isFalse,
+        );
+      }
+      expect(
+        scroll.offset,
+        closeTo(
+          before -
+              scroll.position.viewportDimension +
+              Style.page_scroll_step_offset,
+          1,
+        ),
+      );
+    }
+
+    // TODO 翻屏后的新手势从实际终点累计，手动上滑不展开，下拉则显示双栏。
+    await tester.drag(list, const Offset(0, -50));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(logic.show_navigation.value, isFalse);
+    await tester.drag(list, const Offset(0, 80));
+    await tester.pump();
+    expect(logic.show_navigation.value, isTrue);
+    expect(tester.widget<ReadTopBar>(find.byType(ReadTopBar)).show, isTrue);
+    expect(
+      tester.widget<ReadBottomBar>(find.byType(ReadBottomBar)).show,
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('上一屏动画被手动下拉打断时立即恢复双栏方向识别', (tester) async {
+    final reader = await _mount_reader(tester);
+    await _read_chapter_paragraph(tester, reader, 0);
+    final logic = reader.logic;
+    final scroll = logic.scroll_controller;
+    logic.show_navigation.value = false;
+    logic.sync_scroll_offset(scroll.offset);
+    await tester.pump();
+    final list = find.byType(ReadMainList);
+    final list_rect = tester.getRect(list);
+    await tester.tapAt(Offset(list_rect.center.dx, list_rect.top + 100));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(logic.show_navigation.value, isFalse);
+
+    final gesture = await tester.startGesture(list_rect.center);
+    await tester.pump();
+    await gesture.moveBy(const Offset(0, 60));
+    await tester.pump();
+    expect(logic.show_navigation.value, isTrue);
+    expect(tester.widget<ReadTopBar>(find.byType(ReadTopBar)).show, isTrue);
+    expect(
+      tester.widget<ReadBottomBar>(find.byType(ReadBottomBar)).show,
+      isTrue,
+    );
+    await gesture.up();
     expect(tester.takeException(), isNull);
   });
 

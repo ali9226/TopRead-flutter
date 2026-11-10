@@ -926,6 +926,12 @@
     "status_unknown": "Status"
   },
   "read": {
+    "directory_reviews": "Reviews",
+    "directory_all_chapters": "All {count} chapters",
+    "directory_search": "Search chapters",
+    "directory_search_hint": "Chapter title or number",
+    "directory_no_results": "No matching chapters",
+    "directory_continue": "Continue reading",
     "follow": "+ Follow",
     "followed": "Following",
     "restoring_progress": "Loading reading progress",

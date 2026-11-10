@@ -926,6 +926,12 @@
     "status_unknown": "状态"
   },
   "read": {
+    "directory_reviews": "书评",
+    "directory_all_chapters": "全部 {count} 章",
+    "directory_search": "搜索章节",
+    "directory_search_hint": "搜索章节名或序号",
+    "directory_no_results": "没有匹配的章节",
+    "directory_continue": "继续阅读",
     "follow": "+关注",
     "followed": "已关注",
     "restoring_progress": "正在获取阅读进度",

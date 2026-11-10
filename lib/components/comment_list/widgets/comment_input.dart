@@ -21,6 +21,9 @@ class CommentInput extends StatefulWidget {
   final VoidCallback? on_cancel_reply;
   final FocusNode? focus_node;
 
+  /// TODO 隐藏 Tab 移除独立编辑层并释放焦点，保留输入草稿供返回后继续编辑。
+  final bool active;
+
   const CommentInput({
     super.key,
     required this.is_dark,
@@ -28,6 +31,7 @@ class CommentInput extends StatefulWidget {
     this.reply_target,
     this.on_cancel_reply,
     this.focus_node,
+    this.active = true,
   });
 
   @override
@@ -79,8 +83,13 @@ class _CommentInputState extends State<CommentInput>
       },
     );
 
+    _schedule_overlay_insertion();
+  }
+
+  /// TODO 仅在当前面板激活时挂载根 Overlay，避免 keep-alive Tab 留下编辑器。
+  void _schedule_overlay_insertion() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || !widget.active || _is_overlay_inserted) return;
       _last_keyboard_height = _read_keyboard_height();
       final OverlayState? overlay_state = Overlay.maybeOf(
         context,
@@ -95,6 +104,19 @@ class _CommentInputState extends State<CommentInput>
   @override
   void didUpdateWidget(covariant CommentInput old_widget) {
     super.didUpdateWidget(old_widget);
+
+    if (!widget.active) {
+      _keyboard_opened_in_current_session = false;
+      _show_emoji_panel = false;
+      _is_editor_visible = false;
+      _focus_node.unfocus();
+      if (_is_overlay_inserted) {
+        _overlay_entry.remove();
+        _is_overlay_inserted = false;
+      }
+    } else if (!old_widget.active) {
+      _schedule_overlay_insertion();
+    }
 
     if (old_widget.focus_node != widget.focus_node) {
       final FocusNode old_focus_node =
@@ -119,6 +141,7 @@ class _CommentInputState extends State<CommentInput>
       _overlay_entry.remove();
       _is_overlay_inserted = false;
     }
+    _overlay_entry.dispose();
     _controller.dispose();
     _internal_focus_node.dispose();
     super.dispose();
@@ -126,6 +149,7 @@ class _CommentInputState extends State<CommentInput>
 
   @override
   void didChangeMetrics() {
+    if (!widget.active) return;
     final double keyboard_height = _read_keyboard_height();
     final double previous_keyboard_height = _last_keyboard_height;
     _last_keyboard_height = keyboard_height;
@@ -175,9 +199,9 @@ class _CommentInputState extends State<CommentInput>
     return RepaintBoundary(
       child: IgnorePointer(
         key: const ValueKey<String>('comment_fixed_composer_gate'),
-        ignoring: _is_editor_visible,
+        ignoring: !widget.active || _is_editor_visible,
         child: ExcludeSemantics(
-          excluding: _is_editor_visible,
+          excluding: !widget.active || _is_editor_visible,
           child: AnimatedOpacity(
             duration: const Duration(
               milliseconds: CommentListStyle.input_state_animation_duration_ms,
@@ -210,6 +234,12 @@ class _CommentInputState extends State<CommentInput>
   }
 
   void _on_focus_changed() {
+    if (!widget.active) {
+      _is_editor_visible = false;
+      _show_emoji_panel = false;
+      if (_focus_node.hasFocus) _focus_node.unfocus();
+      return;
+    }
     // 触发重建以更新固定层透明度。
     setState(() {});
 
@@ -251,8 +281,9 @@ class _CommentInputState extends State<CommentInput>
   }
 
   Future<void> _handle_send() async {
-    final String content = _controller.text.trim();
-    if (content.isEmpty || _is_sending) return;
+    final String submitted_text = _controller.text;
+    final String content = submitted_text.trim();
+    if (!widget.active || content.isEmpty || _is_sending) return;
 
     setState(() => _is_sending = true);
     _mark_overlay_needs_build();
@@ -261,13 +292,15 @@ class _CommentInputState extends State<CommentInput>
 
     setState(() => _is_sending = false);
     _mark_overlay_needs_build();
-    if (!success) return;
+    // TODO 等待发送时允许改写草稿，旧请求成功不能清空或收起后来输入的内容。
+    if (!success || _controller.text != submitted_text) return;
 
     _controller.clear();
     _hide_editor();
   }
 
   void _toggle_emoji() {
+    if (!widget.active) return;
     if (!_show_emoji_panel) {
       // 先记录表情模式，再释放焦点。焦点回调因此不会把编辑层
       // 误判为已关闭；键盘下降期间表情网格延迟绘制，减少重布局。
@@ -308,6 +341,7 @@ class _CommentInputState extends State<CommentInput>
   }
 
   void _show_editor() {
+    if (!widget.active) return;
     if (!_is_editor_visible) {
       _begin_editor_session();
     }

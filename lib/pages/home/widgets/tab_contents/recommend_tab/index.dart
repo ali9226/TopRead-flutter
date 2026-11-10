@@ -14,10 +14,12 @@ import 'package:app/models/short_story_item.dart';
 import 'package:app/models/story_item.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/home_store.dart';
+import 'package:app/stores/recommend_waterfall_store.dart';
 import 'package:app/util/language_util/language_change_handler.dart';
 import 'package:app/util/router/router_util.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/widgets/ranking_section/style.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/style.dart';
+import 'package:app/pages/home/widgets/tab_contents/recommend_tab/logic.dart';
 import 'package:app/pages/home/widgets/tab_contents/recommend_tab/widgets/ranking_section/index.dart';
 import 'package:app/config/color_config.dart';
 
@@ -35,7 +37,7 @@ import 'package:app/config/color_config.dart';
 /// - id=157（短篇榜）→ `novel/short_story`
 ///
 /// 数据仅在用户切换到对应 Tab 时才发起请求（懒加载），
-/// 下拉刷新仅更新当前选中 Tab 的数据。
+/// TODO 下拉刷新同步更新当前榜单与今日推荐瀑布流。
 class RecommendTabContent extends StatefulWidget {
   const RecommendTabContent({super.key});
 
@@ -68,7 +70,9 @@ class _RecommendTabContentState extends State<RecommendTabContent>
   // ==================== 状态 ====================
 
   /// 滚动控制器，用于监听滚动事件和返回顶部。
-  final ScrollController _scroll_controller = ScrollController();
+  late final ScrollController _scroll_controller = RecommendScrollController(
+    disable_animations: () => MediaQuery.disableAnimationsOf(context),
+  );
 
   /// 返回顶部按钮是否可见。
   bool _is_back_to_top_visible = false;
@@ -205,13 +209,21 @@ class _RecommendTabContentState extends State<RecommendTabContent>
 
   // ==================== 下拉刷新 ====================
 
-  /// 下拉刷新当前选中 Tab 的数据。
-  ///
-  /// 清除该 Tab 的已加载标记后重新请求。
+  /// TODO 同时刷新当前榜单和瀑布流，两处数据更新完成后结束刷新动画。
+  /// TODO 瀑布流尚未进入懒加载视口时废弃其会话，避免再次出现时沿用旧数据。
   Future<void> _on_refresh() async {
+    _home_store.is_recommend_overlay_open.value = false;
     final int tab_id = _current_tab_id;
     _loaded_tab_ids.remove(tab_id);
-    await _fetch_ranking_for_tab(tab_id);
+    final AnimatedRecommendWaterfallState? waterfall =
+        _recommend_waterfall_key.currentState;
+    if (waterfall == null) {
+      Get.find<RecommendWaterfallStore>().invalidate('home_recommend');
+    }
+    await Future.wait<void>(<Future<void>>[
+      _fetch_ranking_for_tab(tab_id),
+      if (waterfall != null) waterfall.refresh(),
+    ]);
   }
 
   // ==================== Tab 相关 ====================
@@ -518,7 +530,10 @@ class _RecommendTabContentState extends State<RecommendTabContent>
 
     return Obx(() {
       final bool is_dark = device_info.theme.value == ThemeMode.dark;
-      final Color panel_bg = is_dark ? ColorConstants.pages_home_widgets_tab_contents_recommend_tab_index_tone : ColorConstants.whiteColor;
+      final Color panel_bg = is_dark
+          ? ColorConstants
+                .pages_home_widgets_tab_contents_recommend_tab_index_tone
+          : ColorConstants.whiteColor;
       final List<String> ranking_titles = rankings_title_list;
       final List<List<StoryItem>> all_ranking_data =
           _build_ranking_data_from_store();
@@ -537,7 +552,9 @@ class _RecommendTabContentState extends State<RecommendTabContent>
           RefreshIndicator(
             onRefresh: _on_refresh,
             child: ListView(
+              key: const ValueKey('home_recommend_scroll'),
               controller: _scroll_controller,
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.zero,
               children: <Widget>[
                 // 榜单区域
@@ -575,6 +592,7 @@ class _RecommendTabContentState extends State<RecommendTabContent>
                 const SizedBox(height: RecommendTabStyle.recommend_top_spacing),
                 // 今日推荐瀑布流区域
                 Padding(
+                  key: const ValueKey('home_recommend_waterfall'),
                   padding: const EdgeInsets.symmetric(
                     horizontal: LayoutConfig.space_12,
                   ),

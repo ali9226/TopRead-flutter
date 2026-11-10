@@ -40,6 +40,9 @@ mixin ReadProgressMixin {
   /// 当前章节内阅读进度百分比（0-100）。
   double _current_chapter_progress = 0;
 
+  /// TODO 弹窗打开时读取最新章内进度，不沿用整页上一次构建的快照。
+  double get current_chapter_progress_percent => _current_chapter_progress;
+
   /// 获取进度计算器实例。
   ProgressCalculator get _progress_calculator => ProgressCalculator(
     chapter_list: store.chapter_list,
@@ -101,7 +104,9 @@ mixin ReadProgressMixin {
 
   /// 根据全书阅读百分比推算所在章节索引。
   int find_chapter_index_by_progress(double progress_percent) {
-    return _progress_calculator.find_chapter_index_by_progress(progress_percent);
+    return _progress_calculator.find_chapter_index_by_progress(
+      progress_percent,
+    );
   }
 
   /// 根据全书阅读进度换算指定章节内部的阅读百分比。

@@ -68,6 +68,15 @@ class CommentSheet extends StatefulWidget {
   /// 小说总评论数变化回调（段评增删时同步更新小说评论总数，+1 或 -1）。
   final ValueChanged<int>? on_novel_count_changed;
 
+  /// TODO 嵌入现有页面时复用完整评论内容，不重复绘制弹窗标题与外框。
+  final bool embedded;
+
+  /// TODO 隐藏的 Tab 不启动首次请求，并关闭其独立输入编辑层。
+  final bool active;
+
+  /// TODO 可由宿主明确提供主题；未传时沿用全局设备主题。
+  final bool? is_dark;
+
   const CommentSheet({
     super.key,
     required this.on_close,
@@ -77,6 +86,9 @@ class CommentSheet extends StatefulWidget {
     this.on_count_changed,
     this.on_paragraph_count_changed,
     this.on_novel_count_changed,
+    this.embedded = false,
+    this.active = true,
+    this.is_dark,
   });
 
   @override
@@ -114,7 +126,9 @@ Future<int?> showCommentSheet({
     backgroundColor: ColorConstants.transparent,
     clipBehavior: Clip.none,
     constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width),
-    barrierColor: ColorConstants.shadowColor.withValues(alpha: CommentListStyle.sheet_barrier_alpha),
+    barrierColor: ColorConstants.shadowColor.withValues(
+      alpha: CommentListStyle.sheet_barrier_alpha,
+    ),
     sheetAnimationStyle: const AnimationStyle(
       duration: Duration(
         milliseconds: CommentListStyle.sheet_transition_duration_ms,
@@ -205,12 +219,54 @@ class _CommentSheetState extends State<CommentSheet>
   /// 使过期的首次加载请求失效。
   int _load_generation = 0;
 
+  /// TODO 隐藏 Tab 的首次加载延迟到真正激活，成功数据在切页后继续复用。
+  bool _has_requested_initial = false;
+
+  /// TODO 分页失败后只允许明确重试，防止底部尺寸回调重复请求。
+  bool _load_more_failed = false;
+
+  bool get _is_dark =>
+      widget.is_dark ??
+      (Get.isRegistered<DeviceInfo>()
+          ? Get.find<DeviceInfo>().theme.value == ThemeMode.dark
+          : Theme.of(context).brightness == Brightness.dark);
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scroll_controller.addListener(_on_scroll);
-    unawaited(_load_comments());
+    if (widget.active) unawaited(_load_comments());
+  }
+
+  @override
+  void didUpdateWidget(covariant CommentSheet old_widget) {
+    super.didUpdateWidget(old_widget);
+    if (old_widget.novel_id != widget.novel_id ||
+        old_widget.paragraph_id != widget.paragraph_id ||
+        old_widget.scroll_to_comment_id != widget.scroll_to_comment_id) {
+      _load_generation++;
+      _highlight_timer?.cancel();
+      _comments = <CommentData>[];
+      _comment_target_keys.clear();
+      _like_loading_ids.clear();
+      _has_requested_initial = false;
+      _has_new_comments = false;
+      _load_status = 'loading';
+      _current_page = 1;
+      _total_count = 0;
+      _is_loading_more = false;
+      _load_more_failed = false;
+      _has_more = true;
+      _is_sending = false;
+      _highlighted_comment_id = 0;
+      _dismiss_input();
+    }
+    if (!widget.active) {
+      _dismiss_input();
+    } else if (!_has_requested_initial) {
+      unawaited(_load_comments());
+    }
   }
 
   @override
@@ -226,14 +282,14 @@ class _CommentSheetState extends State<CommentSheet>
 
   @override
   void didChangeMetrics() {
-    if (!mounted || _reply_target == null) return;
+    if (!mounted || !widget.active || _reply_target == null) return;
 
     if (_read_keyboard_height() <=
         CommentListStyle.keyboard_close_hide_threshold) {
       if (_pending_reply_focus) {
         _pending_reply_focus = false;
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted || _reply_target == null) return;
+          if (!mounted || !widget.active || _reply_target == null) return;
           _input_focus_node.requestFocus();
         });
       }
@@ -255,7 +311,7 @@ class _CommentSheetState extends State<CommentSheet>
 
   /// 滚动监听，触底时加载更多。
   void _on_scroll() {
-    if (!_scroll_controller.hasClients) return;
+    if (!widget.active || !_scroll_controller.hasClients) return;
     if (_scroll_controller.position.pixels >=
         _scroll_controller.position.maxScrollExtent -
             CommentListStyle.load_more_trigger_distance) {
@@ -304,11 +360,15 @@ class _CommentSheetState extends State<CommentSheet>
 
   /// 加载评论列表（首次加载或刷新）。
   Future<void> _load_comments() async {
+    if (!widget.active) return;
     final int generation = ++_load_generation;
+    _has_requested_initial = true;
     setState(() {
       _load_status = 'loading';
       _current_page = 1;
       _has_more = true;
+      _is_loading_more = false;
+      _load_more_failed = false;
     });
 
     try {
@@ -336,12 +396,13 @@ class _CommentSheetState extends State<CommentSheet>
           return c.copy_with(replies: _flatten_replies(c.replies));
         }).toList();
         _total_count = result.total;
-        _has_more = result.page * result.page_size < result.total;
+        _current_page = math.max(1, result.page);
+        _has_more = _can_load_next_page(result);
       });
       // 首次加载成功后，同步最新评论总数到外层
       widget.on_count_changed?.call(_total_count);
 
-      if (widget.scroll_to_comment_id > 0) {
+      if (widget.active && widget.scroll_to_comment_id > 0) {
         unawaited(_scroll_to_comment(widget.scroll_to_comment_id));
       }
     } catch (_) {
@@ -354,6 +415,7 @@ class _CommentSheetState extends State<CommentSheet>
 
   /// 滚动到指定评论ID所在的位置，并触发闪烁高亮。
   Future<void> _scroll_to_comment(int comment_id) async {
+    final int generation = _load_generation;
     if (!_comments.any(
       (CommentData comment) =>
           comment.id == comment_id ||
@@ -363,13 +425,18 @@ class _CommentSheetState extends State<CommentSheet>
     }
 
     await WidgetsBinding.instance.endOfFrame;
-    if (!mounted || !_scroll_controller.hasClients) return;
+    if (!mounted ||
+        !widget.active ||
+        generation != _load_generation ||
+        !_scroll_controller.hasClients) {
+      return;
+    }
 
     // highlight_id 会让后端把目标所在的顶层评论放到第一页首位。先回到列表
     // 顶部，确保目标真实布局完成，再按 RenderObject 的实际位置定位。
     _scroll_controller.jumpTo(0);
     await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) return;
+    if (!mounted || !widget.active || generation != _load_generation) return;
 
     final BuildContext? target_context = _target_key_for(
       comment_id,
@@ -384,7 +451,7 @@ class _CommentSheetState extends State<CommentSheet>
       ),
       curve: Curves.easeOutCubic,
     );
-    if (!mounted) return;
+    if (!mounted || !widget.active || generation != _load_generation) return;
 
     _highlight_timer?.cancel();
     setState(() => _highlighted_comment_id = comment_id);
@@ -394,24 +461,33 @@ class _CommentSheetState extends State<CommentSheet>
   }
 
   /// 加载更多评论（翻页）。
-  Future<void> _load_more() async {
-    if (_is_loading_more || !_has_more || _load_status != 'success') return;
+  Future<void> _load_more({bool retry = false}) async {
+    if (!widget.active ||
+        _is_loading_more ||
+        !_has_more ||
+        (_load_more_failed && !retry) ||
+        _load_status != 'success') {
+      return;
+    }
+    final int generation = _load_generation;
+    final int next_page = _current_page + 1;
 
     setState(() {
       _is_loading_more = true;
+      _load_more_failed = false;
     });
 
     try {
       final CommentListResult? result = await inquire_comment_list(
         novel_id: widget.novel_id,
         paragraph_id: widget.paragraph_id,
-        page: _current_page + 1,
+        page: next_page,
         page_size: _page_size,
       );
 
-      if (!mounted) return;
+      if (!mounted || generation != _load_generation) return;
 
-      if (result != null) {
+      if (result != null && result.page == next_page) {
         final Set<int> existing_ids = _comments
             .map((CommentData comment) => comment.id)
             .toSet();
@@ -426,18 +502,30 @@ class _CommentSheetState extends State<CommentSheet>
           _current_page = result.page;
           _comments = [..._comments, ...new_comments];
           _total_count = math.max(_total_count, result.total);
-          _has_more = result.page * result.page_size < result.total;
+          _has_more = new_comments.isNotEmpty && _can_load_next_page(result);
         });
+        widget.on_count_changed?.call(_total_count);
+      } else {
+        setState(() => _load_more_failed = true);
       }
     } catch (_) {
-      // 保留当前分页状态，下一次触底时允许重试。
+      if (mounted && generation == _load_generation) {
+        setState(() => _load_more_failed = true);
+      }
     } finally {
-      if (mounted) {
+      if (mounted && generation == _load_generation) {
         setState(() {
           _is_loading_more = false;
         });
       }
     }
+  }
+
+  /// TODO 后端短页或空页即到末尾，不因包含回复的总数继续请求无内容页面。
+  bool _can_load_next_page(CommentListResult result) {
+    final int page_size = result.page_size > 0 ? result.page_size : _page_size;
+    return result.list.length >= page_size &&
+        result.page * page_size < result.total;
   }
 
   /// 处理关闭弹窗。
@@ -468,6 +556,7 @@ class _CommentSheetState extends State<CommentSheet>
 
   /// 处理回复操作。
   void _handle_reply(CommentData comment, BuildContext target_context) {
+    if (!widget.active) return;
     _pending_reply_focus = false;
     _reply_target_context = target_context;
     _set_reply_target(comment);
@@ -486,7 +575,7 @@ class _CommentSheetState extends State<CommentSheet>
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _reply_target?.id != comment.id) return;
+      if (!mounted || !widget.active || _reply_target?.id != comment.id) return;
       _input_focus_node.requestFocus();
     });
   }
@@ -501,7 +590,7 @@ class _CommentSheetState extends State<CommentSheet>
   }
 
   void _keep_reply_target_visible() {
-    if (!mounted || !_scroll_controller.hasClients) return;
+    if (!mounted || !widget.active || !_scroll_controller.hasClients) return;
 
     final BuildContext? target_context =
         _reply_target_context ??
@@ -563,6 +652,8 @@ class _CommentSheetState extends State<CommentSheet>
   ///
   /// 未登录时弹出登录提示弹窗，已登录时调用点赞接口。
   Future<void> _handle_like(CommentData comment) async {
+    if (!widget.active) return;
+    final int generation = _load_generation;
     if (comment.id <= 0) return;
     if (!_like_loading_ids.add(comment.id)) return;
 
@@ -571,7 +662,12 @@ class _CommentSheetState extends State<CommentSheet>
       final bool is_logged_in = await showLoginRequiredDialog(
         title: tr('short_story_read.login_required'),
       );
-      if (!is_logged_in || !mounted) return;
+      if (!is_logged_in ||
+          !mounted ||
+          !widget.active ||
+          generation != _load_generation) {
+        return;
+      }
 
       // TODO 先乐观更新UI
       final bool new_liked = !comment.is_liked;
@@ -587,7 +683,7 @@ class _CommentSheetState extends State<CommentSheet>
         novel_id: widget.novel_id,
       );
 
-      if (!mounted) return;
+      if (!mounted || generation != _load_generation) return;
 
       if (result == null) {
         // TODO 接口失败，回滚UI状态
@@ -602,7 +698,7 @@ class _CommentSheetState extends State<CommentSheet>
       // TODO 用接口返回的真实数据更新UI
       _update_comment_like_state(comment.id, result.like, result.like_count);
     } finally {
-      _like_loading_ids.remove(comment.id);
+      if (generation == _load_generation) _like_loading_ids.remove(comment.id);
     }
   }
 
@@ -640,8 +736,9 @@ class _CommentSheetState extends State<CommentSheet>
   /// 乐观添加的临时评论（id < 0）也支持长按，但不喜欢、举报等需要
   /// 服务端 ID 的操作会被跳过。
   Future<void> _handle_long_press(CommentData comment) async {
-    final DeviceInfo device_info = Get.find<DeviceInfo>();
-    final bool is_dark = device_info.theme.value == ThemeMode.dark;
+    if (!widget.active) return;
+    final int generation = _load_generation;
+    final bool is_dark = _is_dark;
     final bool is_cjk = LanguageUtil.is_cjk_language(
       Localizations.localeOf(context).languageCode,
     );
@@ -661,7 +758,12 @@ class _CommentSheetState extends State<CommentSheet>
       content: comment.content,
     );
 
-    if (!mounted || action == null) return;
+    if (!mounted ||
+        !widget.active ||
+        generation != _load_generation ||
+        action == null) {
+      return;
+    }
 
     switch (action) {
       case 'copy':
@@ -685,6 +787,7 @@ class _CommentSheetState extends State<CommentSheet>
   /// 处理删除评论（乐观标记已删除，不减少数量，保留子回复可见）。
   Future<void> _handle_delete(CommentData comment) async {
     if (comment.id <= 0) return;
+    final int generation = _load_generation;
 
     // 保存原始数据用于回滚
     final List<CommentData> original_comments = _comments;
@@ -699,7 +802,7 @@ class _CommentSheetState extends State<CommentSheet>
         comment_id: comment.id,
         novel_id: widget.novel_id,
       );
-      if (!mounted) return;
+      if (!mounted || generation != _load_generation) return;
 
       if (success) {
         showBottomTip(tr('comment.action.delete_success'));
@@ -711,7 +814,7 @@ class _CommentSheetState extends State<CommentSheet>
         showBottomTip(tr('comment.send_failed'));
       }
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || generation != _load_generation) return;
       // 删除失败，回滚
       setState(() {
         _comments = original_comments;
@@ -736,10 +839,16 @@ class _CommentSheetState extends State<CommentSheet>
   /// 处理不喜欢评论（需要登录，标记后评论内容折叠显示，不改变评论总数）。
   Future<void> _handle_dislike(CommentData comment) async {
     if (comment.id <= 0) return;
+    final int generation = _load_generation;
 
     // 检查登录状态
     final bool is_logged_in = await checkLoginForComment();
-    if (!is_logged_in || !mounted) return;
+    if (!is_logged_in ||
+        !mounted ||
+        !widget.active ||
+        generation != _load_generation) {
+      return;
+    }
 
     // 保存原始数据用于回滚
     final List<CommentData> original_comments = _comments;
@@ -764,7 +873,7 @@ class _CommentSheetState extends State<CommentSheet>
         comment_id: comment.id,
         novel_id: widget.novel_id,
       );
-      if (!mounted) return;
+      if (!mounted || generation != _load_generation) return;
 
       if (success) {
         showBottomTip(tr('comment.action.dislike_success'));
@@ -776,7 +885,7 @@ class _CommentSheetState extends State<CommentSheet>
         showBottomTip(tr('comment.send_failed'));
       }
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || generation != _load_generation) return;
       // 不喜欢失败，回滚
       setState(() {
         _comments = original_comments;
@@ -787,14 +896,14 @@ class _CommentSheetState extends State<CommentSheet>
 
   /// 处理举报评论（打开举报弹窗，提交举报理由）。
   Future<void> _handle_report(CommentData comment) async {
+    final int generation = _load_generation;
     // 临时评论（尚未落库）无法举报
     if (comment.id <= 0) {
       showBottomTip(tr('comment.report.wait_sync'));
       return;
     }
 
-    final DeviceInfo device_info = Get.find<DeviceInfo>();
-    final bool is_dark = device_info.theme.value == ThemeMode.dark;
+    final bool is_dark = _is_dark;
 
     // 打开举报弹窗
     final List<String>? reasons = await showCommentReport(
@@ -802,7 +911,13 @@ class _CommentSheetState extends State<CommentSheet>
       is_dark: is_dark,
     );
 
-    if (!mounted || reasons == null || reasons.isEmpty) return;
+    if (!mounted ||
+        !widget.active ||
+        generation != _load_generation ||
+        reasons == null ||
+        reasons.isEmpty) {
+      return;
+    }
 
     // 提交举报
     try {
@@ -811,7 +926,7 @@ class _CommentSheetState extends State<CommentSheet>
         novel_id: widget.novel_id,
         reasons: reasons,
       );
-      if (!mounted) return;
+      if (!mounted || generation != _load_generation) return;
 
       if (success) {
         showBottomTip(tr('comment.report.success'));
@@ -836,7 +951,7 @@ class _CommentSheetState extends State<CommentSheet>
         showBottomTip(tr('comment.send_failed'));
       }
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || generation != _load_generation) return;
       showBottomTip(tr('comment.send_failed'));
     }
   }
@@ -847,7 +962,10 @@ class _CommentSheetState extends State<CommentSheet>
   /// 发送成功后用服务端返回的真实 ID 替换临时 ID，取消沙漏。
   /// 发送失败后从列表中移除。
   Future<bool> _handle_send(String content) async {
-    if (_is_sending || _load_status != 'success') return false;
+    if (!widget.active || _is_sending || _load_status != 'success') {
+      return false;
+    }
+    final int generation = _load_generation;
     final CommentData? reply_target = _reply_target;
     final int parent_id = reply_target?.id ?? 0;
     final bool is_reply_to_nested =
@@ -856,7 +974,12 @@ class _CommentSheetState extends State<CommentSheet>
     final bool is_logged_in = await showLoginRequiredDialog(
       title: tr('short_story_read.login_required'),
     );
-    if (!is_logged_in || !mounted) return false;
+    if (!is_logged_in ||
+        !mounted ||
+        !widget.active ||
+        generation != _load_generation) {
+      return false;
+    }
 
     final user_info = Get.find<UserInformation>().userInfo.value;
     if (user_info == null) return false;
@@ -904,7 +1027,12 @@ class _CommentSheetState extends State<CommentSheet>
     widget.on_count_changed?.call(_total_count);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scroll_controller.hasClients) return;
+      if (!mounted ||
+          !widget.active ||
+          generation != _load_generation ||
+          !_scroll_controller.hasClients) {
+        return;
+      }
       if (parent_id == 0) {
         unawaited(
           _scroll_controller.animateTo(
@@ -943,6 +1071,7 @@ class _CommentSheetState extends State<CommentSheet>
         parent_id: parent_id,
         paragraph_id: widget.paragraph_id,
       );
+      if (!mounted || generation != _load_generation) return false;
       if (result != null) {
         success = true;
         real_id = result['id'] is int
@@ -962,7 +1091,7 @@ class _CommentSheetState extends State<CommentSheet>
     } catch (_) {
       success = false;
     }
-    if (!mounted) return success;
+    if (!mounted || generation != _load_generation) return success;
 
     _is_sending = false;
     if (!success || real_id == null) {
@@ -1032,29 +1161,59 @@ class _CommentSheetState extends State<CommentSheet>
 
   @override
   Widget build(BuildContext context) {
-    /// 设备信息仓库（获取当前主题模式）。
-    final DeviceInfo device_info = Get.find<DeviceInfo>();
-
-    /// 是否为夜间模式。
-    final bool is_dark = device_info.theme.value == ThemeMode.dark;
+    final bool is_dark = _is_dark;
 
     /// 弹窗背景色。
     final Color bg_color = is_dark
         ? CommentListStyle.sheet_dark_bg
         : CommentListStyle.sheet_light_bg;
 
-    /// 屏幕高度。
-    final double screen_height = MediaQuery.sizeOf(context).height;
-
-    /// 评论区高度。
-    final double sheet_height =
-        screen_height * CommentListStyle.max_height_ratio;
+    final Widget content = Column(
+      children: <Widget>[
+        if (!widget.embedded)
+          CommentHeader(
+            is_dark: is_dark,
+            comment_count: _total_count,
+            on_close: _handle_close,
+            on_drag_start: _dismiss_input,
+          ),
+        Expanded(
+          child: GestureDetector(
+            onTap: _dismiss_input,
+            behavior: HitTestBehavior.translucent,
+            child: RepaintBoundary(child: _buildContent(is_dark: is_dark)),
+          ),
+        ),
+        CommentInput(
+          is_dark: is_dark,
+          active: widget.active,
+          on_send: _handle_send,
+          reply_target: _reply_target,
+          on_cancel_reply: () {
+            _reply_target_context = null;
+            _set_reply_target(null);
+          },
+          focus_node: _input_focus_node,
+        ),
+      ],
+    );
+    if (widget.embedded) {
+      return TickerMode(
+        enabled: widget.active,
+        child: IgnorePointer(
+          ignoring: !widget.active,
+          child: ColoredBox(color: bg_color, child: content),
+        ),
+      );
+    }
 
     // ModalBottomSheet 路由负责面板拖拽、回弹、遮罩点击和下滑关闭；评论内容
     // 仍是固定高度，键盘仅影响根 Overlay 中的真实输入框，不改变这里的布局。
     return RepaintBoundary(
       child: Container(
-        height: sheet_height,
+        height:
+            MediaQuery.sizeOf(context).height *
+            CommentListStyle.max_height_ratio,
         decoration: BoxDecoration(
           color: bg_color,
           borderRadius: const BorderRadius.vertical(
@@ -1062,9 +1221,11 @@ class _CommentSheetState extends State<CommentSheet>
           ),
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: ColorConstants.shadowColor.withValues(alpha: is_dark
+              color: ColorConstants.shadowColor.withValues(
+                alpha: is_dark
                     ? CommentListStyle.sheet_shadow_alpha_dark
-                    : CommentListStyle.sheet_shadow_alpha_light),
+                    : CommentListStyle.sheet_shadow_alpha_light,
+              ),
               blurRadius: CommentListStyle.sheet_shadow_blur,
               offset: const Offset(0, CommentListStyle.sheet_shadow_offset_y),
             ),
@@ -1074,35 +1235,7 @@ class _CommentSheetState extends State<CommentSheet>
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(CommentListStyle.sheet_radius),
           ),
-          child: Column(
-            children: <Widget>[
-              CommentHeader(
-                is_dark: is_dark,
-                comment_count: _total_count,
-                on_close: _handle_close,
-                on_drag_start: _dismiss_input,
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: _dismiss_input,
-                  behavior: HitTestBehavior.translucent,
-                  child: RepaintBoundary(
-                    child: _buildContent(is_dark: is_dark),
-                  ),
-                ),
-              ),
-              CommentInput(
-                is_dark: is_dark,
-                on_send: _handle_send,
-                reply_target: _reply_target,
-                on_cancel_reply: () {
-                  _reply_target_context = null;
-                  _set_reply_target(null);
-                },
-                focus_node: _input_focus_node,
-              ),
-            ],
-          ),
+          child: content,
         ),
       ),
     );
@@ -1114,6 +1247,12 @@ class _CommentSheetState extends State<CommentSheet>
   /// 做交叉淡入淡出过渡，避免状态切换时的突兀跳变。
   Widget _buildContent({required bool is_dark}) {
     return AnimatedSwitcher(
+      // TODO 切换作品时立即卸载旧列表，避免交叉淡入期间共用同一滚动控制器。
+      key: ValueKey((
+        widget.novel_id,
+        widget.paragraph_id,
+        widget.scroll_to_comment_id,
+      )),
       duration: const Duration(
         milliseconds: CommentListStyle.skeleton_switch_duration_ms,
       ),
@@ -1153,9 +1292,19 @@ class _CommentSheetState extends State<CommentSheet>
         padding: const EdgeInsets.symmetric(
           vertical: CommentListStyle.list_vertical_padding,
         ),
-        itemCount: _comments.length + (_is_loading_more ? 1 : 0),
+        itemCount:
+            _comments.length + (_is_loading_more || _load_more_failed ? 1 : 0),
         itemBuilder: (BuildContext context, int index) {
           if (index == _comments.length) {
+            if (_load_more_failed) {
+              return Center(
+                child: TextButton(
+                  key: const ValueKey('comment_load_more_retry'),
+                  onPressed: () => _load_more(retry: true),
+                  child: Text(tr('creator_center.load_more_failed')),
+                ),
+              );
+            }
             return _buildLoadMoreIndicator(is_dark: is_dark);
           }
 
@@ -1201,13 +1350,14 @@ class _CommentSheetState extends State<CommentSheet>
 
   /// 构建错误状态（使用 NoInternet 组件）。
   Widget _buildErrorState({Key? key, required bool is_dark}) {
-    return NoInternet(
+    final Widget error = NoInternet(
       key: key,
       is_dark: is_dark,
       title: tr('comment.load_error_title'),
       description: tr('comment.load_error_desc'),
       on_reload: _load_comments,
     );
+    return widget.embedded ? _scrollable_feedback(error) : error;
   }
 
   /// 构建空状态提示。
@@ -1217,7 +1367,7 @@ class _CommentSheetState extends State<CommentSheet>
         ? CommentListStyle.secondary_dark_color
         : CommentListStyle.secondary_light_color;
 
-    return Center(
+    final Widget empty = Center(
       key: key,
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -1245,5 +1395,16 @@ class _CommentSheetState extends State<CommentSheet>
         ),
       ),
     );
+    return widget.embedded ? _scrollable_feedback(empty) : empty;
   }
+
+  /// TODO 短视口与大字体下保持原空态/错误态外观，内容过高时允许完整滚动。
+  Widget _scrollable_feedback(Widget child) => LayoutBuilder(
+    builder: (context, constraints) => SingleChildScrollView(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+        child: child,
+      ),
+    ),
+  );
 }

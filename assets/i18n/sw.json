@@ -897,6 +897,12 @@
     "status_unknown": "Hali"
   },
   "read": {
+    "directory_reviews": "Maoni",
+    "directory_all_chapters": "Sura zote {count}",
+    "directory_search": "Tafuta sura",
+    "directory_search_hint": "Jina au namba ya sura",
+    "directory_no_results": "Hakuna sura inayolingana",
+    "directory_continue": "Endelea kusoma",
     "follow": "+ Fuatilia",
     "followed": "Imefuatiliwa",
     "restoring_progress": "Inapakia maendeleo ya kusoma",

@@ -255,12 +255,17 @@ class AnimatedRecommendWaterfallState
     await _load_initial_data(language_revision: refresh_context.revision);
   }
 
-  /// 加载首屏数据。
-  Future<void> _load_initial_data({int? language_revision}) async {
+  /// TODO 加载首屏数据；[language_revision] 固定本次语种版本。
+  /// TODO [force_refresh] 允许下拉刷新替代仍在进行的旧首屏请求。
+  Future<void> _load_initial_data({
+    int? language_revision,
+    bool force_refresh = false,
+  }) async {
     final RecommendWaterfallSession target_session = _session;
     final int revision =
         language_revision ?? LanguageChangeHandler.current_revision;
-    if (target_session.is_initial_request_active &&
+    if (!force_refresh &&
+        target_session.is_initial_request_active &&
         target_session.language_revision == revision) {
       return;
     }
@@ -276,6 +281,7 @@ class AnimatedRecommendWaterfallState
       target_session.items.clear();
       target_session.removing_ids.clear();
       target_session.item_heights.clear();
+      target_session.active_overlay_id = null;
       target_session.has_more = true;
     });
 
@@ -299,6 +305,13 @@ class AnimatedRecommendWaterfallState
       target_session.is_initial_request_active = false;
       target_session.has_more = items.isNotEmpty;
     });
+  }
+
+  /// TODO 下拉刷新强制重取首屏，废弃正在进行的旧首屏和分页请求。
+  /// TODO 返回本次请求的 Future，供父级刷新指示器等待数据更新完成。
+  Future<void> refresh() {
+    close_overlay();
+    return _load_initial_data(force_refresh: true);
   }
 
   /// 加载更多数据。

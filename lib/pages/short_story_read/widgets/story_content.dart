@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:app/config/font_config.dart';
 
 import 'package:app/pages/short_story_read/style.dart';
 import 'package:app/util/native_ad_insert_index.dart';
@@ -249,9 +248,10 @@ class _StoryContentState extends State<StoryContent> {
 
     for (int index = 0; index < paragraphs.length; index++) {
       final paragraph = paragraphs[index];
+      // TODO 正文字重不做 Android 降档（降档后仅 w300 过细），固定 w400 与 iOS 一致。
       final text_style = TextStyle(
         fontSize: body_font_size,
-        fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+        fontWeight: FontWeight.w400,
         color: body_color,
         height: body_height,
       );
