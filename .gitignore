@@ -13,7 +13,12 @@ node_modules/
 daemon/
 .tmp/
 build/
+# TODO 项目内热更工具的 build 目录保存 CLI 源码，必须随仓库交付。
+!vendor/flutter_patcher/lib/src/cli/build/
+!vendor/flutter_patcher/lib/src/cli/build/**
 wrapper/
+!vendor/flutter_patcher/example/android/gradle/wrapper/
+!vendor/flutter_patcher/example/android/gradle/wrapper/**
 native/
 .DS_Store
 .atom/

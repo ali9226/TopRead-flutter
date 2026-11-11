@@ -15,6 +15,7 @@ import 'package:app/config/constant.dart';
 import 'package:app/config/font_config.dart';
 import 'package:app/models/language_info.dart';
 import 'package:app/permission_request/admob_consent_permission_request.dart';
+import 'package:app/services/patch/patch_service.dart';
 import 'package:app/stores/device_info.dart';
 import 'package:app/stores/language_store.dart';
 import 'package:app/stores/project_config_store.dart';
@@ -54,6 +55,9 @@ class _AboutTopReadState extends State<AboutTopRead> {
   /// 当前地区法规是否要求展示可随时访问的广告隐私选项入口。
   bool _show_ad_privacy_options = false;
 
+  /// TODO 本次冷启动实际加载的热更版本；待生效或已停用补丁均不显示。
+  int _hotfix_version = 0;
+
   /// 是否正在展示 UMP 隐私选项表单，防止用户重复点击。
   bool _is_opening_ad_privacy_options = false;
 
@@ -69,6 +73,16 @@ class _AboutTopReadState extends State<AboutTopRead> {
       (_) => unawaited(_refresh_ad_privacy_options_requirement()),
     );
     unawaited(_refresh_ad_privacy_options_requirement());
+    unawaited(_load_hotfix_version());
+  }
+
+  /// TODO 读取经原生启动诊断核对的实际版本，不把刚下载的补丁当作已生效。
+  Future<void> _load_hotfix_version() async {
+    final int value = await PatchService.get_applied_hotfix_version();
+    if (!mounted || value == _hotfix_version) return;
+    setState(() {
+      _hotfix_version = value;
+    });
   }
 
   @override
@@ -103,7 +117,8 @@ class _AboutTopReadState extends State<AboutTopRead> {
       /// 分割线色。
       final Color dividerColor = isDark
           ? ColorConstants.util_dialog_show_upgrade_dialog_tone_fffffff
-          : ColorConstants.components_share_sheet_widgets_share_poster_card_tone_f222222;
+          : ColorConstants
+                .components_share_sheet_widgets_share_poster_card_tone_f222222;
 
       /// AppBar背景色：日间固定白色，夜间与页面背景区分。
       final Color appBarBgColor = isDark
@@ -166,6 +181,20 @@ class _AboutTopReadState extends State<AboutTopRead> {
                   ),
                 ),
 
+                /// 热更版本（装有热更补丁时展示：同目标包的第 N 个补丁）。
+                if (_hotfix_version > 0) ...[
+                  const SizedBox(height: Style.version_to_hotfix_spacing),
+                  Text(
+                    '${easy.tr('AboutTopRead.hotfix_version')} $_hotfix_version',
+                    style: TextStyle(
+                      fontSize: Style.hotfix_font_size,
+                      fontWeight: Style.hotfix_weight,
+                      // TODO 小字号补丁版本在日间和夜间均保持可读对比度。
+                      color: titleColor.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+
                 /// 间距。
                 const SizedBox(height: Style.version_to_list_spacing),
 
@@ -222,7 +251,9 @@ class _AboutTopReadState extends State<AboutTopRead> {
                         'V${Constant.appVersion}',
                         style: TextStyle(
                           fontSize: 14,
-                          fontWeight: FontConfig.adjustedWeight(FontWeight.w400),
+                          fontWeight: FontConfig.adjustedWeight(
+                            FontWeight.w400,
+                          ),
                           color: titleColor,
                         ),
                       ),

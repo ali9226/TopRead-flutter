@@ -33,6 +33,7 @@ import 'package:app/stores/bookshelf_store.dart';
 import 'package:app/stores/ranking_full_list_store.dart';
 import 'package:app/stores/recommend_waterfall_store.dart';
 import 'package:app/services/splash_screen_ad_service.dart';
+import 'package:app/services/patch/patch_service.dart';
 import 'package:app/util/router/web_url_strategy.dart';
 import 'package:app/util/device/get_theme_mode.dart';
 import 'package:get_storage/get_storage.dart';
@@ -47,6 +48,10 @@ import 'package:app/config/constant.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // TODO 热更补丁初始化（runApp 之前，尽早安装补丁启动崩溃保护）
+  await PatchService.init_patcher();
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await EasyLocalization.ensureInitialized();
 
@@ -150,7 +155,10 @@ void main() async {
   unawaited(redisRequestStore.fetch_redis_data());
 
   // TODO 检查 App 版本更新（浏览器环境自动跳过）
-  checkAppUpdate();
+  final Future<bool> requires_full_update = checkAppUpdate();
+
+  // TODO 对账实际加载版本、观察启动健康后再检查补丁；强更时跳过补丁下载安装。
+  unawaited(PatchService.start(skip_patch_when: requires_full_update));
 
   // TODO 初始化推送通知服务（异步，不阻塞首帧）
   final FcmService fcm_service = FcmService();

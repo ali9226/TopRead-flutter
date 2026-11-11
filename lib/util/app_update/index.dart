@@ -16,12 +16,13 @@ import 'package:app/util/log_util.dart';
  * 与本地当前版本号对比，决定是否弹出升级弹窗。
  *
  * 浏览器环境下跳过检查（不请求接口）。
+ * TODO 返回 true 表示需要强制整包升级，此次启动不再下载安装热更补丁。
  */
-Future<void> checkAppUpdate() async {
+Future<bool> checkAppUpdate() async {
   // TODO 浏览器环境跳过更新检查。
   if (kIsWeb) {
     logUtil(msg: 'app_update: 浏览器环境，跳过更新检查');
-    return;
+    return false;
   }
 
   try {
@@ -34,7 +35,7 @@ Future<void> checkAppUpdate() async {
 
     if (!results.status || results.content == null) {
       logUtil(msg: 'app_update: 接口请求失败或数据为空', type: 'w');
-      return;
+      return false;
     }
 
     final AppConfigInquire config = results.content!;
@@ -46,17 +47,20 @@ Future<void> checkAppUpdate() async {
 
     // TODO 根据平台选择对应的版本号和升级地址。
     final bool isIOS = defaultTargetPlatform == TargetPlatform.iOS;
-    final String minVersion =
-        isIOS ? config.min_ios_version : config.min_android_version;
-    final String maxVersion =
-        isIOS ? config.max_ios_version : config.max_android_version;
-    final String upgradeUrl =
-        isIOS ? config.ios_update_address : config.update_address;
+    final String minVersion = isIOS
+        ? config.min_ios_version
+        : config.min_android_version;
+    final String maxVersion = isIOS
+        ? config.max_ios_version
+        : config.max_android_version;
+    final String upgradeUrl = isIOS
+        ? config.ios_update_address
+        : config.update_address;
 
     // TODO 版本号为空则跳过。
     if (minVersion.isEmpty || maxVersion.isEmpty) {
       logUtil(msg: 'app_update: 服务端版本号为空，跳过');
-      return;
+      return false;
     }
 
     // TODO 对比版本号。
@@ -72,6 +76,7 @@ Future<void> checkAppUpdate() async {
         currentVersion: currentVersion,
         latestVersion: minVersion,
       );
+      return true;
     } else if (compareMax < 0) {
       // TODO min_version <= 当前版本 < max_version，可选升级（可取消）。
       logUtil(msg: 'app_update: 可选升级 $currentVersion -> $maxVersion');
@@ -87,6 +92,7 @@ Future<void> checkAppUpdate() async {
   } catch (error) {
     logUtil(msg: 'app_update: 检查更新异常 $error', type: 'e');
   }
+  return false;
 }
 
 /* TODO
@@ -104,8 +110,9 @@ int _compareVersion(String v1, String v2) {
   final List<int> parts1 = _parseVersionParts(v1);
   final List<int> parts2 = _parseVersionParts(v2);
 
-  final int maxLen =
-      parts1.length > parts2.length ? parts1.length : parts2.length;
+  final int maxLen = parts1.length > parts2.length
+      ? parts1.length
+      : parts2.length;
 
   for (int i = 0; i < maxLen; i++) {
     final int p1 = i < parts1.length ? parts1[i] : 0;

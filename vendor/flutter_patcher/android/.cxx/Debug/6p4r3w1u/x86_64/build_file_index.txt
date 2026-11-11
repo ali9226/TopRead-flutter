@@ -1,0 +1,1 @@
+/Users/ali/work/小说/app/vendor/flutter_patcher/android/src/main/cpp/CMakeLists.txt

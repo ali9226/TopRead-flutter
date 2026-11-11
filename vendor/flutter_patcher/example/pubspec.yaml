@@ -1,0 +1,27 @@
+name: flutter_patcher_example
+description: "Demonstrates flutter_patcher: build a host, patch it and serve the patch."
+publish_to: 'none'
+# The build number is the host's versionCode; each host needs a new one.
+version: 1.0.0+1
+
+environment:
+  # The floor of flutter_patcher itself: older SDKs stop at pub get.
+  sdk: '>=3.13.0 <4.0.0'
+  flutter: '>=3.47.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_patcher:
+    # This repository's plugin; an app depends on flutter_patcher: ^1.0.0.
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/patch_demo.png

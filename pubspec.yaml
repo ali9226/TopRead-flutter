@@ -3,7 +3,7 @@ description: "TopRead"
 
 
 # + 符号后面的数字，每一次打包只增不减，保持递增状态
-version: 1.2.3+24
+version: 1.2.3+25
 
 environment:
     sdk: ^3.11.5
@@ -20,8 +20,9 @@ dependencies:
   # TODO 多语种
   easy_localization: ^3.0.7+1
 
-  # TODO 上传docx文件解析
-  docx_to_text: ^1.0.1
+  # TODO 上传docx文件解析（原 docx_to_text 包内联进 lib/util，解决与 flutter_patcher 的 archive 版本冲突）
+  archive: ^4.0.0
+  xml: ^6.6.1
 
   # TODO 选择日期时间
   bottom_picker: ^5.0.0
@@ -148,9 +149,14 @@ dependencies:
 
   # TODO 播放音频（聊天消息铃声）
   audioplayers: ^6.1.0
+  # TODO 热更新（自托管 code push）
+  flutter_patcher: ^1.1.0
 
 
 dependency_overrides:
+  # TODO 固定项目内兼容修复，避免字段与同名构造冲突导致热更宿主无法编译。
+  flutter_patcher:
+    path: vendor/flutter_patcher
 
 dev_dependencies:
   # 广告瀑布流回归使用独立图片缓存，避免测试依赖真实网络和文件插件。
@@ -164,6 +170,7 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
 
+  # TODO 热更补丁发布脚本（scripts/hot_patch.dart）直连 MySQL 写 app_patch 表
   # TODO 更改项目名称的插件
   launcher_name: ^1.0.2
 
@@ -175,6 +182,7 @@ dev_dependencies:
   build_runner: ^2.7.1
   freezed: ^3.2.0
   json_serializable: ^6.11.1
+  mysql_client: ^0.0.27
 
 # TODO 更改项目名称，更改之后终端执行命令:
 # TODO flutter pub run launcher_name:main

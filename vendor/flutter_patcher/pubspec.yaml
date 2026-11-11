@@ -1,0 +1,48 @@
+name: flutter_patcher
+description: Self-hosted code push for Flutter on Android and iOS. Signed Dart code and asset patches that apply on the next cold start and roll back automatically.
+version: 1.1.0
+homepage: https://github.com/xuelinger2333/flutter_patcher
+repository: https://github.com/xuelinger2333/flutter_patcher
+issue_tracker: https://github.com/xuelinger2333/flutter_patcher/issues
+documentation: https://github.com/xuelinger2333/flutter_patcher#readme
+
+topics:
+  - android
+  - ios
+  - code-push
+  - hot-update
+  - ota-update
+
+environment:
+  sdk: '>=3.13.0 <4.0.0'
+  flutter: '>=3.47.0'
+
+# The command-line tool (bin/flutter_patcher.dart, `dart run flutter_patcher`)
+# needs args, archive, path and yaml; the app code never imports them.
+executables:
+  flutter_patcher: flutter_patcher
+
+dependencies:
+  flutter:
+    sdk: flutter
+  plugin_platform_interface: '>=2.0.2 <3.0.0'
+  crypto: '>=3.0.3 <4.0.0'
+  args: '>=2.5.0 <3.0.0'
+  archive: '>=4.0.0 <5.0.0'
+  path: '>=1.9.0 <2.0.0'
+  yaml: '>=3.1.2 <4.0.0'
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  test: any
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.flutter_patcher.flutter_patcher
+        pluginClass: FlutterPatcherPlugin
+      ios:
+        pluginClass: FlutterPatcherPlugin

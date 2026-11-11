@@ -92,47 +92,54 @@ class RankingSectionSkeleton extends StatelessWidget {
       text_scaler,
     );
 
-    return SizedBox(
-      width: double.infinity,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: RankingSectionStyle.content_padding_horizontal,
-        ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const NeverScrollableScrollPhysics(),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: List<Widget>.generate(5, (int col_index) {
-              final right_gap = col_index < 4
-                  ? RankingSectionStyle.column_gap
-                  : 0.0;
-              return Padding(
-                padding: EdgeInsets.only(right: right_gap),
-                child: SizedBox(
-                  width: RankingSectionStyle.column_content_width,
-                  child: Column(
-                    children: List<Widget>.generate(
-                      RankingSectionStyle.rows_per_column,
-                      (int row_index) {
-                        final bottom_gap =
-                            row_index < RankingSectionStyle.rows_per_column - 1
-                                ? item_height - item_content_height
-                                : 0.0;
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: bottom_gap),
-                          child: _build_single_skeleton_item(
-                            skeleton_color: skeleton_color,
-                            index: row_index * 5 + col_index,
-                            item_content_height: item_content_height,
-                          ),
-                        );
-                      },
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) => SizedBox(
+        width: double.infinity,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: RankingSectionStyle.content_padding_horizontal,
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: List<Widget>.generate(5, (int col_index) {
+                final right_gap = col_index < 4
+                    ? RankingSectionStyle.column_gap
+                    : 0.0;
+                return Padding(
+                  padding: EdgeInsets.only(right: right_gap),
+                  child: SizedBox(
+                    width: col_index == 4
+                        ? RankingSectionStyle.resolve_last_column_width(
+                            constraints.maxWidth,
+                          )
+                        : RankingSectionStyle.column_content_width,
+                    child: Column(
+                      children: List<Widget>.generate(
+                        RankingSectionStyle.rows_per_column,
+                        (int row_index) {
+                          final bottom_gap =
+                              row_index <
+                                  RankingSectionStyle.rows_per_column - 1
+                              ? item_height - item_content_height
+                              : 0.0;
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: bottom_gap),
+                            child: _build_single_skeleton_item(
+                              skeleton_color: skeleton_color,
+                              index: row_index * 5 + col_index,
+                              item_content_height: item_content_height,
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ),
         ),
       ),

@@ -3,20 +3,20 @@
 ## 项目概览
 
 - TopRead 小说/漫画阅读 App（长篇、短篇、漫画、作者创作、钱包、客服、推送、多语言）。
-- Dart 包名 `app`（import 用 `package:app/...`），应用名 TopRead，Bundle ID `com.topread.novel`，版本源在 `lib/config/constant.dart`。
+- Dart 包名 `app`（import 用 `package:app/...`），应用名 TopRead，Bundle ID `com.topread.novel`，版本唯一源为 `pubspec.yaml`；补丁期间不可递增商店版本。
 - 线上 API：`https://app.read.top` + 前缀 `/api/`（`lib/config/constant.dart` 的 `requestUrl`/`prefix`）。
 - 兄弟仓库：`../后端`（Node API）、`../前端`（Vue 后台）、`../官网`（Web 站）、`../notify`（飞书通知服务）。
 
 ## 命令（重要：必须用 fvm）
 
-**本机 `flutter`/`dart` 不在 PATH，一律通过 fvm 执行**（`.fvmrc` 固定 Flutter 3.44.2 / Dart 3.12.2）：
+**本机 `flutter`/`dart` 不在 PATH，一律通过 fvm 执行**（`.fvmrc` 固定 Flutter 3.47.9 / Dart 3.13.7）：
 
 ```bash
-make run            # = fvm flutter run（先跑 scripts/sync_version.sh 同步版本号）
+make run            # = fvm flutter run（先校验版本并同步 App 名称）
 make run-android / make run-ios / make run-web
 make build-apk      # = fvm flutter build apk --release
 make build-ios / make build-web
-make sync           # 同步 constant.dart 的版本号到 pubspec.yaml
+make sync           # 校验 pubspec.yaml 的版本并同步 App 名称，不递增版本
 fvm flutter test                              # 全部测试（245 个 *_test.dart）
 fvm flutter test --no-pub test/pages/work_editor   # 按目录跑
 fvm dart analyze <改动的文件> 2>&1 | grep -E "error|warning"   # 改完必跑，error 清零

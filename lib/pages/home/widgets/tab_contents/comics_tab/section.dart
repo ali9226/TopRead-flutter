@@ -1,5 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
 
+import 'package:app/components/svg_icon/index.dart';
 import 'package:app/models/comics.dart';
 import 'package:app/models/comics_discovery.dart';
 import 'package:app/pages/comics/style.dart';
@@ -90,7 +91,11 @@ class ComicsHomeSection extends StatelessWidget {
                   child: _SectionAction(
                     key: ValueKey('comics_home_more_${section.id}'),
                     label: easy.tr('comics.discovery_more'),
-                    icon: Icons.grid_view_rounded,
+                    icon: Icon(
+                      Icons.grid_view_rounded,
+                      color: ComicsTabStyle.actions_foreground(dark),
+                      size: ComicsTabStyle.action_icon_size,
+                    ),
                     dark: dark,
                     cjk: cjk,
                     on_tap: on_more,
@@ -107,7 +112,12 @@ class ComicsHomeSection extends StatelessWidget {
                   child: _SectionAction(
                     key: ValueKey('comics_home_shuffle_${section.id}'),
                     label: easy.tr('comics.discovery_shuffle'),
-                    icon: Icons.refresh_rounded,
+                    icon: SvgIcon(
+                      name: 'refresh',
+                      color: ComicsTabStyle.actions_foreground(dark),
+                      width: ComicsTabStyle.action_icon_size,
+                      height: ComicsTabStyle.action_icon_size,
+                    ),
                     dark: dark,
                     cjk: cjk,
                     loading: shuffling,
@@ -164,7 +174,9 @@ class _SectionAction extends StatelessWidget {
   });
 
   final String label;
-  final IconData icon;
+
+  /// 操作条图标（已着色的成品图标，如 [SvgIcon] / [Icon]）。
+  final Widget icon;
   final bool dark;
   final bool cjk;
   final bool loading;
@@ -199,11 +211,13 @@ class _SectionAction extends StatelessWidget {
                           color: foreground,
                           strokeWidth: ComicsTabStyle.loading_stroke_width,
                         )
-                      : Icon(
-                          loading ? Icons.hourglass_top_rounded : icon,
+                      : loading
+                      ? Icon(
+                          Icons.hourglass_top_rounded,
                           color: foreground,
                           size: ComicsTabStyle.action_icon_size,
-                        ),
+                        )
+                      : icon,
                 ),
                 const SizedBox(width: ComicsTabStyle.action_icon_gap),
                 Flexible(

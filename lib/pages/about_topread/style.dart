@@ -34,8 +34,23 @@ class Style {
   static final double list_title_font_size = 15;
 
   /// 列表项标题字重。
-  static final FontWeight list_title_weight = FontConfig.adjustedWeight(FontWeight.w400);
+  static final FontWeight list_title_weight = FontConfig.adjustedWeight(
+    FontWeight.w400,
+  );
 
   /// 版本号字重。
-  static final FontWeight version_weight = FontConfig.adjustedWeight(FontWeight.w400);
+  static final FontWeight version_weight = FontConfig.adjustedWeight(
+    FontWeight.w400,
+  );
+
+  /// 版本号与热更版本间距。
+  static const double version_to_hotfix_spacing = LayoutConfig.space_2;
+
+  /// 热更版本字号。
+  static const double hotfix_font_size = 11;
+
+  /// 热更版本字重。
+  static final FontWeight hotfix_weight = FontConfig.adjustedWeight(
+    FontWeight.w400,
+  );
 }

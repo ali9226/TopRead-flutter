@@ -76,6 +76,14 @@ class RankingSectionStyle {
   /// 而是保持固定列宽和固定列间距，让屏幕自然展示更多列。
   static const double column_content_width = 220;
 
+  /// TODO 最后一列撑满父容器的可用宽度，左右保留与首列一致的内容边距。
+  static double resolve_last_column_width(double viewport_width) {
+    return (viewport_width - content_padding_horizontal * 2).clamp(
+      0.0,
+      double.infinity,
+    );
+  }
+
   /// 行与行之间的间距。
   static const double row_gap = 0;
 
@@ -166,13 +174,15 @@ class RankingSectionStyle {
   // ---- 颜色 ----
 
   /// 未选中 Tab 文字颜色（日间模式）。
-  static const Color unselected_color_light = ColorConstants.customer_service_sheet_style_time_color_light;
+  static const Color unselected_color_light =
+      ColorConstants.customer_service_sheet_style_time_color_light;
 
   /// 书名文字颜色（日间模式）。
   static const Color title_color_light = ColorConstants.lightTextColor;
 
   /// 分类/热度文字颜色（日间模式）。
-  static const Color secondary_color_light = ColorConstants.customer_service_sheet_style_time_color_light;
+  static const Color secondary_color_light =
+      ColorConstants.customer_service_sheet_style_time_color_light;
 
   /// 前三名排名序号对应的主题色索引映射。
   static const int top_rank_count = 3;
@@ -300,20 +310,26 @@ class RankingSectionStyle {
   static const double skeleton_text_line_spacing = LayoutConfig.space_6;
 
   /// 日间主题骨架底色。
-  static const Color skeleton_light_color = ColorConstants.skeleton_light_color_269e9e9e;
+  static const Color skeleton_light_color =
+      ColorConstants.skeleton_light_color_269e9e9e;
 
   /// 夜间主题骨架底色。
-  static const Color skeleton_dark_color = ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff;
+  static const Color skeleton_dark_color =
+      ColorConstants.util_dialog_show_upgrade_dialog_tone_14ffffff;
 
   /// 日间主题流光底色。
-  static const Color skeleton_light_shimmer_base_color = ColorConstants.skeleton_light_shimmer_base_color_1a9e9e9e;
+  static const Color skeleton_light_shimmer_base_color =
+      ColorConstants.skeleton_light_shimmer_base_color_1a9e9e9e;
 
   /// 日间主题流光高亮色。
-  static const Color skeleton_light_shimmer_highlight_color = ColorConstants.skeleton_light_shimmer_highlight_color_409e9e9e;
+  static const Color skeleton_light_shimmer_highlight_color =
+      ColorConstants.skeleton_light_shimmer_highlight_color_409e9e9e;
 
   /// 夜间主题流光底色。
-  static const Color skeleton_dark_shimmer_base_color = ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff;
+  static const Color skeleton_dark_shimmer_base_color =
+      ColorConstants.util_dialog_show_upgrade_dialog_tone_dffffff;
 
   /// 夜间主题流光高亮色。
-  static const Color skeleton_dark_shimmer_highlight_color = ColorConstants.components_fixed_bottom_navigation_widgets_night_panel_decor_tone;
+  static const Color skeleton_dark_shimmer_highlight_color = ColorConstants
+      .components_fixed_bottom_navigation_widgets_night_panel_decor_tone;
 }

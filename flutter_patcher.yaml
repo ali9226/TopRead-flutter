@@ -1,0 +1,33 @@
+# flutter_patcher project settings. Commands read them when no flag is given.
+# Every setting is optional, and nothing here is secret.
+
+# The address FlutterPatcher.checkUpdate() uses when the app passes none;
+# build writes it into the app. Default: http://127.0.0.1:8686, where serve
+# offers patches while developing.
+# url: https://cdn.example.com/my-app
+
+# Where publish writes patch files: file:// or s3://. Default:
+# .flutter_patcher/updates in the project.
+# store: s3://my-bucket/patches
+
+# Where host baselines are kept. Every patch of a host needs its baseline:
+# keep it somewhere durable and backed up.
+# TODO 华为云 OBS（S3 兼容）。凭证取后台「图片配置」image_config 表；OBS 的
+# 端点/If-None-Match 适配由 scripts/shims/aws 垫片处理（make 与一键脚本自动注入），
+# 见 资料/热更补丁操作手册.md。baseline 丢失 = 该 build 永久无法打补丁。
+baseline_store: s3://obs.novel/flutter_patcher/baseline/
+
+# Sign with an external command (a KMS, Vault, a password manager) instead of
+# the key store or FLUTTER_PATCHER_KEYS. It reads the bytes to sign on stdin
+# and prints a base64 Ed25519 signature; FLUTTER_PATCHER_SIGN_ROLE is patch.
+# signing:
+#   command: my-signer --key "fp-$FLUTTER_PATCHER_SIGN_ROLE"
+
+# The project's patch key, written by `flutter_patcher init`. Its
+# private key is in the key store of the computer that ran init.
+trust:
+  patch: T7wMwnykAFBwGsItQLL1le3Strp+KKrdVIg2YY43x6g=
+  # true: hosts built from now on accept only patch files signed by
+  # this key. Hosts already shipped keep what they were built with.
+  # TODO 已开启签名：发出的补丁必须由本密钥签名，App 只装签过的补丁。
+  enabled: true

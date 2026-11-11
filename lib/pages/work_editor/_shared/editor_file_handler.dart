@@ -13,10 +13,9 @@ import 'package:app/pages/work_editor/_shared/widgets/steps/step_publish/widgets
 import 'package:app/stores/device_info.dart';
 import 'package:app/util/dialog/show_bottom_tip.dart';
 import 'package:app/util/upload_file.dart';
-import 'package:docx_to_text/docx_to_text.dart';
+import 'package:app/util/docx_to_text.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -80,7 +79,7 @@ mixin WorkEditorFileMixin {
 
       String content;
       if (file.name.endsWith('.docx')) {
-        content = docxToText(bytes);
+        content = docx_to_text(bytes);
       } else {
         content = utf8.decode(bytes);
       }
@@ -117,7 +116,7 @@ mixin WorkEditorFileMixin {
 
       String content;
       if (file.name.endsWith('.docx')) {
-        content = docxToText(bytes);
+        content = docx_to_text(bytes);
       } else {
         content = utf8.decode(bytes);
       }

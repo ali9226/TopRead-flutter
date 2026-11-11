@@ -1,0 +1,27 @@
+{
+  "buildFiles": [
+    "/Users/ali/work/小说/app/vendor/flutter_patcher/android/src/main/cpp/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/ali/work/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/ali/work/小说/app/vendor/flutter_patcher/android/.cxx/Debug/6p4r3w1u/x86_64",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/ali/work/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/ali/work/小说/app/vendor/flutter_patcher/android/.cxx/Debug/6p4r3w1u/x86_64",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "patcher_boot::@6890427a1f51a3e7e1df": {
+      "artifactName": "patcher_boot",
+      "abi": "x86_64",
+      "output": "/Users/ali/work/小说/app/build/flutter_patcher/intermediates/cxx/Debug/6p4r3w1u/obj/x86_64/libpatcher_boot.so",
+      "runtimeFiles": []
+    }
+  }
+}

@@ -41,17 +41,13 @@ class Constant {
   /// 后端返回给前端的数据需要解密用到的 key。
   static const String decryptionKey = "dencryption_key";
 
-  /// 网络请求的域名。
+  /// TODO 请求域名默认使用生产环境，本地调试通过 API_BASE_URL 显式覆盖。
   ///
-  /// 本地调试时使用 `http://0.0.0.0:5006`，发布前需切换为正式域名。
-  static String get requestUrl {
-    // 本地调试地址
-    // return "http://192.168.31.66:5006";
-    // return "http://192.168.31.120:5006";
-    // return "http://0.0.0.0:5006";
-    // 正式域名（发布前切换为该地址）
-    return "https://app.read.top";
-  }
+  /// TODO 示例：fvm flutter run --dart-define=API_BASE_URL=http://本机IP:5006。
+  static const String requestUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://app.read.top',
+  );
 
   /// 网络请求的前缀。
   static const String prefix = "/api/";

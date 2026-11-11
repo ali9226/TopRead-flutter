@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# TODO 华为 OBS 使用保留证书校验的原生 HTTPS 桥接；其他服务交给真实 AWS CLI。
+# TODO 不改 AWS 全局配置、不降级 HTTP、不用 HEAD+PUT 假装原子写入。
+set -eu
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+SELF="$0"
+REAL="${FLUTTER_PATCHER_REAL_AWS:-}"
+if [ -z "$REAL" ]; then
+    IFS=: read -ra PATH_PARTS <<< "$PATH"
+    for directory in "${PATH_PARTS[@]}"; do
+        candidate="$directory/aws"
+        if [ -x "$candidate" ] && ! [ "$candidate" -ef "$SELF" ]; then
+            REAL="$candidate"
+            break
+        fi
+    done
+fi
+ENDPOINT="${FLUTTER_PATCHER_S3_ENDPOINT:-}"
+previous=""
+for argument in "$@"; do
+    if [ "$previous" = "--endpoint-url" ]; then ENDPOINT="$argument"; fi
+    previous="$argument"
+done
+case "$ENDPOINT" in
+    https://obs.*.myhuaweicloud.com|https://obs.*.myhuaweicloud.com/|https://obs.*.myhuaweicloud.eu|https://obs.*.myhuaweicloud.eu/)
+        export FLUTTER_PATCHER_REAL_AWS="$REAL"
+        exec fvm dart run "$ROOT/scripts/obs_bridge.dart" "$@"
+        ;;
+    http://obs.*.myhuaweicloud.*)
+        echo "OBS 必须通过 HTTPS 访问" >&2
+        exit 1
+        ;;
+esac
+if [ -z "$REAL" ] || [ ! -x "$REAL" ]; then
+    echo "找不到真实 AWS CLI" >&2
+    exit 127
+fi
+exec "$REAL" "$@"
