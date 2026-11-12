@@ -4,10 +4,44 @@ import 'dart:typed_data';
 
 import 'package:app/models/patch_check_result.dart';
 import 'package:app/services/patch/patch_runtime.dart';
+import 'package:app/services/patch/patch_update_status.dart';
 import 'package:flutter_patcher/flutter_patcher.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('进度来自下载字节回调，安装完成只显示待重启而非已生效', () async {
+    final states = <PatchUpdateStatus>[];
+    final platform = _ProgressPlatform();
+    final runtime = PatchRuntime(platform, on_status: states.add);
+    await runtime.check_and_apply_patch();
+    expect(
+      states.map((s) => s.stage),
+      containsAllInOrder([
+        'preparing',
+        'checking',
+        'downloading',
+        'verifying',
+        'installing',
+        'pending_restart',
+      ]),
+    );
+    expect(
+      states.where((s) => s.stage == 'downloading').map((s) => s.progress),
+      contains(0.5),
+    );
+    expect(states.last.running, isFalse);
+    expect(states.last.detail, contains('下次完全退出'));
+    expect(await runtime.get_applied_hotfix_version(), 0);
+  });
+  test('校验拒绝时诊断显示失败，不进入安装和待生效阶段', () async {
+    final states = <PatchUpdateStatus>[];
+    final platform = _ProgressPlatform()..inspection_seq = 999;
+    await PatchRuntime(platform, on_status: states.add).check_and_apply_patch();
+    expect(states.last.stage, 'failed');
+    expect(states.any((s) => s.stage == 'pending_restart'), isFalse);
+    expect(platform.apply_count, 0);
+  });
+
   test('安装成功只登记候选，下一次冷启动才展示实际加载版本', () async {
     final platform = _Platform();
     final initial = PatchRuntime(platform);
@@ -399,4 +433,17 @@ class _Platform implements PatchRuntimePlatform {
 
   @override
   void log(String message) {}
+}
+
+/// TODO 假下载发出确定字节回调，不访问网络。
+class _ProgressPlatform extends _Platform implements PatchProgressPlatform {
+  @override
+  Future<Uint8List?> download_with_progress(
+    int patch_id,
+    void Function(int, int) on_progress,
+  ) async {
+    on_progress(73, 146);
+    on_progress(146, 146);
+    return download_patch(patch_id);
+  }
 }

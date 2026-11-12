@@ -7,6 +7,7 @@ import 'package:app/api/patch.dart';
 import 'package:app/models/patch_check_result.dart';
 import 'package:app/services/patch/patch_boot_window.dart';
 import 'package:app/services/patch/patch_runtime.dart';
+import 'patch_update_status.dart';
 import 'package:app/util/log_util.dart';
 import 'package:app/util/storage_util/index.dart';
 import 'package:app/websocket/websocket_service.dart';
@@ -35,6 +36,7 @@ class PatchService {
 
   static PatchRuntime get _instance => _runtime ??= PatchRuntime(
     _PatchPlatform(),
+    on_status: (status) => patch_update_status.value = status,
     schedule_retry: (retry) {
       Timer(const Duration(seconds: 30), () => unawaited(retry()));
     },
@@ -72,7 +74,7 @@ class PatchService {
 }
 
 /// TODO 生产适配层；业务请求继续使用统一加密 API。
-class _PatchPlatform implements PatchRuntimePlatform {
+class _PatchPlatform implements PatchRuntimePlatform, PatchProgressPlatform {
   static const String _state_key = 'patch_runtime_state_v2';
 
   @override
@@ -124,6 +126,12 @@ class _PatchPlatform implements PatchRuntimePlatform {
   @override
   Future<Uint8List?> download_patch(int patch_id) =>
       download_app_patch(patch_id: patch_id);
+
+  @override
+  Future<Uint8List?> download_with_progress(
+    int patch_id,
+    void Function(int, int) on_progress,
+  ) => download_app_patch(patch_id: patch_id, on_progress: on_progress);
 
   @override
   Future<PatchInspection> inspect_patch(Uint8List bytes) =>

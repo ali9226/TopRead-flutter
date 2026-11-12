@@ -100,8 +100,17 @@ bool acceptsPrestrippedEngineCheck({
 
 /// TODO Use an existing bundletool installation; never download tools or alter Gradle configuration.
 class Bundletool {
-  Bundletool(this.java, this.classpath);
+  Bundletool(this.java, this.classpath, {String? jarsigner})
+    : jarsigner =
+          jarsigner ??
+          (p.isAbsolute(java)
+              ? p.join(
+                  p.dirname(java),
+                  Platform.isWindows ? 'jarsigner.exe' : 'jarsigner',
+                )
+              : 'jarsigner');
   final String java;
+  final String jarsigner;
   final List<String> classpath;
 
   static Future<Bundletool> locate(
@@ -112,16 +121,24 @@ class Bundletool {
     final home = env['HOME'] ?? env['USERPROFILE'] ?? '';
     final javaHome = env['JAVA_HOME'];
     final javaName = Platform.isWindows ? 'java.exe' : 'java';
-    final studioJava = p.join(
-      home,
-      'Applications/Android Studio.app/Contents/jbr/Contents/Home/bin/java',
-    );
-    final java =
-        javaHome != null && File(p.join(javaHome, 'bin', javaName)).existsSync()
+    // TODO 构建入口已按 Flutter 配置选定 JDK；工具不得再自行选择 IDE 的 JRE。
+    final java = javaHome != null && javaHome.isNotEmpty
         ? p.join(javaHome, 'bin', javaName)
-        : File(studioJava).existsSync()
-        ? studioJava
         : 'java';
+    final jarsigner = javaHome != null && javaHome.isNotEmpty
+        ? p.join(
+            javaHome,
+            'bin',
+            Platform.isWindows ? 'jarsigner.exe' : 'jarsigner',
+          )
+        : 'jarsigner';
+    if (javaHome != null && javaHome.isNotEmpty) {
+      require(
+        File(java).existsSync() && File(jarsigner).existsSync(),
+        'BUILD_JDK_TOOLS_MISSING',
+        'AAB verification requires java and jarsigner in the selected Flutter JDK: $javaHome. Configure a full JDK with flutter config --jdk-dir.',
+      );
+    }
     final explicit = env['BUNDLETOOL_CLASSPATH'];
     final jar = env['BUNDLETOOL_JAR'];
     if (explicit != null || jar != null) {
@@ -131,7 +148,7 @@ class Bundletool {
         'BUILD_BUNDLETOOL_MISSING',
         'BUNDLETOOL_CLASSPATH/BUNDLETOOL_JAR must name existing local jars.',
       );
-      return Bundletool(java, paths);
+      return Bundletool(java, paths, jarsigner: jarsigner);
     }
     final roots =
         <String>{
@@ -233,7 +250,7 @@ class Bundletool {
         pending.add([group, name, value(block, 'version')]);
       }
     }
-    return Bundletool(java, paths);
+    return Bundletool(java, paths, jarsigner: jarsigner);
   }
 
   Future<String> run(Commands commands, List<String> args) =>
@@ -380,13 +397,7 @@ Future<void> verifyBundleSignature(
   Bundletool bundletool,
 ) async {
   verifyBundleSignatureEntries(archive);
-  final jarsigner = p.isAbsolute(bundletool.java)
-      ? p.join(
-          p.dirname(bundletool.java),
-          Platform.isWindows ? 'jarsigner.exe' : 'jarsigner',
-        )
-      : 'jarsigner';
-  final output = await commands.run(jarsigner, [
+  final output = await commands.run(bundletool.jarsigner, [
     '-J-Duser.language=en',
     '-J-Duser.country=US',
     '-verify',

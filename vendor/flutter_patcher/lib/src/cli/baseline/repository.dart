@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../core.dart';
+import '../progress.dart';
 import '../build/host_policy.dart';
 import '../run_work.dart';
 import 'archive.dart';
@@ -514,7 +515,14 @@ class BaselineRepository {
     String staging,
   ) async {
     final packed = p.join(staging, object);
-    await archive.pack(dir, packed);
+    final compression = CliProgress('压缩 $kind 基线', show_bytes: false);
+    try {
+      await archive.pack(dir, packed);
+      compression.complete();
+    } catch (_) {
+      compression.fail();
+      rethrow;
+    }
     String status;
     if (await remote().put(object, packed)) {
       // Verify what was actually persisted before anything references it.

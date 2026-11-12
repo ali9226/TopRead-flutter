@@ -1388,12 +1388,11 @@ packages:
     source: hosted
     version: "7.0.2"
   photo_manager:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: photo_manager
-      sha256: "4f7de6c9778993c5c54cf1fb2eaa8d5c27c0771dc24a4dfca341aa81aef13fe1"
-      url: "https://pub.dev"
-    source: hosted
+      path: "vendor/photo_manager"
+      relative: true
+    source: path
     version: "3.11.0"
   photo_manager_image_provider:
     dependency: transitive

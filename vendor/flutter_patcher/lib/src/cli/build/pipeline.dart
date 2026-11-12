@@ -1,3 +1,6 @@
+// TODO 项目发布工具新增标识符遵循 snake_case。
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:io';
 
 import 'package:archive/archive.dart';
@@ -8,6 +11,7 @@ import 'pins.dart';
 import 'package:yaml/yaml.dart';
 
 import '../core.dart';
+import '../build_progress.dart';
 import '../run_work.dart';
 import '../sdk/artifacts.dart';
 import '../sdk/environment.dart';
@@ -109,6 +113,7 @@ class BuildPipeline {
   final Map<String, dynamic> engine;
   final BaselineRepository baselines;
   final EnvironmentBuilder environment;
+  final Bundletool? app_bundle_tool;
 
   /// The artifact releases this host is built with; its release records
   /// them, so every patch of it uses the same ones.
@@ -122,8 +127,9 @@ class BuildPipeline {
     this.aapt,
     this.engine,
     this.baselines,
-    this.releases,
-  ) : environment = EnvironmentBuilder(cache, commands);
+    this.releases, {
+    this.app_bundle_tool,
+  }) : environment = EnvironmentBuilder(cache, commands);
 
   /// Release receipt fields naming what the host was built with.
   Map<String, Object?> get _built => {
@@ -145,6 +151,29 @@ class BuildPipeline {
     );
     final workspace = BuildWorkspace(work);
     var phase = 'prepare';
+    final progress = BuildProgress([
+      'prepare',
+      'pub-get',
+      'analysis',
+      'interface',
+      'baseline-kernel',
+      if (request.platform == 'ios') ...[
+        'ipa',
+        'verify-ipa',
+      ] else ...[
+        'apk',
+        'verify-apk',
+      ],
+      if (request.androidFormat == 'both') ...['aab', 'verify-aab'],
+      'archive',
+      'publish-output',
+    ]);
+    void enter_phase(String value) {
+      phase = value;
+      progress.enter(value);
+    }
+
+    enter_phase(phase);
     final run = runner(work, () => phase);
 
     Future<void> call(List<String> args) async {
@@ -177,7 +206,7 @@ class BuildPipeline {
         await File(p.join(project, 'pubspec.yaml')).readAsString(),
       ) as Map;
       final package = pubspec['name'] as String;
-      phase = 'pub-get';
+      enter_phase('pub-get');
       await run(sdk.host.flutterLauncher(managed), [
         '--suppress-analytics',
         'pub',
@@ -273,7 +302,7 @@ class BuildPipeline {
         ], cwd: project);
       }
 
-      phase = 'analysis';
+      enter_phase('analysis');
       await compile(analysis, linked: true);
       final refs = p.join(work, 'referenced.yaml'),
           trimRefs = p.join(work, 'referenced-trim.yaml'),
@@ -301,7 +330,7 @@ class BuildPipeline {
         protocol,
       ]);
       final iface = p.join(baseline, 'dynamic_interface.yaml');
-      phase = 'interface';
+      enter_phase('interface');
       final privates = p.join(work, 'platform-privates.yaml');
       await call([
         'gen-platform-privates',
@@ -341,7 +370,7 @@ class BuildPipeline {
         evidence_directory: p.join(work, 'interface-compat-evidence'),
       );
       await validateDetails(baseline, await hashFile(iface));
-      phase = 'baseline-kernel';
+      enter_phase('baseline-kernel');
       if (virtualTool) {
         virtual = await VirtualPackages.write(packages, [
           p.absolute(work),
@@ -393,7 +422,7 @@ class BuildPipeline {
         ),
       );
       final ios = request.platform == 'ios';
-      phase = ios ? 'ipa' : 'apk';
+      enter_phase(ios ? 'ipa' : 'apk');
       final trace = p.join(work, 'precompiler-trace.json'),
           hostDump = p.join(work, 'host_compiler_interface.json');
       final extra = [
@@ -410,7 +439,7 @@ class BuildPipeline {
               extra,
             )
           : await assembleApk(run, project, request, target, extra);
-      phase = ios ? 'verify-ipa' : 'verify-apk';
+      enter_phase(ios ? 'verify-ipa' : 'verify-apk');
       final apkInfo = ios
           ? _bind(
               await verifyBuildIpa(
@@ -466,8 +495,10 @@ class BuildPipeline {
       Map<String, dynamic>? bundleReceipt;
       if (!ios && request.androidFormat == 'both') {
         // TODO Finish the authoritative APK receipt before a second packaging pass touches trace files.
-        phase = 'aab';
-        final bundletool = await Bundletool.locate(cache);
+        enter_phase('aab');
+        final bundletool =
+            app_bundle_tool ??
+            await Bundletool.locate(cache, environment: commands.environment);
         final assembled = await assembleAppBundle(
           project,
           request,
@@ -475,7 +506,7 @@ class BuildPipeline {
           extra,
         );
         bundle = assembled.path;
-        phase = 'verify-aab';
+        enter_phase('verify-aab');
         bundleReceipt = await verifyBuildBundle(
           bundle,
           commands,
@@ -502,7 +533,7 @@ class BuildPipeline {
           'sha256': await hashFile(platform),
         },
       };
-      phase = 'archive';
+      enter_phase('archive');
       final archived = await baselines.save(
         baseline,
         metadata,
@@ -515,7 +546,7 @@ class BuildPipeline {
         'BASELINE_FINGERPRINT_MISMATCH',
         'Archived fingerprint changed.',
       );
-      phase = 'publish-output';
+      enter_phase('publish-output');
       final report = <String, dynamic>{
         'status': 'build_archived',
         ...receipt,
@@ -532,8 +563,10 @@ class BuildPipeline {
         bundle: bundle,
       );
       await RunWork.finish(work);
+      progress.complete();
       return {...report, 'output': p.absolute(request.output)};
     } catch (error) {
+      progress.fail();
       await _recordFailure(work, phase, error);
       rethrow;
     }
@@ -554,6 +587,21 @@ class BuildPipeline {
     final work = await RunWork.create(p.join(cache, 'builds/run'));
     final workspace = BuildWorkspace(work);
     var phase = 'prepare';
+    final progress = BuildProgress([
+      'prepare',
+      'pub-get',
+      'apk',
+      'verify-apk',
+      if (request.androidFormat == 'both') ...['aab', 'verify-aab'],
+      'archive',
+      'publish-output',
+    ]);
+    void enter_phase(String value) {
+      phase = value;
+      progress.enter(value);
+    }
+
+    enter_phase(phase);
     final run = runner(work, () => phase);
     try {
       final project = await workspace.copyPackage(
@@ -565,7 +613,7 @@ class BuildPipeline {
           (loadYaml(await File(p.join(project, 'pubspec.yaml')).readAsString())
                   as Map)['name']
               as String;
-      phase = 'pub-get';
+      enter_phase('pub-get');
       await run(sdk.host.flutterLauncher(managed), [
         '--suppress-analytics',
         'pub',
@@ -613,9 +661,9 @@ class BuildPipeline {
           modules: false,
         ),
       );
-      phase = 'apk';
+      enter_phase('apk');
       final apk = await assembleApk(run, project, request, target, const []);
-      phase = 'verify-apk';
+      enter_phase('verify-apk');
       final apkInfo = await verifyApk(apk, release, request, hostTrust);
       final virtual = await VirtualPackages.write(packages, [
         p.absolute(work),
@@ -633,8 +681,10 @@ class BuildPipeline {
       String? bundle;
       Map<String, dynamic>? bundleReceipt;
       if (request.androidFormat == 'both') {
-        phase = 'aab';
-        final bundletool = await Bundletool.locate(cache);
+        enter_phase('aab');
+        final bundletool =
+            app_bundle_tool ??
+            await Bundletool.locate(cache, environment: commands.environment);
         final assembled = await assembleAppBundle(
           project,
           request,
@@ -642,7 +692,7 @@ class BuildPipeline {
           const [],
         );
         bundle = assembled.path;
-        phase = 'verify-aab';
+        enter_phase('verify-aab');
         bundleReceipt = await verifyBuildBundle(
           bundle,
           commands,
@@ -657,7 +707,7 @@ class BuildPipeline {
         }
       }
       await workspace.verifyOriginals();
-      phase = 'archive';
+      enter_phase('archive');
       final archived = await baselines.saveSo(
         release,
         receipt,
@@ -671,7 +721,7 @@ class BuildPipeline {
         'BASELINE_FINGERPRINT_MISMATCH',
         'Archived fingerprint changed.',
       );
-      phase = 'publish-output';
+      enter_phase('publish-output');
       final report = <String, dynamic>{
         'status': 'build_archived',
         'strategy': 'so',
@@ -690,8 +740,10 @@ class BuildPipeline {
         bundle: bundle,
       );
       await RunWork.finish(work);
+      progress.complete();
       return {...report, 'output': p.absolute(request.output)};
     } catch (error) {
+      progress.fail();
       await _recordFailure(work, phase, error);
       rethrow;
     }

@@ -40,7 +40,7 @@ String regex_first(String source, String pattern) {
   return RegExp(pattern).firstMatch(source)?.group(1) ?? '';
 }
 
-/// TODO 独立发布配置可指定隧道端口；缺省仍使用 MySQL 3306，非法值在连接前拒绝。
+/// TODO 后端配置可指定数据库端口；缺省使用 MySQL 3306，非法值在连接前拒绝。
 int _db_port(String source, {bool declaration = false}) {
   var raw = regex_first(
     source,
@@ -141,11 +141,17 @@ Future<ObsConfig> load_obs_config(MySQLConnection conn, String label) async {
   return obs;
 }
 
-/// TODO 连接 MySQL（mysql_client，支持 MySQL 8/9 的 caching_sha2_password）。
-Future<MySQLConnection> connect_db(DbConfig config) async {
-  require_loopback_db(config);
-  // TODO 仅连接本机数据库或 SSH 隧道；驱动无法校验远端证书，不能用它公网直连。
-  // TODO 本机隧道由 SSH 保护，允许在隧道内兼容未开启 MySQL TLS 的服务器。
+/// TODO 显式生产命令允许直连配置中的数据库，本地命令仅允许本机数据库。
+void require_db_connection(DbConfig config, {bool production = false}) {
+  if (!production) require_loopback_db(config);
+}
+
+/// TODO 连接所选环境的 MySQL，优先尝试 TLS 并兼容未启用 TLS 的现有服务器。
+Future<MySQLConnection> connect_db(
+  DbConfig config, {
+  bool production = false,
+}) async {
+  require_db_connection(config, production: production);
   for (final bool secure in [true, false]) {
     try {
       final MySQLConnection conn = await MySQLConnection.createConnection(
@@ -170,13 +176,11 @@ Future<MySQLConnection> connect_db(DbConfig config) async {
   throw FormatException('数据库连接失败（${config.label}）');
 }
 
-/// TODO mysql_client 0.0.27 内部接受坏证书；发布连接须通过本机 SSH 隧道认证远端。
+/// TODO 默认连接与本地测试只允许本机地址，避免误用生产数据库。
 void require_loopback_db(DbConfig config) {
   if (!{'127.0.0.1', 'localhost', '::1'}.contains(config.host.toLowerCase())) {
     throw FormatException(
-      config.label == '本地'
-          ? '--local只允许loopback数据库，请提供独立本地HOT_PATCH_BACKEND_DIR配置；未连接数据库'
-          : '生产数据库请通过SSH隧道映射至127.0.0.1，并在独立HOT_PATCH_BACKEND_DIR配置中指定database_port；未连接数据库',
+      '本地模式只允许loopback数据库；生产直连请显式使用--prod，本地独立配置可通过HOT_PATCH_BACKEND_DIR指定；未连接数据库',
     );
   }
 }

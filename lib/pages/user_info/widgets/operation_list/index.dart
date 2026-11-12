@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:app/config/layout_config.dart';
+import 'package:app/services/patch/patch_service.dart';
 import 'package:easy_localization/easy_localization.dart' as easy;
 
 import 'package:flutter/material.dart';
@@ -53,12 +56,23 @@ class _OperationListState extends State<OperationList> {
   /// 操作区逻辑层。
   late Logic logic;
 
+  /// TODO 本次启动实际加载的补丁版本，尚未加载或没有补丁时为 0。
+  int _hotfix_version = 0;
+
   @override
   void initState() {
     super.initState();
 
     /// 初始化逻辑层。
     logic = Logic(context);
+    unawaited(_load_hotfix_version());
+  }
+
+  /// TODO 读取已经生效的补丁序号，挂载完成后同步更新版本显示。
+  Future<void> _load_hotfix_version() async {
+    final int value = await PatchService.get_applied_hotfix_version();
+    if (!mounted || value == _hotfix_version) return;
+    setState(() => _hotfix_version = value);
   }
 
   /// 构建圆形语种旗帜图片。
@@ -224,7 +238,8 @@ class _OperationListState extends State<OperationList> {
                 width: 16,
                 height: 16,
                 color: deviceInfo.dark.value
-                    ? ColorConstants.pages_read_widgets_read_directory_sheet_index_tone
+                    ? ColorConstants
+                          .pages_read_widgets_read_directory_sheet_index_tone
                     : ColorConstants.lightTextColor.withValues(alpha: 0.22),
               );
             }),
@@ -267,12 +282,13 @@ class _OperationListState extends State<OperationList> {
           type: 1,
           showDivider: isLoggedIn,
           trailing: Text(
-            'V${Constant.appVersion}',
+            Constant.display_version(_hotfix_version),
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontConfig.adjustedWeight(FontWeight.w500),
               color: deviceInfo.dark.value
-                  ? ColorConstants.pages_read_widgets_read_directory_sheet_index_tone
+                  ? ColorConstants
+                        .pages_read_widgets_read_directory_sheet_index_tone
                   : ColorConstants.lightTextColor.withValues(alpha: 0.45),
             ),
           ),
@@ -309,7 +325,8 @@ class _OperationListState extends State<OperationList> {
           if (group1Children.isNotEmpty)
             _OperationGroup(
               accentColor: ColorConstants.message_type_accent_color_list,
-              glowColor: ColorConstants.pages_user_info_widgets_operation_list_index_tone,
+              glowColor: ColorConstants
+                  .pages_user_info_widgets_operation_list_index_tone,
               children: group1Children,
             ),
           if (group2Children.isNotEmpty)
@@ -318,15 +335,19 @@ class _OperationListState extends State<OperationList> {
                 top: isLoggedIn ? 0 : LayoutConfig.space_20,
               ),
               child: _OperationGroup(
-                accentColor: ColorConstants.util_dialog_show_upgrade_dialog_tone_ff8db7ff,
-                glowColor: ColorConstants.util_dialog_show_upgrade_dialog_tone_1a8db7ff,
+                accentColor: ColorConstants
+                    .util_dialog_show_upgrade_dialog_tone_ff8db7ff,
+                glowColor: ColorConstants
+                    .util_dialog_show_upgrade_dialog_tone_1a8db7ff,
                 children: group2Children,
               ),
             ),
           if (group3Children.isNotEmpty)
             _OperationGroup(
-              accentColor: ColorConstants.message_type_accent_color_list_ffff9e80,
-              glowColor: ColorConstants.pages_user_info_widgets_operation_list_index_tone_1aff9e80,
+              accentColor:
+                  ColorConstants.message_type_accent_color_list_ffff9e80,
+              glowColor: ColorConstants
+                  .pages_user_info_widgets_operation_list_index_tone_1aff9e80,
               children: group3Children,
             ),
         ],
@@ -362,7 +383,10 @@ class _OperationGroup extends StatelessWidget {
             bottom: BorderSide(color: accentColor.withValues(alpha: 0.10)),
           );
     final innerBorder = isDark
-        ? Border.all(color: ColorConstants.pages_bill_widgets_bill_record_card_tone_affffff)
+        ? Border.all(
+            color:
+                ColorConstants.pages_bill_widgets_bill_record_card_tone_affffff,
+          )
         : null;
 
     /// 夜间模式保留底部内边距，日间模式取消。
@@ -386,8 +410,16 @@ class _OperationGroup extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isDark
-                ? [ColorConstants.nightHighlightColor, ColorConstants.pages_bill_widgets_bill_record_card_tone]
-                : [ColorConstants.pages_user_info_widgets_operation_list_index_tone_fffffaf2, ColorConstants.pages_user_info_widgets_operation_list_index_tone_fff5f8ff],
+                ? [
+                    ColorConstants.nightHighlightColor,
+                    ColorConstants.pages_bill_widgets_bill_record_card_tone,
+                  ]
+                : [
+                    ColorConstants
+                        .pages_user_info_widgets_operation_list_index_tone_fffffaf2,
+                    ColorConstants
+                        .pages_user_info_widgets_operation_list_index_tone_fff5f8ff,
+                  ],
           ),
           borderRadius: BorderRadius.circular(outerRadius),
           border: outerBorder,
@@ -395,7 +427,8 @@ class _OperationGroup extends StatelessWidget {
             BoxShadow(
               color: isDark
                   ? ColorConstants.shadowColor.withValues(alpha: 0.1608)
-                  : ColorConstants.util_dialog_show_upgrade_dialog_tone_ffd8e0ec.withValues(alpha: 0.18),
+                  : ColorConstants.util_dialog_show_upgrade_dialog_tone_ffd8e0ec
+                        .withValues(alpha: 0.18),
               blurRadius: isDark ? 18 : 10,
               offset: const Offset(0, 5),
             ),
@@ -468,17 +501,26 @@ class _OperationGroup extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     color: isDark
-                        ? ColorConstants.components_fixed_bottom_navigation_widgets_night_panel_decor_tone_5ffffff
-                        : ColorConstants.pages_user_info_widgets_operation_list_index_tone_e6ffffff,
+                        ? ColorConstants
+                              .components_fixed_bottom_navigation_widgets_night_panel_decor_tone_5ffffff
+                        : ColorConstants
+                              .pages_user_info_widgets_operation_list_index_tone_e6ffffff,
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: isDark
                           ? [
-                              ColorConstants.pages_bill_widgets_bill_record_card_tone_affffff,
-                              ColorConstants.pages_bill_widgets_bill_record_card_tone_4ffffff,
+                              ColorConstants
+                                  .pages_bill_widgets_bill_record_card_tone_affffff,
+                              ColorConstants
+                                  .pages_bill_widgets_bill_record_card_tone_4ffffff,
                             ]
-                          : [ColorConstants.util_dialog_pop_up_input_tone_fffffcf7, ColorConstants.pages_user_info_widgets_operation_list_index_tone_fff8fbff],
+                          : [
+                              ColorConstants
+                                  .util_dialog_pop_up_input_tone_fffffcf7,
+                              ColorConstants
+                                  .pages_user_info_widgets_operation_list_index_tone_fff8fbff,
+                            ],
                     ),
                     borderRadius: BorderRadius.circular(innerRadius),
                     border: innerBorder,

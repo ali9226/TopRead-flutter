@@ -31,7 +31,7 @@ void main() {
     CachedNetworkImageProvider.defaultCacheManager = _NoImageCache();
   });
 
-  testWidgets('普通列保持固定宽度且末列吸附贴左撑满父容器', (tester) async {
+  testWidgets('普通列宽度不变且末列按屏幕三分之二上限贴左吸附', (tester) async {
     await _pump_content(tester);
     expect(
       tester.getSize(_book(1)).width,
@@ -41,6 +41,26 @@ void main() {
     await _drag_to_end(tester);
 
     _expect_end_visible(tester, 20);
+    expect(tester.takeException(), isNull);
+
+    await _pump_content(
+      tester,
+      size: const Size(1366, 1024),
+      parent_width: 540,
+      content_key: const ValueKey<String>('ranking_constrained_parent'),
+    );
+    expect(
+      tester.getSize(_book(1)).width,
+      RankingSectionStyle.column_content_width,
+    );
+
+    await _drag_to_end(tester);
+
+    _expect_end_visible(tester, 20);
+    expect(
+      tester.getSize(_book(20)).width,
+      540 - RankingSectionStyle.content_padding_horizontal * 2,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -67,7 +87,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('横屏、Duo 单屏与平板宽屏在日夜模式下均保持末列贴左且完整', (tester) async {
+  testWidgets('横屏、Duo 单屏与平板宽屏在日夜模式下均保持末列限宽贴左', (tester) async {
     for (final Size size in <Size>[
       const Size(844, 390),
       const Size(540, 720),
@@ -126,7 +146,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('单列在窄屏中撑满可用宽度且不产生横向溢出', (tester) async {
+  testWidgets('单列宽度受屏幕三分之二限制且窄屏不产生横向溢出', (tester) async {
     await _pump_content(tester, size: const Size(320, 640), book_count: 4);
 
     expect(_position(tester).pixels, 0);
@@ -140,7 +160,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('数据减少时旧末端位置回到新范围且末列仍贴左撑满', (tester) async {
+  testWidgets('数据减少时旧末端位置回到新范围且末列仍按宽度上限贴左', (tester) async {
     await _pump_content(tester);
     await _drag_to_end(tester);
 
@@ -194,11 +214,19 @@ Future<void> _drag_to_end(WidgetTester tester) async {
   await _settle_scroll(tester);
 }
 
-/// TODO 末列左右边缘均与父容器内边距对齐，封面贴左且整列不超过父容器。
+/// TODO 末列贴左吸附，宽度同时受屏幕三分之二和父容器可用空间限制。
 void _expect_end_visible(WidgetTester tester, int last_book_id) {
   final ScrollPosition position = _position(tester);
   final Rect list_rect = tester.getRect(find.byKey(_horizontal_list_key));
   final Rect book_rect = tester.getRect(_book(last_book_id));
+  final double screen_width =
+      tester.view.physicalSize.width / tester.view.devicePixelRatio;
+  final double available_width =
+      list_rect.width - RankingSectionStyle.content_padding_horizontal * 2;
+  final double screen_width_limit = screen_width * 2 / 3;
+  final double expected_width = screen_width_limit < available_width
+      ? screen_width_limit
+      : available_width;
 
   expect(position.outOfRange, isFalse);
   expect(position.pixels, closeTo(position.maxScrollExtent, .01));
@@ -212,24 +240,29 @@ void _expect_end_visible(WidgetTester tester, int last_book_id) {
   expect(
     book_rect.right,
     closeTo(
-      list_rect.right - RankingSectionStyle.content_padding_horizontal,
+      list_rect.left +
+          RankingSectionStyle.content_padding_horizontal +
+          expected_width,
       .01,
     ),
   );
-  expect(
-    book_rect.width,
-    closeTo(
-      list_rect.width - RankingSectionStyle.content_padding_horizontal * 2,
-      .01,
-    ),
-  );
-  expect(book_rect.width, lessThanOrEqualTo(list_rect.width));
+  expect(book_rect.width, closeTo(expected_width, .01));
+  expect(book_rect.width, lessThanOrEqualTo(available_width + .01));
+  if (screen_width_limit < available_width) {
+    expect(
+      book_rect.right,
+      lessThan(
+        list_rect.right - RankingSectionStyle.content_padding_horizontal,
+      ),
+    );
+  }
 }
 
-/// TODO 用假书籍数据渲染真实榜单布局，size 模拟设备窗口、key 模拟子 Tab 挂载。
+/// TODO 用假数据渲染榜单，size 模拟屏幕，parent_width 模拟窗口内部受限容器。
 Future<void> _pump_content(
   WidgetTester tester, {
   Size size = const Size(390, 844),
+  double? parent_width,
   bool is_dark = false,
   int book_count = 20,
   Key content_key = _content_key,
@@ -251,23 +284,26 @@ Future<void> _pump_content(
       home: Scaffold(
         body: Align(
           alignment: Alignment.topLeft,
-          child: RankingContent(
-            key: content_key,
-            books: List<StoryItem>.generate(
-              book_count,
-              (int index) => StoryItem(
-                id: index + 1,
-                title: 'A long ranking title for book ${index + 1}',
-                popularity_count: '9K',
-                category_text: 'Fiction',
-                heat_text: '9K',
-                cover_url: '',
+          child: SizedBox(
+            width: parent_width,
+            child: RankingContent(
+              key: content_key,
+              books: List<StoryItem>.generate(
+                book_count,
+                (int index) => StoryItem(
+                  id: index + 1,
+                  title: 'A long ranking title for book ${index + 1}',
+                  popularity_count: '9K',
+                  category_text: 'Fiction',
+                  heat_text: '9K',
+                  cover_url: '',
+                ),
               ),
+              is_dark: is_dark,
+              panel_bg: is_dark ? Colors.black : Colors.white,
+              initial_column_index: initial_column_index,
+              on_column_index_changed: on_column_index_changed,
             ),
-            is_dark: is_dark,
-            panel_bg: is_dark ? Colors.black : Colors.white,
-            initial_column_index: initial_column_index,
-            on_column_index_changed: on_column_index_changed,
           ),
         ),
       ),

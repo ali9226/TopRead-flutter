@@ -47,6 +47,51 @@ void objectName(String name) => require(
   'Invalid baseline object name.',
 );
 
+/// TODO 只查询归档对象是否存在；非404失败不能当作空仓库继续构建。
+Future<bool> baselineObjectExists(BaselineStore store, String name) async {
+  objectName(name);
+  if (store is S3BaselineStore) {
+    final result = await store.call('head-object', ['--key', store.key(name)]);
+    if (result.exitCode == 0) return true;
+    if (RegExp(r'\((NoSuchKey|NotFound|404)\)').hasMatch(result.stderr)) {
+      return false;
+    }
+    throw Failure(
+      'BASELINE_STORE_UNREACHABLE',
+      'Cannot check whether $name is archived: S3 HEAD failed '
+          '(exit ${result.exitCode}).',
+    );
+  }
+  if (store is FileBaselineStore) {
+    final path = p.join(store.root, name);
+    await rejectLinks(path);
+    final type = await FileSystemEntity.type(path);
+    if (type == FileSystemEntityType.notFound) return false;
+    require(
+      type == FileSystemEntityType.file,
+      'BASELINE_STORE_UNREACHABLE',
+      'Archived object path is not a regular file: $name.',
+    );
+    return true;
+  }
+  if (store is HttpBaselineStore) {
+    final status = await store.request('HEAD', name);
+    if (status == 200) return true;
+    if (status == 404) return false;
+    throw Failure(
+      'BASELINE_STORE_UNREACHABLE',
+      'Cannot check whether $name is archived: HTTP HEAD returned $status.',
+    );
+  }
+  // TODO 自定义存储没有HEAD能力时，仅使用本次创建的隔离临时目录探测并清理。
+  final temporary = await Directory.systemTemp.createTemp('baseline_head_');
+  try {
+    return await store.get(name, p.join(temporary.path, name));
+  } finally {
+    await temporary.delete(recursive: true);
+  }
+}
+
 /// Also serialize same-process callers: POSIX locks are process-scoped.
 final _queues = <String, Future<void>>{};
 Future<T> serialized<T>(String key, Future<T> Function() action) async {
@@ -256,7 +301,12 @@ class S3BaselineStore implements BaselineStore {
           ...args,
         ],
         code: 'BASELINE_STORE_UNREACHABLE',
-        extraEnvironment: {'AWS_PAGER': ''},
+        timeout: const Duration(hours: 2),
+        forward_progress: true,
+        extraEnvironment: {
+          'AWS_PAGER': '',
+          if (stderr.hasTerminal) 'FLUTTER_PATCHER_PROGRESS_TTY': '1',
+        },
       );
     } catch (_) {
       throw Failure(

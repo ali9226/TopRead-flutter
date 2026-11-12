@@ -114,6 +114,7 @@ class RankingSectionSkeleton extends StatelessWidget {
                     width: col_index == 4
                         ? RankingSectionStyle.resolve_last_column_width(
                             constraints.maxWidth,
+                            screen_width: MediaQuery.sizeOf(context).width,
                           )
                         : RankingSectionStyle.column_content_width,
                     child: Column(

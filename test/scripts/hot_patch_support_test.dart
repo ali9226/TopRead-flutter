@@ -218,7 +218,7 @@ void main() {
     );
   });
 
-  test('dry-run不读取后端配置、不构建、不递增版本', () async {
+  test('dry-run不读取后端配置、不构建、不修改版本', () async {
     final app_dir = Directory.current;
     final pubspec = File('${app_dir.path}/pubspec.yaml');
     final before = sha256.convert(await pubspec.readAsBytes()).toString();
@@ -247,7 +247,7 @@ void main() {
     expect(sha256.convert(await pubspec.readAsBytes()).toString(), before);
   });
 
-  test('正式发版格式在读取凭据和递增版本前校验，APK单产物可演练', () async {
+  test('正式发版格式在读取凭据和构建前校验，APK单产物可演练', () async {
     final pubspec = File('pubspec.yaml');
     final before = sha256.convert(await pubspec.readAsBytes()).toString();
     final cases = [
@@ -278,6 +278,37 @@ void main() {
       }
     }
     expect(sha256.convert(await pubspec.readAsBytes()).toString(), before);
+  });
+
+  test('旧bump参数在读取凭据和构建前拒绝，并提示手动配置版本', () async {
+    final pubspec = File('pubspec.yaml');
+    final before = sha256.convert(await pubspec.readAsBytes()).toString();
+    for (final args in [
+      ['--bump', 'patch'],
+      ['--bump=build'],
+      ['--bump'],
+    ]) {
+      final result = await Process.run(
+        'fvm',
+        [
+          'dart',
+          'run',
+          'scripts/hot_patch.dart',
+          'release',
+          '--prod',
+          '--yes',
+          ...args,
+        ],
+        environment: {'HOT_PATCH_BACKEND_DIR': '/definitely_missing_backend'},
+      );
+      expect(result.exitCode, 1);
+      expect(result.stderr, contains('--bump 已停用'));
+      expect(result.stderr, contains('请手动修改 pubspec.yaml'));
+      expect(result.stderr, contains('移除 --bump 参数'));
+      expect(result.stderr, isNot(contains('找不到后端配置')));
+      expect(result.stdout, isNot(contains('当前版本')));
+      expect(sha256.convert(await pubspec.readAsBytes()).toString(), before);
+    }
   });
 
   test('构建子进程失败仍恢复软链工具目录，保留实际退出码', () async {

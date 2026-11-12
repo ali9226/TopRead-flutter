@@ -29,6 +29,10 @@ class Constant {
   static String get appVersion =>
       _appVersion.isNotEmpty ? _appVersion : "1.0.0";
 
+  /// TODO 展示当前应用版本和实际生效的补丁序号，无补丁时显示 +0。
+  static String display_version(int hotfix_version) =>
+      'V$appVersion+${hotfix_version < 0 ? 0 : hotfix_version}';
+
   /// 保存在本地的密码的 key。
   static const String passwordKey = "password_key";
 

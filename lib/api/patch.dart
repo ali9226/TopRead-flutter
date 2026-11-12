@@ -67,11 +67,15 @@ Future<AppPatchCheckResult?> check_app_patch({
 /// 下载补丁文件字节。
 ///
 /// [patch_id] 补丁记录 id。成功返回文件完整字节，失败返回 null。
-Future<Uint8List?> download_app_patch({required int patch_id}) async {
+Future<Uint8List?> download_app_patch({
+  required int patch_id,
+  void Function(int received, int total)? on_progress,
+}) async {
   try {
     final Response<dynamic> response = await DioClient().instance.get(
       '${Constant.prefix}app_patch/download',
       queryParameters: <String, dynamic>{'patch_id': patch_id},
+      onReceiveProgress: on_progress,
       options: Options(
         responseType: ResponseType.bytes,
         // TODO 补丁文件可能达数 MB，放宽接收超时到 2 分钟。

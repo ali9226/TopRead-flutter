@@ -28,6 +28,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'logic.dart';
 import 'style.dart';
+import 'widgets/patch_status_panel/index.dart';
+import 'package:app/util/language_util/index.dart';
 
 /// 路由：`/about_topread`
 ///
@@ -173,7 +175,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
                 /// 版本号。
                 const SizedBox(height: Style.slogan_to_version_spacing),
                 Text(
-                  'V${Constant.appVersion}',
+                  Constant.display_version(_hotfix_version),
                   style: TextStyle(
                     fontSize: Style.version_font_size,
                     fontWeight: Style.version_weight,
@@ -248,7 +250,7 @@ class _AboutTopReadState extends State<AboutTopRead> {
                       dividerColor: dividerColor,
                       showDivider: false,
                       trailing: Text(
-                        'V${Constant.appVersion}',
+                        Constant.display_version(_hotfix_version),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontConfig.adjustedWeight(
@@ -278,6 +280,14 @@ class _AboutTopReadState extends State<AboutTopRead> {
                         onTap: () => _handleDeleteAccount(),
                       ),
                   ],
+                ),
+                PatchStatusPanel(
+                  enabled: showDebug,
+                  is_dark: isDark,
+                  is_cjk: LanguageUtil.is_cjk_language(
+                    easy.EasyLocalization.of(context)?.locale.languageCode ??
+                        'zh',
+                  ),
                 ),
                 const SizedBox(height: LayoutConfig.space_40),
               ],

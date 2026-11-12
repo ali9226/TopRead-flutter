@@ -142,16 +142,27 @@ class _RankingContentState extends State<RankingContent> {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        /// TODO 末列填满父容器，保证其封面吸附到与首列相同的左边缘。
+        /// TODO 末列最多占屏幕宽度的三分之二，并保留父容器边距。
         final double last_column_width =
-            RankingSectionStyle.resolve_last_column_width(constraints.maxWidth);
+            RankingSectionStyle.resolve_last_column_width(
+              constraints.maxWidth,
+              screen_width: MediaQuery.sizeOf(context).width,
+            );
+
+        /// TODO 末尾补足剩余视口宽度，使加宽受限后的末列仍可完整吸附贴左。
+        final double trailing_space =
+            (constraints.maxWidth -
+                    RankingSectionStyle.content_padding_horizontal * 2 -
+                    last_column_width)
+                .clamp(0.0, double.infinity);
         const double column_width = RankingSectionStyle.column_content_width;
         final bool can_show_all_columns = total_columns == 1;
         final double total_content_width =
             (column_width + RankingSectionStyle.column_gap) *
                 (total_columns - 1) +
             last_column_width +
-            RankingSectionStyle.content_padding_horizontal * 2;
+            RankingSectionStyle.content_padding_horizontal * 2 +
+            trailing_space;
 
         _ensure_scroll_controller(
           total_columns: total_columns,
@@ -172,8 +183,11 @@ class _RankingContentState extends State<RankingContent> {
                   key: ObjectKey(_scroll_controller),
                   controller: _scroll_controller,
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: RankingSectionStyle.content_padding_horizontal,
+                  padding: EdgeInsets.only(
+                    left: RankingSectionStyle.content_padding_horizontal,
+                    right:
+                        RankingSectionStyle.content_padding_horizontal +
+                        trailing_space,
                   ),
                   physics: can_show_all_columns
                       ? const NeverScrollableScrollPhysics()

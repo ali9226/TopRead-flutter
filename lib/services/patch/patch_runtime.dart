@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_patcher/flutter_patcher.dart';
 
 import 'package:app/models/patch_check_result.dart';
+import 'patch_update_status.dart';
 
 /// TODO 可注入的本地存储、原生 SDK 与网络边界，便于验证冷启动状态迁移。
 abstract interface class PatchRuntimePlatform {
@@ -27,6 +28,14 @@ abstract interface class PatchRuntimePlatform {
   Future<String?> read_installed_version();
   Future<bool> send_report(PatchBootReport report);
   void log(String message);
+}
+
+/// TODO 可选下载进度能力，不改变已有平台与测试适配器的下载接口。
+abstract interface class PatchProgressPlatform {
+  Future<Uint8List?> download_with_progress(
+    int patch_id,
+    void Function(int received, int total) on_progress,
+  );
 }
 
 /// TODO 已固定身份的不可变启动报告；网络重试不得改用后来安装的补丁身份。
@@ -70,7 +79,20 @@ class PatchBootReport {
 
 /// TODO 实际加载版本只由本次原生诊断决定；磁盘安装版本仅作为下一次启动的候选。
 class PatchRuntime {
-  PatchRuntime(this._platform, {this.schedule_retry});
+  PatchRuntime(this._platform, {this.schedule_retry, this.on_status});
+
+  final void Function(PatchUpdateStatus status)? on_status;
+
+  void _status(String stage, String detail, {int received = 0, int total = 0}) {
+    on_status?.call(
+      PatchUpdateStatus(
+        stage: stage,
+        detail: detail,
+        received: received,
+        total: total,
+      ),
+    );
+  }
 
   final PatchRuntimePlatform _platform;
   final void Function(Future<void> Function() retry)? schedule_retry;
@@ -92,7 +114,10 @@ class PatchRuntime {
     await _observe_boot();
     unawaited(flush_reports());
     try {
-      if (await (skip_patch_when ?? Future<bool>.value(false))) return;
+      if (await (skip_patch_when ?? Future<bool>.value(false))) {
+        _status('skipped', '需要先更新完整安装包，本次跳过补丁下载');
+        return;
+      }
       await check_and_apply_patch();
     } catch (error) {
       _platform.log('启动任务失败 error=$error');
@@ -109,6 +134,7 @@ class PatchRuntime {
 
   Future<void> _prepare_boot() async {
     try {
+      _status('preparing', '读取热更宿主与本次启动诊断');
       _target = await _platform.read_target();
       _boot_diagnostic = await _platform.read_diagnostic();
       await _reconcile(_boot_diagnostic);
@@ -116,6 +142,7 @@ class PatchRuntime {
       await _platform.clear_legacy_state();
     } catch (error) {
       _active = null;
+      _status('unavailable', '宿主不支持热更或本地对账失败：$error');
       _platform.log('宿主不支持热更或本地对账失败 error=$error');
     }
   }
@@ -241,7 +268,12 @@ class PatchRuntime {
   Future<void> _check_once() async {
     await _observe_boot();
     try {
-      if (_target == null || _boot_verification_failed) return;
+      if (_target == null) return;
+      if (_boot_verification_failed) {
+        _status('failed', '本次启动健康检查未通过，已停止安装新补丁');
+        return;
+      }
+      _status('checking', '正在向服务器检查适用于当前安装包的补丁');
       final target = await _platform.read_target();
       final check = await _platform.check_patch(
         target,
@@ -251,15 +283,40 @@ class PatchRuntime {
           !check.has_update ||
           check.seq <= target.acceptedSeq ||
           check.file_name != target.fileName) {
+        _status(
+          check == null ? 'failed' : 'up_to_date',
+          check == null ? '补丁检查请求失败，请检查网络后重试' : '没有适用于当前宿主的新补丁',
+        );
         return;
       }
-      final bytes = await _platform.download_patch(check.patch_id);
-      if (bytes == null) return;
+      final detail =
+          '补丁 ID：${check.patch_id} · 补丁版本：${check.hotfix_version} · 序号：${check.seq} · 当前已生效补丁：${_active?.hotfix_version ?? 0} · ABI：${target.abi} · 目标 build：${target.versionCode} · 文件：${check.file_name}';
+      _status('downloading', detail);
+      final platform = _platform;
+      final bytes = platform is PatchProgressPlatform
+          ? await (platform as PatchProgressPlatform).download_with_progress(
+              check.patch_id,
+              (received, total) {
+                _status(
+                  'downloading',
+                  detail,
+                  received: received,
+                  total: total,
+                );
+              },
+            )
+          : await platform.download_patch(check.patch_id);
+      if (bytes == null) {
+        _status('failed', '补丁下载失败；$detail');
+        return;
+      }
+      _status('verifying', '正在校验补丁签名、序号与目标身份；$detail');
       final inspection = await _platform.inspect_patch(bytes);
       if (!inspection.fresh ||
           inspection.seq != check.seq ||
           inspection.action !=
               (check.action == 'withdraw' ? 'withdraw' : 'publish')) {
+        _status('failed', '补丁文件头与服务器记录不一致，已拒绝安装；$detail');
         _platform.log('补丁文件头与下发记录不一致 patch_id=${check.patch_id}');
         return;
       }
@@ -273,8 +330,17 @@ class PatchRuntime {
         );
         known.add(identity.to_json());
       });
+      _status('installing', '校验通过，正在安装补丁；$detail');
       final result = await _platform.apply_patch(bytes);
-      if (!result.ok) {
+      if (result.ok) {
+        _status(
+          'pending_restart',
+          '安装完成，下次完全退出并重新打开 App 后生效；$detail',
+          received: bytes.length,
+          total: bytes.length,
+        );
+      } else {
+        _status('failed', '补丁安装失败：${result.error?.name}；$detail');
         await _with_state((state) {
           if ((state['pending'] as Map?)?['patch_id'] == identity.patch_id) {
             state['pending'] = null;
@@ -285,6 +351,7 @@ class PatchRuntime {
         );
       }
     } catch (error) {
+      _status('failed', '检查或安装失败：$error');
       _platform.log('检查或安装失败 error=$error');
     }
   }

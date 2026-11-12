@@ -76,11 +76,23 @@ class RankingSectionStyle {
   /// 而是保持固定列宽和固定列间距，让屏幕自然展示更多列。
   static const double column_content_width = 220;
 
-  /// TODO 最后一列撑满父容器的可用宽度，左右保留与首列一致的内容边距。
-  static double resolve_last_column_width(double viewport_width) {
-    return (viewport_width - content_padding_horizontal * 2).clamp(
+  /// TODO 最后一列最多占当前屏幕宽度的三分之二。
+  static const double last_column_max_screen_width_fraction = 2 / 3;
+
+  /// TODO 最后一列尽量展开，同时受屏幕宽度上限和父容器可用宽度约束。
+  /// [viewport_width] 为父容器宽度，[screen_width] 为当前屏幕的逻辑像素宽度。
+  static double resolve_last_column_width(
+    double viewport_width, {
+    required double screen_width,
+  }) {
+    final double available_width =
+        (viewport_width - content_padding_horizontal * 2).clamp(
+          0.0,
+          double.infinity,
+        );
+    return (screen_width * last_column_max_screen_width_fraction).clamp(
       0.0,
-      double.infinity,
+      available_width,
     );
   }
 
@@ -132,8 +144,8 @@ class RankingSectionStyle {
 
   // ---- 书籍项样式 ----
 
-  /// 排名序号宽度。
-  static const double rank_number_width = 18;
+  /// TODO 排名序号基础宽度，为两位数和字形取整保留空间。
+  static const double rank_number_width = 24;
 
   /// 排名序号字号。
   static const double rank_number_font_size = 14;

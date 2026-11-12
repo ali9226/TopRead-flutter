@@ -1,3 +1,6 @@
+// TODO 项目发布工具新增标识符遵循 snake_case。
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -339,6 +342,7 @@ class Commands {
     Duration timeout = const Duration(minutes: 15),
     Map<String, String>? extraEnvironment,
     String? logPath,
+    bool forward_progress = false,
   }) async {
     final started = DateTime.now();
     Process process;
@@ -373,7 +377,9 @@ class Commands {
             return chunk;
           });
     final output = collectOutput(tee(process.stdout));
-    final diagnostic = collectOutput(tee(process.stderr));
+    final diagnostic = forward_progress
+        ? collect_progress_output(tee(process.stderr))
+        : collectOutput(tee(process.stderr));
     int result;
     try {
       result = await process.exitCode.timeout(timeout);
@@ -400,6 +406,39 @@ class Commands {
     await log?.close();
     return CommandResult(result, out, err);
   }
+}
+
+/// TODO 实时透传桥接进度并保留完整诊断；普通错误仍由调用方判断，避免展示预期的404。
+Future<String> collect_progress_output(
+  Stream<List<int>> stream, {
+  void Function(String)? write,
+}) async {
+  final output = StringBuffer();
+  final report = write ?? stderr.write;
+  var pending = '';
+  var carriage_return = false;
+  void emit(String line, {bool newline = false}) {
+    final visible = line.replaceFirst(RegExp(r'^\x1b\[2K'), '');
+    if (!visible.startsWith('[进度] ')) return;
+    report('${carriage_return ? '\r' : ''}$line${newline ? '\n' : ''}');
+  }
+
+  await for (final text in stream.transform(
+    const Utf8Decoder(allowMalformed: true),
+  )) {
+    output.write(text);
+    pending += text;
+    while (true) {
+      final index = pending.indexOf(RegExp(r'[\r\n]'));
+      if (index < 0) break;
+      final delimiter = pending[index];
+      emit(pending.substring(0, index), newline: delimiter == '\n');
+      carriage_return = delimiter == '\r';
+      pending = pending.substring(index + 1);
+    }
+  }
+  if (pending.isNotEmpty) emit(pending, newline: true);
+  return output.toString();
 }
 
 /// Tools print UTF-8, but Windows reports its own errors in the ANSI code page

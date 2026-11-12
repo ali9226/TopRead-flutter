@@ -6,6 +6,9 @@
 # 打包abb文件
     fvm flutter build appbundle --release
 
+# 打包abb文件支持热更新的版本
+    HOT_PATCH_OBS_DIRECT=1 fvm dart run scripts/hot_patch.dart release --prod --os android --android-format both
+
 # 分版本打包
     flutter build apk --release --split-per-abi --split-debug-info=build/symbols
 
@@ -18,6 +21,14 @@
 
 # 生成ios内测包
     fvm flutter build ipa
+
+# 生成可以热更新的内测包
+    HOT_PATCH_OBS_DIRECT=1 fvm dart run scripts/hot_patch.dart release --prod --os ios
+
+# 生成热更新的补丁
+    HOT_PATCH_OBS_DIRECT=1 fvm dart run scripts/hot_patch.dart patch --prod --os ios --vc 30 --remark '第二个补丁：测试补丁'
+
+
 
 # 开启日志
     adb logcat -s flutter

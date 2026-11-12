@@ -3,7 +3,7 @@ description: "TopRead"
 
 
 # + 符号后面的数字，每一次打包只增不减，保持递增状态
-version: 1.2.3+25
+version: 1.2.7+31
 
 environment:
     sdk: ^3.12.0
@@ -154,6 +154,9 @@ dependencies:
 
 
 dependency_overrides:
+  # TODO 回移 photo_manager 官方 KGP 误报修复，保持当前已验证的相册实现。
+  photo_manager:
+    path: vendor/photo_manager
   # TODO 固定项目内兼容修复，避免字段与同名构造冲突导致热更宿主无法编译。
   flutter_patcher:
     path: vendor/flutter_patcher

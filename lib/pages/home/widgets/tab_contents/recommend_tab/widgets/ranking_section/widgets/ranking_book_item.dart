@@ -125,9 +125,16 @@ class RankingBookItem extends StatelessWidget {
                 top: RankingSectionStyle.rank_number_top_offset,
               ),
               child: SizedBox(
-                width: RankingSectionStyle.rank_number_width,
+                width:
+                    RankingSectionStyle.rank_number_width *
+                    text_scaler.scale(
+                      RankingSectionStyle.rank_number_font_size,
+                    ) /
+                    RankingSectionStyle.rank_number_font_size,
                 child: Text(
                   '$ranking_index',
+                  maxLines: 1,
+                  softWrap: false,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: RankingSectionStyle.rank_number_font_size,

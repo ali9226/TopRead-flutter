@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:mysql_client/mysql_client.dart';
+import 'package:flutter_patcher/src/cli/progress.dart';
 
 import 'check_managed_sdk.dart';
 import 'hot_patch_config.dart';
@@ -64,15 +65,6 @@ Future<void> main(List<String> args) async {
     if (options['file'] == null && vc != version.build) {
       throw const FormatException('当前 build 与目标 VC 不一致，请先检出对应版本；脚本不会修改商店版本');
     }
-    if (command == 'release' &&
-        ![
-          'build',
-          'patch',
-          'minor',
-          'major',
-        ].contains(options['bump'] ?? 'patch')) {
-      throw const FormatException('--bump 只支持 build|patch|minor|major');
-    }
     stdout.writeln(
       '当前版本 ${version.version}+${version.build}；目标${production ? '生产' : '本地'}；${platforms.join('+')}',
     );
@@ -85,9 +77,15 @@ Future<void> main(List<String> args) async {
       await _dry_run(command, options, platforms, vc);
       return;
     }
+    final production_prompt = switch (command) {
+      'release' =>
+        '将按当前版本 ${version.version}+${version.build} 构建生产正式包并归档基线，继续？',
+      'migrate' => '将更新生产数据库结构并回填热更统计，继续？',
+      _ => '将对生产环境执行 $command（补丁登记为草稿），继续？',
+    };
     if (production &&
         command != 'check' &&
-        !_confirm('将对生产环境执行 $command（补丁登记为草稿），继续？', options)) {
+        !_confirm(production_prompt, options)) {
       stdout.writeln('已取消');
       return;
     }
@@ -102,7 +100,11 @@ Future<void> main(List<String> args) async {
         ], directory: backend_dir.path);
         break;
       case 'release':
-        if (!production && !_confirm('将递增商店版本并构建正式包，继续？', options)) {
+        if (!production &&
+            !_confirm(
+              '将按当前版本 ${version.version}+${version.build} 构建正式包并归档基线，继续？',
+              options,
+            )) {
           stdout.writeln('已取消');
           return;
         }
@@ -115,7 +117,9 @@ Future<void> main(List<String> args) async {
     }
   } catch (error) {
     stderr.writeln('失败：$error');
-    exitCode = 1;
+    // TODO 失败退出必须关闭进程内残留网络请求，避免终端显示失败后仍无限等待。
+    await stderr.flush();
+    exit(1);
   }
 }
 
@@ -129,8 +133,8 @@ fvm dart run scripts/hot_patch.dart <check|release|patch|withdraw|migrate> [选�
   --remark 文本                  草稿说明
   --baseline-store file:///路径  本地默认local_baselines；生产默认yaml持久仓库
   --dry-run                      只展示计划/校验已有文件，不连接数据库、不构建、不写配置
-  --bump build|patch|minor|major  仅 release 使用；确认后才递增
   --android-format both|apk      仅 release 使用；Android 默认同时生成 AAB 与 APK
+release 使用当前 pubspec.yaml 版本；整包发版前请手动配置版本号和 build。
 所有补丁和回滚只登记草稿，发布/灰度/回滚激活请在管理后台操作。
 ''');
 
@@ -142,7 +146,6 @@ Map<String, String> _options(String command, List<String> args) {
     'migrate': <String>{},
     'release': <String>{
       'os',
-      'bump',
       'baseline-store',
       'export-method',
       'channel',
@@ -172,6 +175,11 @@ Map<String, String> _options(String command, List<String> args) {
     final arg = args[index];
     if (!arg.startsWith('--')) throw FormatException('未知参数：$arg');
     final key = arg.substring(2);
+    if (key == 'bump' || key.startsWith('bump=')) {
+      throw const FormatException(
+        '--bump 已停用；请手动修改 pubspec.yaml 的版本号和 build，并移除 --bump 参数；未构建、未连接数据库',
+      );
+    }
     if (!common.contains(key) && !supported[command]!.contains(key)) {
       throw FormatException('不支持选项：$arg');
     }
@@ -298,7 +306,10 @@ Future<void> _run(
 
 Future<MySQLConnection> _database(bool production) async {
   final config = load_backend_config(backend_dir);
-  return connect_db(production ? config.prod : config.local);
+  return connect_db(
+    production ? config.prod : config.local,
+    production: production,
+  );
 }
 
 Future<ObsConfig> _obs(bool production) async {
@@ -342,24 +353,31 @@ Future<void> _check(Map<String, String> options, bool production) async {
   }
 }
 
-/// TODO 先确认后递增，失败不掩盖已经产生的版本和 baseline 状态。
+/// TODO 按用户配置的当前版本构建并归档基线，始终保留 pubspec.yaml 版本。
 Future<void> _release(
   Map<String, String> options,
   bool production,
   List<String> platforms,
 ) async {
   final store = _baseline_store(options);
-  final obs = Uri.parse(store).scheme == 's3' ? await _obs(production) : null;
-  if (obs != null) {
-    final transport = _transport(obs);
-    try {
-      await transport.head_bucket();
-      await transport.require_atomic_writes();
-    } finally {
-      transport.close();
+  final preflight = CliProgress('检查发布配置、数据库与 OBS 权限', show_bytes: false);
+  ObsConfig? obs;
+  try {
+    obs = Uri.parse(store).scheme == 's3' ? await _obs(production) : null;
+    if (obs != null) {
+      final transport = _transport(obs);
+      try {
+        await transport.head_bucket();
+        await transport.require_atomic_writes();
+      } finally {
+        transport.close();
+      }
     }
+    preflight.complete();
+  } catch (_) {
+    preflight.fail();
+    rethrow;
   }
-  await _run('bash', ['scripts/bump_version.sh', options['bump'] ?? 'patch']);
   final id = publication_id();
   for (final platform in platforms) {
     final out =
@@ -480,13 +498,16 @@ Future<void> _patch(
     prepared.add((file: file, target: target, envelope: envelope));
   }
   obs ??= await _obs(production);
-  final conn = await _database(production);
+  final schema_conn = await _database(production);
+  try {
+    await _require_schema(schema_conn);
+  } finally {
+    await schema_conn.close();
+  }
   final transport = _transport(obs);
   try {
-    await _require_schema(conn);
     for (final item in prepared) {
       await _register(
-        conn,
         transport,
         obs,
         item.file,
@@ -499,7 +520,6 @@ Future<void> _patch(
     }
   } finally {
     transport.close();
-    await conn.close();
   }
   stdout.writeln(
     '完成：${prepared.length} 个${command == 'withdraw' ? '回滚' : '补丁'}草稿；商店版本未改变。请在后台显式发布。',
@@ -549,7 +569,6 @@ Future<void> _require_schema(MySQLConnection conn) async {
 
 /// TODO 宿主锁与后台完全同口径；先查重再上传，事务内分配独立热更版本。
 Future<void> _register(
-  MySQLConnection conn,
   ObsTransport transport,
   ObsConfig obs,
   File file,
@@ -559,85 +578,159 @@ Future<void> _register(
   String id,
   String remark,
 ) async {
-  final lock_name = target.lock_name(envelope.fingerprint);
-  final locked = await conn.execute('SELECT GET_LOCK(:name, 120) AS acquired', {
-    'name': lock_name,
-  });
-  if (locked.rows.first.colByName('acquired') != '1') {
-    throw const FormatException('无法获得宿主发布锁');
-  }
-  final params = <String, dynamic>{
-    'platform': target.platform,
-    'abi': target.abi,
-    'version_code': target.version_code,
-    'flavor': target.flavor,
-    'channel': target.channel,
-    'fingerprint': envelope.fingerprint,
-    'seq': envelope.seq,
-  };
-  const scope =
-      "platform=:platform AND abi=:abi AND version_code=:version_code AND COALESCE(NULLIF(flavor,''),'default')=:flavor AND COALESCE(NULLIF(channel,''),'production')=:channel";
+  // TODO 已登记文件先短连接确认，重复执行不重新上传；最终仍在发布锁下复查。
+  final precheck = await _database(production);
   try {
-    final existing = await conn.execute(
-      'SELECT id, sha256, fingerprint, remove_status FROM app_patch WHERE $scope AND seq=:seq LIMIT 1',
-      params,
-    );
+    final existing = await precheck
+        .execute(
+          'SELECT id,sha256,fingerprint,remove_status FROM app_patch WHERE platform=:platform AND abi=:abi AND version_code=:vc AND seq=:seq AND COALESCE(NULLIF(flavor,""),"default")=:flavor AND COALESCE(NULLIF(channel,""),"production")=:channel LIMIT 1',
+          {
+            'platform': target.platform,
+            'abi': target.abi,
+            'vc': target.version_code,
+            'seq': envelope.seq,
+            'flavor': target.flavor,
+            'channel': target.channel,
+          },
+        )
+        .timeout(const Duration(seconds: 20));
     if (existing.rows.isNotEmpty) {
-      final old = existing.rows.first;
-      if (old.colByName('sha256') == envelope.sha256_hex &&
-          old.colByName('fingerprint') == envelope.fingerprint &&
-          old.colByName('remove_status') == '1') {
-        stdout.writeln('已登记 id=${old.colByName('id')}，跳过上传（幂等）');
+      final row = existing.rows.first;
+      if (row.colByName('sha256') == envelope.sha256_hex &&
+          row.colByName('fingerprint') == envelope.fingerprint &&
+          row.colByName('remove_status') == '1') {
+        stdout.writeln('已登记 id=${row.colByName('id')}，跳过上传（幂等）');
         return;
       }
-      throw const FormatException('目标与 seq 已存在；拒绝上传覆盖或复活已删除记录');
+      throw const FormatException('目标与seq已存在，拒绝覆盖或复活已删除记录');
     }
-    final key = patch_object_key(target, envelope, id, local: !production);
-    final base = Uri.parse(obs.base_url);
-    if (base.scheme != 'https' ||
-        base.host.isEmpty ||
-        base.hasQuery ||
-        base.hasFragment ||
-        base.userInfo.isNotEmpty) {
-      throw const FormatException('OBS 公开域名必须为 HTTPS');
+  } finally {
+    await precheck.close();
+  }
+  final key = patch_object_key(target, envelope, id, local: !production);
+  final base = Uri.parse(obs.base_url);
+  if (base.scheme != 'https' ||
+      base.host.isEmpty ||
+      base.hasQuery ||
+      base.hasFragment ||
+      base.userInfo.isNotEmpty) {
+    throw const FormatException('OBS 公开域名必须为 HTTPS');
+  }
+  final file_url = '${obs.base_url.replaceFirst(RegExp(r'/+$'), '')}/$key';
+  if (file_url.length > 255) {
+    throw const FormatException('对象 URL 超过数据库255字符限制');
+  }
+  await transport.put_immutable(key, file);
+  if (await transport.object_sha256(key) != envelope.sha256_hex) {
+    throw const FormatException('上传回读 SHA256 不匹配，未登记');
+  }
+  // TODO 文件传输结束后才建立短连接并持锁，避免公网连接在上传期间闲置失效。
+  stdout.writeln('[进度] 文件校验完成，正在连接数据库登记补丁草稿');
+  final conn = await _database(production);
+  try {
+    await _register_record(
+      conn,
+      file,
+      target,
+      envelope,
+      file_url,
+      remark,
+    ).timeout(const Duration(seconds: 45));
+  } finally {
+    try {
+      await conn.close().timeout(const Duration(seconds: 5));
+    } catch (_) {
+      // TODO 保留原始登记错误，主入口失败退出会回收残留连接。
     }
-    final file_url = '${obs.base_url.replaceFirst(RegExp(r'/+$'), '')}/$key';
-    if (file_url.length > 255) {
-      throw const FormatException('对象 URL 超过数据库255字符限制');
+  }
+}
+
+/// TODO 数据库登记短事务；唯一约束、宿主锁和重复文件校验保持不变。
+Future<void> _register_record(
+  MySQLConnection conn,
+  File file,
+  PatchTarget target,
+  PatchEnvelope envelope,
+  String file_url,
+  String remark,
+) async {
+  // TODO 先开启事务以固定数据库代理的后端会话，锁在事务结束前释放。
+  final registered = await conn.transactional((_) async {
+    final lock_name = target.lock_name(envelope.fingerprint);
+    final locked = await conn.execute(
+      'SELECT GET_LOCK(:name, 15) AS acquired',
+      {'name': lock_name},
+    );
+    if (locked.rows.first.colByName('acquired') != '1') {
+      throw const FormatException('无法获得宿主发布锁');
     }
-    await transport.put_immutable(key, file);
-    if (await transport.object_sha256(key) != envelope.sha256_hex) {
-      throw const FormatException('上传回读 SHA256 不匹配，未登记');
-    }
-    final registered = await conn.transactional((transaction) async {
-      var hotfix_version = 0;
-      if (envelope.patch_type == 1) {
-        final max = await transaction.execute(
-          'SELECT COALESCE(MAX(hotfix_version),0) AS max_version FROM app_patch WHERE $scope AND fingerprint=:fingerprint AND patch_type=1',
-          params,
-        );
-        hotfix_version =
-            int.parse(max.rows.first.colByName('max_version')!) + 1;
-      }
-      final inserted = await transaction.execute(
-        'INSERT INTO app_patch (created_by,platform,abi,version_code,flavor,channel,fingerprint,seq,hotfix_version,patch_type,file_name,file_url,file_size,sha256,gray,status,remark,remove_status) VALUES (0,:platform,:abi,:version_code,:flavor,:channel,:fingerprint,:seq,:hotfix_version,:patch_type,:file_name,:file_url,:file_size,:sha256,0,1,:remark,1)',
-        {
-          ...params,
-          'hotfix_version': hotfix_version,
-          'patch_type': envelope.patch_type,
-          'file_name': target.file_name,
-          'file_url': file_url,
-          'file_size': await file.length(),
-          'sha256': envelope.sha256_hex,
-          'remark': remark,
-        },
+    stdout.writeln('[进度] 已取得宿主发布锁，正在写入补丁草稿');
+    final params = <String, dynamic>{
+      'platform': target.platform,
+      'abi': target.abi,
+      'version_code': target.version_code,
+      'flavor': target.flavor,
+      'channel': target.channel,
+      'fingerprint': envelope.fingerprint,
+      'seq': envelope.seq,
+    };
+    const scope =
+        "platform=:platform AND abi=:abi AND version_code=:version_code AND COALESCE(NULLIF(flavor,''),'default')=:flavor AND COALESCE(NULLIF(channel,''),'production')=:channel";
+    try {
+      final existing = await conn.execute(
+        'SELECT id, seq, sha256, fingerprint, remove_status FROM app_patch WHERE $scope FOR UPDATE',
+        params,
       );
-      return (id: inserted.lastInsertID, hotfix_version: hotfix_version);
-    });
+      final matches = existing.rows.where(
+        (row) => row.colByName('seq') == '${envelope.seq}',
+      );
+      if (matches.isNotEmpty) {
+        final old = matches.first;
+        if (old.colByName('sha256') == envelope.sha256_hex &&
+            old.colByName('fingerprint') == envelope.fingerprint &&
+            old.colByName('remove_status') == '1') {
+          stdout.writeln('已登记 id=${old.colByName('id')}，跳过上传（幂等）');
+          return null;
+        }
+        throw const FormatException('目标与 seq 已存在；拒绝上传覆盖或复活已删除记录');
+      }
+      final registered = await (() async {
+        final transaction = conn;
+        var hotfix_version = 0;
+        if (envelope.patch_type == 1) {
+          final max = await transaction.execute(
+            'SELECT COALESCE(MAX(hotfix_version),0) AS max_version FROM app_patch WHERE $scope AND fingerprint=:fingerprint AND patch_type=1',
+            params,
+          );
+          hotfix_version =
+              int.parse(max.rows.first.colByName('max_version')!) + 1;
+        }
+        final inserted = await transaction.execute(
+          'INSERT INTO app_patch (created_by,platform,abi,version_code,flavor,channel,fingerprint,seq,hotfix_version,patch_type,file_name,file_url,file_size,sha256,gray,status,remark,remove_status) VALUES (0,:platform,:abi,:version_code,:flavor,:channel,:fingerprint,:seq,:hotfix_version,:patch_type,:file_name,:file_url,:file_size,:sha256,0,1,:remark,1)',
+          {
+            ...params,
+            'hotfix_version': hotfix_version,
+            'patch_type': envelope.patch_type,
+            'file_name': target.file_name,
+            'file_url': file_url,
+            'file_size': await file.length(),
+            'sha256': envelope.sha256_hex,
+            'remark': remark,
+          },
+        );
+        return (id: inserted.lastInsertID, hotfix_version: hotfix_version);
+      })();
+      return registered;
+    } finally {
+      await conn
+          .execute('SELECT RELEASE_LOCK(:name)', {'name': lock_name})
+          .timeout(const Duration(seconds: 5));
+    }
+  });
+  if (registered != null) {
+    stdout.writeln('[进度] 数据库事务提交成功');
     stdout.writeln(
       '草稿 id=${registered.id} ${target.platform} 热更版本=${registered.hotfix_version}\n$file_url',
     );
-  } finally {
-    await conn.execute('SELECT RELEASE_LOCK(:name)', {'name': lock_name});
   }
 }

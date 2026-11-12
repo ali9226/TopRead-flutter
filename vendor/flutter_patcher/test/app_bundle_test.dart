@@ -1,3 +1,6 @@
+// TODO 新增测试标识符遵循项目 snake_case 约定。
+// ignore_for_file: non_constant_identifier_names
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -14,6 +17,7 @@ import 'package:flutter_patcher/src/cli/patch/resources.dart';
 class JarVerificationOutput extends Commands {
   JarVerificationOutput(this.output) : super(Directory.systemTemp.path);
   final String output;
+  String? last_executable;
 
   @override
   Future<String> run(
@@ -24,7 +28,10 @@ class JarVerificationOutput extends Commands {
     String code = 'TOOL_FAILED',
     Duration timeout = const Duration(minutes: 15),
     Map<String, String>? extraEnvironment,
-  }) async => output;
+  }) async {
+    last_executable = executable;
+    return output;
+  }
 }
 
 void main() {
@@ -331,4 +338,57 @@ void main() {
       }
     },
   );
+
+  test('AAB签名校验使用显式选定的JDK工具，不从IDE运行时重新推导', () async {
+    final archive = Archive()
+      ..addFile(ArchiveFile('META-INF/MANIFEST.MF', 1, [1]))
+      ..addFile(ArchiveFile('META-INF/CERT.SF', 1, [1]))
+      ..addFile(ArchiveFile('META-INF/CERT.RSA', 1, [1]));
+    final commands = JarVerificationOutput('jar verified.\n');
+    await verifyBundleSignature(
+      'fixture.aab',
+      archive,
+      commands,
+      Bundletool(
+        '/IDE runtime/bin/java',
+        [],
+        jarsigner: '/selected full JDK/bin/jarsigner',
+      ),
+    );
+    expect(commands.last_executable, '/selected full JDK/bin/jarsigner');
+  });
+
+  test('只有java的JRE在AAB工具预检时失败，完整JDK保留同目录验签工具', () async {
+    final root = await Directory.systemTemp.createTemp('bundle_jdk_');
+    addTearDown(() => root.delete(recursive: true));
+    final bin = await Directory('${root.path}/full JDK/bin')
+        .create(recursive: true);
+    final java = File(
+      '${bin.path}/${Platform.isWindows ? 'java.exe' : 'java'}',
+    );
+    final signer = File(
+      '${bin.path}/${Platform.isWindows ? 'jarsigner.exe' : 'jarsigner'}',
+    );
+    final jar = File('${root.path}/bundletool.jar');
+    await java.writeAsString('fixture');
+    await jar.writeAsString('fixture');
+    final environment = {
+      'JAVA_HOME': bin.parent.path,
+      'BUNDLETOOL_JAR': jar.path,
+    };
+    await expectLater(
+      Bundletool.locate(root.path, environment: environment),
+      throwsA(
+        isA<Failure>().having(
+          (failure) => failure.code,
+          'code',
+          'BUILD_JDK_TOOLS_MISSING',
+        ),
+      ),
+    );
+    await signer.writeAsString('fixture');
+    final tool = await Bundletool.locate(root.path, environment: environment);
+    expect(tool.java, java.path);
+    expect(tool.jarsigner, signer.path);
+  });
 }

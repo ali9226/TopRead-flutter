@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter_patcher/src/cli/progress.dart';
+
 import 'obs_transport.dart';
 
 /// TODO flutter_patcher 所需 S3 CLI 子集映射到原生 OBS HTTPS API。
 Future<void> main(List<String> args) async {
   ObsTransport? transport;
+  CliProgress? preparation;
   try {
     final values = <String, String>{};
     final positional = <String>[];
@@ -21,6 +24,8 @@ Future<void> main(List<String> args) async {
     if (positional.length < 2 || positional.first != 's3api') {
       throw const FormatException('OBS 桥接仅支持 s3api');
     }
+    preparation = CliProgress('准备 OBS 操作', show_bytes: false);
+    preparation.set_note('读取上传凭据与连接配置');
     var access_key = Platform.environment['AWS_ACCESS_KEY_ID'] ?? '';
     var secret_key = Platform.environment['AWS_SECRET_ACCESS_KEY'] ?? '';
     var token = Platform.environment['AWS_SESSION_TOKEN'] ?? '';
@@ -49,6 +54,7 @@ Future<void> main(List<String> args) async {
       secret_key: secret_key,
       security_token: token,
     );
+    preparation.complete();
     switch (positional[1]) {
       case 'head-bucket':
         await transport.head_bucket();
@@ -91,11 +97,13 @@ Future<void> main(List<String> args) async {
     }
     stdout.writeln('{}');
   } on ObsFailure catch (error) {
+    preparation?.fail();
     stderr.writeln(
       'An error occurred (${error.code}) when calling OBS: HTTP ${error.status}',
     );
     exitCode = 254;
   } catch (error) {
+    preparation?.fail();
     stderr.writeln('OBS 桥接失败：$error');
     exitCode = 1;
   } finally {
