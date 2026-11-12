@@ -18,11 +18,12 @@ pluginManagement {
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-    id("com.android.application") version "8.11.1" apply false
+    id("com.android.application") version "9.1.1" apply false
     // START: FlutterFire Configuration
     id("com.google.gms.google-services") version("4.4.2") apply false
     // END: FlutterFire Configuration
-    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
+    // TODO 在插件解析阶段统一 Kotlin 编译器版本；应用模块使用 AGP 内置 Kotlin。
+    id("org.jetbrains.kotlin.android") version "2.4.21" apply false
 }
 
 include(":app")

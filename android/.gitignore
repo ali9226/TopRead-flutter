@@ -12,3 +12,8 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# TODO Gradle Wrapper 启动器与校验配置随项目交付，确保 IDEA 和命令行使用同一版本。
+!/gradlew
+!/gradlew.bat
+!/gradle/wrapper/gradle-wrapper.jar

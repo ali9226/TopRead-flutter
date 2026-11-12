@@ -13,10 +13,16 @@ node_modules/
 daemon/
 .tmp/
 build/
+# TODO Android 原生编译缓存由 Gradle 生成，不随构建工具升级提交。
+**/.cxx/
 # TODO 项目内热更工具的 build 目录保存 CLI 源码，必须随仓库交付。
 !vendor/flutter_patcher/lib/src/cli/build/
 !vendor/flutter_patcher/lib/src/cli/build/**
 wrapper/
+# TODO 固定 Android 构建入口及 Gradle 版本，避免根目录工具缓存规则误排除 Wrapper。
+!android/gradle/wrapper/
+!android/gradle/wrapper/gradle-wrapper.properties
+!android/gradle/wrapper/gradle-wrapper.jar
 !vendor/flutter_patcher/example/android/gradle/wrapper/
 !vendor/flutter_patcher/example/android/gradle/wrapper/**
 native/

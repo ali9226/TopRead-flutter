@@ -65,17 +65,14 @@ mixin WorkEditorFileMixin {
   /// 上传短篇文件（txt、docx），解析内容到正文框。
   Future<void> upload_short_file() async {
     try {
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      final PlatformFile? file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['txt', 'docx'],
-        withData: true,
       );
 
-      if (result == null || result.files.isEmpty) return;
+      if (file == null) return;
 
-      final PlatformFile file = result.files.first;
-      final Uint8List? bytes = file.bytes;
-      if (bytes == null) return;
+      final Uint8List bytes = await file.readAsBytes();
 
       String content;
       if (file.name.endsWith('.docx')) {
@@ -102,17 +99,14 @@ mixin WorkEditorFileMixin {
   /// 如果标题输入框为空，使用文件名（去掉扩展名）作为章节标题。
   Future<void> upload_long_file() async {
     try {
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      final PlatformFile? file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['txt', 'docx'],
-        withData: true,
       );
 
-      if (result == null || result.files.isEmpty) return;
+      if (file == null) return;
 
-      final PlatformFile file = result.files.first;
-      final Uint8List? bytes = file.bytes;
-      if (bytes == null) return;
+      final Uint8List bytes = await file.readAsBytes();
 
       String content;
       if (file.name.endsWith('.docx')) {

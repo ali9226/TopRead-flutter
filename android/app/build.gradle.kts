@@ -13,8 +13,7 @@ plugins {
     // START: FlutterFire Configuration
     id("com.google.gms.google-services")
     // END: FlutterFire Configuration
-    id("kotlin-android")
-    // Flutter Gradle Plugin 必须在 Android & Kotlin 插件之后应用
+    // TODO Flutter Gradle Plugin 在 Android 插件之后应用，Kotlin 由 AGP 内置支持。
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -27,10 +26,6 @@ android {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
     }
 
     defaultConfig {
@@ -92,7 +87,7 @@ androidComponents {
 
 kotlin {
     compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
